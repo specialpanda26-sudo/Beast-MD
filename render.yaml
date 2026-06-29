@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: shark-bot-v6
+    name: beast-bot-ogolla
     env: docker
     envVars:
       - key: GROQ_API_KEY
