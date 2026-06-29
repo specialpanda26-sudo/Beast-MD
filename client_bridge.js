@@ -20,8 +20,8 @@ const http = require("http");
 // ✅ FIX: hardcoded fallback so owner check never fails on Render
 // (render.yaml doesn't set OWNER_NUMBER so env var was always empty)
 const OWNER_NUMBER  = (process.env.OWNER_NUMBER  || '254141915668').replace(/[^0-9]/g, '');
-const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ogolla';
-const BOT_NAME      = process.env.BOT_NAME      || 'Henry v19™ Beast Bot';
+const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ochibots';
+const BOT_NAME      = process.env.BOT_NAME      || 'Henry Ochibots v19™';
 const CMD_PREFIX    = '.';
 
 // ── Co-Owner System ─────────────────────────────────────────────────────────
@@ -451,19 +451,35 @@ async function startSession(sessionId, opts = {}) {
         msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
         "";
 
-      // Feature: Auto View & Like Status
+      // Feature: Auto View & Like Status + AI comment on status
       if (isStatus) {
         try {
           await socket.readMessages([msg.key]);
-          // Send status reaction properly
           await socket.sendMessage(
             sender,
             { react: { text: "❤️", key: msg.key } },
             { statusJidList: [msg.key.participant || sender] }
           );
-        } catch (e) {
-          // Status reactions can fail silently — it's fine
-        }
+          // ✅ NEW: AI comment reply on text statuses (human-like)
+          if (body && global.botActive !== false) {
+            try {
+              const statusName = msg.pushName || 'rafiki';
+              const aiReply = await apiClient.post('/natural-chat', {
+                body: `Mtu amepost status WhatsApp akisema: "${body}". Jibu kwa comment fupi ya kirafiki kama vile umeona status yao.`,
+                name: statusName,
+                context: 'status'
+              });
+              if (aiReply?.data?.reply) {
+                await delay(Math.floor(Math.random() * 3000) + 2000);
+                await socket.sendMessage(
+                  sender,
+                  { text: aiReply.data.reply },
+                  { statusJidList: [msg.key.participant || sender] }
+                );
+              }
+            } catch (_) {}
+          }
+        } catch (e) {}
         return;
       }
 
@@ -706,7 +722,6 @@ async function startSession(sessionId, opts = {}) {
       }
 
       // ── Natural AI Chat (DM only, non-command messages) ───────────────────
-      // Responds to any plain message in DM like a human — Swahili, Sheng, English
       if (!isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/')) {
         try {
           const aiReply = await apiClient.post('/natural-chat', { body, name });
@@ -721,19 +736,41 @@ async function startSession(sessionId, opts = {}) {
         } catch (e) {}
       }
 
-      // ── Restricted Group: react-only mode ────────────────────────────────
-      // If bot can't send messages in group, just react to show it's alive
-      if (isGroup && body) {
+      // ── Group AI replies — reply when bot is mentioned or name is called ──
+      if (isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/')) {
         try {
           const groupMeta = await socket.groupMetadata(sender);
-          const isRestricted = groupMeta?.announce; // true = only admins can send
+          const isRestricted = groupMeta?.announce;
+
           if (isRestricted) {
+            // React only in restricted groups
             const sentiment = await apiClient.post('/react', { body });
             const emoji = sentiment?.data?.emoji || '👍';
-            await socket.sendMessage(sender, {
-              react: { text: emoji, key: msg.key }
-            });
+            await socket.sendMessage(sender, { react: { text: emoji, key: msg.key } });
             return;
+          }
+
+          // ✅ NEW: Reply in group if bot is mentioned or name called
+          const botNumber = socket.user?.id?.split(':')[0]?.split('@')[0] || '';
+          const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+          const botMentioned = mentions.some(j => j.includes(botNumber));
+          const nameCalledInGroup = body.toLowerCase().includes('henry') ||
+            body.toLowerCase().includes('ochibots') ||
+            body.toLowerCase().includes('bot');
+
+          if (botMentioned || nameCalledInGroup) {
+            const aiReply = await apiClient.post('/natural-chat', {
+              body,
+              name,
+              context: 'group'
+            });
+            if (aiReply?.data?.reply) {
+              await delay(Math.floor(Math.random() * 1500) + 800);
+              try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
+              await delay(Math.floor(Math.random() * 1000) + 500);
+              try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
+              await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
+            }
           }
         } catch (e) {}
       }
@@ -833,7 +870,7 @@ async function startSession(sessionId, opts = {}) {
 
           const welcomeText =
 `╔════════════════════════════════════╗
-║  🔥 *HENRY V19™ BEAST BOT* 🔥      ║
+║  🔥 *HENRY OCHIBOTS V19™* 🔥        ║
 ║       _by @henrytech254_            ║
 ╚════════════════════════════════════╝
 
@@ -878,7 +915,7 @@ Your bot is now live and connected. 🌐
 Type *.menu* to see all commands.
 Use *.addadmin 254XXXXXXXXX* to give friends access.
 
-_Henry v19™ Beast Bot — @henrytech254_ 🔥`;
+_Henry Ochibots v19™ — @henrytech254_ 🔥`;
 
           await delay(3000);
           await socket.sendMessage(selfJid, { text: welcomeText });

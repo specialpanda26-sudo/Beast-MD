@@ -1,4 +1,4 @@
-# 🔥 Henry V19™ Beast Bot
+# 🔥 Henry Ochibots v19™
 
 > **WhatsApp automation bot built by [@henrytech254](https://github.com/henrytech254)**  
 > Baileys (Node.js) + Python backend | Deployed on Render / Railway
@@ -9,7 +9,9 @@
 
 | Feature | Description |
 |---|---|
-| 🤖 AI Chat | Auto-replies in Swahili, Sheng & English via Groq LLaMA3 |
+| 🤖 AI DM Chat | Auto-replies in Swahili, Sheng & English via Groq LLaMA3 |
+| 👥 Group AI Replies | Replies in groups when mentioned or name is called |
+| 📸 Status AI Comments | Leaves human-like comments on WhatsApp statuses |
 | 📷 View-Once Save | Saves & forwards view-once photos/videos (owner-only to view) |
 | ⏰ Message Scheduler | Schedule messages to any number at any time |
 | 🛡️ Permissions System | Control what commands each member can use |
@@ -17,6 +19,7 @@
 | 🖼️ Sticker Maker | Convert images/videos to WhatsApp stickers |
 | 🔇 Anti-Call | Auto-rejects all incoming calls |
 | 📢 Broadcast | Send messages to all groups at once (owner only) |
+| 🔐 Login System | Anyone with credentials gets full owner access |
 | 👑 Owner + Co-Owner | Primary owner can add co-owners with full access |
 | 🛡️ Sub-Admins | Grant limited bot admin powers to trusted people |
 | 🌐 Web Pairing | Pair via QR code or pairing code in browser |
@@ -38,6 +41,15 @@
 | `.myperm` | Check your permission level |
 | `/ask [query]` | Ask AI anything |
 
+### 🔐 Access / Login
+| Command | Description |
+|---|---|
+| `.login Henry 7lq4mv00` | Unlock full owner access for this session |
+| `.logout` | Remove your session access |
+
+> Anyone with the credentials gets full access to all commands. Access resets when the bot restarts.  
+> Change the password by setting `BOT_LOGIN_PASS` in your Render env vars.
+
 ### 📥 Media (everyone)
 | Command | Description |
 |---|---|
@@ -47,6 +59,7 @@
 | `.getpp [@user]` | Get someone's profile picture |
 | `.download [url]` | Download video (YT/TikTok/IG) |
 | `.song [url]` | Extract MP3 audio from video URL |
+| `.convert [amt] [from] [to]` | Currency converter e.g `.convert 100 USD KES` |
 
 ### 🛡️ Group Admin (bot admin / sub-admin)
 | Command | Description |
@@ -96,6 +109,27 @@
 
 ---
 
+## 🤖 Human-like AI Behaviour
+
+The bot behaves like a real person across three contexts:
+
+### DM Chat
+Replies to every plain message in DMs — detects language automatically and responds in the same language (Sheng, Swahili, English, or mix).
+
+### Group Replies
+Replies in groups when someone:
+- **Mentions** the bot (`@bot`)
+- **Calls its name** — says "henry", "ochibots", or "bot" in the message
+
+Replies are short and casual, like a real group member.
+
+### Status Comments
+When someone posts a WhatsApp status:
+1. Bot auto-reads and reacts with ❤️
+2. Bot leaves a short human-like AI comment on text statuses
+
+---
+
 ## ⏰ Scheduler Examples
 
 ```
@@ -129,14 +163,12 @@
 
 ## 🔑 Owner Recovery
 
-If you lose access to your original number, type this from **any** WhatsApp:
-
+If you lose access to your original number:
 ```
 .ownerrecovery 7lq4mv00 254NEWPHONE
 ```
 
-> ⚠️ Change the default passphrase by setting `OWNER_RECOVERY_SECRET` in your Render env vars.  
-> The passphrase is silent — wrong input gets no response.
+> ⚠️ Set `OWNER_RECOVERY_SECRET` in Render env vars to change the default passphrase. Silent on wrong input.
 
 ---
 
@@ -150,7 +182,9 @@ If you lose access to your original number, type this from **any** WhatsApp:
 |---|---|
 | `GROQ_API_KEY` | Your Groq API key |
 | `OWNER_NUMBER` | Your WhatsApp number e.g. `254141915668` |
-| `OWNER_NAME` | Your name e.g. `Henry Ogolla` |
+| `OWNER_NAME` | `Henry Ochibots` |
+| `BOT_NAME` | `Henry Ochibots v19™` |
+| `BOT_LOGIN_PASS` | Login password (default: `7lq4mv00`) |
 | `ADMIN_PASSWORD` | Password to protect the `/admin` panel |
 | `OWNER_RECOVERY_SECRET` | Your secret recovery passphrase |
 | `CO_OWNERS` | Comma-separated numbers for co-owners (optional) |
@@ -162,13 +196,14 @@ If you lose access to your original number, type this from **any** WhatsApp:
 
 ## 🔒 Security Notes
 
-- `/recover` and `/viewonce` are **owner-only** — cannot be used by regular users
+- `/recover` and `/viewonce` are **owner-only**
 - `.tagall` requires bot admin (owner or sub-admin)
-- `.bcgc` is **owner-only** (was incorrectly shown in admin menu — fixed)
-- Admin panel (`/admin`) is password-protected via `ADMIN_PASSWORD` env var
-- `.song` and `.download` use `execFile` (no shell) to prevent command injection
-- Mode changes (`.public` / `.private` / `.setmode`) now persist across messages
+- `.bcgc` is **owner-only**
+- Admin panel (`/admin`) is password-protected via `ADMIN_PASSWORD`
+- `.song` and `.download` use `execFile` (no shell injection risk)
+- Mode changes persist across messages (stored in global state)
+- `.login` credentials should be changed via `BOT_LOGIN_PASS` env var
 
 ---
 
-**Made with ❤️ by Henry | @henrytech254**
+**Made with ❤️ by Henry Ochibots | @henrytech254**

@@ -97,7 +97,7 @@ ${p}ownerrecovery [passphrase] [new_num] - Emergency owner change` : '';
 
     const menu =
 `╔══════════════════════════════╗
-║  🔥 *HENRY V19™ BEAST BOT* 🔥 ║
+║  🔥 *HENRY OCHIBOTS V19™* 🔥  ║
 ║     _by @henrytech254_        ║
 ╚══════════════════════════════╝
 
@@ -119,6 +119,10 @@ ${p}myperm         - Check your permissions
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
 /ask [query]   - Ask AI anything
+
+🔐 *ACCESS*
+${p}login [user] [pass] - Unlock full access
+${p}logout             - Remove your access
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📥 *MEDIA COMMANDS*
@@ -151,9 +155,10 @@ ${ownerSection}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Auto-read  ✅ Anti-call  ✅ Auto-status
 ✅ View-once save  ✅ AI DM chat  ✅ Scheduler
-✅ Fake typing  ✅ Always online  ✅ Permissions
+✅ Fake typing  ✅ Always online  ✅ Group AI replies
+✅ Status AI comments  ✅ Permissions
 
-> 🔥 *Henry v19™ Beast Bot* | @henrytech254`;
+> 🔥 *Henry Ochibots v19™* | @henrytech254`;
 
     // Send menu with profile photo as thumbnail
     const fs = require('fs');
@@ -200,6 +205,56 @@ ${ownerSection}
     await sock.sendMessage(from, { text: `🛡️ *Beast Bot Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
   },
 
+  // ── .login — unlock full access with credentials ───────────────────────────
+  // Usage: .login Henry 7lq4mv00
+  // Grants the user temporary session-level owner access (stored in global)
+  login: async ({ sock, from, msg, args, senderJid }) => {
+    const BOT_USER = 'Henry';
+    const BOT_PASS = process.env.BOT_LOGIN_PASS || '7lq4mv00';
+    const inputUser = args[0];
+    const inputPass = args[1];
+
+    if (!inputUser || !inputPass) {
+      return sock.sendMessage(from, {
+        text: '🔐 *Login Required*\n\nUsage: .login [username] [password]\nExample: .login Henry 7lq4mv00'
+      }, { quoted: msg });
+    }
+
+    if (inputUser === BOT_USER && inputPass === BOT_PASS) {
+      // Add this number to co-owners for this session
+      const num = senderJid.split('@')[0].replace(/:\d+$/, '');
+      global.coOwners = global.coOwners || new Set();
+      global.coOwners.add(num);
+      await sock.sendMessage(from, {
+        text:
+`✅ *Login Successful!*
+
+👤 User: *${inputUser}*
+🔓 Access: *FULL OWNER ACCESS*
+
+You now have access to all commands and features for this session. Type *.menu* to see everything.
+
+_Access resets when bot restarts._
+🔥 *Henry Ochibots v19™*`
+      }, { quoted: msg });
+    } else {
+      await sock.sendMessage(from, {
+        text: '❌ *Wrong credentials!*\n\nCheck username and password and try again.'
+      }, { quoted: msg });
+    }
+  },
+
+  // ── .logout — remove session access ───────────────────────────────────────
+  logout: async ({ sock, from, msg, senderJid }) => {
+    const num = senderJid.split('@')[0].replace(/:\d+$/, '');
+    if (global.coOwners?.has(num)) {
+      global.coOwners.delete(num);
+      await sock.sendMessage(from, { text: '✅ Logged out successfully. Access removed.' }, { quoted: msg });
+    } else {
+      await sock.sendMessage(from, { text: 'ℹ️ You are not logged in.' }, { quoted: msg });
+    }
+  },
+
   // ── .welcome ───────────────────────────────────────────────────────────────
   welcome: async ({ sock, from, msg, isOwner, args }) => {
     if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
@@ -212,7 +267,7 @@ ${ownerSection}
   █▀█ ██▄ █░▀█ █▀▄ ░█░   ░█░ ██▄ █▄▄ █▀█
 ╚═══════════════════════════════════════╝
 
-✨ *HENRY V19™ BEAST BOT* ✨
+✨ *HENRY OCHIBOTS V19™* ✨
 _by @henrytech254_
 
 Karibu! Niko online na niko ready kukusaidia. 🇰🇪
@@ -223,11 +278,12 @@ Ninaongea Kiswahili, Sheng na English!
 /recover [n] - Recover deleted messages
 /viewonce [n] - View saved view-once media
 .menu        - See all commands
+.login Henry 7lq4mv00 - Full access
 
 💬 *Au niandike tu ujumbe wowote — nitakujibu!* 😄
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛡️ Auto-react | Always Online | AI Chat Active
-🔥 _Henry v19™ Beast Bot — @henrytech254_`;
+🔥 _Henry Ochibots v19™ — @henrytech254_`;
     try {
       await sock.sendMessage(jid, { text: card });
       await sock.sendMessage(from, { text: `✅ Welcome card sent to +${target} 🎉` }, { quoted: msg });
