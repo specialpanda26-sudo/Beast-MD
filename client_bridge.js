@@ -17,15 +17,28 @@ const qrcode = require("qrcode-terminal");
 const http = require("http");
 
 // ── Owner & Bot Config ──────────────────────────────────────────────────────
-const OWNER_NUMBER  = (process.env.OWNER_NUMBER  || '').replace(/[^0-9]/g, '');
+// ✅ FIX: hardcoded fallback so owner check never fails on Render
+// (render.yaml doesn't set OWNER_NUMBER so env var was always empty)
+const OWNER_NUMBER  = (process.env.OWNER_NUMBER  || '254141915668').replace(/[^0-9]/g, '');
 const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ogolla';
 const BOT_NAME      = process.env.BOT_NAME      || 'Henry v19™ Beast Bot';
 const CMD_PREFIX    = '.';
 
+// ── Co-Owner System ─────────────────────────────────────────────────────────
+// Co-owners have the same power as owner but cannot add/remove other co-owners
+global.coOwners = new Set(
+  (process.env.CO_OWNERS || '').split(',').map(n => n.replace(/[^0-9]/g, '')).filter(Boolean)
+);
+
+// ── Mode Persistence (global, not per-config object) ───────────────────────
+// ✅ FIX: mode was stored on a throwaway config object rebuilt each message
+if (global.botMode === undefined)   global.botMode   = 'public';
+if (global.botActive === undefined) global.botActive = true;
+
 // ── Sub-Admin System ─────────────────────────────────────────────────────────
 // Numbers that the owner has granted bot-admin access to (without full owner power)
 // Persisted in memory — owner uses .addadmin / .removeadmin to manage
-global.subAdmins = new Set(
+global.subAdmins = global.subAdmins || new Set(
   (process.env.SUB_ADMINS || '').split(',').map(n => n.replace(/[^0-9]/g, '')).filter(Boolean)
 );
 
@@ -462,9 +475,11 @@ async function startSession(sessionId, opts = {}) {
           ? (socket.user?.id || sender)
           : sender;
       const senderNumber = senderJid.split('@')[0].replace(/:\d+$/, '');
-      const isOwner      = Boolean(OWNER_NUMBER && senderNumber === OWNER_NUMBER);
+      const isPrimaryOwner = Boolean(OWNER_NUMBER && senderNumber === OWNER_NUMBER);
+      const isCoOwner    = global.coOwners.has(senderNumber);
+      const isOwner      = isPrimaryOwner || isCoOwner;  // co-owners get owner powers
       const isSubAdmin   = global.subAdmins.has(senderNumber);
-      const isBotAdmin   = isOwner || isSubAdmin; // has elevated bot permissions
+      const isBotAdmin   = isOwner || isSubAdmin;
 
       // ── fromMe guard — allow owner commands even from the bot number ──────
       if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) return;
@@ -589,13 +604,16 @@ async function startSession(sessionId, opts = {}) {
         const args   = parts.slice(1);
 
         const config = {
-          ownerNumber : OWNER_NUMBER,
-          ownerName   : OWNER_NAME_CFG,
-          botName     : BOT_NAME,
-          prefix      : CMD_PREFIX,
-          groqApiKey  : process.env.GROQ_API_KEY || '',
-          mode        : global.botMode  ?? 'public',
-          active      : global.botActive ?? true,
+          ownerNumber  : OWNER_NUMBER,
+          ownerName    : OWNER_NAME_CFG,
+          botName      : BOT_NAME,
+          prefix       : CMD_PREFIX,
+          groqApiKey   : process.env.GROQ_API_KEY || '',
+          // ✅ FIX: read from global — these are now persistent across messages
+          get mode()   { return global.botMode; },
+          set mode(v)  { global.botMode = v; },
+          get active() { return global.botActive; },
+          set active(v){ global.botActive = v; },
         };
 
         if (allCommands[cmd]) {
@@ -613,6 +631,8 @@ async function startSession(sessionId, opts = {}) {
               from    : sender,
               msg,
               isOwner,
+              isPrimaryOwner,
+              isCoOwner,
               isSubAdmin,
               isBotAdmin,
               isGroup,

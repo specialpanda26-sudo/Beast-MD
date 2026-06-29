@@ -60,7 +60,8 @@ module.exports = {
   },
 
   // ── .summarize ─────────────────────────────────────────────────────────────
-  summarize: async ({ sock, from, msg, args, config }) => {
+  summarize: async ({ sock, from, msg, args, config, isOwner }) => {
+    if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
     const text = args.join(' ') || msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation;
     if (!text) return sock.sendMessage(from, { text: '📝 Usage: .summarize [text] or reply to a message' }, { quoted: msg });
     if (!config.groqApiKey) return sock.sendMessage(from, { text: '❌ No Groq API key set!' }, { quoted: msg });

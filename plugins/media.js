@@ -1,5 +1,5 @@
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');  // ✅ FIX: use execFile (no shell injection)
 const fs = require('fs');
 const path = require('path');
 
@@ -34,7 +34,6 @@ module.exports = {
     }
 
     try {
-      // Build a proper message object for download
       const dlMsg = quotedMsg
         ? {
             key: { remoteJid: from, id: quoted.stanzaId, participant: quoted.participant },
@@ -49,10 +48,10 @@ module.exports = {
       fs.writeFileSync(tmpIn, media);
 
       await new Promise((resolve, reject) => {
-        const cmd = imgMsg
-          ? `ffmpeg -i ${tmpIn} -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2" ${tmpOut} -y`
-          : `ffmpeg -i ${tmpIn} -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2,fps=15" -t 6 ${tmpOut} -y`;
-        exec(cmd, (err) => err ? reject(err) : resolve());
+        const args = imgMsg
+          ? ['-i', tmpIn, '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2', tmpOut, '-y']
+          : ['-i', tmpIn, '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2,fps=15', '-t', '6', tmpOut, '-y'];
+        execFile('ffmpeg', args, (err) => err ? reject(err) : resolve());
       });
 
       await sock.sendMessage(from, { sticker: fs.readFileSync(tmpOut) }, { quoted: msg });
@@ -63,7 +62,7 @@ module.exports = {
     }
   },
 
-  // ── .vv (save voice note) ──────────────────────────────────────────────────
+  // ── .vv ───────────────────────────────────────────────────────────────────
   vv: async ({ sock, from, msg }) => {
     const quoted = msg.message?.extendedTextMessage?.contextInfo;
     const quotedMsg = quoted?.quotedMessage;
@@ -109,15 +108,17 @@ module.exports = {
     }
   },
 
-  // ── .song / .download (yt-dlp) ─────────────────────────────────────────────
+  // ── .song — ✅ FIX: use execFile to prevent shell injection ────────────────
   song: async ({ sock, from, msg, args }) => {
     const url = args[0];
     if (!url) return sock.sendMessage(from, { text: '🎵 Usage: .song [YouTube URL]' }, { quoted: msg });
+    // Basic URL validation
+    if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
 
     await sock.sendMessage(from, { text: '⏳ Downloading audio...' }, { quoted: msg });
     const tmpFile = `/tmp/song_${Date.now()}.mp3`;
 
-    exec(`yt-dlp -x --audio-format mp3 -o "${tmpFile}" "${url}"`, async (err) => {
+    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpFile, url], async (err) => {
       if (err) return sock.sendMessage(from, { text: '❌ Download failed. Check the URL.' }, { quoted: msg });
       try {
         await sock.sendMessage(from, {
@@ -131,14 +132,16 @@ module.exports = {
     });
   },
 
+  // ── .download — ✅ FIX: use execFile to prevent shell injection ────────────
   download: async ({ sock, from, msg, args }) => {
     const url = args[0];
     if (!url) return sock.sendMessage(from, { text: '📥 Usage: .download [URL]' }, { quoted: msg });
+    if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
 
     await sock.sendMessage(from, { text: '⏳ Downloading video...' }, { quoted: msg });
     const tmpFile = `/tmp/dl_${Date.now()}.mp4`;
 
-    exec(`yt-dlp -f mp4 -o "${tmpFile}" "${url}"`, async (err) => {
+    execFile('yt-dlp', ['-f', 'mp4', '-o', tmpFile, url], async (err) => {
       if (err) return sock.sendMessage(from, { text: '❌ Download failed. Check the URL.' }, { quoted: msg });
       try {
         await sock.sendMessage(from, {

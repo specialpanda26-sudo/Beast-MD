@@ -1,8 +1,9 @@
 module.exports = {
 
   // ── .tagall ────────────────────────────────────────────────────────────────
-  tagall: async ({ sock, from, msg, isGroup, args }) => {
+  tagall: async ({ sock, from, msg, isGroup, isBotAdmin, args }) => {
     if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only command!' });
+    if (!isBotAdmin) return sock.sendMessage(from, { text: '❌ Bot admin only!' }, { quoted: msg });
     const groupMeta = await sock.groupMetadata(from);
     const members = groupMeta.participants;
     const customMsg = args.join(' ') || '';

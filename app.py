@@ -221,8 +221,27 @@ async def status_check():
     return jsonify({"status": "ok"})
 
 
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+
+def _check_admin_auth(req) -> bool:
+    """
+    ✅ FIX: admin panel had no server-side auth — anyone who found the URL
+    could read all sessions, contacts, messages. Now requires either:
+    - ?pass=PASSWORD query param, or
+    - Authorization: Bearer PASSWORD header
+    Falls back to open if ADMIN_PASSWORD env var is not set (dev mode).
+    """
+    if not ADMIN_PASSWORD:
+        return True  # dev mode: no password set
+    token = req.args.get("pass") or req.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    return token == ADMIN_PASSWORD
+
+
 @app.route("/admin")
 async def admin_panel():
+    if not _check_admin_auth(request):
+        return Response("❌ Unauthorized", status=401,
+                        headers={"WWW-Authenticate": 'Bearer realm="Admin Panel"'})
     admin_path = Path(__file__).parent / "admin.html"
     if admin_path.exists():
         return Response(admin_path.read_text(encoding="utf-8"), mimetype="text/html")
@@ -231,6 +250,8 @@ async def admin_panel():
 
 @app.route("/admin/stats", methods=["GET"])
 async def admin_stats():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT COUNT(*) FROM contacts") as c:
             contacts = (await c.fetchone())[0]
@@ -273,6 +294,8 @@ async def admin_stats():
 
 @app.route("/admin/terminate", methods=["POST"])
 async def admin_terminate():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     session_name = data.get("session", "")
     if session_name in SESSION_REGISTRY:
@@ -517,6 +540,15 @@ async def pair_reset_proxy():
     except Exception:
         return Response('{"ok":true}', status=200, content_type="application/json")
 
+@app.route("/qr-reset", methods=["POST"])
+async def qr_reset_proxy():
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.post(f"{NODE_PAIR_URL}/qr-reset")
+            return Response(resp.content, status=resp.status_code, content_type="application/json")
+    except Exception:
+        return Response('{"ok":true}', status=200, content_type="application/json")
+
 @app.route("/pair-status", methods=["GET"])
 async def pair_status_proxy():
     try:
@@ -628,8 +660,14 @@ async def process_command_pipeline():
         return jsonify({"reply": f"❌ Could not extract audio.\n{result.get('error', 'Unknown error')}"})
 
     # 5. Recover Command
-    elif incoming_text.startswith("/recover "):
-        target_jid = incoming_text[9:].strip()
+    elif incoming_text.startswith("/recover"):
+        # ✅ FIX: gate to owner only — any stranger could read deleted messages
+        owner_number = os.environ.get("OWNER_NUMBER", "254141915668").replace("+", "").replace(" ", "")
+        sender_clean = sender.split("@")[0].split(":")[0]
+        if sender_clean != owner_number:
+            return jsonify({"reply": "❌ This command is owner-only."})
+        parts = incoming_text.split(None, 1)
+        target_jid = parts[1].strip() if len(parts) > 1 else ""
         if not target_jid:
             return jsonify({"reply": "⚠️ Please provide a contact number after /recover"})
         async with aiosqlite.connect(DB_FILE) as db:
@@ -648,6 +686,11 @@ async def process_command_pipeline():
 
     # 6. Viewonce Command
     elif incoming_text.startswith("/viewonce"):
+        # ✅ FIX: gate to owner only — view-once media is private by definition
+        owner_number = os.environ.get("OWNER_NUMBER", "254141915668").replace("+", "").replace(" ", "")
+        sender_clean = sender.split("@")[0].split(":")[0]
+        if sender_clean != owner_number:
+            return jsonify({"reply": "❌ This command is owner-only."})
         parts = incoming_text.split()
         target = parts[1].strip() if len(parts) > 1 else None
         async with aiosqlite.connect(DB_FILE) as db:

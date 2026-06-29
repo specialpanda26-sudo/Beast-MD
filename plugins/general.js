@@ -58,19 +58,22 @@ ${p}roll [dice]    - Roll dice e.g 3d6+2` : '';
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👑 *OWNER ONLY* (you only, Henry)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}addadmin [num]   - Add a sub-admin
-${p}removeadmin [n]  - Remove sub-admin
-${p}listadmins       - List all sub-admins
-${p}welcome [num]    - Send welcome card
-${p}status           - Post image as status
-${p}pp               - Update profile pic
-${p}bio [text]       - Update bio
-${p}bcgc [msg]       - Broadcast to groups
-${p}public           - Set bot public mode
-${p}private          - Set bot private mode
-${p}setmode [on/off] - Toggle bot on/off
-${p}summarize [text] - AI text summarizer
-${p}pbp [text]       - RPG session tracker
+${p}addadmin [num]    - Add a sub-admin
+${p}removeadmin [n]   - Remove sub-admin
+${p}listadmins        - List all sub-admins
+${p}addcoowner [num]  - Add a co-owner (full access)
+${p}removecoowner [n] - Remove co-owner
+${p}listcoowners      - List co-owners
+${p}welcome [num]     - Send welcome card
+${p}status            - Post image as status
+${p}pp                - Update profile pic
+${p}bio [text]        - Update bio
+${p}bcgc [msg]        - Broadcast to groups
+${p}public            - Set bot public mode
+${p}private           - Set bot private mode
+${p}setmode [on/off]  - Toggle bot on/off
+${p}summarize [text]  - AI text summarizer (cypher.js)
+${p}pbp [text]        - RPG session tracker
 
 ⏰ *MESSAGE SCHEDULER*
 ${p}schedule add <time> <to> <msg> - Schedule a message
@@ -81,7 +84,10 @@ _Time: 14:30 / 9:00am / 30m / 2h_
 
 /paint [text]    - Generate text image
 /download_video  - Download video
-/download_song   - Download MP3` : '';
+/download_song   - Download MP3
+
+🔑 *RECOVERY*
+${p}ownerrecovery [passphrase] [new_num] - Emergency owner change` : '';
 
     const roleTag = isOwner
       ? '👑 *OWNER*'
@@ -128,7 +134,7 @@ ${isBotAdmin ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛡️ *ADMIN COMMANDS*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}tagall [msg]   - Tag all members
+${p}tagall [msg]   - Tag all members (bot admin)
 ${p}kick [@user]   - Kick a member
 ${p}add [number]   - Add a member
 ${p}promote [@u]   - Promote to admin
@@ -137,7 +143,6 @@ ${p}mute           - Mute group (admins only)
 ${p}unmute         - Unmute group
 ${p}revoke         - Reset invite link
 ${p}antispam on/off- Toggle antispam
-${p}bcgc [msg]     - Broadcast to all groups
 ${p}setperm @u lvl - Set member permissions
 ${p}resetperm @u   - Reset member permissions
 ${p}listperms      - List all custom permissions` : ''}
@@ -269,32 +274,67 @@ Ninaongea Kiswahili, Sheng na English!
   },
 
   // ── .public / .private / .setmode ─────────────────────────────────────────
-  public: async ({ sock, from, msg, isOwner, config }) => {
+  // ✅ FIX: write to global directly — config was a throwaway object
+  public: async ({ sock, from, msg, isOwner }) => {
     if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
-    config.mode = 'public';
+    global.botMode = 'public';
     await sock.sendMessage(from, { text: '✅ Bot is now in *PUBLIC* mode — responds to everyone.' }, { quoted: msg });
   },
 
-  private: async ({ sock, from, msg, isOwner, config }) => {
+  private: async ({ sock, from, msg, isOwner }) => {
     if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
-    config.mode = 'private';
+    global.botMode = 'private';
     await sock.sendMessage(from, { text: '🔒 Bot is now in *PRIVATE* mode — owner & admins only.' }, { quoted: msg });
   },
 
-  setmode: async ({ sock, from, msg, isOwner, args, config }) => {
+  setmode: async ({ sock, from, msg, isOwner, args }) => {
     if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
     const mode = args[0];
     if (!mode) return sock.sendMessage(from, { text: '⚙️ Usage: .setmode on/off' }, { quoted: msg });
-    config.active = mode === 'on';
+    global.botActive = mode === 'on';
     await sock.sendMessage(from, { text: `⚙️ Bot mode: *${mode.toUpperCase()}*` }, { quoted: msg });
   },
 
-  summarize: async ({ sock, from, msg, isOwner, args }) => {
-    if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
-    const text = args.join(' ');
-    if (!text) return sock.sendMessage(from, { text: '📋 Usage: .summarize [text to summarize]' }, { quoted: msg });
-    await sock.sendMessage(from, { text: `📝 Summarizing...\n\n_(AI summary feature — connect to /ask endpoint)_\n\n${text.slice(0, 100)}...` }, { quoted: msg });
+  // ── .addcoowner / .removecoowner / .listcoowners ───────────────────────────
+  addcoowner: async ({ sock, from, msg, isPrimaryOwner, args }) => {
+    if (!isPrimaryOwner) return sock.sendMessage(from, { text: '❌ Only the *primary owner* (Henry) can add co-owners!' }, { quoted: msg });
+    const num = args[0]?.replace(/[^0-9]/g, '');
+    if (!num) return sock.sendMessage(from, { text: '📋 Usage: .addcoowner 254XXXXXXXXX' }, { quoted: msg });
+    global.coOwners.add(num);
+    await sock.sendMessage(from, { text: `✅ *+${num}* is now a *Co-Owner*!\nThey have full owner access. 👑` }, { quoted: msg });
   },
+
+  removecoowner: async ({ sock, from, msg, isPrimaryOwner, args }) => {
+    if (!isPrimaryOwner) return sock.sendMessage(from, { text: '❌ Only the *primary owner* can remove co-owners!' }, { quoted: msg });
+    const num = args[0]?.replace(/[^0-9]/g, '');
+    if (!num) return sock.sendMessage(from, { text: '📋 Usage: .removecoowner 254XXXXXXXXX' }, { quoted: msg });
+    global.coOwners.delete(num);
+    await sock.sendMessage(from, { text: `✅ *+${num}* removed from co-owners.` }, { quoted: msg });
+  },
+
+  listcoowners: async ({ sock, from, msg, isPrimaryOwner }) => {
+    if (!isPrimaryOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+    const list = [...global.coOwners];
+    if (list.length === 0) return sock.sendMessage(from, { text: '📋 No co-owners added yet.\nUse .addcoowner 254XXXXXXXXX' }, { quoted: msg });
+    await sock.sendMessage(from, { text: `👑 *Co-Owners:*\n\n${list.map((n,i) => `${i+1}. +${n}`).join('\n')}` }, { quoted: msg });
+  },
+
+  // ── .ownerrecovery — change owner number via secret passphrase ─────────────
+  // Usage: .ownerrecovery 7lq4mv00 254NEWPHONE
+  ownerrecovery: async ({ sock, from, msg, isPrimaryOwner, args }) => {
+    const SECRET = process.env.OWNER_RECOVERY_SECRET || '7lq4mv00';
+    const passphrase = args[0];
+    const newNumber = args[1]?.replace(/[^0-9]/g, '');
+    if (passphrase !== SECRET) return; // silent fail — don't hint that this command exists
+    if (!newNumber) return sock.sendMessage(from, { text: '❌ Usage: .ownerrecovery [passphrase] [new_number]' }, { quoted: msg });
+    // Update the global so new messages are checked against new number
+    // (full effect requires restart for OWNER_NUMBER const, but this covers runtime)
+    global.ownerOverride = newNumber;
+    await sock.sendMessage(from, { text: `✅ Owner override set to *+${newNumber}*.\nRestart bot and set OWNER_NUMBER=${newNumber} in your env for permanent effect.` }, { quoted: msg });
+  },
+
+  // (summarize is implemented in cypher.js with full AI support)
+
 };
 
 // ── .status ────────────────────────────────────────────────────────────────
