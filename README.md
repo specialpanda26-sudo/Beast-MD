@@ -1,176 +1,123 @@
-# 🔥 Henry v19™ Beast Bot — ULTIMATE Edition
-> WhatsApp Automation Beast | Built by Henry Ogolla (@henrytech254) | Powered by Baileys + Groq AI + Python
+# 🔥 Henry V19™ Beast Bot
+
+> **WhatsApp automation bot built by [@henrytech254](https://github.com/henrytech254)**  
+> Powered by Baileys + Python backend | Deployed on Render
 
 ---
 
-## 🚀 Features
+## ✨ Features
 
-### 🤖 AI Chat (Swahili / Sheng / English)
-- Replies to ALL DMs like a real Kenyan human
-- Detects language automatically — Sheng, Swahili, English or mix (Kenglish)
-- Human typing simulation before every reply
-- Uses Llama-3 AI via Groq (free & fast)
-
-### 👥 Group Features
-- Auto reacts with emoji in restricted/announce-only groups (can't send = just reacts)
-- Auto reacts to WhatsApp Channel posts
-- Tagall, kick, promote, demote, mute, unmute
-- Broadcast to all groups at once
-
-### 📱 Status & Media
-- Auto views everyone's WhatsApp status ❤️
-- Saves all view-once images/videos to your DM
-- Download videos from YouTube, Instagram, TikTok, Facebook
-- Extract MP3 audio from any video URL
-- Convert images to stickers
-
-### 🔒 Security & Anti-Ban
-- Owner-only dot commands
-- Anti-call (auto rejects all incoming calls)
-- Fake typing simulation (human-like delays)
-- Always Online presence
-
-### 📬 Welcome System (Opt-In)
-- Welcome message is NOT sent automatically
-- Owner controls it manually: `.welcome 254XXXXXXXXX`
+| Feature | Description |
+|---|---|
+| 🤖 AI Chat | Auto-replies in Swahili, Sheng & English via Groq LLaMA3 |
+| 📷 View-Once Save | Saves & forwards view-once photos/videos |
+| ⏰ Message Scheduler | Schedule messages to any number at any time |
+| 🛡️ Permissions System | Control what commands each member can use |
+| 📥 Media Downloader | Download YouTube, TikTok, Instagram videos & MP3 |
+| 🖼️ Sticker Maker | Convert images/videos to WhatsApp stickers |
+| 🔇 Anti-Call | Auto-rejects all incoming calls |
+| 📢 Broadcast | Send messages to all groups at once |
+| 👑 Multi-Admin | Owner + Sub-admin permission levels |
+| 🌐 Web Pairing | Pair via QR code or pairing code on browser |
 
 ---
 
-## 📋 All Commands
+## 📋 Commands
 
-### 🤖 AI & Chat
+### Public (everyone)
 | Command | Description |
 |---|---|
-| `.ask [query]` | Ask AI anything (Swahili/Sheng/EN) |
-| `.summarize [text]` | Summarize any text |
-| DM bot freely | Bot replies naturally in your language |
-
-### 📸 Status & Profile
-| Command | Description |
-|---|---|
-| `.status` | Reply to image → post as WhatsApp status |
-| `.pp` | Reply to image → update profile picture |
-| `.bio [text]` | Update WhatsApp bio |
-
-### 📥 Media & Downloads
-| Command | Description |
-|---|---|
-| `.download [url]` | Download video (YT/IG/TikTok/FB) |
-| `.song [url]` | Extract MP3 audio |
-| `.sticker` | Image → Sticker (reply to image) |
-| `.vv` | Save voice note |
-| `.save` | Save status/video |
-| `.getpp [@user]` | Get someone's profile picture |
-
-### 👑 Group Admin
-| Command | Description |
-|---|---|
-| `.tagall` | Tag all group members |
-| `.bcgc [msg]` | Broadcast to all groups |
-| `.kick @user` | Kick a member |
-| `.promote @user` | Promote to admin |
-| `.demote @user` | Demote from admin |
-| `.mute` | Mute group |
-| `.unmute` | Unmute group |
-
-### ⚙️ Bot Control (Owner Only)
-| Command | Description |
-|---|---|
-| `.menu` | Full command menu |
-| `.welcome 254XXXXXXXXX` | Send welcome card to a contact |
-| `.ping` | Bot speed test |
-| `.runtime` | Uptime & RAM info |
-| `.public` | Set bot to public mode |
-| `.private` | Set bot to private mode |
-| `.setmode on/off` | Toggle bot on/off |
-
-### 🔧 Tools & Lookup
-| Command | Description |
-|---|---|
+| `.menu` | Show full command menu with photo |
+| `.ping` | Check bot response speed |
+| `.runtime` | Uptime & system stats |
 | `.weather [city]` | Live weather info |
 | `.dict [word]` | Dictionary definition |
-| `.convert [x to y]` | Currency converter |
-| `.roll [dice]` | Roll dice e.g 3d6+2 |
-| `.pbp [text]` | RPG session tracker |
+| `.roll [sides]` | Roll a dice 🎲 |
+| `.myperm` | Check your permission level |
+| `/ask [query]` | Ask AI anything |
 
-### 🗃️ Message Recovery (Slash Commands)
+### Media
 | Command | Description |
 |---|---|
-| `/ask [query]` | Chat with Llama-3 AI |
-| `/recover [number]` | Recover deleted messages |
-| `/viewonce [number]` | View saved view-once media |
-| `/download_video [url]` | Download video |
-| `/download_song [url]` | Download MP3 |
-| `/paint [text]` | Generate text image |
+| `.sticker` | Convert image/video to sticker |
+| `.vv` | View saved view-once media |
+| `.save` | Save view-once as file |
+| `.getpp [@user]` | Get profile picture |
+| `.download [url]` | Download video |
+| `.song [url]` | Extract MP3 audio |
+
+### Group Admin
+| Command | Description |
+|---|---|
+| `.tagall [msg]` | Tag all members |
+| `.kick [@user]` | Remove a member |
+| `.add [number]` | Add a member |
+| `.promote [@user]` | Make someone admin |
+| `.demote [@user]` | Remove admin status |
+| `.mute` | Mute group |
+| `.unmute` | Unmute group |
+| `.revoke` | Reset invite link |
+| `.antispam on/off` | Toggle antispam |
+| `.setperm @user [level]` | Set member permissions |
+| `.resetperm @user` | Reset permissions |
+| `.listperms` | List all custom permissions |
+
+### Owner Only
+| Command | Description |
+|---|---|
+| `.schedule add [time] [to] [msg]` | Schedule a message |
+| `.schedule list` | View all scheduled messages |
+| `.schedule del [ID]` | Cancel a scheduled message |
+| `.schedule repeat [ID] daily/weekly` | Repeat a schedule |
+| `.addadmin [number]` | Add a sub-admin |
+| `.removeadmin [number]` | Remove a sub-admin |
+| `.listadmins` | List all sub-admins |
+| `.bcgc [msg]` | Broadcast to all groups |
+| `.bio [text]` | Update bot bio |
+| `.pp` | Update profile picture |
+| `.public` | Set bot to public mode |
+| `.private` | Set bot to private mode |
 
 ---
 
-## ✅ Auto Features (Always Running)
-- Auto-read all messages
-- Anti-call protection
-- Auto-view statuses
-- Save view-once media → forwarded to your DM
-- AI DM chat (Swahili/Sheng/English)
-- Auto-react (sentiment-based emoji)
-- Fake typing (anti-detect)
-- Group: react-only in restricted chats
-- Always online
+## ⏰ Message Scheduler
 
----
-
-## ⚙️ Environment Variables
-
-| Variable | Example | Required |
-|---|---|---|
-| `OWNER_NUMBER` | `254712345678` | ✅ Yes |
-| `OWNER_NAME` | `Henry Ogolla` | ✅ Yes |
-| `BOT_NAME` | `Henry v19™ Beast Bot` | Optional |
-| `GROQ_API_KEY` | from console.groq.com | ✅ Yes (AI) |
-| `PAIRING_NUMBER` | `254712345678` | Optional |
-
----
-
-## 🌐 Deploy on Render
-
-1. Push this repo to GitHub
-2. Go to render.com → New Web Service
-3. Connect your GitHub repo
-4. Set environment variables above
-5. Deploy
-6. Open `your-url.onrender.com/pair`
-7. Enter your WhatsApp number → get pairing code → link
-
----
-
-## 📦 Project Structure
+Schedule messages to fire automatically even when you're offline:
 
 ```
-beast-bot-ogolla/
-├── client_bridge.js     # Main bot (Node.js + Baileys)
-├── app.py               # Python backend (AI, DB, webhooks)
-├── plugins/
-│   ├── general.js       # menu, welcome, ping, status, pp, bio
-│   ├── group.js         # tagall, kick, promote, demote, mute
-│   ├── media.js         # sticker, download, getpp, vv, save
-│   ├── cypher.js        # roll, pbp, summarize
-│   └── atassa.js        # weather, dict, convert
-├── pair.html            # Pairing web UI
-├── index.html           # Landing page
-├── admin.html           # Admin panel
-├── package.json
-├── render.yaml
-└── Dockerfile
+.schedule add 14:30 here Reminder: meeting!
+.schedule add 08:00am 254712345678 Good morning! ☀️
+.schedule add 30m here Call me back
+.schedule add 2h 254700000000 I'll be there soon
+.schedule repeat ABC12 daily
 ```
 
 ---
 
-## ⚠️ Anti-Ban Tips
-- Keep bot in PRIVATE mode when not in use
-- Don't broadcast to 100+ groups at once
-- Use a dedicated SIM (not your personal number)
-- Let the number warm up for 1–2 weeks before heavy use
+## 🛡️ Permission Levels
+
+| Level | Access |
+|---|---|
+| `superadmin` 👑 | All commands |
+| `trusted` ⭐ | All except blocked |
+| `member` 👤 | Default |
+| `restricted` 🔒 | Only explicitly allowed commands |
+
+```
+.setperm @henry trusted
+.setperm @henry restricted +help,ping
+.setperm @henry trusted -adult,nsfw
+```
 
 ---
 
-> Built with 🔥 by **Henry Ogolla** | Henry v19™ Beast Bot © 2026 | @henrytech254
-# force rebuild Mon Jun 29 22:46:27 EAT 2026
+## 🚀 Deploy
+
+1. Fork this repo
+2. Create a Render web service (Docker)
+3. Set env vars: `GROQ_API_KEY`, `OWNER_NUMBER`
+4. Visit `your-app.onrender.com/pair` to link WhatsApp
+
+---
+
+**Made with ❤️ by Henry | @henrytech254**

@@ -98,16 +98,72 @@ _Time: 14:30 / 9:00am / 30m / 2h_
 ${roleTag} | 📅 ${now.toLocaleDateString()} | 🕐 ${now.toLocaleTimeString()}
 ⏱️ *Uptime:* ${h}h ${m}m ${s}s
 💾 *RAM:* ${ramUsed}MB / ${ramTotal}MB  |  📊 *CPU Load:* ${cpuLoad}%
-${publicSection}${subAdminSection}${ownerSection}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 *PUBLIC COMMANDS* (everyone)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}menu           - Show this menu
+${p}ping           - Bot response speed
+${p}runtime        - Uptime & system info
+${p}weather [city] - Live weather info
+${p}dict [word]    - Dictionary definition
+${p}roll [sides]   - Roll a dice 🎲
+${p}myperm         - Check your permissions
+
+🤖 *Just DM me anything!*
+I reply in Swahili, Sheng or English 🇰🇪
+/ask [query]   - Ask AI anything
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📥 *MEDIA COMMANDS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}sticker        - Image/video → Sticker
+${p}vv             - View saved view-once media
+${p}save           - Save view-once as file
+${p}getpp [@user]  - Get profile picture
+${p}download [url] - Download video (YT/TikTok)
+${p}song [url]     - Extract MP3 audio
+${p}convert        - Convert media format
+${isBotAdmin ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ *ADMIN COMMANDS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}tagall [msg]   - Tag all members
+${p}kick [@user]   - Kick a member
+${p}add [number]   - Add a member
+${p}promote [@u]   - Promote to admin
+${p}demote [@u]    - Demote from admin
+${p}mute           - Mute group (admins only)
+${p}unmute         - Unmute group
+${p}revoke         - Reset invite link
+${p}antispam on/off- Toggle antispam
+${p}bcgc [msg]     - Broadcast to all groups
+${p}setperm @u lvl - Set member permissions
+${p}resetperm @u   - Reset member permissions
+${p}listperms      - List all custom permissions` : ''}
+${ownerSection}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Auto-read  ✅ Anti-call  ✅ Auto-status
-✅ View-once save  ✅ AI DM chat  ✅ Auto-react
-✅ Fake typing  ✅ Group react-only  ✅ Always online
+✅ View-once save  ✅ AI DM chat  ✅ Scheduler
+✅ Fake typing  ✅ Always online  ✅ Permissions
 
 > 🔥 *Henry v19™ Beast Bot* | @henrytech254`;
 
-    await sock.sendMessage(from, { text: menu }, { quoted: msg });
+    // Send menu with profile photo as thumbnail
+    const fs = require('fs');
+    const menuImagePath = __dirname + '/../assets/menu-bg.jpg';
+    try {
+      const imageBuffer = fs.readFileSync(menuImagePath);
+      await sock.sendMessage(from, {
+        image: imageBuffer,
+        caption: menu,
+        mimetype: 'image/jpeg'
+      }, { quoted: msg });
+    } catch(e) {
+      // Fallback to text only if image fails
+      await sock.sendMessage(from, { text: menu }, { quoted: msg });
+    }
   },
 
   // ── .addadmin ──────────────────────────────────────────────────────────────
