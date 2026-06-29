@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Henry v19™ Beast Bot — Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #020408; --surface: #080f1a; --border: #112030;
+      --accent: #00e5ff; --green: #00ff88; --red: #ff4455;
+      --yellow: #ffd700; --text: #e2eaf4; --muted: #4a6070;
+      --card: #060e18;
+    }
+    body { background: var(--bg); color: var(--text); font-family: Arial, sans-serif; min-height: 100vh; }
+
+    /* ── LOGIN PAGE ── */
+    #login-page {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+    }
+    .login-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 40px; max-width: 400px; width: 100%;
+    }
+    .login-card h1 { color: var(--accent); font-size: 28px; margin-bottom: 8px; }
+    .login-card p { color: var(--muted); margin-bottom: 28px; font-size: 14px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+    .field input {
+      width: 100%; padding: 14px 16px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-size: 16px;
+    }
+    .field input:focus { outline: none; border-color: var(--accent); }
+    .btn {
+      width: 100%; padding: 14px; border-radius: 10px; border: none;
+      background: var(--accent); color: #000; font-size: 16px;
+      font-weight: bold; cursor: pointer; margin-top: 8px;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-red { background: var(--red); color: white; }
+    .btn-sm {
+      padding: 6px 14px; font-size: 13px; border-radius: 8px;
+      border: none; cursor: pointer; font-weight: bold; width: auto;
+    }
+    .error { color: var(--red); font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+
+    /* ── ADMIN DASHBOARD ── */
+    #admin-page { display: none; }
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar h1 { color: var(--accent); font-size: 20px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .badge { background: var(--green); color: #000; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .logout-btn { background: var(--border); color: var(--muted); padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; }
+
+    .content { padding: 24px; max-width: 900px; margin: 0 auto; }
+
+    /* Stats cards */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; text-align: center;
+    }
+    .stat-num { font-size: 36px; font-weight: bold; color: var(--accent); }
+    .stat-label { color: var(--muted); font-size: 12px; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Sessions */
+    .section-title { font-size: 16px; font-weight: bold; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .session-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .session-info { display: flex; align-items: center; gap: 14px; }
+    .session-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); flex-shrink: 0; }
+    .session-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    .session-name { font-weight: bold; font-size: 15px; }
+    .session-number { color: var(--muted); font-size: 13px; }
+    .session-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .session-actions { display: flex; gap: 8px; }
+
+    .empty { text-align: center; color: var(--muted); padding: 40px; font-size: 14px; }
+
+    /* Contacts */
+    .contacts-list { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .contact-row { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 14px; }
+    .contact-row:last-child { border-bottom: none; }
+    .contact-name { font-weight: bold; }
+    .contact-num { color: var(--muted); font-size: 12px; }
+    .contact-time { color: var(--muted); font-size: 12px; }
+
+    .refresh-btn { background: var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="login-page">
+  <div class="login-card">
+    <h1>🦈 Henry v19™</h1>
+    <p>Admin Panel — Login to continue</p>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="username" placeholder="admin" autocomplete="off"/>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••"/>
+    </div>
+    <button class="btn" onclick="doLogin()">Login →</button>
+    <div class="error" id="login-error">❌ Wrong username or password</div>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div id="admin-page">
+  <div class="topbar">
+    <h1>🦈 Henry v19™ Admin</h1>
+    <div class="topbar-right">
+      <span class="badge" id="online-badge">● ONLINE</span>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-sessions">0</div>
+        <div class="stat-label">Active Sessions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-contacts">0</div>
+        <div class="stat-label">Total Contacts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-messages">0</div>
+        <div class="stat-label">Messages Logged</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-viewonce">0</div>
+        <div class="stat-label">View Once Saved</div>
+      </div>
+    </div>
+
+    <!-- Sessions -->
+    <div class="section-header">
+      <div class="section-title">📱 Active Sessions</div>
+      <button class="refresh-btn" onclick="loadDashboard()">↻ Refresh</button>
+    </div>
+    <div id="sessions-list">
+      <div class="empty">Loading sessions...</div>
+    </div>
+
+    <br/>
+
+    <!-- Recent Contacts -->
+    <div class="section-header">
+      <div class="section-title">👥 Recent Contacts</div>
+    </div>
+    <div class="contacts-list" id="contacts-list">
+      <div class="contact-row"><span style="color:var(--muted)">Loading...</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  const ADMIN_USER = "henry";
+  const ADMIN_PASS = "henrytech2024";
+  let token = localStorage.getItem("admin_token");
+
+  // ── Auth ─────────────────────────────────────────────────
+  function doLogin() {
+    const u = document.getElementById("username").value.trim();
+    const p = document.getElementById("password").value.trim();
+    if (u === ADMIN_USER && p === ADMIN_PASS) {
+      token = btoa(u + ":" + p);
+      localStorage.setItem("admin_token", token);
+      showAdmin();
+    } else {
+      document.getElementById("login-error").style.display = "block";
+    }
+  }
+
+  function doLogout() {
+    localStorage.removeItem("admin_token");
+    token = null;
+    document.getElementById("admin-page").style.display = "none";
+    document.getElementById("login-page").style.display = "flex";
+  }
+
+  function showAdmin() {
+    document.getElementById("login-page").style.display = "none";
+    document.getElementById("admin-page").style.display = "block";
+    loadDashboard();
+    setInterval(loadDashboard, 15000); // auto refresh every 15s
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────
+  async function loadDashboard() {
+    try {
+      // Load stats
+      const stats = await fetch("/admin/stats").then(r => r.json());
+      document.getElementById("stat-sessions").textContent = stats.sessions || 0;
+      document.getElementById("stat-contacts").textContent = stats.contacts || 0;
+      document.getElementById("stat-messages").textContent = stats.messages || 0;
+      document.getElementById("stat-viewonce").textContent = stats.viewonce || 0;
+
+      // Load sessions
+      const sessionsEl = document.getElementById("sessions-list");
+      const sessions = stats.session_list || [];
+      if (sessions.length === 0) {
+        sessionsEl.innerHTML = '<div class="empty">No active sessions. <a href="/pair" style="color:var(--accent)">Link one →</a></div>';
+      } else {
+        sessionsEl.innerHTML = sessions.map(s => `
+          <div class="session-card">
+            <div class="session-info">
+              <div class="session-dot ${s.online ? '' : 'offline'}"></div>
+              <div>
+                <div class="session-name">${s.name}</div>
+                <div class="session-number">+${s.number || 'Unknown'}</div>
+                <div class="session-meta">Messages: ${s.msg_count || 0} · Since: ${s.since || 'N/A'}</div>
+              </div>
+            </div>
+            <div class="session-actions">
+              <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="viewSession('${s.name}')">View</button>
+              <button class="btn-sm btn-red" onclick="terminateSession('${s.name}')">Terminate</button>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      // Load contacts
+      const contactsEl = document.getElementById("contacts-list");
+      const contacts = stats.recent_contacts || [];
+      if (contacts.length === 0) {
+        contactsEl.innerHTML = '<div class="contact-row"><span style="color:var(--muted)">No contacts yet</span></div>';
+      } else {
+        contactsEl.innerHTML = contacts.map(c => `
+          <div class="contact-row">
+            <div>
+              <div class="contact-name">${c.name}</div>
+              <div class="contact-num">${c.sender}</div>
+            </div>
+            <div class="contact-time">${c.time}</div>
+          </div>
+        `).join("");
+      }
+    } catch(e) {
+      console.error("Dashboard error:", e);
+    }
+  }
+
+  async function terminateSession(name) {
+    if (!confirm(`Terminate session "${name}"? This will disconnect WhatsApp.`)) return;
+    try {
+      await fetch("/admin/terminate", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({session: name})
+      });
+      alert(`Session "${name}" terminated.`);
+      loadDashboard();
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  }
+
+  function viewSession(name) {
+    window.open(`/admin/session-detail?session=${encodeURIComponent(name)}`, '_blank');
+  }
+
+  // ── Keyboard enter key support ────────────────────────────
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter" && document.getElementById("login-page").style.display !== "none") {
+      doLogin();
+    }
+  });
+
+  // ── Init ─────────────────────────────────────────────────
+  if (token) {
+    showAdmin();
+  }
+</script>
+</body>
+</html>

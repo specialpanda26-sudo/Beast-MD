@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: shark-bot-v6
+    env: docker
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PORT
+        value: 5000
+      - key: WEB_PORT
+        value: 3000
+    # Python (app.py) owns the single public $PORT (5000).
+    # Node's /pair server runs internally on WEB_PORT (3000).
+    # Python proxies /pair → Node so customers reach it via your public URL:
+    #   https://your-app.onrender.com/pair
+    # Health check hits Python's /status endpoint.
+    healthCheckPath: /status
