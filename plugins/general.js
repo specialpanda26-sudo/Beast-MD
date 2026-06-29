@@ -72,6 +72,13 @@ ${p}setmode [on/off] - Toggle bot on/off
 ${p}summarize [text] - AI text summarizer
 ${p}pbp [text]       - RPG session tracker
 
+⏰ *MESSAGE SCHEDULER*
+${p}schedule add <time> <to> <msg> - Schedule a message
+${p}schedule list    - See all scheduled msgs
+${p}schedule del <ID> - Cancel a scheduled msg
+${p}schedule repeat <ID> daily|weekly - Repeat it
+_Time: 14:30 / 9:00am / 30m / 2h_
+
 /paint [text]    - Generate text image
 /download_video  - Download video
 /download_song   - Download MP3` : '';

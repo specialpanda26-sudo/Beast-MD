@@ -811,8 +811,8 @@
     const msg = document.getElementById('qrMsg');
     btn.disabled = true;
     btn.textContent = '⏳ Requesting QR...';
-    // Reset the session slot so bot will generate a new QR
-    await fetch('/pair-reset', { method: 'POST' }).catch(() => {});
+    // ✅ FIX: call /qr-reset which starts a QR-mode session (not pairing code)
+    await fetch('/qr-reset', { method: 'POST' }).catch(() => {});
     await sleep(600);
     msg.textContent = 'Waiting for QR code...';
     // Poll for the QR data URL

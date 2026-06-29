@@ -32,7 +32,7 @@ global.subAdmins = new Set(
 // ── Plugin Loader ────────────────────────────────────────────────────────────
 // Loads all command handlers from /plugins/*.js
 const allCommands = {};
-['general', 'group', 'media', 'cypher', 'atassa'].forEach(name => {
+['general', 'group', 'media', 'cypher', 'atassa', 'scheduler'].forEach(name => {
   try {
     Object.assign(allCommands, require(`./plugins/${name}`));
   } catch (e) {
@@ -131,7 +131,26 @@ const pairServer = http.createServer(async (req, res) => {
       const newPath = path.join(SESSIONS_DIR, newSid);
       if (fs.existsSync(newPath)) fs.rmSync(newPath, { recursive: true, force: true });
     } catch (_) {}
-    setTimeout(() => startSession(newSid), 500);
+    setTimeout(() => startSession(newSid, { forceQR: false }), 500);
+    return;
+  }
+
+  // POST /qr-reset — start a NEW session in QR code mode (not pairing code)
+  if (req.method === "POST" && url.pathname === "/qr-reset") {
+    lastPairingCode = null;
+    lastPairingNumber = null;
+    lastQRDataUrl = null;
+    pendingPairResolve = null;
+    pairingPending = true;
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+    const newSid = "qr_session_" + Date.now();
+    console.log(`📷 Starting QR session: ${newSid}`);
+    try {
+      const newPath = path.join(SESSIONS_DIR, newSid);
+      if (fs.existsSync(newPath)) fs.rmSync(newPath, { recursive: true, force: true });
+    } catch (_) {}
+    setTimeout(() => startSession(newSid, { forceQR: true }), 500);
     return;
   }
 
@@ -302,7 +321,8 @@ async function askSessionId() {
   return answer || "default";
 }
 
-async function startSession(sessionId) {
+async function startSession(sessionId, opts = {}) {
+  const forceQR = opts.forceQR === true;
   currentSessionId = sessionId;
   activeSessions.add(sessionId);
   const sessionPath = path.join(SESSIONS_DIR, sessionId);
@@ -316,10 +336,15 @@ async function startSession(sessionId) {
   let phoneNumber = "";
 
   if (!state.creds.registered) {
-    if (PAIRING_NUMBER_ENV) {
+    if (forceQR) {
+      // QR mode — don't request pairing code, let Baileys generate QR naturally
+      usePairingCode = false;
+      console.log(`📷 [${sessionId}] QR mode — waiting for QR from Baileys...`);
+      pairingPending = true;
+    } else if (PAIRING_NUMBER_ENV) {
       usePairingCode = true;
       phoneNumber = PAIRING_NUMBER_ENV;
-      console.log(`🔢 Using pairing code linking for ${phoneNumber} (from PAIRING_NUMBER env var).`);
+      console.log(`🔢 Using pairing code linking for ${phoneNumber} (from PAIRING_NUMBER env var.)`);
     } else if (IS_INTERACTIVE) {
       const method = await askLinkingMethod();
       if (method === "2") {
@@ -327,15 +352,14 @@ async function startSession(sessionId) {
         phoneNumber = await askPhoneNumber();
       }
     } else {
-      // No TTY — use web UI for pairing
+      // No TTY — use web UI for pairing code
       console.log(`🌐 No terminal detected. Open /pair in browser to link your number.`);
       usePairingCode = true;
       phoneNumber = await new Promise((resolve) => {
-        pendingPairResolves[sessionId] = resolve;  // register in per-session map
-        pendingPairResolve = resolve;              // legacy compat reference
+        pendingPairResolves[sessionId] = resolve;
+        pendingPairResolve = resolve;
         console.log(`⏳ [${sessionId}] Waiting for number from web UI at /pair ...`);
       });
-      // Clean up after resolution
       delete pendingPairResolves[sessionId];
       pendingPairResolve = null;
       console.log(`📱 Got number from web UI: ${phoneNumber}`);
@@ -755,6 +779,12 @@ async function startSession(sessionId) {
       botOnline = true;
       if (lastPairingCode) lastPairingCode = null;
       lastQRDataUrl = null;  // clear QR — no longer needed
+      // Start message scheduler loop (runs once globally)
+      try {
+        const { startSchedulerLoop } = require('./plugins/scheduler');
+        startSchedulerLoop(socket);
+        console.log('⏰ Message scheduler started');
+      } catch(e) { console.warn('⚠️ Scheduler not loaded:', e.message); }
       // Register session with admin panel
       apiClient.post("/admin/register-session", {
         name: sessionId,
@@ -858,12 +888,14 @@ _Henry v19™ Beast Bot — @henrytech254_ 🔥`;
         try {
           fs.rmSync(path.join(SESSIONS_DIR, sessionId), { recursive: true, force: true });
         } catch (_) {}
-        setTimeout(() => startSession(sessionId), 3000);
+        // Preserve QR mode if this was a QR session
+        const wasQR = sessionId.startsWith('qr_session_');
+        setTimeout(() => startSession(sessionId, { forceQR: wasQR }), 3000);
       } else {
         const reason = statusCode ? `(code: ${statusCode})` : "(unknown reason)";
         console.log(`🔄 [${sessionId}] Reconnecting... ${reason}`);
-        // Exponential backoff — wait 3s before reconnecting
-        setTimeout(() => startSession(sessionId), 3000);
+        const wasQR = sessionId.startsWith('qr_session_');
+        setTimeout(() => startSession(sessionId, { forceQR: wasQR }), 3000);
       }
     }
   });
