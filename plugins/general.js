@@ -15,50 +15,6 @@ module.exports = {
     const cpuLoad = os.loadavg()[0].toFixed(2);
     const p = config.prefix;
 
-    // ── PUBLIC MENU (anyone can see) ──────────────────────────────────────
-    const publicSection = `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💬 *PUBLIC COMMANDS* (everyone)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}menu           - Show this menu
-${p}ping           - Bot response speed
-${p}runtime        - Uptime & system info
-
-🤖 *Just DM me anything!*
-I reply in Swahili, Sheng or English 🇰🇪
-
-/ask [query]   - Ask AI a question
-/recover [n]   - Recover deleted msgs (owner-only, sent to bot's own number)
-/viewonce [n]  - View saved view-once media (owner-only, sent to bot's own number)
-
-💡 Some words trigger instant auto-replies (set by the owner) — just message normally.`;
-
-    // ── SUB-ADMIN MENU ─────────────────────────────────────────────────────
-    const subAdminSection = isBotAdmin ? `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🛡️ *SUB-ADMIN COMMANDS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}tagall         - Tag all group members
-${p}kick [@user]   - Kick a member
-${p}promote [@u]   - Promote to admin
-${p}demote [@u]    - Demote from admin
-${p}mute           - Mute group
-${p}unmute         - Unmute group
-${p}sticker        - Image → Sticker
-${p}getpp [@user]  - Get profile picture (any number)
-${p}download [url] - Download video
-${p}song [url]     - Extract MP3
-${p}dl [url] (audio) - Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
-${p}convertmedia [fmt] - Universal media converter (reply to file)
-${p}weather [city] - Live weather
-${p}dict [word]    - Dictionary
-${p}convert [x y]  - Currency converter
-${p}roll [dice]    - Roll dice e.g 3d6+2
-${p}checklink [url] - Check if a link looks safe or suspicious
-
-🌝 React with this emoji on any message (or view-once) to privately recover it to the bot's own number` : '';
-
     // ── OWNER-ONLY MENU ────────────────────────────────────────────────────
     const ownerSection = isOwner ? `
 
@@ -137,6 +93,8 @@ ${p}referral       - Get your referral link & track earnings
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
 /ask [query]   - Ask AI anything
+/recover [n]   - Recover deleted msgs (owner-only, sent to bot's own number)
+/viewonce [n]  - View saved view-once media (owner-only, sent to bot's own number)
 
 🔐 *ACCESS*
 ${p}login [user] [pass] - Unlock full access
@@ -169,7 +127,10 @@ ${p}revoke         - Reset invite link
 ${p}antispam on/off- Toggle antispam
 ${p}setperm @u lvl - Set member permissions
 ${p}resetperm @u   - Reset member permissions
-${p}listperms      - List all custom permissions` : ''}
+${p}listperms      - List all custom permissions
+${p}checklink [url] - Check if a link looks safe or suspicious
+
+🌝 React with this emoji on any message (or view-once) to privately recover it to the bot's own number` : ''}
 ${ownerSection}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
