@@ -7,7 +7,9 @@
 
 ## 🩹 Recent fixes
 
-- **💰 Wallet top-up system (NEW)** — verified users can now send `.profile` to see their kesh balance/badge, and `.addfunds <amount> <mpesa_code>` (optionally with a screenshot attached) to request a top-up after sending money to the admin's M-Pesa number. **This does not auto-verify payments** — there's no Safaricom Daraja API hookup — every request lands in `/admin → 💰 Payments` as "pending" for a human admin to approve or reject. Approving is the only thing that actually credits the wallet. Each M-Pesa code can only be submitted once (duplicate codes are rejected outright), and the admin gets pinged on WhatsApp the moment a request comes in.
+- **📧 Email OTP error messages fixed** — failed email OTP sends used to return a raw, often cryptic SMTP exception. Now diagnoses the common causes directly: wrong/missing Gmail App Password (Gmail rejects your normal account password for SMTP — you need a 16-char App Password from Google Account → Security → 2-Step Verification → App passwords), or the host's network blocking outbound SMTP. See `.env.example` for the full SMTP setup, and `render.yaml`/Railway dashboard for where to set `SMTP_EMAIL`/`SMTP_PASSWORD` in production — they were previously undeclared there, so email OTP silently failed on a fresh deploy until someone manually added them.
+- **📱 Optional dedicated OTP-sending number** — `OTP_SENDER_SESSION_ID` lets you pair a *second* WhatsApp number purely for sending verification codes, separate from your main bot's chat. **Important:** WhatsApp has no free/anonymous "push notification" sender like Instagram/Meta's own verified numbers — every message, OTP included, has to come from a real, paired WhatsApp account. This just lets that account be a different number than the one running the bot, if you have a second SIM/eSIM to pair. Without it set, OTPs keep using the bot's main number exactly as before.
+- **💰 Wallet top-up system** — verified users can now send `.profile` to see their kesh balance/badge, and `.addfunds <amount> <mpesa_code>` (optionally with a screenshot attached) to request a top-up after sending money to the admin's M-Pesa number. **This does not auto-verify payments** — there's no Safaricom Daraja API hookup — every request lands in `/admin → 💰 Payments` as "pending" for a human admin to approve or reject. Approving is the only thing that actually credits the wallet. Each M-Pesa code can only be submitted once (duplicate codes are rejected outright), and the admin gets pinged on WhatsApp the moment a request comes in.
 - **🔍 `.checkblocked [number]` (owner/sub-admin)** — best-effort heuristic for whether a number has blocked the bot, based on whether their profile photo can be fetched. WhatsApp doesn't expose a real "blocked" status to bots, so this is a clue, not a guarantee — a private/no-photo account can look identical to a block.
 - **Faster replies** — every command used to wait through stacked "human-like typing" delays (1–3s+ of pure artificial wait) plus a blocking backend call with a 45s timeout on the hot path. Delays are now minimal and backend logging calls no longer block replies.
 - **Auto-welcome DM removed** — brand-new DMers no longer get an automatic welcome message; the bot still saves their contact silently in the background. Use `.register` or the `/register` page if you want them directed to sign up.
@@ -68,6 +70,8 @@
 | `.checklink [url]` | Heuristic check for suspicious/phishing links |
 | `.myperm` | Check your permission level |
 | `.register` | Get the web panel registration link (free credits + trust badge) |
+| `.profile` | View your wallet balance, trust badge & recent top-up requests |
+| `.addfunds [amount] [mpesa_code]` | Submit an M-Pesa top-up for admin review (attach a screenshot for faster approval) |
 | `/ask [query]` | Ask AI anything |
 
 ### 🔐 Access / Login
@@ -118,6 +122,7 @@
 | `.addcoowner [number]` | Add a co-owner (full owner powers) |
 | `.removecoowner [number]` | Remove a co-owner |
 | `.settier [number] [subadmin\|coowner]` | Assign any number to any permission tier; auto-DMs them an access notification | Remove a co-owner |
+| `.checkblocked [number]` | Heuristic check for whether a number has blocked the bot (not 100% reliable — WhatsApp has no official "blocked" signal) |
 | `.listcoowners` | List all co-owners |
 | `.bcgc [msg]` | Broadcast message to all groups |
 | `.creategroup [name] \| [numbers]` | Create a new group from a plain list of numbers, e.g. `.creategroup Squad \| 254712345678,254798765432` |
@@ -247,11 +252,29 @@ A self-serve page at **`/register`** lets anyone register their WhatsApp number 
 3. User enters the OTP on the same page to verify.
 4. On success, the number is awarded a **🛡️ Trusted badge** and **80 kesh free credit** automatically.
 
-**Setup:** the WhatsApp delivery option needs nothing extra — it reuses your already-paired WhatsApp session. Adjust the starter credit with `REG_STARTER_CREDITS`. The **email delivery option requires `SMTP_EMAIL`/`SMTP_PASSWORD`** to be set — without them, picking "Email" on the register page returns a clear "email service not configured" error instead of failing silently.
+**Setup:** the WhatsApp delivery option needs nothing extra — it reuses your already-paired WhatsApp session. Adjust the starter credit with `REG_STARTER_CREDITS`. The **email delivery option requires `SMTP_EMAIL`/`SMTP_PASSWORD`** to be set (see `.env.example`) — without them, picking "Email" on the register page returns a clear "email service not configured" error instead of failing silently. **Using Gmail:** `SMTP_PASSWORD` must be a 16-character **App Password** (Google Account → Security → 2-Step Verification → App passwords) — Gmail rejects your normal account password for SMTP logins.
+
+**Optional — a separate number just for OTPs:** by default OTP WhatsApp messages are sent from the same number the main bot runs on. If you'd rather they came from a dedicated number (so OTPs don't sit in your main bot's chat history), pair a second WhatsApp number at `/pair` and set its session name as `OTP_SENDER_SESSION_ID`. Note there's no free/anonymous "push notification" channel like Instagram's own verified sender numbers — WhatsApp only delivers from a real, paired account, so this still needs an actual second SIM/eSIM behind it.
 
 **Admin side:** the **🛡️ Registrations** tab in `/admin` lists every registered user (verified status, badge, credit balance) and lets you **manually top up credit** for any number — just enter their phone + name (no OTP required, since the main bot already has their contact saved). This is also how you'd add credit for a number that hasn't self-registered yet.
 
 This system is intentionally lightweight (SQLite-backed, same DB as the rest of the bot) so it's ready to plug into a future paid top-up flow without restructuring.
+
+---
+
+## 💰 Wallet Top-Ups (M-Pesa, admin-reviewed)
+
+Verified users can fund their kesh wallet by sending real money to the admin's M-Pesa number and submitting the transaction code:
+
+1. User sends money via M-Pesa to `ADMIN_PAYTO_NUMBER` (set this env var — it's just for your own reference/communication to users, nothing automatic reads it).
+2. User sends `.addfunds [amount] [mpesa_code]` to the bot — e.g. `.addfunds 200 QFG7H8J9K0`. Attaching the M-Pesa confirmation screenshot (sent with the command as a caption, or replied to) is optional but speeds up review.
+3. The request is queued as **pending** — nothing is credited yet.
+4. The admin gets pinged on WhatsApp immediately, and reviews it in `/admin → 💰 Payments`: each entry shows the phone, amount, code, and screenshot (if any), with **Approve**/**Reject** buttons.
+5. Approving instantly adds the kesh to that user's wallet and notifies them; rejecting notifies them too, with an optional reason.
+
+**This is intentionally NOT automatic.** There's no Safaricom Daraja API integration here, so there's no way to programmatically confirm a code or screenshot is genuine — this flow keeps a human in the loop instead of pretending to auto-verify, which is what most "fake payment bot" scams rely on. Each M-Pesa code can only be submitted once; a reused/duplicate code is rejected outright before it even reaches the admin queue.
+
+Users can check their balance and submission history anytime with `.profile`.
 
 ---
 

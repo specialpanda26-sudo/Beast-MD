@@ -103,7 +103,26 @@ const pairServer = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST /send-otp-whatsapp — called locally by app.py (Python backend) to
+// ✅ NEW: optional DEDICATED number for sending OTPs, separate from the main
+// bot number — pair a second WhatsApp session (any spare SIM/eSIM/virtual
+// number you control) and set OTP_SENDER_SESSION_ID to its session name.
+// This is the closest you can get to "Instagram-style" OTP delivery on
+// WhatsApp: there's no free/anonymous SMS-style push channel — WhatsApp
+// only delivers messages from a real, paired WhatsApp account — but a
+// second dedicated number at least keeps OTPs out of your main bot's
+// regular chat history and gives it its own clean identity/profile name.
+const OTP_SENDER_SESSION_ID = (process.env.OTP_SENDER_SESSION_ID || "").trim();
+
+function getOtpSocket() {
+  if (OTP_SENDER_SESSION_ID && activeSockets.has(OTP_SENDER_SESSION_ID)) {
+    return activeSockets.get(OTP_SENDER_SESSION_ID);
+  }
+  // Falls back to whichever session is connected first if no dedicated
+  // OTP session is configured/online — keeps OTPs working even before
+  // you've set one up.
+  return activeSockets.values().next().value;
+}
+
   // deliver a registration OTP straight to the user's WhatsApp, instead of
   // email. Internal-only: app.py reaches this over 127.0.0.1, same as the
   // /pair proxy routes below.
@@ -118,10 +137,10 @@ const pairServer = http.createServer(async (req, res) => {
           res.writeHead(400, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: false, error: "phone and otp are required" }));
         }
-        // Use whichever paired session is currently connected — most
-        // deployments only run one WhatsApp number, so the first live
-        // socket is "the bot" sending the code.
-        const socket = activeSockets.values().next().value;
+        // Prefers a dedicated OTP-sending session (OTP_SENDER_SESSION_ID) if
+        // one is paired and online; otherwise falls back to the first
+        // connected session so OTPs still work without one configured.
+        const socket = getOtpSocket();
         if (!socket) {
           res.writeHead(503, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: false, error: "No WhatsApp session is connected right now." }));

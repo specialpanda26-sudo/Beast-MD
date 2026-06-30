@@ -21,4 +21,23 @@ services:
         value: 5000
       - key: WEB_PORT
         value: 3000
+      # ── Email OTP (optional fallback delivery method on /register) ──────
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_EMAIL
+        sync: false                  # the Gmail/SMTP address OTP emails are sent FROM
+      - key: SMTP_PASSWORD
+        sync: false                  # Gmail: must be a 16-char App Password, not your real password
+      - key: SMTP_FROM_NAME
+        value: "Henry Tech Bot Panel"
+      # ── Optional: send OTPs from a SEPARATE WhatsApp number/session,
+      # so codes don't come from the same chat as the main bot. Pair a
+      # second number via /pair and put its session name here.
+      - key: OTP_SENDER_SESSION_ID
+        sync: false
+      # ── Optional: the admin's M-Pesa number shown to users for top-ups ──
+      - key: ADMIN_PAYTO_NUMBER
+        sync: false
     healthCheckPath: /status

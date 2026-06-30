@@ -155,9 +155,30 @@ async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
     try:
         await asyncio.to_thread(_send_sync)
         return {"success": True}
+    except smtplib.SMTPAuthenticationError:
+        logger.error("OTP email send failed: SMTP authentication rejected.")
+        return {
+            "success": False,
+            "error": (
+                "Email login was rejected by the mail server. If you're using Gmail, "
+                "SMTP_PASSWORD must be a 16-character App Password (Google Account → "
+                "Security → 2-Step Verification → App passwords), not your normal Gmail "
+                "password — Gmail blocks regular passwords for SMTP."
+            ),
+        }
+    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, OSError) as e:
+        logger.error("OTP email send failed: could not reach SMTP server: %s", e)
+        return {
+            "success": False,
+            "error": (
+                "Couldn't reach the email server (host/port unreachable or blocked by your "
+                "hosting provider's firewall). Double-check SMTP_HOST/SMTP_PORT, and note "
+                "some free hosts block outbound port 587."
+            ),
+        }
     except Exception as e:
         logger.error("OTP email send failed: %s", e)
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "Couldn't send the email right now. Please try again or use WhatsApp delivery instead."}
 
 
 DB_FILE = "henry_tech_v5.db"
