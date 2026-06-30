@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: beast-bot-ogolla
+    env: docker
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OWNER_NUMBER
+        value: "254141915668"        # ✅ FIX: was missing — owner check always failed
+      - key: OWNER_NAME
+        value: "Henry Ogolla"
+      - key: BOT_NAME
+        value: "Henry v19™ Beast Bot"
+      - key: OWNER_RECOVERY_SECRET
+        sync: false                  # set this in Render dashboard — keep it private
+      - key: PORT
+        value: 5000
+      - key: WEB_PORT
+        value: 3000
+    healthCheckPath: /status

@@ -1,0 +1,255 @@
+const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { execFile } = require('child_process');  // ✅ FIX: use execFile (no shell injection)
+const fs = require('fs');
+const path = require('path');
+
+module.exports = {
+
+  // ── .getpp (upgraded) ────────────────────────────────────────────────────
+  // Usage: .getpp (your own pfp) | .getpp @user | .getpp 254712345678 | reply to someone's msg with .getpp
+  // ✅ Works even for numbers NOT saved in contacts — verifies via sock.onWhatsApp()
+  getpp: async ({ sock, from, msg, args, senderJid, isGroup }) => {
+    const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    const rawArgNumber = args[0]?.replace(/[^0-9]/g, '');
+
+    let target =
+      mentioned ||
+      quotedParticipant ||
+      (rawArgNumber ? `${rawArgNumber}@s.whatsapp.net` : null) ||
+      senderJid ||
+      from;
+
+    // In a group with no target specified, default to the requester not the group
+    if (isGroup && !mentioned && !quotedParticipant && !rawArgNumber) {
+      target = senderJid;
+    }
+
+    // ✅ FIX: if a raw number was given (unsaved contact), verify it's on WhatsApp
+    // and use the JID WhatsApp returns — this is what makes it work for numbers
+    // not saved in your phone contacts.
+    if (rawArgNumber && !mentioned && !quotedParticipant) {
+      try {
+        const [result] = await sock.onWhatsApp(target);
+        if (result?.exists) {
+          target = result.jid;
+        } else {
+          return sock.sendMessage(from, { text: `❌ +${rawArgNumber} is not on WhatsApp.` }, { quoted: msg });
+        }
+      } catch {
+        // If lookup fails, fall back to the raw constructed JID and try anyway
+      }
+    }
+
+    try {
+      // ✅ Try high-res first, fall back to low-res, then to a friendly error
+      let ppUrl;
+      try {
+        ppUrl = await sock.profilePictureUrl(target, 'image');
+      } catch {
+        ppUrl = await sock.profilePictureUrl(target, 'preview');
+      }
+
+      await sock.sendMessage(from, {
+        image: { url: ppUrl },
+        caption: `📸 Profile picture of @${target.split('@')[0]}`,
+        mentions: [target],
+      }, { quoted: msg });
+    } catch {
+      await sock.sendMessage(from, {
+        text: `❌ Could not get profile picture of @${target.split('@')[0]} — it may be private or they don't have one set.`,
+        mentions: [target],
+      }, { quoted: msg });
+    }
+  },
+
+  // ── .about — get someone's WhatsApp "About" status text ────────────────────
+  // Usage: .about (your own) | .about @user | .about 254712345678 | reply with .about
+  // ✅ Works even for numbers NOT saved in contacts
+  about: async ({ sock, from, msg, args, senderJid, isGroup }) => {
+    const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    const rawArgNumber = args[0]?.replace(/[^0-9]/g, '');
+
+    let target =
+      mentioned ||
+      quotedParticipant ||
+      (rawArgNumber ? `${rawArgNumber}@s.whatsapp.net` : null) ||
+      senderJid ||
+      from;
+
+    if (isGroup && !mentioned && !quotedParticipant && !rawArgNumber) {
+      target = senderJid;
+    }
+
+    if (rawArgNumber && !mentioned && !quotedParticipant) {
+      try {
+        const [result] = await sock.onWhatsApp(target);
+        if (result?.exists) {
+          target = result.jid;
+        } else {
+          return sock.sendMessage(from, { text: `❌ +${rawArgNumber} is not on WhatsApp.` }, { quoted: msg });
+        }
+      } catch {
+        // fall back and try anyway
+      }
+    }
+
+    try {
+      const statusResult = await sock.fetchStatus(target);
+      const aboutText = statusResult?.status || statusResult?.[0]?.status;
+      const setAt = statusResult?.setAt || statusResult?.[0]?.setAt;
+
+      if (!aboutText) {
+        return sock.sendMessage(from, {
+          text: `ℹ️ @${target.split('@')[0]} has no About text set or it's private.`,
+          mentions: [target],
+        }, { quoted: msg });
+      }
+
+      const dateLine = setAt ? `\n🕐 _Set: ${new Date(setAt).toLocaleString()}_` : '';
+      await sock.sendMessage(from, {
+        text: `ℹ️ *About* of @${target.split('@')[0]}:\n\n"${aboutText}"${dateLine}`,
+        mentions: [target],
+      }, { quoted: msg });
+    } catch {
+      await sock.sendMessage(from, {
+        text: `❌ Could not get About info for @${target.split('@')[0]} — it may be private.`,
+        mentions: [target],
+      }, { quoted: msg });
+    }
+  },
+
+  // ── .sticker ───────────────────────────────────────────────────────────────
+  sticker: async ({ sock, from, msg }) => {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = quoted?.quotedMessage;
+    const imgMsg = quotedMsg?.imageMessage || msg.message?.imageMessage;
+    const vidMsg = quotedMsg?.videoMessage || msg.message?.videoMessage;
+
+    if (!imgMsg && !vidMsg) {
+      return sock.sendMessage(from, { text: '❌ Reply to an image or short video with .sticker' }, { quoted: msg });
+    }
+
+    try {
+      const dlMsg = quotedMsg
+        ? {
+            key: { remoteJid: from, id: quoted.stanzaId, participant: quoted.participant },
+            message: quotedMsg,
+          }
+        : msg;
+
+      const media = await downloadMediaMessage(dlMsg, 'buffer', {});
+      const ext = imgMsg ? 'jpg' : 'mp4';
+      const tmpIn = `/tmp/sticker_in_${Date.now()}.${ext}`;
+      const tmpOut = `/tmp/sticker_out_${Date.now()}.webp`;
+      fs.writeFileSync(tmpIn, media);
+
+      await new Promise((resolve, reject) => {
+        const args = imgMsg
+          ? ['-i', tmpIn, '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2', tmpOut, '-y']
+          : ['-i', tmpIn, '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2,fps=15', '-t', '6', tmpOut, '-y'];
+        execFile('ffmpeg', args, (err) => err ? reject(err) : resolve());
+      });
+
+      await sock.sendMessage(from, { sticker: fs.readFileSync(tmpOut) }, { quoted: msg });
+      fs.unlinkSync(tmpIn);
+      fs.unlinkSync(tmpOut);
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Sticker failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  // ── .vv ───────────────────────────────────────────────────────────────────
+  vv: async ({ sock, from, msg }) => {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = quoted?.quotedMessage;
+    const audioMsg = quotedMsg?.audioMessage || msg.message?.audioMessage;
+
+    if (!audioMsg) return sock.sendMessage(from, { text: '❌ Reply to a voice note with .vv' }, { quoted: msg });
+
+    try {
+      const dlMsg = quotedMsg
+        ? { key: { remoteJid: from, id: quoted.stanzaId, participant: quoted.participant }, message: quotedMsg }
+        : msg;
+      const buffer = await downloadMediaMessage(dlMsg, 'buffer', {});
+      await sock.sendMessage(from, {
+        audio: buffer,
+        mimetype: 'audio/mp4',
+        ptt: false,
+      }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  save: async ({ sock, from, msg }) => {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = quoted?.quotedMessage;
+    const vidMsg = quotedMsg?.videoMessage || msg.message?.videoMessage;
+    const imgMsg = quotedMsg?.imageMessage || msg.message?.imageMessage;
+
+    if (!vidMsg && !imgMsg) return sock.sendMessage(from, { text: '❌ Reply to a video or image with .save' }, { quoted: msg });
+
+    try {
+      const dlMsg = quotedMsg
+        ? { key: { remoteJid: from, id: quoted.stanzaId, participant: quoted.participant }, message: quotedMsg }
+        : msg;
+      const buffer = await downloadMediaMessage(dlMsg, 'buffer', {});
+      if (vidMsg) {
+        await sock.sendMessage(from, { video: buffer, caption: '✅ Video saved!' }, { quoted: msg });
+      } else {
+        await sock.sendMessage(from, { image: buffer, caption: '✅ Image saved!' }, { quoted: msg });
+      }
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  // ── .song — ✅ FIX: use execFile to prevent shell injection ────────────────
+  song: async ({ sock, from, msg, args }) => {
+    const url = args[0];
+    if (!url) return sock.sendMessage(from, { text: '🎵 Usage: .song [YouTube URL]' }, { quoted: msg });
+    // Basic URL validation
+    if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
+
+    await sock.sendMessage(from, { text: '⏳ Downloading audio...' }, { quoted: msg });
+    const tmpFile = `/tmp/song_${Date.now()}.mp3`;
+
+    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpFile, url], async (err) => {
+      if (err) return sock.sendMessage(from, { text: '❌ Download failed. Check the URL.' }, { quoted: msg });
+      try {
+        await sock.sendMessage(from, {
+          audio: fs.readFileSync(tmpFile),
+          mimetype: 'audio/mpeg',
+        }, { quoted: msg });
+        fs.unlinkSync(tmpFile);
+      } catch (e) {
+        await sock.sendMessage(from, { text: `❌ Send failed: ${e.message}` }, { quoted: msg });
+      }
+    });
+  },
+
+  // ── .download — ✅ FIX: use execFile to prevent shell injection ────────────
+  download: async ({ sock, from, msg, args }) => {
+    const url = args[0];
+    if (!url) return sock.sendMessage(from, { text: '📥 Usage: .download [URL]' }, { quoted: msg });
+    if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
+
+    await sock.sendMessage(from, { text: '⏳ Downloading video...' }, { quoted: msg });
+    const tmpFile = `/tmp/dl_${Date.now()}.mp4`;
+
+    execFile('yt-dlp', ['-f', 'mp4', '-o', tmpFile, url], async (err) => {
+      if (err) return sock.sendMessage(from, { text: '❌ Download failed. Check the URL.' }, { quoted: msg });
+      try {
+        await sock.sendMessage(from, {
+          video: fs.readFileSync(tmpFile),
+          caption: '✅ Downloaded!',
+        }, { quoted: msg });
+        fs.unlinkSync(tmpFile);
+      } catch (e) {
+        await sock.sendMessage(from, { text: `❌ Send failed: ${e.message}` }, { quoted: msg });
+      }
+    });
+  },
+};
