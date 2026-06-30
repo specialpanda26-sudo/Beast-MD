@@ -315,7 +315,7 @@ async def init_db():
                 verified_at REAL
             )
         """)
-        for default_feature in ("ai_chat", "downloads", "keywords", "welcome_message",
+        for default_feature in ("ai_chat", "downloads", "keywords",
                                  "status_save", "antilink", "menu_buttons"):
             await db.execute(
                 "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",

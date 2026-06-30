@@ -306,7 +306,16 @@ ${ownerSection}
   // ✅ SECURITY FIX: failed attempts are rate-limited per number to slow brute force.
   login: async ({ sock, from, msg, args, senderJid }) => {
     const BOT_USER = process.env.BOT_LOGIN_USER || 'Henry';
-    const BOT_PASS = process.env.BOT_LOGIN_PASS || '7lq4mv00';
+    const BOT_PASS = process.env.BOT_LOGIN_PASS;
+    // 🔒 SECURITY FIX: this used to fall back to a hardcoded default
+    // password ('7lq4mv00') baked into the source code on a public repo —
+    // anyone reading the code could log in as owner. Now it refuses to
+    // work at all until you set BOT_LOGIN_PASS yourself.
+    if (!BOT_PASS) {
+      return sock.sendMessage(from, {
+        text: '🔒 Login is disabled — BOT_LOGIN_PASS is not set in the environment.'
+      }, { quoted: msg });
+    }
     const inputUser = args[0];
     const inputPass = args[1];
     const num = senderJid.split('@')[0].replace(/:\d+$/, '');
@@ -488,9 +497,15 @@ Ninaongea Kiswahili, Sheng na English!
   },
 
   // ── .ownerrecovery — change owner number via secret passphrase ─────────────
-  // Usage: .ownerrecovery 7lq4mv00 254NEWPHONE
+  // Usage: .ownerrecovery [OWNER_RECOVERY_SECRET] 254NEWPHONE
   ownerrecovery: async ({ sock, from, msg, isPrimaryOwner, args }) => {
-    const SECRET = process.env.OWNER_RECOVERY_SECRET || '7lq4mv00';
+    const SECRET = process.env.OWNER_RECOVERY_SECRET;
+    // 🔒 SECURITY FIX: this used to fall back to the same hardcoded default
+    // ('7lq4mv00') as .login, sitting in plain text in a public repo —
+    // anyone could hijack bot ownership with it. Now it silently does
+    // nothing (same as a wrong passphrase) until OWNER_RECOVERY_SECRET is
+    // actually set.
+    if (!SECRET) return;
     const passphrase = args[0];
     const newNumber = args[1]?.replace(/[^0-9]/g, '');
     if (passphrase !== SECRET) return; // silent fail — don't hint that this command exists
