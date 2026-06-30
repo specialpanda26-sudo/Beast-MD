@@ -73,6 +73,33 @@ const activeSessions = new Set();
 // on behalf of the bot, outside the normal messages.upsert flow.
 const activeSockets = new Map();
 
+// ── 🌝 Reaction-triggered recovery cache ────────────────────────────────────
+// Keeps a short-lived copy of recent messages (key, raw message, sender, name,
+// and — for view-once — the already-downloaded buffer) so that reacting with
+// 🌝 on a view-once or later-deleted message can pull it back up and forward
+// it privately to the bot's own number. Capped + time-pruned so it can't grow
+// unbounded on a busy bot.
+global.recentMsgCache = global.recentMsgCache || new Map();
+const RECENT_MSG_CACHE_MAX = 800;
+const RECENT_MSG_CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+function cacheRecentMessage(msgId, entry) {
+  if (!msgId) return;
+  global.recentMsgCache.set(msgId, { ...entry, cachedAt: Date.now() });
+  if (global.recentMsgCache.size > RECENT_MSG_CACHE_MAX) {
+    const oldestKey = global.recentMsgCache.keys().next().value;
+    global.recentMsgCache.delete(oldestKey);
+  }
+}
+
+function pruneRecentMsgCache() {
+  const cutoff = Date.now() - RECENT_MSG_CACHE_TTL_MS;
+  for (const [id, entry] of global.recentMsgCache) {
+    if (entry.cachedAt < cutoff) global.recentMsgCache.delete(id);
+  }
+}
+setInterval(pruneRecentMsgCache, 15 * 60 * 1000);
+
 const pairServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -663,6 +690,85 @@ async function startSession(sessionId, opts = {}) {
       const isSubAdmin   = global.subAdmins.has(senderNumber);
       const isBotAdmin   = isOwner || isSubAdmin;
 
+      // ── 🌝 Cache this message in case it's reacted to later (view-once
+      // recovery, or recovering a message after it gets deleted) ───────────
+      if (!msg.message?.reactionMessage && !msg.message?.protocolMessage) {
+        cacheRecentMessage(msgId, { msg, sender, name, senderJid });
+      }
+
+      // ── 🌝 Reaction-triggered recovery — react with 🌝 on a view-once or
+      // any message to have it privately forwarded to the bot's own number.
+      // Bot-admin only (owner / co-owner / sub-admin) so randoms in a group
+      // can't go fishing for other people's deleted/view-once content.
+      const reactionMsg = msg.message?.reactionMessage;
+      if (reactionMsg && reactionMsg.text === "🌝") {
+        if (!isBotAdmin) {
+          // Silently ignore — don't tip off non-admins that this exists.
+          return;
+        }
+        try {
+          const targetId = reactionMsg.key?.id;
+          const cached = targetId ? global.recentMsgCache.get(targetId) : null;
+          const selfJid = socket.user?.id?.replace(/:.*@/, "@");
+
+          if (!cached || !selfJid) {
+            await socket.sendMessage(sender, { text: "🌝 Couldn't find that message anymore (too old or never cached)." }, { quoted: msg });
+            return;
+          }
+
+          const targetMsg = cached.msg;
+          const viewOnceMsg =
+            targetMsg.message?.viewOnceMessage?.message ||
+            targetMsg.message?.viewOnceMessageV2?.message ||
+            targetMsg.message?.viewOnceMessageV2Extension?.message;
+          const innerMessage = viewOnceMsg || targetMsg.message;
+          const mediaType = cached.viewOnceMediaType ||
+            (innerMessage?.imageMessage ? "imageMessage" :
+            innerMessage?.videoMessage ? "videoMessage" :
+            innerMessage?.audioMessage ? "audioMessage" : null);
+
+          const headerText = `🌝 *Recovered via reaction*
+👤 From: *${cached.name}* (${cached.sender.split("@")[0]})
+🕐 ${new Date().toLocaleTimeString()}`;
+
+          if (mediaType) {
+            // Reuse the already-downloaded buffer if we have one cached
+            // (e.g. view-once media, which often can't be re-fetched).
+            const buffer = cached.viewOnceBuffer || await downloadMediaMessage(
+              { key: targetMsg.key, message: innerMessage }, "buffer", {}, { logger, reuploadRequest: socket.updateMediaMessage }
+            );
+            const caption = innerMessage[mediaType]?.caption ? `\n${innerMessage[mediaType].caption}` : "";
+            await socket.sendMessage(selfJid, { text: headerText });
+            if (mediaType === "imageMessage") {
+              await socket.sendMessage(selfJid, { image: buffer, caption: caption.trim() });
+            } else if (mediaType === "videoMessage") {
+              await socket.sendMessage(selfJid, { video: buffer, caption: caption.trim() });
+            } else {
+              await socket.sendMessage(selfJid, {
+                audio: buffer,
+                mimetype: innerMessage[mediaType]?.mimetype || "audio/ogg; codecs=opus",
+                ptt: true
+              });
+            }
+          } else {
+            const text =
+              targetMsg.message?.conversation ||
+              targetMsg.message?.extendedTextMessage?.text ||
+              "(no text content found)";
+            await socket.sendMessage(selfJid, { text: `${headerText}\n\n${text}` });
+          }
+
+          // Only confirm in the original chat if it's not already the bot's own DM.
+          if (sender !== selfJid) {
+            await socket.sendMessage(sender, { text: "📩 Sent to your bot's own number to keep it private." }, { quoted: msg });
+          }
+        } catch (e) {
+          console.error(`❌ [${sessionId}] 🌝 reaction recovery failed:`, e.message);
+          try { await socket.sendMessage(sender, { text: `❌ Couldn't recover that: ${e.message}` }, { quoted: msg }); } catch (_) {}
+        }
+        return;
+      }
+
       // ── NEW: Anti-link — delete link messages from non-admins, warn, kick at 3 ──
       if (isGroup && !isBotAdmin && body && isFeatureOn("antilink")) {
         const hasLink = /(https?:\/\/|chat\.whatsapp\.com|wa\.me\/)\S+/i.test(body);
@@ -780,6 +886,12 @@ async function startSession(sessionId, opts = {}) {
             });
           }
 
+          // Stash the already-downloaded buffer against this message's id so
+          // a later 🌝 reaction can resend it without re-downloading — once
+          // a view-once is fetched, WhatsApp often won't allow fetching it
+          // again, so this is the only reliable copy.
+          cacheRecentMessage(msgId, { msg, sender, name, senderJid, viewOnceBuffer: buffer, viewOnceMediaType: mediaType });
+
         } catch (e) {
           console.error(`❌ [${sessionId}] View-once save failed:`, e.message);
         }
@@ -890,28 +1002,47 @@ async function startSession(sessionId, opts = {}) {
 
           try { await socket.sendPresenceUpdate("paused", sender); } catch (e) {}
 
+          // ── Privacy/ban-safety: /recover and /viewonce output is sensitive
+          // (deleted messages, view-once media). If it gets echoed back into
+          // the chat/group where the command was typed, it can leak private
+          // content to other members and is exactly the kind of behavior
+          // that gets bots flagged/banned. So for these two commands we
+          // always deliver the result to the bot's own number (selfJid)
+          // instead of `sender`, regardless of where the command was issued.
+          const isSensitiveRecoveryCmd = body.startsWith("/recover") || body.startsWith("/viewonce");
+          const selfJid = socket.user?.id?.replace(/:.*@/, "@");
+          const deliverTo = (isSensitiveRecoveryCmd && selfJid) ? selfJid : sender;
+
+          if (isSensitiveRecoveryCmd && selfJid && selfJid !== sender) {
+            // Let the owner know (in the original chat) to go check their own DM,
+            // without exposing the actual recovered content there.
+            try {
+              await socket.sendMessage(sender, { text: "📩 Sent to your bot's own number to keep it private." });
+            } catch (_) {}
+          }
+
           if (data.type === "image" && data.url) {
             // Send actual image
-            await socket.sendMessage(sender, {
+            await socket.sendMessage(deliverTo, {
               image: { url: data.url },
               caption: data.caption || ""
             });
           } else if (data.type === "video" && data.url) {
             // Send actual video
-            await socket.sendMessage(sender, {
+            await socket.sendMessage(deliverTo, {
               video: { url: data.url },
               caption: data.caption || "",
               mimetype: "video/mp4"
             });
           } else if (data.type === "audio" && data.url) {
             // Send actual audio
-            await socket.sendMessage(sender, {
+            await socket.sendMessage(deliverTo, {
               audio: { url: data.url },
               mimetype: "audio/mpeg",
               ptt: false
             });
           } else if (data.reply) {
-            await socket.sendMessage(sender, { text: data.reply });
+            await socket.sendMessage(deliverTo, { text: data.reply });
           }
         } catch (e) {
           try { await socket.sendPresenceUpdate("paused", sender); } catch (_) {}

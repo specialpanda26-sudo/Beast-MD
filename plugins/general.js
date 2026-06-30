@@ -28,8 +28,8 @@ ${p}runtime        - Uptime & system info
 I reply in Swahili, Sheng or English 🇰🇪
 
 /ask [query]   - Ask AI a question
-/recover [n]   - Recover deleted msgs
-/viewonce [n]  - View saved view-once media
+/recover [n]   - Recover deleted msgs (owner-only, sent to bot's own number)
+/viewonce [n]  - View saved view-once media (owner-only, sent to bot's own number)
 
 💡 Some words trigger instant auto-replies (set by the owner) — just message normally.`;
 
@@ -55,7 +55,9 @@ ${p}weather [city] - Live weather
 ${p}dict [word]    - Dictionary
 ${p}convert [x y]  - Currency converter
 ${p}roll [dice]    - Roll dice e.g 3d6+2
-${p}checklink [url] - Check if a link looks safe or suspicious` : '';
+${p}checklink [url] - Check if a link looks safe or suspicious
+
+🌝 React with this emoji on any message (or view-once) to privately recover it to the bot's own number` : '';
 
     // ── OWNER-ONLY MENU ────────────────────────────────────────────────────
     const ownerSection = isOwner ? `

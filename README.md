@@ -7,6 +7,8 @@
 
 ## 🩹 Recent fixes
 
+- **🌝 Reaction-triggered recovery** — bot admins (owner/co-owner/sub-admin) can react with the 🌝 emoji on *any* message — including a view-once photo/video — and the bot privately forwards it to the **bot's own number**. Non-admin reactions are silently ignored. View-once content reuses the buffer already captured at interception time (re-fetching a viewed view-once usually fails on WhatsApp's side); other messages are pulled from a short-lived in-memory cache (last ~800 messages, 2h TTL), so this only works for messages the bot was online to see.
+- **🔒 `/recover` and `/viewonce` now reply privately, not in-chat** — these used to echo the recovered text / view-once back into whatever chat the command was typed in, which could leak deleted messages or view-once media to other people in a group. Both commands now always deliver their result to the **bot's own WhatsApp number** instead, with just a quiet "sent to your bot's own number" notice left in the original chat. This also reduces ban risk from sensitive content surfacing in group chats.
 - **📧 Email OTP error messages fixed** — failed email OTP sends used to return a raw, often cryptic SMTP exception. Now diagnoses the common causes directly: wrong/missing Gmail App Password (Gmail rejects your normal account password for SMTP — you need a 16-char App Password from Google Account → Security → 2-Step Verification → App passwords), or the host's network blocking outbound SMTP. See `.env.example` for the full SMTP setup, and `render.yaml`/Railway dashboard for where to set `SMTP_EMAIL`/`SMTP_PASSWORD` in production — they were previously undeclared there, so email OTP silently failed on a fresh deploy until someone manually added them.
 - **📱 Optional dedicated OTP-sending number** — `OTP_SENDER_SESSION_ID` lets you pair a *second* WhatsApp number purely for sending verification codes, separate from your main bot's chat. **Important:** WhatsApp has no free/anonymous "push notification" sender like Instagram/Meta's own verified numbers — every message, OTP included, has to come from a real, paired WhatsApp account. This just lets that account be a different number than the one running the bot, if you have a second SIM/eSIM to pair. Without it set, OTPs keep using the bot's main number exactly as before.
 - **💰 Wallet top-up system** — verified users can now send `.profile` to see their kesh balance/badge, and `.addfunds <amount> <mpesa_code>` (optionally with a screenshot attached) to request a top-up after sending money to the admin's M-Pesa number. **This does not auto-verify payments** — there's no Safaricom Daraja API hookup — every request lands in `/admin → 💰 Payments` as "pending" for a human admin to approve or reject. Approving is the only thing that actually credits the wallet. Each M-Pesa code can only be submitted once (duplicate codes are rejected outright), and the admin gets pinged on WhatsApp the moment a request comes in.
@@ -34,7 +36,8 @@
 | 🤖 AI DM Chat | Auto-replies in Swahili, Sheng & English via Groq LLaMA3 |
 | 👥 Group AI Replies | Replies in groups when mentioned or name is called |
 | 📸 Status AI Comments | Leaves human-like comments on WhatsApp statuses |
-| 📷 View-Once Save | Saves & forwards view-once photos/videos (owner-only to view) |
+| 📷 View-Once Save | Saves & forwards view-once photos/videos to the bot's own number (owner-only to view) |
+| 🌝 Reaction Recovery | Bot admins react 🌝 on any message (or view-once) to privately recover it to the bot's own number |
 | ⏰ Message Scheduler | Schedule messages to any number at any time |
 | 🛡️ Permissions System | Control what commands each member can use |
 | 📥 Media Downloader | YouTube, TikTok, Instagram videos & MP3, plus a universal downloader (`.dl`) covering Facebook, Twitter/X, SoundCloud & more |
@@ -151,8 +154,9 @@
 | `.schedule del [ID]` | Cancel a scheduled message |
 | `.schedule repeat [ID] daily/weekly` | Repeat a schedule |
 | `/paint [text]` | Generate a text image |
-| `/recover [number]` | Recover deleted messages (owner only) |
-| `/viewonce [number]` | View saved view-once media (owner only) |
+| `/recover [number]` | Recover deleted messages — sent to the bot's own number, not the chat (owner only) |
+| `/viewonce [number]` | View saved view-once media — sent to the bot's own number, not the chat (owner only) |
+| 🌝 *(react, not a command)* | React 🌝 on any message or view-once to forward it to the bot's own number (bot admins only) |
 | `/download_video [url]` | Download & send video |
 | `/download_song [url]` | Download & send MP3 |
 
@@ -346,7 +350,8 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 
 ## 🔒 Security Notes
 
-- `/recover` and `/viewonce` are **owner-only**
+- `/recover` and `/viewonce` are **owner-only**, and now always reply to the **bot's own number** instead of the chat the command was typed in — keeps deleted messages/view-once media from leaking into groups
+- 🌝 reaction recovery is **bot-admin only** (owner/co-owner/sub-admin) — reactions from anyone else are silently ignored, and results always go to the bot's own number
 - `.tagall` requires bot admin (owner or sub-admin)
 - `.bcgc` is **owner-only**
 - Admin panel (`/admin`) is password-protected via `ADMIN_PASSWORD` — supports blacklist management, message search, broadcast, keyword auto-replies, and feature toggles
