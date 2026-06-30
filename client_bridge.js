@@ -801,6 +801,40 @@ async function startSession(sessionId, opts = {}) {
     } catch(e) {}
   }, 30000);
 
+  // ✅ NEW: Poll for admin panel broadcasts (every 20s)
+  const broadcastCheck = setInterval(async () => {
+    try {
+      const res = await apiClient.get("/admin/broadcast/pending");
+      const broadcasts = res.data?.broadcasts || [];
+      for (const b of broadcasts) {
+        try {
+          if (b.target === 'all_groups') {
+            const groups = await socket.groupFetchAllParticipating();
+            for (const gid of Object.keys(groups)) {
+              try {
+                await socket.sendMessage(gid, { text: b.message });
+                await delay(1200);
+              } catch (_) {}
+            }
+          } else if (b.target === 'all_contacts') {
+            // Pull recent contacts from our own DB via stats endpoint
+            const statsRes = await apiClient.get("/admin/stats");
+            const contacts = statsRes.data?.recent_contacts || [];
+            for (const c of contacts) {
+              try {
+                await socket.sendMessage(c.sender, { text: b.message });
+                await delay(1200);
+              } catch (_) {}
+            }
+          }
+          console.log(`📢 [${sessionId}] Admin broadcast sent to ${b.target}`);
+        } catch (e) {
+          console.warn(`⚠️ Broadcast send failed: ${e.message}`);
+        }
+      }
+    } catch (e) {}
+  }, 20000);
+
   // Connection state handler with null-safety fix
   socket.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect, qr } = update;

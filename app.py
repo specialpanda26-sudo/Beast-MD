@@ -56,6 +56,7 @@ if not GROQ_API_KEY:
 
 DB_FILE = "henry_tech_v5.db"
 SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
+PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
 
 async def call_groq_ai(prompt: str) -> str:
     if not GROQ_API_KEY:
@@ -274,21 +275,34 @@ async def admin_stats():
     # Session info from global registry
     session_list = []
     for name, info in SESSION_REGISTRY.items():
+        last_active_ts = info.get("last_active_ts")
         session_list.append({
             "name": name,
             "number": info.get("number", ""),
             "online": info.get("online", False),
             "msg_count": info.get("msg_count", 0),
-            "since": info.get("since", "")
+            "since": info.get("since", ""),
+            "since_ts": info.get("since_ts"),
+            "last_active": time.strftime("%d %b %Y, %H:%M", time.localtime(last_active_ts)) if last_active_ts else "N/A",
         })
+
+    # Today's message count (for activity chart)
+    today_start = time.time() - (time.time() % 86400)
+    async with aiosqlite.connect(DB_FILE) as db2:
+        async with db2.execute(
+            "SELECT COUNT(*) FROM messages WHERE timestamp >= ?", (today_start,)
+        ) as c:
+            messages_today = (await c.fetchone())[0]
 
     return jsonify({
         "sessions": len([s for s in session_list if s["online"]]),
         "contacts": contacts,
         "messages": messages,
+        "messages_today": messages_today,
         "viewonce": viewonce,
         "session_list": session_list,
-        "recent_contacts": recent_contacts
+        "recent_contacts": recent_contacts,
+        "server_time": time.strftime("%d %b %Y, %H:%M:%S", time.localtime()),
     })
 
 
@@ -308,11 +322,14 @@ async def admin_terminate():
 async def register_session():
     data = await request.get_json() or {}
     name = data.get("name", "unknown")
+    now = time.time()
     SESSION_REGISTRY[name] = {
         "number": data.get("number", ""),
         "online": data.get("online", False),
         "msg_count": data.get("msg_count", 0),
-        "since": time.strftime("%d/%m %H:%M")
+        "since_ts": now,
+        "since": time.strftime("%d %b %Y, %H:%M", time.localtime(now)),
+        "last_active_ts": now,
     }
     return jsonify({"status": "registered"})
 
@@ -325,7 +342,8 @@ async def update_session():
         SESSION_REGISTRY[name].update({
             "online": data.get("online", SESSION_REGISTRY[name].get("online")),
             "msg_count": data.get("msg_count", SESSION_REGISTRY[name].get("msg_count", 0)),
-            "number": data.get("number", SESSION_REGISTRY[name].get("number", ""))
+            "number": data.get("number", SESSION_REGISTRY[name].get("number", "")),
+            "last_active_ts": time.time(),
         })
     return jsonify({"status": "updated"})
 
@@ -365,6 +383,113 @@ a{{color:#a78bfa;text-decoration:none}}</style></head>
 {"".join(f'<div class="msg"><div class="meta">{m["name"]} ({m["sender"]}) · {__import__("time").strftime("%Y-%m-%d %H:%M", __import__("time").localtime(m["time"]))}</div><div class="body">{m["body"]}</div></div>' for m in msgs) if msgs else '<p style="color:#555">No messages found for this session.</p>'}
 </body></html>"""
     return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+# ── ✅ NEW: Blacklist management ─────────────────────────────────────────────
+@app.route("/admin/blacklist", methods=["GET"])
+async def admin_get_blacklist():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT sender FROM blacklist") as c:
+            rows = await c.fetchall()
+    return jsonify({"blacklist": [r[0] for r in rows]})
+
+
+@app.route("/admin/blacklist/add", methods=["POST"])
+async def admin_add_blacklist():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    sender = data.get("sender", "").strip()
+    if not sender:
+        return jsonify({"status": "error", "message": "No sender provided"}), 400
+    if "@" not in sender:
+        sender = f"{sender}@s.whatsapp.net"
+    async with aiosqlite.connect(DB_FILE) as db:
+        try:
+            await db.execute("INSERT INTO blacklist VALUES (?)", (sender,))
+            await db.commit()
+        except aiosqlite.IntegrityError:
+            pass
+    return jsonify({"status": "blacklisted", "sender": sender})
+
+
+@app.route("/admin/blacklist/remove", methods=["POST"])
+async def admin_remove_blacklist():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    sender = data.get("sender", "").strip()
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM blacklist WHERE sender = ?", (sender,))
+        await db.commit()
+    return jsonify({"status": "removed", "sender": sender})
+
+
+# ── ✅ NEW: Search messages ──────────────────────────────────────────────────
+@app.route("/admin/search-messages", methods=["GET"])
+async def admin_search_messages():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify({"results": []})
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT sender, name, body, timestamp FROM messages WHERE body LIKE ? ORDER BY timestamp DESC LIMIT 50",
+            (f"%{q}%",)
+        ) as c:
+            rows = await c.fetchall()
+    results = [
+        {"sender": r[0], "name": r[1], "body": r[2],
+         "time": time.strftime("%d %b %Y, %H:%M", time.localtime(r[3]))}
+        for r in rows
+    ]
+    return jsonify({"results": results})
+
+
+# ── ✅ NEW: Manual broadcast queue (bot polls and sends) ────────────────────
+BROADCAST_QUEUE = []
+
+@app.route("/admin/broadcast", methods=["POST"])
+async def admin_broadcast():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    target = data.get("target", "all_contacts")  # all_contacts | all_groups | custom
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"status": "error", "message": "Empty message"}), 400
+    BROADCAST_QUEUE.append({
+        "target": target,
+        "message": message,
+        "queued_at": time.time(),
+        "sent": False,
+    })
+    return jsonify({"status": "queued", "queue_size": len(BROADCAST_QUEUE)})
+
+
+@app.route("/admin/broadcast/pending", methods=["GET"])
+async def admin_broadcast_pending():
+    """Polled by the Node bridge to pick up queued broadcasts."""
+    pending = [b for b in BROADCAST_QUEUE if not b["sent"]]
+    for b in pending:
+        b["sent"] = True
+    return jsonify({"broadcasts": pending})
+
+
+# ── ✅ NEW: Restart / health controls ────────────────────────────────────────
+@app.route("/admin/uptime", methods=["GET"])
+async def admin_uptime():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    uptime_seconds = time.time() - PROCESS_START_TIME
+    return jsonify({
+        "uptime_seconds": uptime_seconds,
+        "uptime_human": f"{int(uptime_seconds // 3600)}h {int((uptime_seconds % 3600) // 60)}m",
+        "started_at": time.strftime("%d %b %Y, %H:%M:%S", time.localtime(PROCESS_START_TIME)),
+    })
 
 
 @app.route("/auto-save", methods=["POST"])

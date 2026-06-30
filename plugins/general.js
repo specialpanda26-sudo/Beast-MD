@@ -207,30 +207,46 @@ ${ownerSection}
   },
 
   // ── .login — unlock full access with credentials ───────────────────────────
-  // Usage: .login Henry 7lq4mv00
+  // Usage: .login [username] [password]
   // Grants the user temporary session-level owner access (stored in global)
+  // ✅ SECURITY FIX: usage hint no longer reveals the real username/password.
+  // ✅ SECURITY FIX: failed attempts are rate-limited per number to slow brute force.
   login: async ({ sock, from, msg, args, senderJid }) => {
-    const BOT_USER = 'Henry';
+    const BOT_USER = process.env.BOT_LOGIN_USER || 'Henry';
     const BOT_PASS = process.env.BOT_LOGIN_PASS || '7lq4mv00';
     const inputUser = args[0];
     const inputPass = args[1];
+    const num = senderJid.split('@')[0].replace(/:\d+$/, '');
 
     if (!inputUser || !inputPass) {
       return sock.sendMessage(from, {
-        text: '🔐 *Login Required*\n\nUsage: .login [username] [password]\nExample: .login Henry 7lq4mv00'
+        text: '🔐 *Login Required*\n\nUsage: .login [username] [password]'
+      }, { quoted: msg });
+    }
+
+    // ── Rate limiting: max 3 failed attempts per number per 10 minutes ──────
+    global.loginAttempts = global.loginAttempts || new Map();
+    const record = global.loginAttempts.get(num) || { count: 0, resetAt: Date.now() + 10 * 60 * 1000 };
+    if (Date.now() > record.resetAt) {
+      record.count = 0;
+      record.resetAt = Date.now() + 10 * 60 * 1000;
+    }
+    if (record.count >= 3) {
+      const waitMin = Math.ceil((record.resetAt - Date.now()) / 60000);
+      return sock.sendMessage(from, {
+        text: `🚫 Too many failed attempts. Try again in ${waitMin} min.`
       }, { quoted: msg });
     }
 
     if (inputUser === BOT_USER && inputPass === BOT_PASS) {
-      // Add this number to co-owners for this session
-      const num = senderJid.split('@')[0].replace(/:\d+$/, '');
+      global.loginAttempts.delete(num);
       global.coOwners = global.coOwners || new Set();
       global.coOwners.add(num);
+      console.log(`🔓 Login success: +${num} granted session owner access`);
       await sock.sendMessage(from, {
         text:
 `✅ *Login Successful!*
 
-👤 User: *${inputUser}*
 🔓 Access: *FULL OWNER ACCESS*
 
 You now have access to all commands and features for this session. Type *.menu* to see everything.
@@ -239,8 +255,11 @@ _Access resets when bot restarts._
 🔥 *Henry Ochibots v19™*`
       }, { quoted: msg });
     } else {
+      record.count += 1;
+      global.loginAttempts.set(num, record);
+      console.warn(`⚠️ Failed login attempt from +${num} (${record.count}/3)`);
       await sock.sendMessage(from, {
-        text: '❌ *Wrong credentials!*\n\nCheck username and password and try again.'
+        text: '❌ *Wrong credentials!*'
       }, { quoted: msg });
     }
   },
@@ -279,7 +298,6 @@ Ninaongea Kiswahili, Sheng na English!
 /recover [n] - Recover deleted messages
 /viewonce [n] - View saved view-once media
 .menu        - See all commands
-.login Henry 7lq4mv00 - Full access
 
 💬 *Au niandike tu ujumbe wowote — nitakujibu!* 😄
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
