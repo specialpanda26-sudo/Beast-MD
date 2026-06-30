@@ -130,7 +130,8 @@ ${p}logout             - Remove your access
 ${p}sticker        - Image/video → Sticker
 ${p}vv             - View saved view-once media
 ${p}save           - Save view-once as file
-${p}getpp [@user]  - Get profile picture
+${p}getpp [@user]  - Get profile picture (works unsaved)
+${p}about [@user]  - Get About status text (works unsaved)
 ${p}download [url] - Download video (YT/TikTok)
 ${p}song [url]     - Extract MP3 audio
 ${p}convert        - Convert media format

@@ -5,20 +5,118 @@ const path = require('path');
 
 module.exports = {
 
-  // ── .getpp ─────────────────────────────────────────────────────────────────
-  getpp: async ({ sock, from, msg, args, sender }) => {
-    let target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
-      || (args[0] ? args[0].replace('@', '') + '@s.whatsapp.net' : sender);
+  // ── .getpp (upgraded) ────────────────────────────────────────────────────
+  // Usage: .getpp (your own pfp) | .getpp @user | .getpp 254712345678 | reply to someone's msg with .getpp
+  // ✅ Works even for numbers NOT saved in contacts — verifies via sock.onWhatsApp()
+  getpp: async ({ sock, from, msg, args, senderJid, isGroup }) => {
+    const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    const rawArgNumber = args[0]?.replace(/[^0-9]/g, '');
+
+    let target =
+      mentioned ||
+      quotedParticipant ||
+      (rawArgNumber ? `${rawArgNumber}@s.whatsapp.net` : null) ||
+      senderJid ||
+      from;
+
+    // In a group with no target specified, default to the requester not the group
+    if (isGroup && !mentioned && !quotedParticipant && !rawArgNumber) {
+      target = senderJid;
+    }
+
+    // ✅ FIX: if a raw number was given (unsaved contact), verify it's on WhatsApp
+    // and use the JID WhatsApp returns — this is what makes it work for numbers
+    // not saved in your phone contacts.
+    if (rawArgNumber && !mentioned && !quotedParticipant) {
+      try {
+        const [result] = await sock.onWhatsApp(target);
+        if (result?.exists) {
+          target = result.jid;
+        } else {
+          return sock.sendMessage(from, { text: `❌ +${rawArgNumber} is not on WhatsApp.` }, { quoted: msg });
+        }
+      } catch {
+        // If lookup fails, fall back to the raw constructed JID and try anyway
+      }
+    }
 
     try {
-      const ppUrl = await sock.profilePictureUrl(target, 'image');
+      // ✅ Try high-res first, fall back to low-res, then to a friendly error
+      let ppUrl;
+      try {
+        ppUrl = await sock.profilePictureUrl(target, 'image');
+      } catch {
+        ppUrl = await sock.profilePictureUrl(target, 'preview');
+      }
+
       await sock.sendMessage(from, {
         image: { url: ppUrl },
         caption: `📸 Profile picture of @${target.split('@')[0]}`,
         mentions: [target],
       }, { quoted: msg });
     } catch {
-      await sock.sendMessage(from, { text: '❌ No profile picture found or it is private.' }, { quoted: msg });
+      await sock.sendMessage(from, {
+        text: `❌ Could not get profile picture of @${target.split('@')[0]} — it may be private or they don't have one set.`,
+        mentions: [target],
+      }, { quoted: msg });
+    }
+  },
+
+  // ── .about — get someone's WhatsApp "About" status text ────────────────────
+  // Usage: .about (your own) | .about @user | .about 254712345678 | reply with .about
+  // ✅ Works even for numbers NOT saved in contacts
+  about: async ({ sock, from, msg, args, senderJid, isGroup }) => {
+    const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+    const rawArgNumber = args[0]?.replace(/[^0-9]/g, '');
+
+    let target =
+      mentioned ||
+      quotedParticipant ||
+      (rawArgNumber ? `${rawArgNumber}@s.whatsapp.net` : null) ||
+      senderJid ||
+      from;
+
+    if (isGroup && !mentioned && !quotedParticipant && !rawArgNumber) {
+      target = senderJid;
+    }
+
+    if (rawArgNumber && !mentioned && !quotedParticipant) {
+      try {
+        const [result] = await sock.onWhatsApp(target);
+        if (result?.exists) {
+          target = result.jid;
+        } else {
+          return sock.sendMessage(from, { text: `❌ +${rawArgNumber} is not on WhatsApp.` }, { quoted: msg });
+        }
+      } catch {
+        // fall back and try anyway
+      }
+    }
+
+    try {
+      const statusResult = await sock.fetchStatus(target);
+      const aboutText = statusResult?.status || statusResult?.[0]?.status;
+      const setAt = statusResult?.setAt || statusResult?.[0]?.setAt;
+
+      if (!aboutText) {
+        return sock.sendMessage(from, {
+          text: `ℹ️ @${target.split('@')[0]} has no About text set or it's private.`,
+          mentions: [target],
+        }, { quoted: msg });
+      }
+
+      const dateLine = setAt ? `\n🕐 _Set: ${new Date(setAt).toLocaleString()}_` : '';
+      await sock.sendMessage(from, {
+        text: `ℹ️ *About* of @${target.split('@')[0]}:\n\n"${aboutText}"${dateLine}`,
+        mentions: [target],
+      }, { quoted: msg });
+    } catch {
+      await sock.sendMessage(from, {
+        text: `❌ Could not get About info for @${target.split('@')[0]} — it may be private.`,
+        mentions: [target],
+      }, { quoted: msg });
     }
   },
 

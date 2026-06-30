@@ -653,6 +653,7 @@ async function startSession(sessionId, opts = {}) {
               isBotAdmin,
               isGroup,
               sender  : senderJid,
+              senderJid,
               args,
               config,
             });
