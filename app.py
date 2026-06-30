@@ -48,7 +48,16 @@ def print_banner():
 
 print_banner()
 
-app = Quart(__name__)
+app = Quart(__name__, static_folder="assets", static_url_path="/assets")
+
+# ✅ Force browsers to always fetch the latest HTML instead of using a stale
+# local cache — without this, anyone who'd visited before kept seeing old
+# landing-page/admin-page content even after a fresh deploy.
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 if not GROQ_API_KEY:
@@ -211,7 +220,7 @@ async def check_db_blacklist(sender: str) -> bool:
 async def landing_page():
     index_path = Path(__file__).parent / "index.html"
     if index_path.exists():
-        return Response(index_path.read_text(encoding="utf-8"), mimetype="text/html")
+        return Response(index_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
     return jsonify({"status": "ok"})
 
 
@@ -246,7 +255,7 @@ async def admin_panel():
                         headers={"WWW-Authenticate": 'Bearer realm="Admin Panel"'})
     admin_path = Path(__file__).parent / "admin.html"
     if admin_path.exists():
-        return Response(admin_path.read_text(encoding="utf-8"), mimetype="text/html")
+        return Response(admin_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
     return jsonify({"error": "Admin panel not found"}), 404
 
 

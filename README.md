@@ -24,6 +24,8 @@
 | 🛡️ Sub-Admins | Grant limited bot admin powers to trusted people |
 | 🌐 Web Pairing | Pair via QR code or pairing code in browser |
 | 🔑 Owner Recovery | Emergency passphrase to change owner number at runtime |
+| 👥 Bulk Group Add | Create a group or add to one from a plain list of numbers |
+| ⏳ Subscription Expiry | Set a paid-access expiry date per session from the admin panel |
 
 ---
 
@@ -88,6 +90,8 @@
 | `.removecoowner [number]` | Remove a co-owner |
 | `.listcoowners` | List all co-owners |
 | `.bcgc [msg]` | Broadcast message to all groups |
+| `.creategroup [name] \| [numbers]` | Create a new group from a plain list of numbers, e.g. `.creategroup Squad \| 254712345678,254798765432` |
+| `.addtogroup [numbers]` | Run inside a group to bulk-add a plain list of numbers to it |
 | `.bio [text]` | Update bot WhatsApp bio |
 | `.pp` | Update bot profile picture (reply to image) |
 | `.status` | Post image as WhatsApp status (reply to image) |
@@ -170,6 +174,19 @@ If you lose access to your original number:
 ```
 
 > ⚠️ Set `OWNER_RECOVERY_SECRET` in Render env vars to change the default passphrase. Silent on wrong input.
+
+---
+
+## ⏳ Subscription Expiry (Admin Panel)
+
+For paid/client sessions, set an expiry date and time per session directly from `/admin`:
+
+1. Open `/admin` and find the session card for the client's number
+2. Pick a date & time in the **Set Expiry** field and click **Set Expiry**
+3. Once that time passes, the bot auto-replies with a "subscription expired, contact owner" message to anyone who messages that session — the owner number is always exempt, so you're never locked out
+4. Click **Clear** on a session to remove its expiry and restore full access
+
+Expiry status (active/expired countdown) is checked automatically every 30 seconds and survives the bot reconnecting/restarting since it lives in the admin server, not the bot session itself.
 
 ---
 
