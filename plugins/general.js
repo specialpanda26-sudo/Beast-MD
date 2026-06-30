@@ -69,6 +69,8 @@ ${p}status            - Post image as status
 ${p}pp                - Update profile pic
 ${p}bio [text]        - Update bio
 ${p}bcgc [msg]        - Broadcast to groups
+${p}creategroup [name] | [numbers] - Create group from a number list
+${p}addtogroup [numbers]           - Bulk-add numbers to current group
 ${p}public            - Set bot public mode
 ${p}private           - Set bot private mode
 ${p}setmode [on/off]  - Toggle bot on/off

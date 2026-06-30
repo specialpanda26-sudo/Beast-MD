@@ -252,3 +252,73 @@ module.exports.listperms = async ({ sock, from, msg, isGroup, sender }) => {
   }
   await sock.sendMessage(from, { text: reply.trim(), mentions }, { quoted: msg });
 };
+
+// ── .creategroup ───────────────────────────────────────────────────────────
+// Owner only. Bulk-create a new WhatsApp group from a plain list of numbers.
+// Usage: .creategroup Group Name | 254712345678,254798765432,0712345678
+module.exports.creategroup = async ({ sock, from, msg, isOwner, args }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  const raw = args.join(' ');
+  if (!raw.includes('|')) {
+    return sock.sendMessage(from, {
+      text: `📋 *Usage:*\n${'.'}creategroup Group Name | 254712345678,254798765432,254700111222\n\n• Separate the group name and numbers with *|*\n• Numbers can be plain (with or without country code), comma or space separated\n• Names are optional — just paste raw numbers`
+    }, { quoted: msg });
+  }
+  const [namePartRaw, numsPartRaw] = raw.split('|');
+  const groupName = namePartRaw.trim() || 'New Group';
+  const numbers = numsPartRaw.split(/[,\s]+/).map(n => n.trim()).filter(Boolean);
+  if (numbers.length === 0) {
+    return sock.sendMessage(from, { text: '❌ No numbers found after the | separator.' }, { quoted: msg });
+  }
+
+  const jids = numbers.map(n => {
+    let clean = n.replace(/[^0-9]/g, '');
+    if (clean.startsWith('0')) clean = '254' + clean.slice(1); // default to KE country code for local-format numbers
+    return `${clean}@s.whatsapp.net`;
+  });
+
+  await sock.sendMessage(from, { text: `⏳ Creating group *${groupName}* with ${jids.length} number(s)...` }, { quoted: msg });
+
+  try {
+    const group = await sock.groupCreate(groupName, jids);
+    const addedCount = group?.participants?.length || jids.length;
+    await sock.sendMessage(from, {
+      text: `✅ Group created!\n\n📛 *${groupName}*\n👥 ${addedCount} member(s) added\n🆔 ${group.id}\n\nNote: numbers without WhatsApp, or that block adding by unknown contacts, may not have been added — check the group directly.`
+    }, { quoted: msg });
+  } catch (e) {
+    await sock.sendMessage(from, { text: `❌ Failed to create group: ${e.message}` }, { quoted: msg });
+  }
+};
+
+// ── .addtogroup ────────────────────────────────────────────────────────────
+// Owner only. Bulk-add a plain list of numbers to an EXISTING group.
+// Run this command INSIDE the target group: .addtogroup 254712345678,254798765432
+module.exports.addtogroup = async ({ sock, from, msg, isGroup, isOwner, args }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  if (!isGroup) {
+    return sock.sendMessage(from, {
+      text: `📋 *Usage:* run this command inside the group you want people added to:\n${'.'}addtogroup 254712345678,254798765432,254700111222\n\nNumbers can be plain, with or without country code, comma or space separated.`
+    }, { quoted: msg });
+  }
+  const numbers = args.join(' ').split(/[,\s]+/).map(n => n.trim()).filter(Boolean);
+  if (numbers.length === 0) {
+    return sock.sendMessage(from, { text: '❌ Please list the numbers to add, e.g. .addtogroup 254712345678,254798765432' }, { quoted: msg });
+  }
+
+  const jids = numbers.map(n => {
+    let clean = n.replace(/[^0-9]/g, '');
+    if (clean.startsWith('0')) clean = '254' + clean.slice(1);
+    return `${clean}@s.whatsapp.net`;
+  });
+
+  try {
+    const result = await sock.groupParticipantsUpdate(from, jids, 'add');
+    const ok = result.filter(r => r.status === '200').length;
+    const failed = result.length - ok;
+    let text = `✅ Added ${ok}/${jids.length} number(s) to the group.`;
+    if (failed > 0) text += `\n⚠️ ${failed} could not be added directly — they may need a WhatsApp invite link (privacy settings).`;
+    await sock.sendMessage(from, { text }, { quoted: msg });
+  } catch (e) {
+    await sock.sendMessage(from, { text: `❌ Failed to add members: ${e.message}` }, { quoted: msg });
+  }
+};

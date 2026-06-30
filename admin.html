@@ -321,11 +321,21 @@
                 <div class="session-number">+${s.number || 'Unknown'}</div>
                 <div class="session-meta">Messages: ${s.msg_count || 0} · Last active: ${s.last_active || 'N/A'}</div>
                 <div class="session-date">📅 Session started: ${s.since || 'N/A'}</div>
+                <div class="session-date" style="${s.expired ? 'color:#ff6b6b;font-weight:600' : ''}">
+                  ${s.expiry_display ? (s.expired ? `⛔ Subscription expired: ${s.expiry_display}` : `⏳ Subscription valid until: ${s.expiry_display}`) : '♾️ No expiry set'}
+                </div>
               </div>
             </div>
-            <div class="session-actions">
-              <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="viewSession('${s.name}')">View</button>
-              <button class="btn-sm btn-red" onclick="terminateSession('${s.name}')">Terminate</button>
+            <div class="session-actions" style="flex-direction:column;align-items:flex-end;gap:6px">
+              <div style="display:flex;gap:6px">
+                <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="viewSession('${s.name}')">View</button>
+                <button class="btn-sm btn-red" onclick="terminateSession('${s.name}')">Terminate</button>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input type="datetime-local" id="expiry-${s.name}" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.75rem" />
+                <button class="btn-sm" style="background:var(--accent2);color:#fff" onclick="setExpiry('${s.name}')">Set Expiry</button>
+                ${s.expiry_ts ? `<button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="clearExpiry('${s.name}')">Clear</button>` : ''}
+              </div>
             </div>
           </div>
         `).join("");
@@ -358,6 +368,35 @@
       document.getElementById("uptime-display").innerHTML =
         `🟢 Up for <strong style="color:var(--green)">${data.uptime_human}</strong><br/>📅 Started: ${data.started_at}`;
     } catch(e) {}
+  }
+
+  async function setExpiry(name) {
+    const input = document.getElementById(`expiry-${name}`);
+    if (!input || !input.value) { alert("Pick a date & time first."); return; }
+    const expiryTs = new Date(input.value).getTime() / 1000;
+    try {
+      await authedFetch("/admin/set-expiry", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ session: name, expiry_ts: expiryTs })
+      });
+      loadDashboard();
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  }
+
+  async function clearExpiry(name) {
+    try {
+      await authedFetch("/admin/set-expiry", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ session: name, expiry_ts: null })
+      });
+      loadDashboard();
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
   }
 
   async function terminateSession(name) {

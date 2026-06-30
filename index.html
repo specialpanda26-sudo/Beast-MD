@@ -67,6 +67,23 @@
     .nav-logo span { color: var(--text); }
     .nav-logo .v { color: var(--muted); }
 
+    .nav-links {
+      display: flex; align-items: center; gap: 1.8rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    .nav-links a {
+      color: var(--muted); text-decoration: none; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--accent); }
+    .nav-links .nav-pair-btn {
+      color: #000; background: var(--green); padding: 0.4rem 0.9rem;
+      border-radius: 6px; font-weight: 700;
+      box-shadow: 0 0 14px rgba(0,255,136,0.25);
+    }
+    .nav-links .nav-pair-btn:hover { color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+    @media (max-width: 760px) { .nav-links { display: none; } }
+
     .nav-status {
       display: flex; align-items: center; gap: 0.5rem;
       font-size: 0.72rem; color: var(--green);
@@ -500,6 +517,12 @@
 
 <nav>
   <div class="nav-logo">HENRY <span>OCHIBOTS</span> <span class="v">V19™</span></div>
+  <div class="nav-links">
+    <a href="#commands">Commands</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#deploy">Deploy</a>
+    <a href="/pair" class="nav-pair-btn">Pair Now</a>
+  </div>
   <div class="nav-status">
     <div class="pulse"></div>
     BOT ONLINE
@@ -508,16 +531,16 @@
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-badge">⚡ HENRY OCHIBOTS V19™ — FULLY LOADED</div>
+  <div class="hero-badge">⚡ BUILT &amp; MAINTAINED BY HENRY — V19™ PRODUCTION BUILD</div>
   <h1>
     <span class="line1">WhatsApp Automation</span>
     <span class="line2">Unleashed.</span>
   </h1>
-  <p>Henry Ochibots v19™ — AI-powered WhatsApp automation with multi-session pairing, media downloads, smart replies, and 24/7 uptime.</p>
+  <p>A production-grade WhatsApp bot engine — multi-session pairing, Groq-powered AI replies, media tools, and a real admin panel. Built by a developer who runs it himself.</p>
   <div class="hero-cta">
-    <a href="#pair" class="btn-pair-hero">📱 Pair WhatsApp Now</a>
+    <a href="/pair" class="btn-pair-hero">📱 Pair WhatsApp Now</a>
     <a href="#commands" class="btn-primary">Explore Commands</a>
-    <a href="#deploy" class="btn-outline">Deploy Guide</a>
+    <a href="#how-it-works" class="btn-outline">How It Works</a>
   </div>
 
   <div class="terminal">
@@ -628,49 +651,44 @@
 
 <div class="divider"></div>
 
-<!-- PAIR SECTION -->
-<div id="pair" class="pair-section" style="position:relative;">
+<!-- HOW IT WORKS -->
+<div id="how-it-works" class="pair-section" style="position:relative;">
   <div class="pair-bg-photo"></div>
   <div class="reveal" style="text-align:center;margin-bottom:2.5rem;">
-    <div class="section-label" style="justify-content:center;display:flex;">// pair your number</div>
-    <div class="section-title">Link WhatsApp in seconds</div>
-    <p style="color:var(--muted);max-width:440px;margin:0 auto;font-size:0.95rem;">Enter your number below, get a code, then link it in WhatsApp Linked Devices. No QR scan needed.</p>
+    <div class="section-label" style="justify-content:center;display:flex;">// how it works</div>
+    <div class="section-title">From zero to a live bot in 5 steps</div>
+    <p style="color:var(--muted);max-width:440px;margin:0 auto;font-size:0.95rem;">No installs, no QR scanning headaches. Link your number, then control everything from WhatsApp itself.</p>
   </div>
 
-  <div class="pair-card reveal" id="pairCard">
+  <div class="pair-card reveal" id="howCard">
     <div class="pair-logo">
       <div class="pair-logo-icon">🔐</div>
       <div class="pair-logo-title">HENRY OCHIBOTS V19™</div>
-      <div class="pair-logo-sub">SESSION LINK</div>
+      <div class="pair-logo-sub">HOW IT WORKS</div>
     </div>
 
     <div class="pair-divider"></div>
 
-    <!-- This content is swapped by JS -->
-    <div id="pairContent">
-      <div class="pair-status-badge badge-waiting">
-        <span class="badge-dot yellow"></span> READY TO PAIR
-      </div>
-
-      <div class="pair-label">WhatsApp Number</div>
-      <div class="pair-input-wrap">
-        <span class="pflag">📱</span>
-        <input type="tel" id="numInput" placeholder="e.g. 254712345678" autocomplete="off" />
-      </div>
-      <button class="btn-generate" id="pairBtn" onclick="submitPair()">🔑 &nbsp;Generate Pairing Code</button>
-      <div class="pair-hint">Include country code · No + or spaces · e.g. 254712345678</div>
-
-      <div class="pair-divider"></div>
-
-      <div class="pair-steps">
-        <div class="steps-title">How it works</div>
-        <div class="step"><div class="step-num">1</div><div class="step-text">Enter your WhatsApp number with country code</div></div>
-        <div class="step"><div class="step-num">2</div><div class="step-text">Click Generate — your 8-digit code appears in seconds</div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-text">Open WhatsApp → <b>⋮ Menu</b> → <b>Linked Devices</b></div></div>
-        <div class="step"><div class="step-num">4</div><div class="step-text">Tap <b>Link a Device</b> → <b>Link with phone number instead</b></div></div>
-        <div class="step"><div class="step-num">5</div><div class="step-text">Enter the code — bot is live instantly! 🚀</div></div>
-      </div>
+    <div class="pair-steps">
+      <div class="steps-title">Getting started</div>
+      <div class="step"><div class="step-num">1</div><div class="step-text">Tap <b>Pair WhatsApp Now</b> below to open the secure pairing page</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Enter your number with country code and generate your 8-digit code</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Open WhatsApp → <b>⋮ Menu</b> → <b>Linked Devices</b> → <b>Link a Device</b></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Choose <b>"Link with phone number instead"</b> and enter the code</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">That's it — the bot is live on your number instantly 🚀</div></div>
     </div>
+
+    <div class="pair-divider"></div>
+
+    <div class="pair-steps">
+      <div class="steps-title">Using the bot</div>
+      <div class="step"><div class="step-num">⚡</div><div class="step-text">Send <b>.menu</b> in any chat to see every available command</div></div>
+      <div class="step"><div class="step-num">🤖</div><div class="step-text">Mention the bot or reply to its messages in a group to chat with AI</div></div>
+      <div class="step"><div class="step-num">👑</div><div class="step-text">Owners get extra admin commands — group tools, scheduler, broadcasts</div></div>
+      <div class="step"><div class="step-num">🔒</div><div class="step-text">Your session stays private — only you control your linked number</div></div>
+    </div>
+
+    <a href="/pair" class="btn-generate" style="display:block;text-align:center;text-decoration:none;margin-top:1.5rem;">📱 &nbsp;Go to Pairing Page</a>
   </div>
 </div>
 
@@ -704,6 +722,19 @@
 </section>
 
 <div class="glow-strip"></div>
+
+<section style="text-align:center;padding-top:4rem;padding-bottom:4rem;">
+  <div class="reveal">
+    <div class="section-label" style="justify-content:center;display:flex;">// work with henry</div>
+    <div class="section-title">Want a bot like this for your number?</div>
+    <p class="section-sub" style="margin:0 auto 2rem;">Henry builds and deploys custom WhatsApp bots, HTTP configs, and web tools for clients across Kenya. Reach out to get set up.</p>
+    <div class="hero-cta" style="justify-content:center;">
+      <!-- 📞 To change the contact number later, just edit the number in this href -->
+      <a href="https://wa.me/254141915668" target="_blank" class="btn-pair-hero">💬 Chat on WhatsApp</a>
+      <a href="/pair" class="btn-outline">Try This Bot</a>
+    </div>
+  </div>
+</section>
 
 <footer>
   Built by <span>@henrytech254</span> · Henry Ochibots v19™ · <span>All systems online 🟢</span>
@@ -754,115 +785,7 @@
   }, { threshold: 0.12 });
   reveals.forEach(r=>observer.observe(r));
 
-  // PAIRING LOGIC
-  function submitPair() {
-    const num = document.getElementById('numInput').value.trim().replace(/\D/g,'');
-    if (!num || num.length < 7) { alert('Please enter a valid number with country code.'); return; }
-    const btn = document.getElementById('pairBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Generating...';
-
-    fetch('/pair', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'number=' + encodeURIComponent(num)
-    }).then(() => {
-      pollForCode(num);
-    }).catch(err => {
-      btn.disabled = false;
-      btn.innerHTML = '🔑 &nbsp;Generate Pairing Code';
-      alert('Error: Could not reach the bot server. Make sure it is running.');
-    });
-  }
-
-  function pollForCode(num, attempts) {
-    attempts = attempts || 0;
-    // Timeout after 90 seconds (45 attempts × 2s)
-    if (attempts > 45) {
-      const btn = document.getElementById('pairBtn');
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '🔑 &nbsp;Generate Pairing Code';
-      }
-      document.getElementById('pairContent').innerHTML += '<p style="color:#ff6b6b;font-size:0.8rem;text-align:center;margin-top:1rem;">⚠️ Timed out. Please try again.</p>';
-      return;
-    }
-    fetch('/pair-status')
-      .then(r => r.json())
-      .then(data => {
-        if (data.code) {
-          // ✅ Fresh code received
-          showCode(data.code, data.number || num);
-        } else {
-          // Still waiting — update spinner text to show progress
-          const btn = document.getElementById('pairBtn');
-          if (btn && btn.disabled) {
-            const secs = attempts * 2;
-            btn.innerHTML = '<span class="spinner"></span> Waiting for code... (' + secs + 's)';
-          }
-          setTimeout(() => pollForCode(num, attempts + 1), 2000);
-        }
-      })
-      .catch(() => setTimeout(() => pollForCode(num, attempts + 1), 3000));
-  }
-
-  function showCode(code, number) {
-    document.getElementById('pairContent').innerHTML = `
-      <div class="pair-status-badge badge-online">
-        <span class="badge-dot green"></span> CODE GENERATED — LINK NOW
-      </div>
-      <div class="code-for">Code for: <span>+${number}</span></div>
-      <div class="code-box">
-        <div class="code-label-top">Your Pairing Code</div>
-        <span class="code-val" id="theCode">${code}</span>
-        <div class="code-sub">Valid for ~60 seconds · Use it before it expires</div>
-        <button class="copy-btn" onclick="copyCode('${code}')" id="copyBtn">📋 Copy Code</button>
-      </div>
-      <div class="pair-steps">
-        <div class="steps-title">Link it now</div>
-        <div class="step"><div class="step-num">1</div><div class="step-text">Open WhatsApp on your phone</div></div>
-        <div class="step"><div class="step-num">2</div><div class="step-text">Tap <b>⋮ Menu</b> → <b>Linked Devices</b></div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-text">Tap <b>Link a Device</b></div></div>
-        <div class="step"><div class="step-num">4</div><div class="step-text">Tap <b>"Link with phone number instead"</b></div></div>
-        <div class="step"><div class="step-num">5</div><div class="step-text">Enter the code above ☝️ — you're live!</div></div>
-      </div>
-      <div class="reset-link" onclick="resetPair()">🔄 Pair a different number</div>
-    `;
-  }
-
-  function copyCode(code) {
-    navigator.clipboard.writeText(code).then(() => {
-      const btn = document.getElementById('copyBtn');
-      btn.textContent = '✅ Copied!';
-      btn.style.background = 'rgba(0,255,136,0.1)';
-      btn.style.borderColor = 'rgba(0,255,136,0.3)';
-      btn.style.color = 'var(--green)';
-      setTimeout(() => {
-        btn.textContent = '📋 Copy Code';
-        btn.style.background = '';
-        btn.style.borderColor = '';
-        btn.style.color = '';
-      }, 3000);
-    }).catch(() => {
-      window.prompt('Copy this pairing code:', code);
-    });
-  }
-
-  function resetPair() {
-    fetch('/pair-reset', { method: 'POST' })
-      .then(() => window.location.reload())
-      .catch(() => window.location.reload());
-  }
-
-  // Auto-check on load — only show code if it's fresh (not pending a new one)
-  fetch('/pair-status').then(r => r.json()).then(data => {
-    if (data.code && !data.pending) showCode(data.code, data.number || '');
-  }).catch(() => {});
-
-  // Enter key in input
-  document.getElementById('numInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') submitPair();
-  });
+  // PAIRING now lives entirely on /pair — see pair.html
 </script>
 </body>
 </html>

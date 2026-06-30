@@ -500,6 +500,17 @@ async function startSession(sessionId, opts = {}) {
       // ── fromMe guard — allow owner commands even from the bot number ──────
       if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) return;
 
+      // ── Subscription expiry gate ───────────────────────────────────────────
+      // If the admin panel has marked this session's subscription as expired,
+      // reply once with the expiry notice and stop here. Owner is always exempt
+      // so they can still manage the bot / renew via the admin panel.
+      if (global.subscriptionExpired && !isOwner && body) {
+        try {
+          await socket.sendMessage(sender, { text: global.expiryMessage || '⏳ Your subscription has expired. Please contact the owner to renew access.' }, { quoted: msg });
+        } catch (_) {}
+        return;
+      }
+
       // Feature: Auto Read Messages
       try {
         await socket.readMessages([msg.key]);
@@ -793,6 +804,8 @@ async function startSession(sessionId, opts = {}) {
   const terminateCheck = setInterval(async () => {
     try {
       const res = await apiClient.post("/admin/check-terminate", { name: sessionId });
+      global.subscriptionExpired = Boolean(res.data?.expired);
+      global.expiryMessage = res.data?.expiry_message || global.expiryMessage;
       if (res.data?.terminate) {
         console.log(`🛑 [${sessionId}] Terminated by admin panel`);
         clearInterval(terminateCheck);

@@ -56,6 +56,7 @@ if not GROQ_API_KEY:
 
 DB_FILE = "henry_tech_v5.db"
 SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
+DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
 PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
 
 async def call_groq_ai(prompt: str) -> str:
@@ -274,8 +275,10 @@ async def admin_stats():
 
     # Session info from global registry
     session_list = []
+    now_ts = time.time()
     for name, info in SESSION_REGISTRY.items():
         last_active_ts = info.get("last_active_ts")
+        expiry_ts = info.get("expiry_ts")
         session_list.append({
             "name": name,
             "number": info.get("number", ""),
@@ -284,6 +287,10 @@ async def admin_stats():
             "since": info.get("since", ""),
             "since_ts": info.get("since_ts"),
             "last_active": time.strftime("%d %b %Y, %H:%M", time.localtime(last_active_ts)) if last_active_ts else "N/A",
+            "expiry_ts": expiry_ts,
+            "expiry_display": time.strftime("%d %b %Y, %H:%M", time.localtime(expiry_ts)) if expiry_ts else None,
+            "expired": bool(expiry_ts and now_ts >= expiry_ts),
+            "expiry_message": info.get("expiry_message", DEFAULT_EXPIRY_MESSAGE),
         })
 
     # Today's message count (for activity chart)
@@ -323,6 +330,7 @@ async def register_session():
     data = await request.get_json() or {}
     name = data.get("name", "unknown")
     now = time.time()
+    existing = SESSION_REGISTRY.get(name, {})
     SESSION_REGISTRY[name] = {
         "number": data.get("number", ""),
         "online": data.get("online", False),
@@ -330,6 +338,9 @@ async def register_session():
         "since_ts": now,
         "since": time.strftime("%d %b %Y, %H:%M", time.localtime(now)),
         "last_active_ts": now,
+        # ✅ Subscription expiry — preserved across re-registers/restarts
+        "expiry_ts": existing.get("expiry_ts"),
+        "expiry_message": existing.get("expiry_message", DEFAULT_EXPIRY_MESSAGE),
     }
     return jsonify({"status": "registered"})
 
@@ -348,12 +359,39 @@ async def update_session():
     return jsonify({"status": "updated"})
 
 
+@app.route("/admin/set-expiry", methods=["POST"])
+async def admin_set_expiry():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    session_name = data.get("session", "")
+    expiry_ts = data.get("expiry_ts")  # epoch seconds, or null/0 to clear
+    expiry_message = data.get("expiry_message") or DEFAULT_EXPIRY_MESSAGE
+    if session_name not in SESSION_REGISTRY:
+        return jsonify({"error": "Unknown session"}), 404
+    SESSION_REGISTRY[session_name]["expiry_ts"] = float(expiry_ts) if expiry_ts else None
+    SESSION_REGISTRY[session_name]["expiry_message"] = expiry_message
+    return jsonify({
+        "status": "ok",
+        "session": session_name,
+        "expiry_ts": SESSION_REGISTRY[session_name]["expiry_ts"],
+        "expiry_message": expiry_message,
+    })
+
+
 @app.route("/admin/check-terminate", methods=["POST"])
 async def check_terminate():
     data = await request.get_json() or {}
     name = data.get("name", "")
-    should_terminate = SESSION_REGISTRY.get(name, {}).get("terminate", False)
-    return jsonify({"terminate": should_terminate})
+    info = SESSION_REGISTRY.get(name, {})
+    should_terminate = info.get("terminate", False)
+    expiry_ts = info.get("expiry_ts")
+    expired = bool(expiry_ts and time.time() >= expiry_ts)
+    return jsonify({
+        "terminate": should_terminate,
+        "expired": expired,
+        "expiry_message": info.get("expiry_message", DEFAULT_EXPIRY_MESSAGE),
+    })
 
 
 @app.route("/admin/session-detail", methods=["GET"])
