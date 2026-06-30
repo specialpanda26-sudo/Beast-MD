@@ -279,10 +279,30 @@ const IS_INTERACTIVE = Boolean(process.stdin.isTTY);
 
 const apiClient = axios.create({
   baseURL: BACKEND_URL,
-  timeout: 45000,
+  // ✅ FIX: was 45000ms. Any backend call accidentally left on the hot path
+  // (or any future one) could stall a reply for up to 45 seconds. 8s is
+  // generous for a localhost call and fails fast instead.
+  timeout: 8000,
   maxContentLength: Infinity,
   maxBodyLength: Infinity
 });
+
+// ── Feature flag cache ──────────────────────────────────────────────────────
+// Polls the backend's feature toggles every 30s so we don't hit the DB on
+// every single message. Defaults to "on" if the backend hasn't responded yet.
+let featureCache = {};
+async function refreshFeatures() {
+  try {
+    const res = await apiClient.get("/bot/features");
+    featureCache = res.data || {};
+    global.__featureCache = featureCache;
+  } catch (e) { /* keep last known cache on failure */ }
+}
+refreshFeatures();
+setInterval(refreshFeatures, 30000);
+function isFeatureOn(name) {
+  return featureCache[name] !== false; // unknown/missing = treated as on
+}
 
 // Sessions directory
 const SESSIONS_DIR = "./sessions";
@@ -460,6 +480,31 @@ async function startSession(sessionId, opts = {}) {
             { react: { text: "❤️", key: msg.key } },
             { statusJidList: [msg.key.participant || sender] }
           );
+
+          // NEW: Auto-save status media to disk before it expires in 24h
+          if (isFeatureOn("status_save")) {
+            try {
+              const statusMediaType = msg.message?.imageMessage ? "imageMessage"
+                : msg.message?.videoMessage ? "videoMessage" : null;
+              if (statusMediaType) {
+                const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger, reuploadRequest: socket.updateMediaMessage });
+                const mediaDir = path.join(__dirname, "status_media");
+                if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir, { recursive: true });
+                const ext = statusMediaType === "imageMessage" ? "jpg" : "mp4";
+                const who = (msg.key.participant || sender).split("@")[0];
+                const filename = `${who}_${Date.now()}.${ext}`;
+                fs.writeFileSync(path.join(mediaDir, filename), buffer);
+                apiClient.post("/log-status", {
+                  sender: msg.key.participant || sender,
+                  name,
+                  filename,
+                  mediaType: statusMediaType,
+                  caption: body || "",
+                  timestamp: Date.now()
+                }).catch(() => {});
+              }
+            } catch (_) { /* media download can fail on expired/protected statuses, skip silently */ }
+          }
           // ✅ NEW: AI comment reply on text statuses (human-like)
           if (body && global.botActive !== false) {
             try {
@@ -496,6 +541,29 @@ async function startSession(sessionId, opts = {}) {
       const isOwner      = isPrimaryOwner || isCoOwner;  // co-owners get owner powers
       const isSubAdmin   = global.subAdmins.has(senderNumber);
       const isBotAdmin   = isOwner || isSubAdmin;
+
+      // ── NEW: Anti-link — delete link messages from non-admins, warn, kick at 3 ──
+      if (isGroup && !isBotAdmin && body && isFeatureOn("antilink")) {
+        const hasLink = /(https?:\/\/|chat\.whatsapp\.com|wa\.me\/)\S+/i.test(body);
+        if (hasLink) {
+          try { await socket.sendMessage(sender, { delete: msg.key }); } catch (_) {}
+          try {
+            const strikeRes = await apiClient.post("/antilink/strike", { group_id: sender, sender: senderJid });
+            const { count = 1, kick = false } = strikeRes.data || {};
+            if (kick) {
+              try {
+                await socket.groupParticipantsUpdate(sender, [senderJid], "remove");
+                await socket.sendMessage(sender, { text: `🚫 @${senderNumber} removed — 3 link warnings reached.`, mentions: [senderJid] });
+              } catch (_) {
+                await socket.sendMessage(sender, { text: `⚠️ @${senderNumber} hit 3 link warnings but I couldn't remove them (need admin rights).`, mentions: [senderJid] });
+              }
+            } else {
+              await socket.sendMessage(sender, { text: `⚠️ @${senderNumber} no links allowed here. Warning ${count}/3.`, mentions: [senderJid] });
+            }
+          } catch (_) {}
+          return; // don't process this message any further
+        }
+      }
 
       // ── fromMe guard — allow owner commands even from the bot number ──────
       if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) return;
@@ -597,14 +665,28 @@ async function startSession(sessionId, opts = {}) {
       }
 
       // Feature: Auto Save Contacts (silent — no auto-message sent to strangers)
-      try {
-        await apiClient.post("/auto-save", { sender, name });
-      } catch (e) {}
+      // ✅ FIX (latency): this used to be `await`-ed on the hot path with a
+      // 45s timeout, so any slow/locked backend response stalled EVERY
+      // reply. Stays non-blocking — but now actually reads the response.
+      // ✅ FIX (first reply): the backend has computed a WELCOME_TEXT for
+      // brand-new users for a while, but nothing ever sent it — first-time
+      // DMers got silence instead of a welcome message. Wired up below.
+      apiClient.post("/auto-save", { sender, name })
+        .then(res => {
+          if (res?.data?.status === "new_user_registered" && res.data.welcome_message) {
+            socket.sendMessage(sender, { text: res.data.welcome_message }).catch(() => {});
+          }
+        })
+        .catch(() => {});
 
       // Feature: Fake Typing on ALL incoming messages (human-like)
+      // ✅ FIX: shortened — this used to add 0.5-1.5s to literally every
+      // message, then the command dispatcher below added ANOTHER 0.5-1.7s
+      // on top of that. Stacked together that was 1-3s+ of pure artificial
+      // delay before a command even started running.
       try {
         await socket.sendPresenceUpdate("composing", sender);
-        await delay(Math.floor(Math.random() * 1000) + 500);
+        await delay(250);
         await socket.sendPresenceUpdate("paused", sender);
       } catch (e) {}
 
@@ -613,8 +695,9 @@ async function startSession(sessionId, opts = {}) {
 
       // ── Dot-command dispatcher (.menu .ping .tagall etc.) ─────────────────
       if (body.startsWith(CMD_PREFIX)) {
-        const humanDelay = Math.floor(Math.random() * 1200) + 500;
-        await delay(humanDelay);
+        // ✅ FIX: removed a second 0.5-1.7s "human-like" delay that was
+        // stacking on top of the fake-typing delay above — commands like
+        // .ping/.menu were waiting 1-3s+ before they even started running.
         try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
 
         const parts  = body.slice(CMD_PREFIX.length).trim().split(/\s+/);
@@ -681,8 +764,9 @@ async function startSession(sessionId, opts = {}) {
 
       // Core Command Handler (slash commands only)
       if (body.startsWith("/")) {
-        // Feature: Anti-Ban random human-like delay
-        const humanDelay = Math.floor(Math.random() * 1500) + 800;
+        // ✅ FIX: was a forced 0.8-2.3s wait before even calling /webhook
+        // (which then has to call the Groq AI API on top of that).
+        const humanDelay = 300;
         await delay(humanDelay);
 
         // Feature: Fake Typing / Recording simulation
@@ -729,10 +813,10 @@ async function startSession(sessionId, opts = {}) {
         try {
           const aiReply = await apiClient.post('/natural-chat', { body, name });
           if (aiReply?.data?.reply) {
-            const humanDelay = Math.floor(Math.random() * 1500) + 800;
-            await delay(humanDelay);
+            // ✅ FIX: was two stacked delays (0.8-2.3s + 0.6-1.8s = up to 4s)
+            // on top of the AI call itself. One short delay is enough.
             try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
-            await delay(Math.floor(Math.random() * 1200) + 600);
+            await delay(400);
             try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
             await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
           }
@@ -768,9 +852,9 @@ async function startSession(sessionId, opts = {}) {
               context: 'group'
             });
             if (aiReply?.data?.reply) {
-              await delay(Math.floor(Math.random() * 1500) + 800);
+              // ✅ FIX: same double-delay issue as the DM path above.
               try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
-              await delay(Math.floor(Math.random() * 1000) + 500);
+              await delay(400);
               try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
               await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
             }

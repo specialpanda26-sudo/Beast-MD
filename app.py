@@ -63,6 +63,60 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 if not GROQ_API_KEY:
     logger.warning("⚠️  GROQ_API_KEY not set! /ask command will fail.")
 
+# NEW: panel registration OTP — sent via free email SMTP, no WhatsApp/paid SMS needed
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Henry Tech Bot Panel")
+REG_STARTER_CREDITS = int(os.environ.get("REG_STARTER_CREDITS", "80"))  # 80 kesh starter credit on verify
+OTP_TTL_SECONDS = 600  # 10 minutes
+
+
+def _generate_otp() -> str:
+    return f"{random.randint(0, 999999):06d}"
+
+
+async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
+    """
+    Sends a 6-digit OTP to the registering user's email via SMTP.
+    Free to run — just needs a Gmail (or any SMTP) account + app password
+    set as SMTP_EMAIL / SMTP_PASSWORD env vars. No paid SMS gateway required.
+    """
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        logger.warning("⚠️  SMTP_EMAIL/SMTP_PASSWORD not set — cannot send OTP emails.")
+        return {"success": False, "error": "OTP email service not configured on server."}
+
+    import smtplib
+    from email.mime.text import MIMEText
+
+    subject = "Your Henry Tech Bot Panel verification code"
+    body = (
+        f"Hi {name or 'there'},\n\n"
+        f"Your verification code is: {otp}\n\n"
+        f"This code expires in 10 minutes. Enter it on the registration page to verify "
+        f"your number and unlock your trust badge + {REG_STARTER_CREDITS} kesh free credit.\n\n"
+        f"— Henry Tech Bot Panel"
+    )
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_EMAIL}>"
+    msg["To"] = to_email
+
+    def _send_sync():
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, [to_email], msg.as_string())
+
+    try:
+        await asyncio.to_thread(_send_sync)
+        return {"success": True}
+    except Exception as e:
+        logger.error("OTP email send failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
 DB_FILE = "henry_tech_v5.db"
 SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
@@ -157,6 +211,14 @@ async def get_audio_url(url: str) -> dict:
 
 async def init_db():
     async with aiosqlite.connect(DB_FILE) as db:
+        # ✅ FIX: every request opens a fresh sqlite connection (auto-save,
+        # log-message, registration, etc. all hit the DB on every WhatsApp
+        # message / panel request). In the default journal mode, concurrent
+        # writes can block each other for the full busy timeout, which stacks
+        # up as multi-second delays on bot replies. WAL mode lets reads/writes
+        # run concurrently instead of serializing on a file lock.
+        await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA busy_timeout=5000")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
                 sender TEXT PRIMARY KEY, name TEXT, timestamp REAL
@@ -177,6 +239,61 @@ async def init_db():
                 media_type TEXT, caption TEXT, timestamp REAL
             )
         """)
+        # NEW: keyword auto-reply table - admin-managed trigger/response pairs
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS keywords (
+                trigger TEXT PRIMARY KEY,
+                reply TEXT NOT NULL,
+                match_type TEXT NOT NULL DEFAULT 'contains',
+                enabled INTEGER NOT NULL DEFAULT 1,
+                timestamp REAL
+            )
+        """)
+        # NEW: feature toggle table - admin can flip modules on/off without redeploying
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS features (
+                name TEXT PRIMARY KEY,
+                enabled INTEGER NOT NULL DEFAULT 1
+            )
+        """)
+        # NEW: auto-saved status media log
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS status_media (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender TEXT, name TEXT, filename TEXT,
+                media_type TEXT, caption TEXT, timestamp REAL
+            )
+        """)
+        # NEW: anti-link warning strikes, per group per sender
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS group_warnings (
+                group_id TEXT NOT NULL,
+                sender TEXT NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (group_id, sender)
+            )
+        """)
+        # NEW: panel registration — phone+email verification, trust badges, credits
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS registrations (
+                phone TEXT PRIMARY KEY,
+                name TEXT,
+                email TEXT,
+                otp TEXT,
+                otp_expiry REAL,
+                verified INTEGER NOT NULL DEFAULT 0,
+                credits INTEGER NOT NULL DEFAULT 0,
+                badge TEXT NOT NULL DEFAULT 'none',
+                created_at REAL,
+                verified_at REAL
+            )
+        """)
+        for default_feature in ("ai_chat", "downloads", "keywords", "welcome_message",
+                                 "status_save", "antilink", "menu_buttons"):
+            await db.execute(
+                "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
+                (default_feature,)
+            )
         await db.commit()
         logger.info("\033[1;32m⚡ V5.0 Master Database Synchronized — All tables ready.\033[0m")
 
@@ -186,6 +303,8 @@ async def startup():
     await init_db()
     logger.info("\033[1;36m🦈 Henry Tech V5.0 Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
     logger.info("\033[1;33m📡 Waiting for Shark Bot (Node.js) to connect...\033[0m")
+    if not ADMIN_PASSWORD:
+        logger.warning("\033[1;31m⚠️  ADMIN_PASSWORD is not set — /admin has FULL OPEN ACCESS to anyone with the URL. Set ADMIN_PASSWORD in your environment before going live.\033[0m")
 
 
 WELCOME_TEXT = (
@@ -216,6 +335,36 @@ async def check_db_blacklist(sender: str) -> bool:
             return (await c.fetchone()) is not None
 
 
+async def is_feature_enabled(name: str) -> bool:
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT enabled FROM features WHERE name = ?", (name,)) as c:
+            row = await c.fetchone()
+            return True if row is None else bool(row[0])
+
+
+async def match_keyword(text: str):
+    """Return the configured reply if text matches an enabled keyword trigger, else None."""
+    if not text:
+        return None
+    lowered = text.lower().strip()
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT trigger, reply, match_type FROM keywords WHERE enabled = 1"
+        ) as c:
+            rows = await c.fetchall()
+    for trigger, reply, match_type in rows:
+        t = (trigger or "").lower().strip()
+        if not t:
+            continue
+        if match_type == "exact" and lowered == t:
+            return reply
+        if match_type == "starts_with" and lowered.startswith(t):
+            return reply
+        if match_type == "contains" and t in lowered:
+            return reply
+    return None
+
+
 @app.route("/")
 async def landing_page():
     index_path = Path(__file__).parent / "index.html"
@@ -230,6 +379,94 @@ async def status_check():
     # route external traffic to whatever port app.py binds to via $PORT —
     # not to the Node bridge's internal-only WEB_PORT.
     return jsonify({"status": "ok"})
+
+
+@app.route("/register")
+async def register_page():
+    reg_path = Path(__file__).parent / "register.html"
+    if reg_path.exists():
+        return Response(reg_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/register", methods=["POST"])
+async def api_register():
+    """Step 1: user submits phone + name + email -> we generate + email an OTP."""
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip()
+
+    if not phone or not phone.isdigit() or len(phone) < 9:
+        return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+    if not email or "@" not in email:
+        return jsonify({"success": False, "error": "Enter a valid email address."}), 400
+
+    otp = _generate_otp()
+    now = time.time()
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
+            row = await c.fetchone()
+        if row and row[0] == 1:
+            return jsonify({"success": False, "error": "This number is already verified."}), 400
+
+        await db.execute("""
+            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at)
+            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?)
+            ON CONFLICT(phone) DO UPDATE SET
+                name=excluded.name, email=excluded.email, otp=excluded.otp,
+                otp_expiry=excluded.otp_expiry
+        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now))
+        await db.commit()
+
+    result = await send_otp_email(email, otp, name)
+    if not result["success"]:
+        return jsonify({"success": False, "error": result["error"]}), 500
+
+    return jsonify({"success": True, "message": "OTP sent to your email. Enter it below to verify."})
+
+
+@app.route("/api/verify-otp", methods=["POST"])
+async def api_verify_otp():
+    """Step 2: user submits phone + OTP -> verify, award trust badge + free credits."""
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    otp = (data.get("otp") or "").strip()
+
+    if not phone or not otp:
+        return jsonify({"success": False, "error": "Phone and OTP are required."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT otp, otp_expiry, verified, name FROM registrations WHERE phone = ?", (phone,)
+        ) as c:
+            row = await c.fetchone()
+
+        if not row:
+            return jsonify({"success": False, "error": "No registration found for this number."}), 404
+
+        stored_otp, expiry, verified, name = row
+        if verified:
+            return jsonify({"success": False, "error": "Already verified."}), 400
+        if time.time() > expiry:
+            return jsonify({"success": False, "error": "OTP expired. Please register again."}), 400
+        if otp != stored_otp:
+            return jsonify({"success": False, "error": "Incorrect OTP."}), 400
+
+        await db.execute("""
+            UPDATE registrations
+            SET verified = 1, badge = 'Trusted', credits = credits + ?, verified_at = ?
+            WHERE phone = ?
+        """, (REG_STARTER_CREDITS, time.time(), phone))
+        await db.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Number verified! 🛡️ Trust badge unlocked + {REG_STARTER_CREDITS} kesh free credit added.",
+        "badge": "Trusted",
+        "credits": REG_STARTER_CREDITS
+    })
 
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
@@ -250,9 +487,11 @@ def _check_admin_auth(req) -> bool:
 
 @app.route("/admin")
 async def admin_panel():
-    if not _check_admin_auth(request):
-        return Response("❌ Unauthorized", status=401,
-                        headers={"WWW-Authenticate": 'Bearer realm="Admin Panel"'})
+    # FIX: this used to call _check_admin_auth() here too, which meant that
+    # when ADMIN_PASSWORD was set, you got a bare 401 before the in-page
+    # login form (the one inside admin.html) ever had a chance to load.
+    # The page itself contains no sensitive data - auth is enforced on every
+    # /admin/* data endpoint below instead, so this is safe to serve openly.
     admin_path = Path(__file__).parent / "admin.html"
     if admin_path.exists():
         return Response(admin_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
@@ -433,6 +672,61 @@ a{{color:#a78bfa;text-decoration:none}}</style></head>
 
 
 # ── ✅ NEW: Blacklist management ─────────────────────────────────────────────
+@app.route("/admin/registrations", methods=["GET"])
+async def admin_registrations():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("""
+            SELECT phone, name, email, verified, credits, badge, created_at, verified_at
+            FROM registrations ORDER BY created_at DESC
+        """) as c:
+            rows = await c.fetchall()
+    return jsonify({"registrations": [
+        {"phone": r[0], "name": r[1], "email": r[2], "verified": bool(r[3]),
+         "credits": r[4], "badge": r[5], "created_at": r[6], "verified_at": r[7]}
+        for r in rows
+    ]})
+
+
+@app.route("/admin/registrations/add-credit", methods=["POST"])
+async def admin_add_credit():
+    """
+    Admin tops up a verified user's kesh credit manually — just phone + name.
+    If the number isn't registered yet, creates a verified record for it
+    (the main bot already has the contact saved, so identity is trusted).
+    """
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    amount = data.get("amount")
+
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Amount must be a number."}), 400
+
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT phone FROM registrations WHERE phone = ?", (phone,)) as c:
+            exists = await c.fetchone()
+        if exists:
+            await db.execute("UPDATE registrations SET credits = credits + ?, name = COALESCE(NULLIF(?, ''), name) WHERE phone = ?",
+                              (amount, name, phone))
+        else:
+            await db.execute("""
+                INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, verified_at)
+                VALUES (?, ?, '', '', 0, 1, ?, 'Trusted', ?, ?)
+            """, (phone, name, amount, now, now))
+        await db.commit()
+
+    return jsonify({"success": True, "message": f"{amount} kesh added to {phone}."})
+
+
 @app.route("/admin/blacklist", methods=["GET"])
 async def admin_get_blacklist():
     if not _check_admin_auth(request):
@@ -539,6 +833,102 @@ async def admin_uptime():
     })
 
 
+@app.route("/admin/keywords", methods=["GET"])
+async def admin_get_keywords():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT trigger, reply, match_type, enabled FROM keywords ORDER BY trigger"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"keywords": [
+        {"trigger": r[0], "reply": r[1], "match_type": r[2], "enabled": bool(r[3])} for r in rows
+    ]})
+
+
+@app.route("/admin/keywords/add", methods=["POST"])
+async def admin_add_keyword():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    trigger = (data.get("trigger") or "").strip()
+    reply = (data.get("reply") or "").strip()
+    match_type = (data.get("match_type") or "contains").strip()
+    if match_type not in ("contains", "exact", "starts_with"):
+        match_type = "contains"
+    if not trigger or not reply:
+        return jsonify({"error": "trigger and reply are required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            """INSERT INTO keywords (trigger, reply, match_type, enabled, timestamp)
+               VALUES (?, ?, ?, 1, ?)
+               ON CONFLICT(trigger) DO UPDATE SET reply=excluded.reply,
+                   match_type=excluded.match_type, timestamp=excluded.timestamp""",
+            (trigger, reply, match_type, time.time())
+        )
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/keywords/remove", methods=["POST"])
+async def admin_remove_keyword():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    trigger = (data.get("trigger") or "").strip()
+    if not trigger:
+        return jsonify({"error": "trigger is required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM keywords WHERE trigger = ?", (trigger,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/keywords/toggle", methods=["POST"])
+async def admin_toggle_keyword():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    trigger = (data.get("trigger") or "").strip()
+    enabled = 1 if data.get("enabled") else 0
+    if not trigger:
+        return jsonify({"error": "trigger is required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE keywords SET enabled = ? WHERE trigger = ?", (enabled, trigger))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/features", methods=["GET"])
+async def admin_get_features():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT name, enabled FROM features ORDER BY name") as c:
+            rows = await c.fetchall()
+    return jsonify({"features": [{"name": r[0], "enabled": bool(r[1])} for r in rows]})
+
+
+@app.route("/admin/features/toggle", methods=["POST"])
+async def admin_toggle_feature():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    enabled = 1 if data.get("enabled") else 0
+    if not name:
+        return jsonify({"error": "name is required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO features (name, enabled) VALUES (?, ?) "
+            "ON CONFLICT(name) DO UPDATE SET enabled=excluded.enabled",
+            (name, enabled)
+        )
+        await db.commit()
+    return jsonify({"success": True})
+
+
 @app.route("/auto-save", methods=["POST"])
 async def register_profile():
     data = await request.get_json() or {}
@@ -595,7 +985,64 @@ async def log_viewonce():
     return jsonify({"status": "saved"})
 
 
-@app.route("/natural-chat", methods=["POST"])
+@app.route("/bot/features", methods=["GET"])
+async def bot_features():
+    """Internal — called by client_bridge.js on every relevant message.
+    Not part of the public admin API; returns just the on/off map."""
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT name, enabled FROM features") as c:
+            rows = await c.fetchall()
+    return jsonify({r[0]: bool(r[1]) for r in rows})
+
+
+@app.route("/log-status", methods=["POST"])
+async def log_status():
+    data = await request.get_json() or {}
+    sender = data.get("sender")
+    name = data.get("name", "User")
+    filename = data.get("filename")
+    media_type = data.get("mediaType", "imageMessage")
+    caption = data.get("caption", "")
+    timestamp = data.get("timestamp", time.time())
+    if not sender or not filename:
+        return jsonify({"status": "ignored"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO status_media (sender, name, filename, media_type, caption, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            (sender, name, filename, media_type, caption, timestamp)
+        )
+        await db.commit()
+    return jsonify({"status": "saved"})
+
+
+@app.route("/antilink/strike", methods=["POST"])
+async def antilink_strike():
+    """Records a strike for sender in group_id, returns the new count and
+    whether the bot should kick them (3 strikes)."""
+    data = await request.get_json() or {}
+    group_id = data.get("group_id")
+    sender = data.get("sender")
+    if not group_id or not sender:
+        return jsonify({"error": "group_id and sender required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            """INSERT INTO group_warnings (group_id, sender, count) VALUES (?, ?, 1)
+               ON CONFLICT(group_id, sender) DO UPDATE SET count = count + 1""",
+            (group_id, sender)
+        )
+        await db.commit()
+        async with db.execute(
+            "SELECT count FROM group_warnings WHERE group_id = ? AND sender = ?",
+            (group_id, sender)
+        ) as c:
+            row = await c.fetchone()
+    count = row[0] if row else 1
+    should_kick = count >= 3
+    if should_kick:
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute("DELETE FROM group_warnings WHERE group_id = ? AND sender = ?", (group_id, sender))
+            await db.commit()
+    return jsonify({"count": count, "kick": should_kick})
 async def natural_chat():
     data = await request.get_json() or {}
     body = data.get("body", "").strip()
@@ -812,8 +1259,17 @@ async def process_command_pipeline():
     if await check_db_blacklist(sender):
         return jsonify({"reply": "❌ Access Denied. Your profile node remains blacklisted."})
 
+    # 0. Keyword auto-reply — checked first so custom triggers (e.g. "price",
+    #    "hi") work even when they don't start with a slash command.
+    if await is_feature_enabled("keywords"):
+        kw_reply = await match_keyword(incoming_text)
+        if kw_reply:
+            return jsonify({"reply": kw_reply})
+
     # 1. AI Command
     if incoming_text.startswith("/ask "):
+        if not await is_feature_enabled("ai_chat"):
+            return jsonify({"reply": "⚠️ AI chat is currently disabled by the admin."})
         prompt = incoming_text[5:].strip()
         if not prompt:
             return jsonify({"reply": "⚠️ Please provide a query after /ask"})
@@ -831,6 +1287,8 @@ async def process_command_pipeline():
 
     # 3. Video Download — sends actual video
     elif incoming_text.startswith("/download_video "):
+        if not await is_feature_enabled("downloads"):
+            return jsonify({"reply": "⚠️ Downloads are currently disabled by the admin."})
         url = incoming_text[16:].strip()
         if not url:
             return jsonify({"reply": "⚠️ Please provide a URL after /download_video"})
@@ -845,6 +1303,8 @@ async def process_command_pipeline():
 
     # 4. Song Download — sends actual audio
     elif incoming_text.startswith("/download_song "):
+        if not await is_feature_enabled("downloads"):
+            return jsonify({"reply": "⚠️ Downloads are currently disabled by the admin."})
         url = incoming_text[15:].strip()
         if not url:
             return jsonify({"reply": "⚠️ Please provide a URL after /download_song"})
