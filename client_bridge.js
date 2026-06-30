@@ -459,7 +459,7 @@ function prompt(question) {
 
 function printBanner() {
   console.log("\n╔══════════════════════════════════════╗");
-  console.log("   🦈 SHARK BOT — HENRY BOTS© V5.0 🦈   ");
+  console.log("   🔥 HENRY OCHIBOTS v19™ 🔥   ");
   console.log("╚══════════════════════════════════════╝\n");
 }
 
@@ -1200,7 +1200,7 @@ async function startSession(sessionId, opts = {}) {
     }
 
     if (connection === "open") {
-      console.log(`\n✅ [${sessionId}] HENRY V19™ BEAST BOT IS ONLINE AND READY! 🔥\n`);
+      console.log(`\n✅ [${sessionId}] HENRY OCHIBOTS v19™ IS ONLINE AND READY! 🔥\n`);
       botOnline = true;
       // ✅ Only now is the socket actually safe to use for OTP delivery.
       activeSockets.set(sessionId, socket);

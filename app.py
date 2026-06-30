@@ -38,8 +38,8 @@ def print_banner():
 ║   \033[1;35m██████╔╝╚██████╔╝   ██║   ███████║\033[1;36m                    ║
 ║   \033[1;35m╚═════╝  ╚═════╝    ╚═╝   ╚══════╝\033[1;36m                   ║
 ║                                                              ║
-║      \033[1;33m✦ Henry Bots© — created by Henry ✦\033[1;36m              ║
-║      \033[1;32m🦈 AUTOMATION V5.0  |  PYTHON BACKEND\033[1;36m              ║
+║      \033[1;33m✦ Henry Ochibots v19™ — created by Henry ✦\033[1;36m              ║
+║      \033[1;32m⚡ HENRY OCHIBOTS v19™  |  PYTHON BACKEND\033[1;36m              ║
 ║      \033[1;33m⚡ AI  |  DATABASE  |  COMMANDS  |  API\033[1;36m            ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -413,36 +413,16 @@ async def init_db():
                 (default_feature,)
             )
         await db.commit()
-        logger.info("\033[1;32m⚡ V5.0 Master Database Synchronized — All tables ready.\033[0m")
+        logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
 
 
 @app.before_serving
 async def startup():
     await init_db()
-    logger.info("\033[1;36m🦈 Henry Tech V5.0 Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
-    logger.info("\033[1;33m📡 Waiting for Shark Bot (Node.js) to connect...\033[0m")
+    logger.info("\033[1;36m🔥 Henry Ochibots v19™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
+    logger.info("\033[1;33m📡 Waiting for WhatsApp bot session (Node.js) to connect...\033[0m")
     if not ADMIN_PASSWORD:
         logger.warning("\033[1;31m⚠️  ADMIN_PASSWORD is not set — /admin has FULL OPEN ACCESS to anyone with the URL. Set ADMIN_PASSWORD in your environment before going live.\033[0m")
-
-
-WELCOME_TEXT = (
-    "╔═══════════════════════════════════════╗\n"
-    "  █░█ █▀▀ █▄░█ █▀█ █▄█   ▀█▀ █▀▀ █▀▀ █░█\n"
-    "  █▀█ ██▄ █░▀█ █▀▄ ░█░   ░█░ ██▄ █▄▄ █▀█\n"
-    "╚═══════════════════════════════════════╝\n\n"
-    "✨ 𝖧𝖤𝖭𝖱𝖸 𝖳𝖤𝖢𝖧 𝖠𝖴𝖳𝖮𝖬𝖠𝖳𝖨𝖮𝖭 𝖵𝖤𝖱𝖲𝖨𝖮𝖭 5.0 ✨\n\n"
-    "Your profile node is securely authenticated. All 19 Automation Core Modules are currently online. 🌐\n\n"
-    "⚡ ENGINE COMMAND MATRIX ⚡\n"
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    "🧠 /ask [query] ➔ Chat with Llama-3 AI\n"
-    "🎨 /paint [text] ➔ Generate text image\n"
-    "📥 /download_video [URL] ➔ Download Videos (YT, IG, FB, TikTok)\n"
-    "🎧 /download_song [URL] ➔ Extract MP3 audio\n"
-    "🗑️ /recover [number] ➔ Recover deleted messages\n"
-    "👁️ /viewonce [number] ➔ View saved view once media\n"
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    "🛡️ Anti-Ban, Fake Typing, Auto Status & Auto React running in background."
-)
 
 
 async def check_db_blacklist(sender: str) -> bool:
@@ -1682,10 +1662,10 @@ async def pair_proxy_post():
 @app.route("/get-bio", methods=["GET"])
 async def generate_auto_bio():
     bios = [
-        f"🤖 Henry Tech V5.0 | Online 24/7 | {time.strftime('%H:%M')} 🌐",
-        f"⚡ Powered by Henry Tech | Always Active | {time.strftime('%H:%M')}",
-        f"🦈 Shark Bot V5 Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
-        f"🔥 Henry Tech Automation | {time.strftime('%H:%M')} | All systems go",
+        f"🤖 Henry Ochibots v19™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
+        f"⚡ Powered by Henry Ochibots | Always Active | {time.strftime('%H:%M')}",
+        f"🔥 Henry Ochibots v19™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
+        f"🔥 Henry Ochibots Automation | {time.strftime('%H:%M')} | All systems go",
     ]
     return jsonify({"bio": random.choice(bios)})
 

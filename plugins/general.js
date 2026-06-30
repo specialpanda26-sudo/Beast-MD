@@ -197,7 +197,7 @@ ${ownerSection}
     const num = args[0]?.replace(/[^0-9]/g, '');
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .addadmin 254XXXXXXXXX' }, { quoted: msg });
     global.subAdmins.add(num);
-    await sock.sendMessage(from, { text: `✅ *${num}* is now a Beast Bot Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `✅ *${num}* is now a Henry Ochibots Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
     // Notify the granted number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
@@ -265,7 +265,7 @@ ${ownerSection}
       return sock.sendMessage(from, { text: '📋 No sub-admins added yet.\nUse .addadmin 254XXXXXXXXX to add one.' }, { quoted: msg });
     }
     const list = admins.map((n, i) => `${i + 1}. +${n}`).join('\n');
-    await sock.sendMessage(from, { text: `🛡️ *Beast Bot Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `🛡️ *Henry Ochibots Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
   },
 
   // ── .login — unlock full access with credentials ───────────────────────────
@@ -404,7 +404,7 @@ Ninaongea Kiswahili, Sheng na English!
     const load = os.loadavg()[0].toFixed(2);
     await sock.sendMessage(from, {
       text:
-`⚡ *Henry v19™ Beast Bot — Runtime*
+`⚡ *Henry Ochibots v19™ — Runtime*
 
 ⏱️ *Uptime:* ${h}h ${m}m ${s}s
 🖥️ *CPU:* ${cpuModel}
@@ -415,7 +415,7 @@ Ninaongea Kiswahili, Sheng na English!
 🏠 *Platform:* ${os.platform()}
 ⚙️ *Node.js:* ${process.version}
 
-🔥 _Henry v19™ Beast Bot — @henrytech254_`
+🔥 _Henry Ochibots v19™ — @henrytech254_`
     }, { quoted: msg });
   },
 
