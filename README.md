@@ -28,6 +28,9 @@
 | ⏳ Subscription Expiry | Set a paid-access expiry date per session from the admin panel |
 | 🔑 Keyword Auto-Replies | Set custom trigger words/phrases in the admin panel — bot auto-replies instantly, no AI call needed |
 | ⚙️ Feature Toggles | Turn AI chat, downloads, keywords, or welcome message on/off for the whole bot from the admin panel |
+| 💾 Auto-Save Statuses | Saves contacts' status images/videos to disk before they expire in 24h |
+| 🚫 Anti-Link | Deletes links posted by non-admins in groups, warns, kicks after 3 strikes |
+| 🔘 Tappable Menu | `.menu` includes quick-reply buttons (Ping/Runtime/My Perms) alongside the full text menu — buttons fall back silently if WhatsApp doesn't render them for that client |
 
 ---
 
@@ -254,6 +257,7 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 - Admin panel (`/admin`) is password-protected via `ADMIN_PASSWORD` — supports blacklist management, message search, broadcast, keyword auto-replies, and feature toggles
 - ⚠️ If `ADMIN_PASSWORD` is **not** set, `/admin` is fully open to anyone with the URL — always set it before going live (the bot logs a warning on startup if it's missing)
 - Keyword auto-replies are checked before commands but skip blacklisted senders
+- Tappable menu buttons are best-effort: WhatsApp periodically changes how it renders Baileys-sent buttons. If they stop showing up for some users, the text/image menu (which always works) is sent first regardless — disable the toggle in Features if it ever causes errors in your logs
 - `.song` and `.download` use `execFile` (no shell injection risk)
 - Mode changes persist across messages (stored in global state)
 - `.login` is rate-limited to 3 failed attempts per number per 10 minutes

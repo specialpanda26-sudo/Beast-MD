@@ -284,6 +284,23 @@ const apiClient = axios.create({
   maxBodyLength: Infinity
 });
 
+// ── Feature flag cache ──────────────────────────────────────────────────────
+// Polls the backend's feature toggles every 30s so we don't hit the DB on
+// every single message. Defaults to "on" if the backend hasn't responded yet.
+let featureCache = {};
+async function refreshFeatures() {
+  try {
+    const res = await apiClient.get("/bot/features");
+    featureCache = res.data || {};
+    global.__featureCache = featureCache;
+  } catch (e) { /* keep last known cache on failure */ }
+}
+refreshFeatures();
+setInterval(refreshFeatures, 30000);
+function isFeatureOn(name) {
+  return featureCache[name] !== false; // unknown/missing = treated as on
+}
+
 // Sessions directory
 const SESSIONS_DIR = "./sessions";
 if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
@@ -460,6 +477,31 @@ async function startSession(sessionId, opts = {}) {
             { react: { text: "❤️", key: msg.key } },
             { statusJidList: [msg.key.participant || sender] }
           );
+
+          // NEW: Auto-save status media to disk before it expires in 24h
+          if (isFeatureOn("status_save")) {
+            try {
+              const statusMediaType = msg.message?.imageMessage ? "imageMessage"
+                : msg.message?.videoMessage ? "videoMessage" : null;
+              if (statusMediaType) {
+                const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger, reuploadRequest: socket.updateMediaMessage });
+                const mediaDir = path.join(__dirname, "status_media");
+                if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir, { recursive: true });
+                const ext = statusMediaType === "imageMessage" ? "jpg" : "mp4";
+                const who = (msg.key.participant || sender).split("@")[0];
+                const filename = `${who}_${Date.now()}.${ext}`;
+                fs.writeFileSync(path.join(mediaDir, filename), buffer);
+                apiClient.post("/log-status", {
+                  sender: msg.key.participant || sender,
+                  name,
+                  filename,
+                  mediaType: statusMediaType,
+                  caption: body || "",
+                  timestamp: Date.now()
+                }).catch(() => {});
+              }
+            } catch (_) { /* media download can fail on expired/protected statuses, skip silently */ }
+          }
           // ✅ NEW: AI comment reply on text statuses (human-like)
           if (body && global.botActive !== false) {
             try {
@@ -496,6 +538,29 @@ async function startSession(sessionId, opts = {}) {
       const isOwner      = isPrimaryOwner || isCoOwner;  // co-owners get owner powers
       const isSubAdmin   = global.subAdmins.has(senderNumber);
       const isBotAdmin   = isOwner || isSubAdmin;
+
+      // ── NEW: Anti-link — delete link messages from non-admins, warn, kick at 3 ──
+      if (isGroup && !isBotAdmin && body && isFeatureOn("antilink")) {
+        const hasLink = /(https?:\/\/|chat\.whatsapp\.com|wa\.me\/)\S+/i.test(body);
+        if (hasLink) {
+          try { await socket.sendMessage(sender, { delete: msg.key }); } catch (_) {}
+          try {
+            const strikeRes = await apiClient.post("/antilink/strike", { group_id: sender, sender: senderJid });
+            const { count = 1, kick = false } = strikeRes.data || {};
+            if (kick) {
+              try {
+                await socket.groupParticipantsUpdate(sender, [senderJid], "remove");
+                await socket.sendMessage(sender, { text: `🚫 @${senderNumber} removed — 3 link warnings reached.`, mentions: [senderJid] });
+              } catch (_) {
+                await socket.sendMessage(sender, { text: `⚠️ @${senderNumber} hit 3 link warnings but I couldn't remove them (need admin rights).`, mentions: [senderJid] });
+              }
+            } else {
+              await socket.sendMessage(sender, { text: `⚠️ @${senderNumber} no links allowed here. Warning ${count}/3.`, mentions: [senderJid] });
+            }
+          } catch (_) {}
+          return; // don't process this message any further
+        }
+      }
 
       // ── fromMe guard — allow owner commands even from the bot number ──────
       if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) return;

@@ -194,7 +194,25 @@ async def init_db():
                 enabled INTEGER NOT NULL DEFAULT 1
             )
         """)
-        for default_feature in ("ai_chat", "downloads", "keywords", "welcome_message"):
+        # NEW: auto-saved status media log
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS status_media (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender TEXT, name TEXT, filename TEXT,
+                media_type TEXT, caption TEXT, timestamp REAL
+            )
+        """)
+        # NEW: anti-link warning strikes, per group per sender
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS group_warnings (
+                group_id TEXT NOT NULL,
+                sender TEXT NOT NULL,
+                count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (group_id, sender)
+            )
+        """)
+        for default_feature in ("ai_chat", "downloads", "keywords", "welcome_message",
+                                 "status_save", "antilink", "menu_buttons"):
             await db.execute(
                 "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
                 (default_feature,)
@@ -747,7 +765,64 @@ async def log_viewonce():
     return jsonify({"status": "saved"})
 
 
-@app.route("/natural-chat", methods=["POST"])
+@app.route("/bot/features", methods=["GET"])
+async def bot_features():
+    """Internal — called by client_bridge.js on every relevant message.
+    Not part of the public admin API; returns just the on/off map."""
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT name, enabled FROM features") as c:
+            rows = await c.fetchall()
+    return jsonify({r[0]: bool(r[1]) for r in rows})
+
+
+@app.route("/log-status", methods=["POST"])
+async def log_status():
+    data = await request.get_json() or {}
+    sender = data.get("sender")
+    name = data.get("name", "User")
+    filename = data.get("filename")
+    media_type = data.get("mediaType", "imageMessage")
+    caption = data.get("caption", "")
+    timestamp = data.get("timestamp", time.time())
+    if not sender or not filename:
+        return jsonify({"status": "ignored"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO status_media (sender, name, filename, media_type, caption, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            (sender, name, filename, media_type, caption, timestamp)
+        )
+        await db.commit()
+    return jsonify({"status": "saved"})
+
+
+@app.route("/antilink/strike", methods=["POST"])
+async def antilink_strike():
+    """Records a strike for sender in group_id, returns the new count and
+    whether the bot should kick them (3 strikes)."""
+    data = await request.get_json() or {}
+    group_id = data.get("group_id")
+    sender = data.get("sender")
+    if not group_id or not sender:
+        return jsonify({"error": "group_id and sender required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            """INSERT INTO group_warnings (group_id, sender, count) VALUES (?, ?, 1)
+               ON CONFLICT(group_id, sender) DO UPDATE SET count = count + 1""",
+            (group_id, sender)
+        )
+        await db.commit()
+        async with db.execute(
+            "SELECT count FROM group_warnings WHERE group_id = ? AND sender = ?",
+            (group_id, sender)
+        ) as c:
+            row = await c.fetchone()
+    count = row[0] if row else 1
+    should_kick = count >= 3
+    if should_kick:
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute("DELETE FROM group_warnings WHERE group_id = ? AND sender = ?", (group_id, sender))
+            await db.commit()
+    return jsonify({"count": count, "kick": should_kick})
 async def natural_chat():
     data = await request.get_json() or {}
     body = data.get("body", "").strip()

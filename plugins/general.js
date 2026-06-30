@@ -181,6 +181,25 @@ ${ownerSection}
       // Fallback to text only if image fails
       await sock.sendMessage(from, { text: menu }, { quoted: msg });
     }
+
+    // NEW: tappable quick-reply buttons under the menu, if enabled.
+    // Falls back silently if WhatsApp rejects buttons for this client —
+    // the menu above already sent and always works regardless.
+    const buttonsEnabled = global.__featureCache ? global.__featureCache.menu_buttons !== false : true;
+    if (buttonsEnabled) {
+      try {
+        await sock.sendMessage(from, {
+          text: "👇 Quick actions:",
+          footer: config.botName,
+          buttons: [
+            { buttonId: `${p}ping`,    buttonText: { displayText: "🏓 Ping" },     type: 1 },
+            { buttonId: `${p}runtime`, buttonText: { displayText: "⏱️ Runtime" },  type: 1 },
+            { buttonId: `${p}myperm`,  buttonText: { displayText: "🔑 My Perms" }, type: 1 }
+          ],
+          headerType: 1
+        }, { quoted: msg });
+      } catch (_) { /* buttons unsupported here, text/image menu already sent */ }
+    }
   },
 
   // ── .addadmin ──────────────────────────────────────────────────────────────
