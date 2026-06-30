@@ -195,6 +195,8 @@
       <a href="#" onclick="switchTab('features');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">⚙️ Features</a>
       <a href="#" onclick="switchTab('blacklist');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🚫 Blacklist</a>
       <a href="#" onclick="switchTab('broadcast');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">📢 Broadcast</a>
+      <a href="#" onclick="switchTab('registrations');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🛡️ Registrations</a>
+      <a href="#" onclick="switchTab('payments');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">💰 Payments</a>
     </div>
   </div>
 
@@ -208,6 +210,8 @@
       <div class="tab" data-tab="features" onclick="switchTab('features')">⚙️ Features</div>
       <div class="tab" data-tab="blacklist" onclick="switchTab('blacklist')">🚫 Blacklist</div>
       <div class="tab" data-tab="broadcast" onclick="switchTab('broadcast')">📢 Broadcast</div>
+      <div class="tab" data-tab="registrations" onclick="switchTab('registrations')">🛡️ Registrations</div>
+      <div class="tab" data-tab="payments" onclick="switchTab('payments')">💰 Payments</div>
     </div>
 
     <!-- OVERVIEW TAB -->
@@ -310,6 +314,46 @@
         <div id="broadcast-status" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
       </div>
     </div>
+
+    <!-- REGISTRATIONS TAB -->
+    <div class="tab-content" id="tab-registrations">
+      <div class="form-card">
+        <div class="section-title">🛡️ Add / Top-Up Credit Manually</div>
+        <label>Phone Number (with country code)</label>
+        <input type="text" id="reg-credit-phone" placeholder="254712345678"/>
+        <label>Name</label>
+        <input type="text" id="reg-credit-name" placeholder="Customer name"/>
+        <label>Amount (kesh)</label>
+        <input type="number" id="reg-credit-amount" placeholder="e.g. 80"/>
+        <div class="hint">If the number isn't registered yet, this creates a verified record for it directly — no OTP needed since you've already confirmed identity.</div>
+        <button class="btn btn-green" style="width:auto" onclick="addRegCredit()">Add Credit</button>
+        <div id="reg-credit-status" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">📋 Registered Users</div>
+        <button class="refresh-btn" onclick="loadRegistrations()">↻ Refresh</button>
+      </div>
+      <div id="registrations-list"><div class="empty">Loading...</div></div>
+    </div>
+
+    <!-- PAYMENTS TAB -->
+    <div class="tab-content" id="tab-payments">
+      <div class="form-card">
+        <div class="hint">⚠️ There's no live M-Pesa API hookup here — every request below is a user's *claim* that they sent money. Cross-check the amount and code against your own M-Pesa statement (and the screenshot, if attached) before approving. Approving is what actually adds kesh to their wallet.</div>
+        <label>Filter</label>
+        <select id="payments-filter" onchange="loadPayments()">
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="">All</option>
+        </select>
+      </div>
+      <div class="section-header">
+        <div class="section-title">💰 Top-Up Requests</div>
+        <button class="refresh-btn" onclick="loadPayments()">↻ Refresh</button>
+      </div>
+      <div id="payments-list"><div class="empty">Loading...</div></div>
+    </div>
   </div>
 </div>
 
@@ -361,10 +405,128 @@
     if (name === "blacklist") loadBlacklist();
     if (name === "keywords") loadKeywords();
     if (name === "features") loadFeatures();
+    if (name === "registrations") loadRegistrations();
+    if (name === "payments") loadPayments();
   }
 
   function toggleAdminMenu() { document.getElementById('adminMenuOverlay').style.display = 'block'; }
   function closeAdminMenu() { document.getElementById('adminMenuOverlay').style.display = 'none'; }
+
+  /* ── REGISTRATIONS ── */
+  async function loadRegistrations() {
+    const list = document.getElementById('registrations-list');
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await authedFetch('/admin/registrations');
+      const data = await res.json();
+      const regs = data.registrations || [];
+      if (regs.length === 0) {
+        list.innerHTML = '<div class="empty">No registrations yet.</div>';
+        return;
+      }
+      list.innerHTML = regs.map(r => `
+        <div class="contact-row">
+          <div>
+            <strong>${r.name || 'Unnamed'}</strong> — ${r.phone}<br/>
+            <span style="color:var(--muted);font-size:12px">${r.email || 'no email'}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="color:${r.verified ? 'var(--green)' : 'var(--muted)'};font-size:12px">${r.verified ? '🛡️ ' + r.badge : '⏳ Unverified'}</div>
+            <div style="color:var(--accent);font-weight:700">${r.credits} kesh</div>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  async function addRegCredit() {
+    const phone = document.getElementById('reg-credit-phone').value.trim();
+    const name = document.getElementById('reg-credit-name').value.trim();
+    const amount = document.getElementById('reg-credit-amount').value.trim();
+    const status = document.getElementById('reg-credit-status');
+    if (!phone || !amount) { status.textContent = 'Phone and amount are required.'; return; }
+    status.textContent = 'Saving...';
+    try {
+      const res = await authedFetch('/admin/registrations/add-credit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, name, amount })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.message : (data.error || 'Failed.');
+      if (data.success) {
+        document.getElementById('reg-credit-phone').value = '';
+        document.getElementById('reg-credit-name').value = '';
+        document.getElementById('reg-credit-amount').value = '';
+        loadRegistrations();
+      }
+    } catch (e) {
+      status.textContent = 'Network error.';
+    }
+  }
+
+  /* ── PAYMENTS ── */
+  async function loadPayments() {
+    const list = document.getElementById('payments-list');
+    const filter = document.getElementById('payments-filter').value;
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await authedFetch(`/admin/payments${filter ? `?status=${filter}` : ''}`);
+      const data = await res.json();
+      const pays = data.payments || [];
+      if (pays.length === 0) {
+        list.innerHTML = '<div class="empty">No requests here.</div>';
+        return;
+      }
+      list.innerHTML = pays.map(p => {
+        const statusColor = p.status === 'approved' ? 'var(--green)' : p.status === 'rejected' ? '#ef4444' : '#f59e0b';
+        const when = p.created_at ? new Date(p.created_at * 1000).toLocaleString() : '';
+        return `
+        <div class="contact-row" style="flex-direction:column;align-items:stretch;gap:8px">
+          <div style="display:flex;justify-content:space-between">
+            <div>
+              <strong>#${p.id} — ${p.phone}</strong><br/>
+              <span style="color:var(--muted);font-size:12px">${when}</span>
+            </div>
+            <div style="text-align:right">
+              <div style="color:${statusColor};font-size:12px;text-transform:uppercase">${p.status}</div>
+              <div style="color:var(--accent);font-weight:700">${p.amount} kesh</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:#ccc">Code: <strong>${p.mpesa_code}</strong>
+            ${p.has_screenshot ? ` · <a href="#" onclick="authedFetch('/admin/payment-proof/${p.id}').then(r=>r.blob()).then(b=>window.open(URL.createObjectURL(b)));return false">📸 View screenshot</a>` : ' · <span style="color:var(--muted)">no screenshot</span>'}
+          </div>
+          ${p.status === 'pending' ? `
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-green" style="width:auto;padding:6px 14px" onclick="reviewPayment(${p.id},'approve')">✅ Approve</button>
+            <button class="btn" style="width:auto;padding:6px 14px;background:#ef4444" onclick="reviewPayment(${p.id},'reject')">❌ Reject</button>
+          </div>` : (p.admin_note ? `<div style="font-size:12px;color:var(--muted)">Note: ${p.admin_note}</div>` : '')}
+        </div>`;
+      }).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  async function reviewPayment(id, action) {
+    let note = '';
+    if (action === 'reject') note = prompt('Optional reason for rejecting (shown to the user):') || '';
+    if (!confirm(`${action === 'approve' ? 'Approve' : 'Reject'} request #${id}?`)) return;
+    try {
+      const res = await authedFetch('/admin/payments/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action, note })
+      });
+      const data = await res.json();
+      if (!data.success) { alert(data.error || 'Failed.'); return; }
+      loadPayments();
+    } catch (e) {
+      alert('Network error.');
+    }
+  }
 
   /* ── KEYWORDS ── */
   async function loadKeywords() {
@@ -429,7 +591,6 @@
     ai_chat: '🧠 AI Chat (/ask)',
     downloads: '📥 Video & Song Downloads',
     keywords: '🔑 Keyword Auto-Replies',
-    welcome_message: '👋 Welcome Message',
     status_save: '💾 Auto-Save Statuses',
     antilink: '🚫 Anti-Link (warn → kick)',
     menu_buttons: '🔘 Tappable Menu Buttons'

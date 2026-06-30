@@ -13,6 +13,10 @@ services:
         value: "Henry v19™ Beast Bot"
       - key: OWNER_RECOVERY_SECRET
         sync: false                  # set this in Render dashboard — keep it private
+      - key: ADMIN_PASSWORD
+        sync: false                  # protects /admin — set in Render dashboard
+      - key: BOT_LOGIN_PASS
+        sync: false                  # protects .login command — set in Render dashboard
       - key: PORT
         value: 5000
       - key: WEB_PORT

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Register — Henry Ochibots v19™</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#020408;--surface:#080f1a;--border:#112030;--accent:#00e5ff;--accent2:#7c3aed;
+    --green:#00ff88;--text:#e2eaf4;--muted:#4a6070;--card:#060e18;--red:#ff3b5c;
+  }
+  body{
+    background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size:50px 50px;
+  }
+  .card{
+    width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);
+    border-radius:18px;padding:34px 28px;box-shadow:0 0 60px rgba(0,229,255,0.08);
+    position:relative;overflow:hidden;
+  }
+  .card::before{
+    content:"";position:absolute;top:-80px;left:50%;transform:translateX(-50%);
+    width:300px;height:300px;background:var(--accent);filter:blur(100px);opacity:0.15;pointer-events:none;
+  }
+  h1{
+    font-family:'JetBrains Mono',monospace;font-size:1.05rem;color:var(--accent);
+    text-shadow:0 0 18px rgba(0,229,255,0.5);text-align:center;margin-bottom:4px;letter-spacing:0.04em;
+  }
+  .sub{text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:24px}
+  label{display:block;font-size:0.78rem;color:var(--muted);margin:14px 0 6px;font-family:'JetBrains Mono',monospace}
+  input{
+    width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:12px 14px;color:var(--text);font-size:0.95rem;outline:none;transition:border-color .2s;
+  }
+  input:focus{border-color:var(--accent)}
+  .btn{
+    width:100%;margin-top:22px;padding:13px;border:none;border-radius:10px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));color:#000;font-weight:700;
+    font-size:0.95rem;cursor:pointer;transition:opacity .2s;
+  }
+  .btn:hover{opacity:0.88}
+  .btn:disabled{opacity:0.5;cursor:not-allowed}
+  .msg{margin-top:16px;font-size:0.85rem;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
+  .msg.error{background:rgba(255,59,92,0.1);color:var(--red);border:1px solid rgba(255,59,92,0.25);display:block}
+  .msg.success{background:rgba(0,255,136,0.08);color:var(--green);border:1px solid rgba(0,255,136,0.25);display:block}
+  .step{display:none}
+  .step.active{display:block}
+  .badge-result{text-align:center;padding:20px 0}
+  .badge-icon{font-size:48px;margin-bottom:10px}
+  .badge-title{font-family:'JetBrains Mono',monospace;color:var(--green);font-size:1.1rem;font-weight:700;margin-bottom:6px}
+  .credit-line{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:1rem;margin-top:8px}
+  .hint{color:var(--muted);font-size:0.75rem;margin-top:10px;line-height:1.5}
+  .back-link{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:0.8rem;text-decoration:none}
+  .back-link:hover{color:var(--accent)}
+  .method-toggle{display:flex;gap:8px;margin-top:6px}
+  .method-btn{
+    flex:1;padding:10px 8px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);font-size:0.82rem;font-family:'Space Grotesk',sans-serif;
+    cursor:pointer;text-align:center;transition:all .15s;
+  }
+  .method-btn.active{
+    border-color:var(--accent);color:var(--accent);
+    background:rgba(0,229,255,0.08);box-shadow:0 0 12px rgba(0,229,255,0.15);
+  }
+  .field-hidden{display:none}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🦈 BOT PANEL ACCESS</h1>
+    <p class="sub">Register your WhatsApp number — verify to unlock your Trust Badge</p>
+
+    <!-- STEP 1: REGISTER -->
+    <div class="step active" id="step-register">
+      <label>WhatsApp Number (with country code)</label>
+      <input type="text" id="reg-phone" placeholder="254712345678" inputmode="numeric"/>
+      <label>Name</label>
+      <input type="text" id="reg-name" placeholder="Your name"/>
+
+      <label>Get my code via</label>
+      <div class="method-toggle">
+        <button type="button" class="method-btn active" id="method-whatsapp" onclick="setMethod('whatsapp')">📱 WhatsApp</button>
+        <button type="button" class="method-btn" id="method-email" onclick="setMethod('email')">📧 Email</button>
+      </div>
+
+      <div id="email-field" class="field-hidden">
+        <label>Email Address</label>
+        <input type="email" id="reg-email" placeholder="you@example.com"/>
+      </div>
+
+      <button class="btn" id="btn-register" onclick="doRegister()">Send Verification Code →</button>
+      <div class="hint" id="method-hint">Your 6-digit code will be sent as a WhatsApp message from the bot.</div>
+      <div class="msg" id="register-msg"></div>
+    </div>
+
+    <!-- STEP 2: VERIFY OTP -->
+    <div class="step" id="step-verify">
+      <label id="verify-label">Enter the 6-digit code sent to your WhatsApp</label>
+      <input type="text" id="otp-input" placeholder="000000" inputmode="numeric" maxlength="6"/>
+      <button class="btn" id="btn-verify" onclick="doVerify()">Verify Number →</button>
+      <div class="msg" id="verify-msg"></div>
+    </div>
+
+    <!-- STEP 3: SUCCESS -->
+    <div class="step" id="step-success">
+      <div class="badge-result">
+        <div class="badge-icon">🛡️</div>
+        <div class="badge-title">TRUSTED BADGE UNLOCKED</div>
+        <div class="credit-line" id="credit-result"></div>
+        <div class="hint" style="margin-top:14px">Your number is now verified on the bot panel. Contact the admin or use the bot directly to start using your credit.</div>
+      </div>
+    </div>
+
+    <a class="back-link" href="/">← Back to home</a>
+  </div>
+
+<script>
+  let registeredPhone = "";
+  let deliveryMethod = "whatsapp";
+
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = "msg " + type;
+  }
+
+  function setMethod(method) {
+    deliveryMethod = method;
+    document.getElementById("method-whatsapp").classList.toggle("active", method === "whatsapp");
+    document.getElementById("method-email").classList.toggle("active", method === "email");
+    document.getElementById("email-field").classList.toggle("field-hidden", method !== "email");
+    document.getElementById("method-hint").textContent = method === "email"
+      ? "Your 6-digit code will be sent to your email address."
+      : "Your 6-digit code will be sent as a WhatsApp message from the bot.";
+  }
+
+  async function doRegister() {
+    const phone = document.getElementById("reg-phone").value.trim();
+    const name = document.getElementById("reg-name").value.trim();
+    const email = document.getElementById("reg-email").value.trim();
+    const btn = document.getElementById("btn-register");
+
+    if (deliveryMethod === "email" && !email) {
+      return showMsg("register-msg", "Enter your email address to receive the code.", "error");
+    }
+
+    btn.disabled = true; btn.textContent = "Sending...";
+
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, name, email, method: deliveryMethod })
+      });
+      const data = await res.json();
+      if (data.success) {
+        registeredPhone = phone.replace(/\s+/g, "").replace("+", "");
+        document.getElementById("verify-label").textContent =
+          deliveryMethod === "email"
+            ? "Enter the 6-digit code sent to your email"
+            : "Enter the 6-digit code sent to your WhatsApp";
+        document.getElementById("step-register").classList.remove("active");
+        document.getElementById("step-verify").classList.add("active");
+      } else {
+        showMsg("register-msg", data.error || "Something went wrong.", "error");
+      }
+    } catch (e) {
+      showMsg("register-msg", "Network error. Try again.", "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Send Verification Code →";
+    }
+  }
+
+  async function doVerify() {
+    const otp = document.getElementById("otp-input").value.trim();
+    const btn = document.getElementById("btn-verify");
+    btn.disabled = true; btn.textContent = "Verifying...";
+
+    try {
+      const res = await fetch("/api/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: registeredPhone, otp })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById("step-verify").classList.remove("active");
+        document.getElementById("step-success").classList.add("active");
+        document.getElementById("credit-result").textContent = `+ ${data.credits} kesh free credit added`;
+      } else {
+        showMsg("verify-msg", data.error || "Incorrect code.", "error");
+      }
+    } catch (e) {
+      showMsg("verify-msg", "Network error. Try again.", "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Verify Number →";
+    }
+  }
+</script>
+</body>
+</html>

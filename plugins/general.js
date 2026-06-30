@@ -49,10 +49,13 @@ ${p}sticker        - Image → Sticker
 ${p}getpp [@user]  - Get profile picture
 ${p}download [url] - Download video
 ${p}song [url]     - Extract MP3
+${p}dl [url] (audio) - Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
+${p}convertmedia [fmt] - Universal media converter (reply to file)
 ${p}weather [city] - Live weather
 ${p}dict [word]    - Dictionary
 ${p}convert [x y]  - Currency converter
-${p}roll [dice]    - Roll dice e.g 3d6+2` : '';
+${p}roll [dice]    - Roll dice e.g 3d6+2
+${p}checklink [url] - Check if a link looks safe or suspicious` : '';
 
     // ── OWNER-ONLY MENU ────────────────────────────────────────────────────
     const ownerSection = isOwner ? `
@@ -66,6 +69,8 @@ ${p}listadmins        - List all sub-admins
 ${p}addcoowner [num]  - Add a co-owner (full access)
 ${p}removecoowner [n] - Remove co-owner
 ${p}listcoowners      - List co-owners
+${p}settier [num] [subadmin|coowner] - Assign any number to any tier (auto-notifies them)
+${p}checkblocked [num] - Heuristic check if a number has blocked the bot
 ${p}welcome [num]     - Send welcome card
 ${p}status            - Post image as status
 ${p}pp                - Update profile pic
@@ -121,6 +126,9 @@ ${p}weather [city] - Live weather info
 ${p}dict [word]    - Dictionary definition
 ${p}roll [sides]   - Roll a dice 🎲
 ${p}myperm         - Check your permissions
+${p}register       - Get web panel link (free credits + trust badge)
+${p}profile        - View your wallet balance & badge
+${p}addfunds [amt] [code] - Top up wallet via M-Pesa (admin reviews it)
 
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
@@ -140,7 +148,8 @@ ${p}getpp [@user]  - Get profile picture (works unsaved)
 ${p}about [@user]  - Get About status text (works unsaved)
 ${p}download [url] - Download video (YT/TikTok)
 ${p}song [url]     - Extract MP3 audio
-${p}convert        - Convert media format
+${p}dl [url] (audio) - 🌐 Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
+${p}convertmedia [fmt] - 🔄 Universal media converter (reply to img/video/audio)
 ${isBotAdmin ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛡️ *ADMIN COMMANDS*
@@ -202,6 +211,20 @@ ${ownerSection}
     }
   },
 
+  // ── .register ─────────────────────────────────────────────────────────────
+  // Sends the user a link to the web registration panel where they verify
+  // their WhatsApp number via OTP and unlock starter credits + a trust badge.
+  register: async ({ sock, from, msg }) => {
+    const publicUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || `http://localhost:${process.env.WEB_PORT || 3000}`;
+    await sock.sendMessage(from, {
+      text: `🌟 *Register on the Henry Ochibots Web Panel*\n\n` +
+            `Verify your number to unlock:\n` +
+            `✅ Free starter credits\n` +
+            `✅ A trust badge on your profile\n\n` +
+            `👉 ${publicUrl}/register`
+    }, { quoted: msg });
+  },
+
   // ── .addadmin ──────────────────────────────────────────────────────────────
   addadmin: async ({ sock, from, msg, isOwner, args }) => {
     if (!isOwner) return sock.sendMessage(from, { text: '❌ Only *Henry* (main owner) can add admins!' }, { quoted: msg });
@@ -209,6 +232,54 @@ ${ownerSection}
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .addadmin 254XXXXXXXXX' }, { quoted: msg });
     global.subAdmins.add(num);
     await sock.sendMessage(from, { text: `✅ *${num}* is now a Beast Bot Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
+    // Notify the granted number directly on their own chat
+    try {
+      await sock.sendMessage(`${num}@s.whatsapp.net`, {
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *Sub-Admin* access on Henry Ochibots v19™.\nType *.menu* to see what you can now use.`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
+    }
+  },
+
+  // ── .settier — owner-only, assign ANY number to ANY permission tier ────────
+  // Usage: .settier 254XXXXXXXXX [subadmin|coowner]
+  // Unlike .addadmin (sub-admin only), this lets the main owner grant full
+  // co-owner (same tier as themselves) access too. Always DMs the target.
+  settier: async ({ sock, from, msg, isOwner, args }) => {
+    if (!isOwner) return sock.sendMessage(from, { text: '❌ Only the main owner can assign tiers!' }, { quoted: msg });
+    const num = args[0]?.replace(/[^0-9]/g, '');
+    const tier = (args[1] || '').toLowerCase();
+    if (!num || !['subadmin', 'coowner'].includes(tier)) {
+      return sock.sendMessage(from, {
+        text: '📋 Usage: .settier 254XXXXXXXXX [subadmin|coowner]'
+      }, { quoted: msg });
+    }
+
+    global.subAdmins = global.subAdmins || new Set();
+    global.coOwners = global.coOwners || new Set();
+
+    let tierLabel;
+    if (tier === 'subadmin') {
+      global.subAdmins.add(num);
+      tierLabel = 'Sub-Admin';
+    } else {
+      global.coOwners.add(num);
+      tierLabel = 'Co-Owner (full owner access)';
+    }
+
+    await sock.sendMessage(from, {
+      text: `✅ *${num}* has been set to tier: *${tierLabel}*.`
+    }, { quoted: msg });
+
+    // Notify the granted number directly on their own chat
+    try {
+      await sock.sendMessage(`${num}@s.whatsapp.net`, {
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *${tierLabel}* access on Henry Ochibots v19™.\nType *.menu* to see what you can now use.`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
+    }
   },
 
   // ── .removeadmin ───────────────────────────────────────────────────────────
@@ -238,7 +309,16 @@ ${ownerSection}
   // ✅ SECURITY FIX: failed attempts are rate-limited per number to slow brute force.
   login: async ({ sock, from, msg, args, senderJid }) => {
     const BOT_USER = process.env.BOT_LOGIN_USER || 'Henry';
-    const BOT_PASS = process.env.BOT_LOGIN_PASS || '7lq4mv00';
+    const BOT_PASS = process.env.BOT_LOGIN_PASS;
+    // 🔒 SECURITY FIX: this used to fall back to a hardcoded default
+    // password ('7lq4mv00') baked into the source code on a public repo —
+    // anyone reading the code could log in as owner. Now it refuses to
+    // work at all until you set BOT_LOGIN_PASS yourself.
+    if (!BOT_PASS) {
+      return sock.sendMessage(from, {
+        text: '🔒 Login is disabled — BOT_LOGIN_PASS is not set in the environment.'
+      }, { quoted: msg });
+    }
     const inputUser = args[0];
     const inputPass = args[1];
     const num = senderJid.split('@')[0].replace(/:\d+$/, '');
@@ -420,9 +500,15 @@ Ninaongea Kiswahili, Sheng na English!
   },
 
   // ── .ownerrecovery — change owner number via secret passphrase ─────────────
-  // Usage: .ownerrecovery 7lq4mv00 254NEWPHONE
+  // Usage: .ownerrecovery [OWNER_RECOVERY_SECRET] 254NEWPHONE
   ownerrecovery: async ({ sock, from, msg, isPrimaryOwner, args }) => {
-    const SECRET = process.env.OWNER_RECOVERY_SECRET || '7lq4mv00';
+    const SECRET = process.env.OWNER_RECOVERY_SECRET;
+    // 🔒 SECURITY FIX: this used to fall back to the same hardcoded default
+    // ('7lq4mv00') as .login, sitting in plain text in a public repo —
+    // anyone could hijack bot ownership with it. Now it silently does
+    // nothing (same as a wrong passphrase) until OWNER_RECOVERY_SECRET is
+    // actually set.
+    if (!SECRET) return;
     const passphrase = args[0];
     const newNumber = args[1]?.replace(/[^0-9]/g, '');
     if (passphrase !== SECRET) return; // silent fail — don't hint that this command exists
@@ -490,4 +576,81 @@ module.exports.bio = async ({ sock, from, msg, isOwner, args }) => {
   } catch (e) {
     await sock.sendMessage(from, { text: `❌ Failed: ${e.message}` }, { quoted: msg });
   }
+};
+
+// ── .checklink — heuristic URL safety checker (no external API) ────────────
+// Usage: .checklink [url]
+// Flags common phishing/scam red flags. This is NOT a guarantee of safety —
+// just a fast first-pass screen. Encourage users to still be cautious.
+module.exports.checklink = async ({ sock, from, msg, args }) => {
+  const input = args[0];
+  if (!input) {
+    return sock.sendMessage(from, { text: '🔗 Usage: .checklink [url]' }, { quoted: msg });
+  }
+
+  let url;
+  try {
+    url = new URL(input.startsWith('http') ? input : `http://${input}`);
+  } catch (e) {
+    return sock.sendMessage(from, { text: "❌ That doesn't look like a valid URL." }, { quoted: msg });
+  }
+
+  const host = url.hostname.toLowerCase();
+  const flags = [];
+
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+    flags.push('Uses a raw IP address instead of a domain name');
+  }
+
+  const riskyTlds = ['.zip', '.xyz', '.top', '.tk', '.gq', '.ml', '.cf', '.work', '.click', '.country', '.kim'];
+  if (riskyTlds.some(tld => host.endsWith(tld))) {
+    flags.push('Uses a TLD frequently abused for scams/phishing');
+  }
+
+  const labels = host.split('.');
+  if (labels.length > 4) {
+    flags.push('Unusually long chain of subdomains');
+  }
+
+  const knownBrands = ['paypal', 'whatsapp', 'facebook', 'instagram', 'google', 'apple', 'amazon', 'netflix', 'mpesa', 'safaricom', 'binance'];
+  const rootDomain = labels.slice(-2).join('.');
+  const brandHit = knownBrands.find(b => host.includes(b) && !rootDomain.startsWith(b));
+  if (brandHit) {
+    flags.push(`Mentions "${brandHit}" but that's not the actual root domain — classic lookalike pattern`);
+  }
+
+  const shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'is.gd', 'cutt.ly', 'rebrand.ly', 'shorturl.at'];
+  if (shorteners.includes(host)) {
+    flags.push('This is a shortened link — the real destination is hidden until clicked');
+  }
+
+  if (url.protocol !== 'https:') {
+    flags.push('Not using HTTPS — connection is not encrypted');
+  }
+
+  let verdict, emoji;
+  if (flags.length === 0) {
+    verdict = 'No obvious red flags found.';
+    emoji = '✅';
+  } else if (flags.length <= 2) {
+    verdict = 'A few warning signs — proceed with caution.';
+    emoji = '⚠️';
+  } else {
+    verdict = 'Multiple red flags — this looks risky, avoid entering any info.';
+    emoji = '🚫';
+  }
+
+  const flagText = flags.length ? flags.map(f => `• ${f}`).join('\n') : '• None detected';
+
+  await sock.sendMessage(from, {
+    text:
+`${emoji} *Link Check: ${host}*
+
+${verdict}
+
+*Findings:*
+${flagText}
+
+_This is a heuristic check, not a guarantee. When in doubt, don't enter passwords or payment info._`
+  }, { quoted: msg });
 };

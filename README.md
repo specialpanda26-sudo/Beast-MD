@@ -5,6 +5,22 @@
 
 ---
 
+## 🩹 Recent fixes
+
+- **💰 Wallet top-up system (NEW)** — verified users can now send `.profile` to see their kesh balance/badge, and `.addfunds <amount> <mpesa_code>` (optionally with a screenshot attached) to request a top-up after sending money to the admin's M-Pesa number. **This does not auto-verify payments** — there's no Safaricom Daraja API hookup — every request lands in `/admin → 💰 Payments` as "pending" for a human admin to approve or reject. Approving is the only thing that actually credits the wallet. Each M-Pesa code can only be submitted once (duplicate codes are rejected outright), and the admin gets pinged on WhatsApp the moment a request comes in.
+- **🔍 `.checkblocked [number]` (owner/sub-admin)** — best-effort heuristic for whether a number has blocked the bot, based on whether their profile photo can be fetched. WhatsApp doesn't expose a real "blocked" status to bots, so this is a clue, not a guarantee — a private/no-photo account can look identical to a block.
+- **Faster replies** — every command used to wait through stacked "human-like typing" delays (1–3s+ of pure artificial wait) plus a blocking backend call with a 45s timeout on the hot path. Delays are now minimal and backend logging calls no longer block replies.
+- **Auto-welcome DM removed** — brand-new DMers no longer get an automatic welcome message; the bot still saves their contact silently in the background. Use `.register` or the `/register` page if you want them directed to sign up.
+- **OTP failures now respond fast & cleanly** — registering used to be able to hang and surface a raw crash (`Cannot read properties of undefined (reading 'id')`) if the bot's WhatsApp session was reconnecting when an OTP was requested. The socket is now only used once it's fully connected, stale sockets are dropped immediately on disconnect, and both the WhatsApp and email send timeouts were cut to 5–6s — so a bad session now fails fast with a clear error instead of hanging.
+- **Choice of OTP delivery: WhatsApp or Email** — `/register` now lets the user pick how they want their code delivered, instead of WhatsApp-only. Useful as a fallback if the bot's WhatsApp session is down. Requires `SMTP_EMAIL`/`SMTP_PASSWORD` to be set for the email option to work.
+- **🔒 Security fix — hardcoded login/recovery password removed** — `.login` and `.ownerrecovery` used to fall back to the same hardcoded default password if `BOT_LOGIN_PASS`/`OWNER_RECOVERY_SECRET` weren't set, which meant anyone reading the public source code could log in as owner or hijack bot ownership. Both commands now refuse to run at all until you explicitly set those env vars yourself — no default fallback exists anymore. **If you ever ran an earlier version of this bot, treat the old default password as compromised and set fresh values.**
+- **Dead "Welcome Message" toggle removed from `/admin`** — it used to do nothing since the auto-welcome DM feature was removed; the toggle no longer appears.
+- **Register button added to the landing page** — `/register` is now linked directly from the nav bar, mobile menu, and hero section, not just discoverable via `.register` in chat.
+- **SQLite WAL mode enabled** — reduces lock-contention stalls when multiple sessions write to the DB at the same time.
+- **`.register` command added** — DM the bot `.register` to get the web panel link directly in chat, no need to know the URL.
+
+---
+
 ## ✨ Features
 
 | Feature | Description |
@@ -15,7 +31,8 @@
 | 📷 View-Once Save | Saves & forwards view-once photos/videos (owner-only to view) |
 | ⏰ Message Scheduler | Schedule messages to any number at any time |
 | 🛡️ Permissions System | Control what commands each member can use |
-| 📥 Media Downloader | YouTube, TikTok, Instagram videos & MP3 |
+| 📥 Media Downloader | YouTube, TikTok, Instagram videos & MP3, plus a universal downloader (`.dl`) covering Facebook, Twitter/X, SoundCloud & more |
+| 🔄 Media Converter | Universal media converter (`.convertmedia`) — convert replied images/video/audio between common formats |
 | 🖼️ Sticker Maker | Convert images/videos to WhatsApp stickers |
 | 🔇 Anti-Call | Auto-rejects all incoming calls |
 | 📢 Broadcast | Send messages to all groups at once (owner only) |
@@ -23,6 +40,8 @@
 | 👑 Owner + Co-Owner | Primary owner can add co-owners with full access |
 | 🛡️ Sub-Admins | Grant limited bot admin powers to trusted people |
 | 🌐 Web Pairing | Pair via QR code or pairing code in browser |
+| 💰 Wallet & Top-Ups | `.profile` shows balance/badge; `.addfunds` submits an M-Pesa top-up for admin approval (manual review, not auto-verified) |
+| 🔍 Block Checker | `.checkblocked [num]` — heuristic check, owner/sub-admin only |
 | 🔑 Owner Recovery | Emergency passphrase to change owner number at runtime |
 | 👥 Bulk Group Add | Create a group or add to one from a plain list of numbers |
 | ⏳ Subscription Expiry | Set a paid-access expiry date per session from the admin panel |
@@ -31,6 +50,7 @@
 | 💾 Auto-Save Statuses | Saves contacts' status images/videos to disk before they expire in 24h |
 | 🚫 Anti-Link | Deletes links posted by non-admins in groups, warns, kicks after 3 strikes |
 | 🔘 Tappable Menu | `.menu` includes quick-reply buttons (Ping/Runtime/My Perms) alongside the full text menu — buttons fall back silently if WhatsApp doesn't render them for that client |
+| 🌟 Web Panel Registration | Self-serve `/register` page — WhatsApp OTP verification unlocks starter credits + a trust badge, manageable from the admin panel |
 
 ---
 
@@ -45,7 +65,9 @@
 | `.weather [city]` | Live weather info |
 | `.dict [word]` | Dictionary definition |
 | `.roll [XdY+Z]` | Roll dice e.g `.roll 3d6+2` 🎲 |
+| `.checklink [url]` | Heuristic check for suspicious/phishing links |
 | `.myperm` | Check your permission level |
+| `.register` | Get the web panel registration link (free credits + trust badge) |
 | `/ask [query]` | Ask AI anything |
 
 ### 🔐 Access / Login
@@ -67,6 +89,8 @@
 | `.about [@user]` | Get someone's WhatsApp About status text (works even unsaved) |
 | `.download [url]` | Download video (YT/TikTok/IG) |
 | `.song [url]` | Extract MP3 audio from video URL |
+| `.dl [url] (audio)` | 🌐 Universal downloader — YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud & most yt-dlp-supported sites. Add `audio` to grab MP3 instead of video |
+| `.convertmedia [format]` | 🔄 Universal media converter — reply to an image/video/audio file to convert it (mp3, mp4, wav, ogg, opus, m4a, png, jpg, webp, gif, webm) |
 | `.convert [amt] [from] [to]` | Currency converter e.g `.convert 100 USD KES` |
 
 ### 🛡️ Group Admin (bot admin / sub-admin)
@@ -93,6 +117,7 @@
 | `.listadmins` | List all sub-admins |
 | `.addcoowner [number]` | Add a co-owner (full owner powers) |
 | `.removecoowner [number]` | Remove a co-owner |
+| `.settier [number] [subadmin\|coowner]` | Assign any number to any permission tier; auto-DMs them an access notification | Remove a co-owner |
 | `.listcoowners` | List all co-owners |
 | `.bcgc [msg]` | Broadcast message to all groups |
 | `.creategroup [name] \| [numbers]` | Create a new group from a plain list of numbers, e.g. `.creategroup Squad \| 254712345678,254798765432` |
@@ -213,6 +238,23 @@ When a feature is off, the bot replies with a short "currently disabled by the a
 
 ---
 
+## 🛡️ Bot Panel Registration, OTP & Trust Badges
+
+A self-serve page at **`/register`** lets anyone register their WhatsApp number on the bot panel and get verified:
+
+1. User enters their **WhatsApp number and name** at `/register`, and chooses how to receive their code: **📱 WhatsApp** (default — sent as a message from the bot itself, no email/SMS gateway needed) or **📧 Email** (useful if the bot's WhatsApp session is temporarily down).
+2. A 6-digit OTP is generated and sent via the chosen method.
+3. User enters the OTP on the same page to verify.
+4. On success, the number is awarded a **🛡️ Trusted badge** and **80 kesh free credit** automatically.
+
+**Setup:** the WhatsApp delivery option needs nothing extra — it reuses your already-paired WhatsApp session. Adjust the starter credit with `REG_STARTER_CREDITS`. The **email delivery option requires `SMTP_EMAIL`/`SMTP_PASSWORD`** to be set — without them, picking "Email" on the register page returns a clear "email service not configured" error instead of failing silently.
+
+**Admin side:** the **🛡️ Registrations** tab in `/admin` lists every registered user (verified status, badge, credit balance) and lets you **manually top up credit** for any number — just enter their phone + name (no OTP required, since the main bot already has their contact saved). This is also how you'd add credit for a number that hasn't self-registered yet.
+
+This system is intentionally lightweight (SQLite-backed, same DB as the rest of the bot) so it's ready to plug into a future paid top-up flow without restructuring.
+
+---
+
 ## ⏳ Subscription Expiry (Admin Panel)
 
 For paid/client sessions, set an expiry date and time per session directly from `/admin`:
@@ -258,7 +300,7 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 - ⚠️ If `ADMIN_PASSWORD` is **not** set, `/admin` is fully open to anyone with the URL — always set it before going live (the bot logs a warning on startup if it's missing)
 - Keyword auto-replies are checked before commands but skip blacklisted senders
 - Tappable menu buttons are best-effort: WhatsApp periodically changes how it renders Baileys-sent buttons. If they stop showing up for some users, the text/image menu (which always works) is sent first regardless — disable the toggle in Features if it ever causes errors in your logs
-- `.song` and `.download` use `execFile` (no shell injection risk)
+- `.song`, `.download`, `.dl`, and `.convertmedia` use `execFile` (no shell injection risk)
 - Mode changes persist across messages (stored in global state)
 - `.login` is rate-limited to 3 failed attempts per number per 10 minutes
 - `.login` usage hint never reveals the real username/password — change credentials via `BOT_LOGIN_USER` / `BOT_LOGIN_PASS` env vars

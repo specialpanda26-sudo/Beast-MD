@@ -63,6 +63,103 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 if not GROQ_API_KEY:
     logger.warning("⚠️  GROQ_API_KEY not set! /ask command will fail.")
 
+# NEW: panel registration OTP — sent via free email SMTP, no WhatsApp/paid SMS needed
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Henry Tech Bot Panel")
+REG_STARTER_CREDITS = int(os.environ.get("REG_STARTER_CREDITS", "80"))  # 80 kesh starter credit on verify
+OTP_TTL_SECONDS = 600  # 10 minutes
+
+# NEW: manual top-up / wallet funding via M-Pesa "Send Money" to the admin's
+# own number. We CANNOT verify in real time whether an M-Pesa code or
+# screenshot is genuine (that needs a Safaricom Daraja API integration this
+# project doesn't have) — so instead of pretending to auto-verify, this
+# queues every submission for a human admin to approve/reject from the
+# Payments tab. Credits only land in the user's wallet once approved.
+import re as _re
+import base64 as _b64
+
+MPESA_CODE_RE = _re.compile(r"^[A-Z0-9]{8,12}$")
+PAYMENT_PROOFS_DIR = Path(__file__).parent / "payment_proofs"
+PAYMENT_PROOFS_DIR.mkdir(exist_ok=True)
+ADMIN_PAYTO_NUMBER = os.environ.get("ADMIN_PAYTO_NUMBER", "")  # e.g. 254712345678 — shown to users as where to send M-Pesa funds
+
+
+def _generate_otp() -> str:
+    return f"{random.randint(0, 999999):06d}"
+
+
+# ✅ NEW: WhatsApp OTP delivery — this IS a WhatsApp bot, so the registering
+# user's code is sent straight from the bot's own number instead of email.
+# Talks to the Node bridge's internal pairing server over localhost (same
+# mechanism the /pair proxy routes further down use).
+NODE_PAIR_URL = f"http://127.0.0.1:{os.environ.get('WEB_PORT', 3000)}"
+
+
+async def send_otp_whatsapp(phone: str, otp: str, name: str) -> dict:
+    try:
+        # ✅ FIX (speed): was timeout=15 — a dead/half-open session would make
+        # registering users wait up to 15s just to see "doesn't work". Since
+        # the Node bridge now rejects immediately when there's no live
+        # socket, 5s is plenty and failures show up far faster.
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.post(
+                f"{NODE_PAIR_URL}/send-otp-whatsapp",
+                json={"phone": phone, "otp": otp, "name": name}
+            )
+            data = resp.json()
+            if resp.status_code == 200 and data.get("success"):
+                return {"success": True}
+            return {"success": False, "error": data.get("error", "Failed to send WhatsApp message.")}
+    except Exception as e:
+        logger.error("OTP WhatsApp send failed: %s", e)
+        return {"success": False, "error": "Bot isn't connected to WhatsApp right now. Try again shortly."}
+
+
+async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
+    """
+    Optional fallback — sends the OTP via email instead of WhatsApp. Only
+    used if SMTP_EMAIL/SMTP_PASSWORD are configured; WhatsApp delivery above
+    is the primary path now.
+    """
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        logger.warning("⚠️  SMTP_EMAIL/SMTP_PASSWORD not set — cannot send OTP emails.")
+        return {"success": False, "error": "OTP email service not configured on server."}
+
+    import smtplib
+    from email.mime.text import MIMEText
+
+    subject = "Your Henry Tech Bot Panel verification code"
+    body = (
+        f"Hi {name or 'there'},\n\n"
+        f"Your verification code is: {otp}\n\n"
+        f"This code expires in 10 minutes. Enter it on the registration page to verify "
+        f"your number and unlock your trust badge + {REG_STARTER_CREDITS} kesh free credit.\n\n"
+        f"— Henry Tech Bot Panel"
+    )
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_EMAIL}>"
+    msg["To"] = to_email
+
+    def _send_sync():
+        # ✅ FIX (speed): was timeout=15 — matches the same "fail fast,
+        # don't make the user wait" fix applied to WhatsApp OTP delivery.
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=6) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, [to_email], msg.as_string())
+
+    try:
+        await asyncio.to_thread(_send_sync)
+        return {"success": True}
+    except Exception as e:
+        logger.error("OTP email send failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
 DB_FILE = "henry_tech_v5.db"
 SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
@@ -157,6 +254,14 @@ async def get_audio_url(url: str) -> dict:
 
 async def init_db():
     async with aiosqlite.connect(DB_FILE) as db:
+        # ✅ FIX: every request opens a fresh sqlite connection (auto-save,
+        # log-message, registration, etc. all hit the DB on every WhatsApp
+        # message / panel request). In the default journal mode, concurrent
+        # writes can block each other for the full busy timeout, which stacks
+        # up as multi-second delays on bot replies. WAL mode lets reads/writes
+        # run concurrently instead of serializing on a file lock.
+        await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA busy_timeout=5000")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
                 sender TEXT PRIMARY KEY, name TEXT, timestamp REAL
@@ -211,7 +316,42 @@ async def init_db():
                 PRIMARY KEY (group_id, sender)
             )
         """)
-        for default_feature in ("ai_chat", "downloads", "keywords", "welcome_message",
+        # NEW: panel registration — phone+email verification, trust badges, credits
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS registrations (
+                phone TEXT PRIMARY KEY,
+                name TEXT,
+                email TEXT,
+                otp TEXT,
+                otp_expiry REAL,
+                verified INTEGER NOT NULL DEFAULT 0,
+                credits INTEGER NOT NULL DEFAULT 0,
+                badge TEXT NOT NULL DEFAULT 'none',
+                created_at REAL,
+                verified_at REAL
+            )
+        """)
+        # NEW: wallet top-up requests — user claims they sent M-Pesa funds to
+        # the admin and submits the transaction code (+ optional screenshot).
+        # Nothing here is auto-trusted: status starts 'pending' and only an
+        # admin approving it from /admin moves kesh into the wallet. The
+        # mpesa_code UNIQUE constraint stops the same code being replayed
+        # twice (a common fake-payment trick).
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phone TEXT NOT NULL,
+                name TEXT,
+                amount INTEGER NOT NULL,
+                mpesa_code TEXT NOT NULL UNIQUE,
+                screenshot_path TEXT,
+                status TEXT NOT NULL DEFAULT 'pending',
+                admin_note TEXT,
+                created_at REAL,
+                reviewed_at REAL
+            )
+        """)
+        for default_feature in ("ai_chat", "downloads", "keywords",
                                  "status_save", "antilink", "menu_buttons"):
             await db.execute(
                 "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
@@ -302,6 +442,234 @@ async def status_check():
     # route external traffic to whatever port app.py binds to via $PORT —
     # not to the Node bridge's internal-only WEB_PORT.
     return jsonify({"status": "ok"})
+
+
+@app.route("/register")
+async def register_page():
+    reg_path = Path(__file__).parent / "register.html"
+    if reg_path.exists():
+        return Response(reg_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/register", methods=["POST"])
+async def api_register():
+    """Step 1: user submits their WhatsApp number (+ optional name/email) ->
+    we generate an OTP and send it via whichever delivery method they chose
+    (WhatsApp from the bot, or email as a fallback for anyone whose WhatsApp
+    session/bot isn't reachable right now)."""
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip()
+    method = (data.get("method") or "whatsapp").strip().lower()
+
+    if not phone or not phone.isdigit() or len(phone) < 9:
+        return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+
+    if method == "email":
+        if not email or "@" not in email or "." not in email.split("@")[-1]:
+            return jsonify({"success": False, "error": "Enter a valid email address."}), 400
+    elif method != "whatsapp":
+        return jsonify({"success": False, "error": "Invalid delivery method."}), 400
+
+    otp = _generate_otp()
+    now = time.time()
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
+            row = await c.fetchone()
+        if row and row[0] == 1:
+            return jsonify({"success": False, "error": "This number is already verified."}), 400
+
+        await db.execute("""
+            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at)
+            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?)
+            ON CONFLICT(phone) DO UPDATE SET
+                name=excluded.name, email=excluded.email, otp=excluded.otp,
+                otp_expiry=excluded.otp_expiry
+        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now))
+        await db.commit()
+
+    if method == "email":
+        result = await send_otp_email(email, otp, name)
+    else:
+        result = await send_otp_whatsapp(phone, otp, name)
+    if not result["success"]:
+        return jsonify({"success": False, "error": result["error"]}), 500
+
+    return jsonify({
+        "success": True,
+        "message": "OTP sent to your email. Enter it below to verify." if method == "email"
+                   else "OTP sent to your WhatsApp. Enter it below to verify."
+    })
+
+
+@app.route("/api/verify-otp", methods=["POST"])
+async def api_verify_otp():
+    """Step 2: user submits phone + OTP -> verify, award trust badge + free credits."""
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    otp = (data.get("otp") or "").strip()
+
+    if not phone or not otp:
+        return jsonify({"success": False, "error": "Phone and OTP are required."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT otp, otp_expiry, verified, name FROM registrations WHERE phone = ?", (phone,)
+        ) as c:
+            row = await c.fetchone()
+
+        if not row:
+            return jsonify({"success": False, "error": "No registration found for this number."}), 404
+
+        stored_otp, expiry, verified, name = row
+        if verified:
+            return jsonify({"success": False, "error": "Already verified."}), 400
+        if time.time() > expiry:
+            return jsonify({"success": False, "error": "OTP expired. Please register again."}), 400
+        if otp != stored_otp:
+            return jsonify({"success": False, "error": "Incorrect OTP."}), 400
+
+        await db.execute("""
+            UPDATE registrations
+            SET verified = 1, badge = 'Trusted', credits = credits + ?, verified_at = ?
+            WHERE phone = ?
+        """, (REG_STARTER_CREDITS, time.time(), phone))
+        await db.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Number verified! 🛡️ Trust badge unlocked + {REG_STARTER_CREDITS} kesh free credit added.",
+        "badge": "Trusted",
+        "credits": REG_STARTER_CREDITS
+    })
+
+
+@app.route("/api/profile", methods=["GET"])
+async def api_profile():
+    """Profile panel data for a verified user — wallet balance, badge, and
+    recent top-up requests with their review status. Looked up by phone
+    only (no password); this mirrors how /api/verify-otp already trusts a
+    WhatsApp number once it's been OTP-verified."""
+    phone = (request.args.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT name, email, verified, credits, badge, verified_at FROM registrations WHERE phone = ?",
+            (phone,)
+        ) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404
+
+        async with db.execute(
+            "SELECT id, amount, mpesa_code, status, created_at FROM payments WHERE phone = ? ORDER BY created_at DESC LIMIT 10",
+            (phone,)
+        ) as c:
+            prows = await c.fetchall()
+
+    name, email, verified, credits, badge, verified_at = row
+    return jsonify({
+        "success": True,
+        "phone": phone,
+        "name": name,
+        "email": email,
+        "verified": bool(verified),
+        "credits": credits,
+        "badge": badge if verified else "none",
+        "verified_at": verified_at,
+        "recent_payments": [
+            {"id": p[0], "amount": p[1], "mpesa_code": p[2], "status": p[3], "created_at": p[4]}
+            for p in prows
+        ],
+    })
+
+
+@app.route("/api/payment/submit", methods=["POST"])
+async def api_payment_submit():
+    """User claims they sent kesh to the admin's M-Pesa number and submits
+    the transaction code (+ optional screenshot as base64) for review.
+
+    Important: this endpoint does NOT and CANNOT confirm the code is real —
+    there's no Safaricom Daraja/M-Pesa API integration here. It only does
+    cheap, honest checks (format looks like a real M-Pesa code, the code
+    hasn't been used before, the user is a verified registrant) and then
+    queues it as 'pending' for a human admin to approve from the Payments
+    tab. Credits are added only on admin approval, never automatically.
+    """
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    amount = data.get("amount")
+    mpesa_code = (data.get("mpesa_code") or "").strip().upper()
+    screenshot_b64 = data.get("screenshot_base64")  # optional, data-URL or raw base64
+
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+    try:
+        amount = int(amount)
+        if amount <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Amount must be a positive whole number."}), 400
+    if not MPESA_CODE_RE.match(mpesa_code):
+        return jsonify({"success": False, "error": "That doesn't look like a valid M-Pesa transaction code (8-12 letters/numbers, e.g. QFG7H8J9K0)."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
+            reg = await c.fetchone()
+        if not reg or not reg[0]:
+            return jsonify({"success": False, "error": "Verify your number first — send *.register* to the bot."}), 403
+
+        async with db.execute("SELECT id, status FROM payments WHERE mpesa_code = ?", (mpesa_code,)) as c:
+            dup = await c.fetchone()
+        if dup:
+            return jsonify({"success": False, "error": f"This transaction code was already submitted (status: {dup[1]}). Each code can only be used once."}), 409
+
+        screenshot_path = None
+        if screenshot_b64:
+            try:
+                raw = screenshot_b64.split(",", 1)[-1]  # strip data: URL prefix if present
+                img_bytes = _b64.b64decode(raw)
+                if len(img_bytes) > 6 * 1024 * 1024:
+                    return jsonify({"success": False, "error": "Screenshot too large (max 6MB)."}), 400
+                fname = f"{phone}_{mpesa_code}_{int(time.time())}.jpg"
+                (PAYMENT_PROOFS_DIR / fname).write_bytes(img_bytes)
+                screenshot_path = fname
+            except Exception:
+                return jsonify({"success": False, "error": "Couldn't read that screenshot — try sending it again."}), 400
+
+        now = time.time()
+        await db.execute("""
+            INSERT INTO payments (phone, name, amount, mpesa_code, screenshot_path, status, created_at)
+            VALUES (?, '', ?, ?, ?, 'pending', ?)
+        """, (phone, amount, mpesa_code, screenshot_path, now))
+        await db.commit()
+        async with db.execute("SELECT last_insert_rowid()") as c:
+            new_id = (await c.fetchone())[0]
+
+    # Best-effort nudge to the admin on WhatsApp — never blocks the response
+    try:
+        async with httpx.AsyncClient(timeout=4) as client:
+            await client.post(f"{NODE_PAIR_URL}/notify-owner", json={
+                "text": (
+                    f"💰 *New top-up request* #{new_id}\n"
+                    f"From: {phone}\nAmount: {amount} kesh\nCode: {mpesa_code}\n"
+                    f"{'📸 Screenshot attached' if screenshot_path else '⚠️ No screenshot'}\n\n"
+                    f"Review in /admin → Payments tab."
+                )
+            })
+    except Exception:
+        pass
+
+    return jsonify({
+        "success": True,
+        "id": new_id,
+        "message": "Submitted! Your top-up is pending admin review — you'll be notified once it's approved."
+    })
 
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
@@ -507,6 +875,157 @@ a{{color:#a78bfa;text-decoration:none}}</style></head>
 
 
 # ── ✅ NEW: Blacklist management ─────────────────────────────────────────────
+@app.route("/admin/registrations", methods=["GET"])
+async def admin_registrations():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("""
+            SELECT phone, name, email, verified, credits, badge, created_at, verified_at
+            FROM registrations ORDER BY created_at DESC
+        """) as c:
+            rows = await c.fetchall()
+    return jsonify({"registrations": [
+        {"phone": r[0], "name": r[1], "email": r[2], "verified": bool(r[3]),
+         "credits": r[4], "badge": r[5], "created_at": r[6], "verified_at": r[7]}
+        for r in rows
+    ]})
+
+
+@app.route("/admin/registrations/add-credit", methods=["POST"])
+async def admin_add_credit():
+    """
+    Admin tops up a verified user's kesh credit manually — just phone + name.
+    If the number isn't registered yet, creates a verified record for it
+    (the main bot already has the contact saved, so identity is trusted).
+    """
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    amount = data.get("amount")
+
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Amount must be a number."}), 400
+
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT phone FROM registrations WHERE phone = ?", (phone,)) as c:
+            exists = await c.fetchone()
+        if exists:
+            await db.execute("UPDATE registrations SET credits = credits + ?, name = COALESCE(NULLIF(?, ''), name) WHERE phone = ?",
+                              (amount, name, phone))
+        else:
+            await db.execute("""
+                INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, verified_at)
+                VALUES (?, ?, '', '', 0, 1, ?, 'Trusted', ?, ?)
+            """, (phone, name, amount, now, now))
+        await db.commit()
+
+    return jsonify({"success": True, "message": f"{amount} kesh added to {phone}."})
+
+
+# ── ✅ NEW: Wallet top-up review queue ───────────────────────────────────────
+@app.route("/admin/payments", methods=["GET"])
+async def admin_get_payments():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    status_filter = (request.args.get("status") or "").strip().lower()
+    query = "SELECT id, phone, amount, mpesa_code, screenshot_path, status, admin_note, created_at, reviewed_at FROM payments"
+    params = ()
+    if status_filter in ("pending", "approved", "rejected"):
+        query += " WHERE status = ?"
+        params = (status_filter,)
+    query += " ORDER BY created_at DESC LIMIT 200"
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(query, params) as c:
+            rows = await c.fetchall()
+    return jsonify({"payments": [
+        {
+            "id": r[0], "phone": r[1], "amount": r[2], "mpesa_code": r[3],
+            "has_screenshot": bool(r[4]), "status": r[5], "admin_note": r[6],
+            "created_at": r[7], "reviewed_at": r[8],
+        } for r in rows
+    ]})
+
+
+@app.route("/admin/payment-proof/<int:payment_id>", methods=["GET"])
+async def admin_payment_proof(payment_id):
+    """Serves the uploaded screenshot for one payment — gated behind admin
+    auth so users' M-Pesa screenshots (which can contain phone numbers and
+    names) aren't sitting at a guessable public URL."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT screenshot_path FROM payments WHERE id = ?", (payment_id,)) as c:
+            row = await c.fetchone()
+    if not row or not row[0]:
+        return jsonify({"error": "No screenshot for this payment."}), 404
+    fpath = PAYMENT_PROOFS_DIR / row[0]
+    if not fpath.exists():
+        return jsonify({"error": "Screenshot file missing on disk."}), 404
+    return await app.send_file(fpath)
+
+
+@app.route("/admin/payments/review", methods=["POST"])
+async def admin_review_payment():
+    """Approve or reject a top-up request. Approving is the ONLY way kesh
+    credits get added from a user-submitted M-Pesa code — this is the human
+    verification step standing in for a real payment-gateway integration.
+    Always cross-check the code/amount against your own M-Pesa statement
+    before approving; the screenshot is supporting evidence, not proof."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    payment_id = data.get("id")
+    action = (data.get("action") or "").strip().lower()
+    note = (data.get("note") or "").strip()
+    if action not in ("approve", "reject"):
+        return jsonify({"success": False, "error": "action must be 'approve' or 'reject'."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT phone, amount, status FROM payments WHERE id = ?", (payment_id,)
+        ) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Payment request not found."}), 404
+        phone, amount, status = row
+        if status != "pending":
+            return jsonify({"success": False, "error": f"Already reviewed (status: {status})."}), 400
+
+        now = time.time()
+        new_status = "approved" if action == "approve" else "rejected"
+        await db.execute(
+            "UPDATE payments SET status = ?, admin_note = ?, reviewed_at = ? WHERE id = ?",
+            (new_status, note, now, payment_id)
+        )
+        if action == "approve":
+            await db.execute(
+                "UPDATE registrations SET credits = credits + ? WHERE phone = ?",
+                (amount, phone)
+            )
+        await db.commit()
+
+    # Best-effort notify the user of the outcome
+    try:
+        if action == "approve":
+            text = f"✅ Your top-up of {amount} kesh has been approved and added to your wallet! Send *.profile* to check your balance."
+        else:
+            text = f"❌ Your top-up request was rejected.{(' Reason: ' + note) if note else ''} Reply to the bot if you think this is a mistake."
+        async with httpx.AsyncClient(timeout=4) as client:
+            await client.post(f"{NODE_PAIR_URL}/notify-user", json={"phone": phone, "text": text})
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "status": new_status})
+
+
 @app.route("/admin/blacklist", methods=["GET"])
 async def admin_get_blacklist():
     if not _check_admin_auth(request):
@@ -722,7 +1241,9 @@ async def register_profile():
         try:
             await db.execute("INSERT INTO contacts VALUES (?, ?, ?)", (sender, name, time.time()))
             await db.commit()
-            return jsonify({"status": "new_user_registered", "welcome_message": WELCOME_TEXT})
+            # ✅ Auto-welcome DM removed on request — contact is still saved
+            # silently, but no message gets sent to the stranger anymore.
+            return jsonify({"status": "new_user_registered"})
         except aiosqlite.IntegrityError:
             return jsonify({"status": "already_indexed"})
 
@@ -944,8 +1465,7 @@ async def process_sentiment():
 # binds to.  Node's pairing web server runs internally on WEB_PORT (3000).
 # These two routes forward /pair traffic through Python so customers can reach
 # the session-link page at your public Render/Railway URL.
-
-NODE_PAIR_URL = f"http://127.0.0.1:{os.environ.get('WEB_PORT', 3000)}"
+# (NODE_PAIR_URL is defined earlier, alongside send_otp_whatsapp, which uses it too.)
 
 @app.route("/pair-abandon", methods=["POST"])
 async def pair_abandon_proxy():
