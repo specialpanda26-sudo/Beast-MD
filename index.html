@@ -106,13 +106,18 @@
       position: relative; z-index: 1; min-height: 100vh;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       text-align: center; padding: 8rem 1.5rem 5rem;
-      background-image:
-        linear-gradient(180deg, rgba(2,4,8,0.55) 0%, rgba(2,4,8,0.75) 55%, var(--bg) 92%),
-        linear-gradient(90deg, var(--bg) 0%, rgba(2,4,8,0.25) 35%, rgba(2,4,8,0.25) 65%, var(--bg) 100%),
-        url('/assets/menu-bg.jpg');
+      overflow: hidden;
+    }
+    .hero-bg-image {
+      position: absolute; inset: 0; z-index: -1;
+      background-image: url('/assets/menu-bg.jpg');
       background-size: cover;
       background-position: top center;
       background-repeat: no-repeat;
+      opacity: 0.22;
+      pointer-events: none;
+      mask-image: linear-gradient(180deg, black 0%, black 60%, transparent 95%);
+      -webkit-mask-image: linear-gradient(180deg, black 0%, black 60%, transparent 95%);
     }
 
     .hero-badge {
@@ -538,6 +543,7 @@
 
 <!-- HERO -->
 <div class="hero">
+  <div class="hero-bg-image"></div>
   <div class="hero-badge">⚡ BUILT &amp; MAINTAINED BY HENRY — V19™ PRODUCTION BUILD</div>
   <h1>
     <span class="line1">WhatsApp Automation</span>
