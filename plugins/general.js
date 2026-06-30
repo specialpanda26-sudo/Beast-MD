@@ -210,12 +210,12 @@ ${ownerSection}
 
   // ── .register ─────────────────────────────────────────────────────────────
   // Sends the user a link to the web registration panel where they verify
-  // their email via OTP and unlock starter credits + a trust badge.
+  // their WhatsApp number via OTP and unlock starter credits + a trust badge.
   register: async ({ sock, from, msg }) => {
     const publicUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || `http://localhost:${process.env.WEB_PORT || 3000}`;
     await sock.sendMessage(from, {
       text: `🌟 *Register on the Henry Ochibots Web Panel*\n\n` +
-            `Verify your email to unlock:\n` +
+            `Verify your number to unlock:\n` +
             `✅ Free starter credits\n` +
             `✅ A trust badge on your profile\n\n` +
             `👉 ${publicUrl}/register`

@@ -68,6 +68,10 @@ let currentSessionId = "beastbot";
 let lastQRDataUrl = null;  // base64 data URL of the latest QR code for web display
 // Track all active session IDs so /pair-status can report correctly
 const activeSessions = new Set();
+// ✅ NEW: live socket registry, keyed by sessionId — lets HTTP routes (like
+// /send-otp-whatsapp) reach a connected WhatsApp socket to send messages
+// on behalf of the bot, outside the normal messages.upsert flow.
+const activeSockets = new Map();
 
 const pairServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -99,6 +103,44 @@ const pairServer = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST /send-otp-whatsapp — called locally by app.py (Python backend) to
+  // deliver a registration OTP straight to the user's WhatsApp, instead of
+  // email. Internal-only: app.py reaches this over 127.0.0.1, same as the
+  // /pair proxy routes below.
+  if (req.method === "POST" && url.pathname === "/send-otp-whatsapp") {
+    let body = "";
+    req.on("data", d => body += d);
+    req.on("end", async () => {
+      try {
+        const { phone, otp, name } = JSON.parse(body || "{}");
+        const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
+        if (!cleanPhone || !otp) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "phone and otp are required" }));
+        }
+        // Use whichever paired session is currently connected — most
+        // deployments only run one WhatsApp number, so the first live
+        // socket is "the bot" sending the code.
+        const socket = activeSockets.values().next().value;
+        if (!socket) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "No WhatsApp session is connected right now." }));
+        }
+        await socket.sendMessage(`${cleanPhone}@s.whatsapp.net`, {
+          text: `🔐 *Henry Ochibots v19™ — Verification Code*\n\n` +
+                `Hi ${name || "there"}, your code is: *${otp}*\n\n` +
+                `This code expires in 10 minutes. Enter it on the registration page to verify your number and unlock your trust badge + free credit.`
+        });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+      } catch (e) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
   // POST /pair-reset — clear pairing state and start a NEW session
   // OLD sessions keep running — supports 100+ numbers simultaneously
   // POST /pair-abandon — user left the page without pairing; free the session slot
@@ -106,6 +148,7 @@ const pairServer = http.createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/pair-abandon") {
     // Read body (sendBeacon sends JSON)
     let body = "";
+
     req.on("data", d => body += d);
     req.on("end", () => {
       console.log(`🚪 User left pairing page without pairing — auto-releasing slot`);
@@ -410,6 +453,9 @@ async function startSession(sessionId, opts = {}) {
     // Helps avoid bans — don't look like web browser
     browser: Browsers.ubuntu("Chrome")
   });
+
+  // ✅ NEW: make this socket reachable from HTTP routes (e.g. OTP delivery)
+  activeSockets.set(sessionId, socket);
 
   // Pairing code generation
   if (usePairingCode && !state.creds.registered) {
@@ -1062,6 +1108,7 @@ _Henry Ochibots v19™ — @henrytech254_ 🔥`;
         lastPairingCode = null;
         lastPairingNumber = "";
         activeSessions.delete(sessionId);
+        activeSockets.delete(sessionId);
         delete pendingPairResolves[sessionId];
         // Delete session folder so /pair web UI can re-pair
         try {

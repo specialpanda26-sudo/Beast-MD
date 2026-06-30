@@ -41,7 +41,7 @@
 | 💾 Auto-Save Statuses | Saves contacts' status images/videos to disk before they expire in 24h |
 | 🚫 Anti-Link | Deletes links posted by non-admins in groups, warns, kicks after 3 strikes |
 | 🔘 Tappable Menu | `.menu` includes quick-reply buttons (Ping/Runtime/My Perms) alongside the full text menu — buttons fall back silently if WhatsApp doesn't render them for that client |
-| 🌟 Web Panel Registration | Self-serve `/register` page — email OTP verification unlocks starter credits + a trust badge, manageable from the admin panel |
+| 🌟 Web Panel Registration | Self-serve `/register` page — WhatsApp OTP verification unlocks starter credits + a trust badge, manageable from the admin panel |
 
 ---
 
@@ -233,12 +233,12 @@ When a feature is off, the bot replies with a short "currently disabled by the a
 
 A self-serve page at **`/register`** lets anyone register their WhatsApp number on the bot panel and get verified:
 
-1. User enters their **WhatsApp number, name, and email** at `/register`.
-2. A 6-digit OTP is generated and **emailed** to them (free, via SMTP — no WhatsApp message or paid SMS gateway needed).
+1. User enters their **WhatsApp number and name** at `/register`.
+2. A 6-digit OTP is generated and **sent as a WhatsApp message from the bot itself** — no email or paid SMS gateway needed, since the bot already has a live WhatsApp connection.
 3. User enters the OTP on the same page to verify.
 4. On success, the number is awarded a **🛡️ Trusted badge** and **80 kesh free credit** automatically.
 
-**Setup:** set `SMTP_EMAIL` and `SMTP_PASSWORD` in your `.env` (a Gmail account + [app password](https://myaccount.google.com/apppasswords) works out of the box). Adjust the starter credit with `REG_STARTER_CREDITS`.
+**Setup:** nothing extra required — it reuses your already-paired WhatsApp session. Adjust the starter credit with `REG_STARTER_CREDITS`. (An optional email-OTP fallback function still exists in `app.py` for anyone who wants to switch back; set `SMTP_EMAIL`/`SMTP_PASSWORD` to use it.)
 
 **Admin side:** the **🛡️ Registrations** tab in `/admin` lists every registered user (verified status, badge, credit balance) and lets you **manually top up credit** for any number — just enter their phone + name (no OTP required, since the main bot already has their contact saved). This is also how you'd add credit for a number that hasn't self-registered yet.
 
