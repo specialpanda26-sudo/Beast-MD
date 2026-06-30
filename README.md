@@ -7,6 +7,7 @@
 
 ## 🩹 Recent fixes
 
+- **📸 `.getpp` now works for any number, no exceptions** — it used to hard-reject a number if WhatsApp's `onWhatsApp()` lookup couldn't confirm it (which can false-negative on numbers with tighter privacy settings). Now it always attempts the profile picture fetch regardless of what the lookup says, and if it fails, the error message folds in the same blocked-vs-private heuristic as `.checkblocked` so you know right away whether it looks like a block or just no photo set.
 - **🌝 Reaction-triggered recovery** — bot admins (owner/co-owner/sub-admin) can react with the 🌝 emoji on *any* message — including a view-once photo/video — and the bot privately forwards it to the **bot's own number**. Non-admin reactions are silently ignored. View-once content reuses the buffer already captured at interception time (re-fetching a viewed view-once usually fails on WhatsApp's side); other messages are pulled from a short-lived in-memory cache (last ~800 messages, 2h TTL), so this only works for messages the bot was online to see.
 - **🔒 `/recover` and `/viewonce` now reply privately, not in-chat** — these used to echo the recovered text / view-once back into whatever chat the command was typed in, which could leak deleted messages or view-once media to other people in a group. Both commands now always deliver their result to the **bot's own WhatsApp number** instead, with just a quiet "sent to your bot's own number" notice left in the original chat. This also reduces ban risk from sensitive content surfacing in group chats.
 - **📧 Email OTP error messages fixed** — failed email OTP sends used to return a raw, often cryptic SMTP exception. Now diagnoses the common causes directly: wrong/missing Gmail App Password (Gmail rejects your normal account password for SMTP — you need a 16-char App Password from Google Account → Security → 2-Step Verification → App passwords), or the host's network blocking outbound SMTP. See `.env.example` for the full SMTP setup, and `render.yaml`/Railway dashboard for where to set `SMTP_EMAIL`/`SMTP_PASSWORD` in production — they were previously undeclared there, so email OTP silently failed on a fresh deploy until someone manually added them.
@@ -100,7 +101,7 @@
 | `.sticker` | Reply to image/video to make sticker |
 | `.vv` | Reply to voice note to re-send as audio |
 | `.save` | Reply to video/image to save it |
-| `.getpp [@user]` | Get someone's profile picture (works even unsaved) |
+| `.getpp [@user]` | Get someone's profile picture — works for any number, even unsaved/private ones, and tells you if it looks blocked |
 | `.about [@user]` | Get someone's WhatsApp About status text (works even unsaved) |
 | `.download [url]` | Download video (YT/TikTok/IG) |
 | `.song [url]` | Extract MP3 audio from video URL |
@@ -362,7 +363,7 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 - Mode changes persist across messages (stored in global state)
 - `.login` is rate-limited to 3 failed attempts per number per 10 minutes
 - `.login` usage hint never reveals the real username/password — change credentials via `BOT_LOGIN_USER` / `BOT_LOGIN_PASS` env vars
-- `.getpp` and `.about` work even for numbers not saved in contacts (verified via WhatsApp lookup)
+- `.getpp` and `.about` work even for numbers not saved in contacts (verified via WhatsApp lookup where possible). `.getpp` no longer hard-rejects numbers WhatsApp's lookup can't confirm (privacy settings can cause false negatives) — it always attempts the fetch, and folds in the same heuristic as `.checkblocked` into the error message if it fails, so you immediately see whether it looks like a block vs. just no photo/private settings
 
 ---
 

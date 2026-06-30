@@ -46,7 +46,7 @@ ${p}demote [@u]    - Demote from admin
 ${p}mute           - Mute group
 ${p}unmute         - Unmute group
 ${p}sticker        - Image → Sticker
-${p}getpp [@user]  - Get profile picture
+${p}getpp [@user]  - Get profile picture (any number)
 ${p}download [url] - Download video
 ${p}song [url]     - Extract MP3
 ${p}dl [url] (audio) - Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
@@ -148,7 +148,7 @@ ${p}logout             - Remove your access
 ${p}sticker        - Image/video → Sticker
 ${p}vv             - View saved view-once media
 ${p}save           - Save view-once as file
-${p}getpp [@user]  - Get profile picture (works unsaved)
+${p}getpp [@user]  - Get profile picture (any number, even unsaved/private)
 ${p}about [@user]  - Get About status text (works unsaved)
 ${p}download [url] - Download video (YT/TikTok)
 ${p}song [url]     - Extract MP3 audio
