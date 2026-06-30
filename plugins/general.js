@@ -29,7 +29,9 @@ I reply in Swahili, Sheng or English 🇰🇪
 
 /ask [query]   - Ask AI a question
 /recover [n]   - Recover deleted msgs
-/viewonce [n]  - View saved view-once media`;
+/viewonce [n]  - View saved view-once media
+
+💡 Some words trigger instant auto-replies (set by the owner) — just message normally.`;
 
     // ── SUB-ADMIN MENU ─────────────────────────────────────────────────────
     const subAdminSection = isBotAdmin ? `
@@ -76,6 +78,8 @@ ${p}private           - Set bot private mode
 ${p}setmode [on/off]  - Toggle bot on/off
 ${p}summarize [text]  - AI text summarizer (cypher.js)
 ${p}pbp [text]        - RPG session tracker
+
+🔑 Manage keyword auto-replies & feature toggles from the *Admin Panel* (/admin → Keywords / Features tabs)
 
 ⏰ *MESSAGE SCHEDULER*
 ${p}schedule add <time> <to> <msg> - Schedule a message

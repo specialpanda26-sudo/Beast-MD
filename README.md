@@ -26,6 +26,8 @@
 | 🔑 Owner Recovery | Emergency passphrase to change owner number at runtime |
 | 👥 Bulk Group Add | Create a group or add to one from a plain list of numbers |
 | ⏳ Subscription Expiry | Set a paid-access expiry date per session from the admin panel |
+| 🔑 Keyword Auto-Replies | Set custom trigger words/phrases in the admin panel — bot auto-replies instantly, no AI call needed |
+| ⚙️ Feature Toggles | Turn AI chat, downloads, keywords, or welcome message on/off for the whole bot from the admin panel |
 
 ---
 
@@ -177,6 +179,37 @@ If you lose access to your original number:
 
 ---
 
+## 🔑 Keyword Auto-Replies (Admin Panel)
+
+Set up canned responses to trigger words from the **🔑 Keywords** tab in `/admin` — no AI call, no slash prefix needed:
+
+1. Open `/admin` → **Keywords** tab
+2. Enter a trigger word/phrase, pick a match type, and write the reply:
+   - **Contains** — fires if the trigger appears anywhere in the message (e.g. trigger `price` matches "what's your price?")
+   - **Exact match** — message must be exactly the trigger
+   - **Starts with** — message must start with the trigger
+3. Click **Save Keyword** — it's checked on every incoming message before any command, so it works even from strangers who've never messaged the bot before
+4. Toggle a keyword ON/OFF or delete it any time from the same list
+
+This whole feature can also be killed bot-wide from the **Features** tab without deleting any keywords.
+
+---
+
+## ⚙️ Feature Toggles (Admin Panel)
+
+The **⚙️ Features** tab in `/admin` lets you flip entire modules on/off instantly, no redeploy:
+
+| Toggle | Affects |
+|---|---|
+| AI Chat | `/ask` command |
+| Downloads | `/download_video`, `/download_song` |
+| Keyword Auto-Replies | The keyword system above |
+| Welcome Message | New-session welcome text |
+
+When a feature is off, the bot replies with a short "currently disabled by the admin" message instead of running the command.
+
+---
+
 ## ⏳ Subscription Expiry (Admin Panel)
 
 For paid/client sessions, set an expiry date and time per session directly from `/admin`:
@@ -218,7 +251,9 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 - `/recover` and `/viewonce` are **owner-only**
 - `.tagall` requires bot admin (owner or sub-admin)
 - `.bcgc` is **owner-only**
-- Admin panel (`/admin`) is password-protected via `ADMIN_PASSWORD` — supports blacklist management, message search, and broadcast
+- Admin panel (`/admin`) is password-protected via `ADMIN_PASSWORD` — supports blacklist management, message search, broadcast, keyword auto-replies, and feature toggles
+- ⚠️ If `ADMIN_PASSWORD` is **not** set, `/admin` is fully open to anyone with the URL — always set it before going live (the bot logs a warning on startup if it's missing)
+- Keyword auto-replies are checked before commands but skip blacklisted senders
 - `.song` and `.download` use `execFile` (no shell injection risk)
 - Mode changes persist across messages (stored in global state)
 - `.login` is rate-limited to 3 failed attempts per number per 10 minutes
