@@ -11,6 +11,10 @@
 - **📱 Optional dedicated OTP-sending number** — `OTP_SENDER_SESSION_ID` lets you pair a *second* WhatsApp number purely for sending verification codes, separate from your main bot's chat. **Important:** WhatsApp has no free/anonymous "push notification" sender like Instagram/Meta's own verified numbers — every message, OTP included, has to come from a real, paired WhatsApp account. This just lets that account be a different number than the one running the bot, if you have a second SIM/eSIM to pair. Without it set, OTPs keep using the bot's main number exactly as before.
 - **💰 Wallet top-up system** — verified users can now send `.profile` to see their kesh balance/badge, and `.addfunds <amount> <mpesa_code>` (optionally with a screenshot attached) to request a top-up after sending money to the admin's M-Pesa number. **This does not auto-verify payments** — there's no Safaricom Daraja API hookup — every request lands in `/admin → 💰 Payments` as "pending" for a human admin to approve or reject. Approving is the only thing that actually credits the wallet. Each M-Pesa code can only be submitted once (duplicate codes are rejected outright), and the admin gets pinged on WhatsApp the moment a request comes in.
 - **🔍 `.checkblocked [number]` (owner/sub-admin)** — best-effort heuristic for whether a number has blocked the bot, based on whether their profile photo can be fetched. WhatsApp doesn't expose a real "blocked" status to bots, so this is a clue, not a guarantee — a private/no-photo account can look identical to a block.
+- **🔗 `.checklink [url]`** — heuristic phishing/scam link checker (no external API needed). Flags raw IP domains, risky TLDs, excessive subdomains, brand-lookalike domains, link shorteners, and missing HTTPS, with a ✅/⚠️/🚫 verdict.
+- **👑 `.settier [number] [subadmin|coowner]`** — owner-only command to assign any number to any permission tier in one step (instead of separate add/remove commands per tier), and automatically DMs the target number to let them know they've been granted access.
+- **📢 `.announce [message]` (owner-only)** — broadcasts a message to every number that has ever messaged the bot (the full `contacts` table, not just a 20-row preview). Queued through the same backend broadcast system the admin panel uses, and sent with a 1.2s delay between each contact to reduce spam-flag risk.
+- **🤝 Referral program** — every verified user can run `.referral` to get a personal referral link (`/register?ref=<their number>`). When someone signs up through that link and completes OTP verification, the referrer automatically earns **15 kesh** and the new user gets a **30 kesh** bonus on top of the normal starter credit — both paid instantly, no admin review needed. Self-referral and fake/unverified referral codes are rejected server-side.
 - **Faster replies** — every command used to wait through stacked "human-like typing" delays (1–3s+ of pure artificial wait) plus a blocking backend call with a 45s timeout on the hot path. Delays are now minimal and backend logging calls no longer block replies.
 - **Auto-welcome DM removed** — brand-new DMers no longer get an automatic welcome message; the bot still saves their contact silently in the background. Use `.register` or the `/register` page if you want them directed to sign up.
 - **OTP failures now respond fast & cleanly** — registering used to be able to hang and surface a raw crash (`Cannot read properties of undefined (reading 'id')`) if the bot's WhatsApp session was reconnecting when an OTP was requested. The socket is now only used once it's fully connected, stale sockets are dropped immediately on disconnect, and both the WhatsApp and email send timeouts were cut to 5–6s — so a bad session now fails fast with a clear error instead of hanging.
@@ -43,7 +47,10 @@
 | 🛡️ Sub-Admins | Grant limited bot admin powers to trusted people |
 | 🌐 Web Pairing | Pair via QR code or pairing code in browser |
 | 💰 Wallet & Top-Ups | `.profile` shows balance/badge; `.addfunds` submits an M-Pesa top-up for admin approval (manual review, not auto-verified) |
+| 🤝 Referral Program | `.referral` gets your link; earn 15 kesh per verified signup, they get 30 kesh — paid instantly |
+| 📣 Mass Announcement | `.announce [message]` — owner-only broadcast to every bot contact, rate-limited |
 | 🔍 Block Checker | `.checkblocked [num]` — heuristic check, owner/sub-admin only |
+| 🔗 Link Safety Checker | `.checklink [url]` — heuristic phishing/scam URL screen, no API key needed |
 | 🔑 Owner Recovery | Emergency passphrase to change owner number at runtime |
 | 👥 Bulk Group Add | Create a group or add to one from a plain list of numbers |
 | ⏳ Subscription Expiry | Set a paid-access expiry date per session from the admin panel |
@@ -72,6 +79,7 @@
 | `.register` | Get the web panel registration link (free credits + trust badge) |
 | `.profile` | View your wallet balance, trust badge & recent top-up requests |
 | `.addfunds [amount] [mpesa_code]` | Submit an M-Pesa top-up for admin review (attach a screenshot for faster approval) |
+| `.referral` | Get your referral link, track signups & kesh earned |
 | `/ask [query]` | Ask AI anything |
 
 ### 🔐 Access / Login
@@ -121,7 +129,8 @@
 | `.listadmins` | List all sub-admins |
 | `.addcoowner [number]` | Add a co-owner (full owner powers) |
 | `.removecoowner [number]` | Remove a co-owner |
-| `.settier [number] [subadmin\|coowner]` | Assign any number to any permission tier; auto-DMs them an access notification | Remove a co-owner |
+| `.settier [number] [subadmin\|coowner]` | Assign any number to any permission tier; auto-DMs them an access notification |
+| `.announce [message]` | Broadcast a message to every number that's ever messaged the bot |
 | `.checkblocked [number]` | Heuristic check for whether a number has blocked the bot (not 100% reliable — WhatsApp has no official "blocked" signal) |
 | `.listcoowners` | List all co-owners |
 | `.bcgc [msg]` | Broadcast message to all groups |
@@ -275,6 +284,27 @@ Verified users can fund their kesh wallet by sending real money to the admin's M
 **This is intentionally NOT automatic.** There's no Safaricom Daraja API integration here, so there's no way to programmatically confirm a code or screenshot is genuine — this flow keeps a human in the loop instead of pretending to auto-verify, which is what most "fake payment bot" scams rely on. Each M-Pesa code can only be submitted once; a reused/duplicate code is rejected outright before it even reaches the admin queue.
 
 Users can check their balance and submission history anytime with `.profile`.
+
+---
+
+## 🤝 Referral Program
+
+Verified users can earn kesh by inviting people who go on to verify their own number:
+
+1. User sends `.referral` to the bot — gets back a personal link: `{publicUrl}/register?ref=<their phone>`.
+2. They share that link. Anyone who registers through it has the referral code captured automatically (no extra step for the new user).
+3. When the **new user** completes OTP verification, two payouts happen instantly, with no admin review:
+   - The **referrer** gets `REFERRAL_REFERRER_BONUS` kesh (default **15**).
+   - The **new user** gets `REFERRAL_REFERRED_BONUS` kesh (default **30**) — on top of the normal `REG_STARTER_CREDITS`.
+4. Both amounts are configurable via env vars (`REFERRAL_REFERRER_BONUS`, `REFERRAL_REFERRED_BONUS`) without code changes.
+
+**Anti-abuse:** a referral code is just the referrer's own phone number, so the backend rejects self-referral (`ref === phone`) and any code that doesn't belong to an already-verified account — you can't invent a fake code to farm bonus credits. Each new user can only trigger one referral payout, recorded in the `referrals` table, which `.referral` also reads from to show total signups and kesh earned.
+
+---
+
+## 📣 Mass Announcements (Owner Only)
+
+`.announce [message]` queues a broadcast to **every number that has ever messaged the bot** — pulled from the full `contacts` table, not just the 20 most recent shown on the admin dashboard. It reuses the same broadcast queue the admin panel's "Send to all contacts" button uses, polled by the Node bridge every 20 seconds and sent with a 1.2-second delay between each message to reduce the chance of WhatsApp flagging the account for spam-like behavior. Only the main owner can run this command.
 
 ---
 

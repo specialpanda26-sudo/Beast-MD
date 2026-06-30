@@ -152,4 +152,44 @@ module.exports = {
     }
   },
 
+  // ── .referral — show your referral code/link + earnings ────────────────
+  // Referral code is just your own verified phone number. Anyone who
+  // registers via {publicUrl}/register?ref=<your number> and completes OTP
+  // verification automatically earns you REFERRAL_REFERRER_BONUS kesh, and
+  // they get REFERRAL_REFERRED_BONUS kesh themselves — both paid instantly,
+  // no admin review needed (unlike .addfunds top-ups).
+  referral: async ({ sock, from, msg, sender }) => {
+    const phone = cleanNumber(sender || from);
+    const publicUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || `http://localhost:${process.env.WEB_PORT || 3000}`;
+    try {
+      const { data } = await api.get('/api/referrals', { params: { phone } });
+      if (!data.success) {
+        return sock.sendMessage(from, {
+          text: `📋 *Referrals*\n\n${data.error || 'Not registered yet.'}\n\n👉 Send *.register* first to unlock your referral link.`
+        }, { quoted: msg });
+      }
+      const link = `${publicUrl}/register?ref=${data.referral_code}`;
+      const lines = [
+        `🤝 *Your Referral Link*`,
+        `━━━━━━━━━━━━━━━━━━━━`,
+        link,
+        '',
+        `💰 You earn *${data.referrer_bonus} kesh* per friend who verifies via your link.`,
+        `🎁 They get a *${data.referred_bonus} kesh* bonus too (on top of the normal starter credit).`,
+        '',
+        `📊 Total referrals: ${data.total_referrals}`,
+        `💵 Total earned: ${data.total_earned} kesh`
+      ];
+      if (data.referrals && data.referrals.length) {
+        lines.push('', '📜 *Recent referrals*');
+        for (const r of data.referrals.slice(0, 5)) {
+          lines.push(`✅ ${r.phone} — +${r.bonus} kesh`);
+        }
+      }
+      await sock.sendMessage(from, { text: lines.join('\n') }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Couldn't load your referrals right now (${e.message}). Try again shortly.` }, { quoted: msg });
+    }
+  },
+
 };

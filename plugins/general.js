@@ -70,6 +70,7 @@ ${p}addcoowner [num]  - Add a co-owner (full access)
 ${p}removecoowner [n] - Remove co-owner
 ${p}listcoowners      - List co-owners
 ${p}settier [num] [subadmin|coowner] - Assign any number to any tier (auto-notifies them)
+${p}announce [message] - Broadcast a message to every bot contact
 ${p}checkblocked [num] - Heuristic check if a number has blocked the bot
 ${p}welcome [num]     - Send welcome card
 ${p}status            - Post image as status
@@ -129,6 +130,7 @@ ${p}myperm         - Check your permissions
 ${p}register       - Get web panel link (free credits + trust badge)
 ${p}profile        - View your wallet balance & badge
 ${p}addfunds [amt] [code] - Top up wallet via M-Pesa (admin reviews it)
+${p}referral       - Get your referral link & track earnings
 
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
@@ -221,7 +223,8 @@ ${ownerSection}
             `Verify your number to unlock:\n` +
             `✅ Free starter credits\n` +
             `✅ A trust badge on your profile\n\n` +
-            `👉 ${publicUrl}/register`
+            `👉 ${publicUrl}/register\n\n` +
+            `💡 Already verified? Send *.referral* to get your own invite link and earn kesh for every friend who signs up.`
     }, { quoted: msg });
   },
 
@@ -653,4 +656,40 @@ ${flagText}
 
 _This is a heuristic check, not a guarantee. When in doubt, don't enter passwords or payment info._`
   }, { quoted: msg });
+};
+
+// ── .announce — owner-only broadcast to everyone who's messaged the bot ────
+// Usage: .announce [message]
+// Queues the message on the backend's broadcast queue (same system the
+// admin panel uses), which the Node bridge polls every 20s and sends, with
+// a short delay between each contact, to every number that's ever sent the
+// bot a message (the "contacts" table) — not just people currently in this
+// chat/session. Sending is rate-limited (1.2s between messages) to reduce
+// the chance of WhatsApp flagging the account for spam-like behavior.
+module.exports.announce = async ({ sock, from, msg, isOwner, args }) => {
+  if (!isOwner) {
+    return sock.sendMessage(from, { text: '❌ Only the main owner can send announcements!' }, { quoted: msg });
+  }
+  const text = args.join(' ').trim();
+  if (!text) {
+    return sock.sendMessage(from, { text: '📋 Usage: .announce [message]\n\nThis goes out to every number that has ever messaged the bot.' }, { quoted: msg });
+  }
+
+  const axios = require('axios');
+  const BACKEND_PORT = process.env.PORT || 5000;
+  const adminPass = process.env.ADMIN_PASSWORD || '';
+
+  try {
+    const res = await axios.post(
+      `http://127.0.0.1:${BACKEND_PORT}/admin/broadcast`,
+      { target: 'all_contacts', message: text },
+      { headers: { Authorization: `Bearer ${adminPass}` }, timeout: 8000 }
+    );
+    await sock.sendMessage(from, {
+      text: `📢 *Announcement queued!*\n\nIt'll go out to all bot contacts over the next ~20-40s (small delay between each to stay safe).\n\nQueue size: ${res.data?.queue_size ?? '?'}`
+    }, { quoted: msg });
+  } catch (e) {
+    const apiErr = e.response?.data?.error || e.message;
+    await sock.sendMessage(from, { text: `❌ Couldn't queue the announcement: ${apiErr}` }, { quoted: msg });
+  }
 };

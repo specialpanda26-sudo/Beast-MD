@@ -1025,9 +1025,12 @@ async function startSession(sessionId, opts = {}) {
               } catch (_) {}
             }
           } else if (b.target === 'all_contacts') {
-            // Pull recent contacts from our own DB via stats endpoint
-            const statsRes = await apiClient.get("/admin/stats");
-            const contacts = statsRes.data?.recent_contacts || [];
+            // Pull the FULL contact list (not the 20-row dashboard preview)
+            // so .announce actually reaches everyone who's messaged the bot.
+            const contactsRes = await apiClient.get("/admin/contacts/all", {
+              headers: { Authorization: `Bearer ${process.env.ADMIN_PASSWORD || ''}` }
+            });
+            const contacts = contactsRes.data?.contacts || [];
             for (const c of contacts) {
               try {
                 await socket.sendMessage(c.sender, { text: b.message });

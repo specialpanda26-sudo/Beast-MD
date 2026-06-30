@@ -123,6 +123,9 @@
 <script>
   let registeredPhone = "";
   let deliveryMethod = "whatsapp";
+  // Referral code passed via ?ref=<referrer phone> — captured once on load
+  // and sent along with /api/register so the backend can credit them.
+  const referralCode = new URLSearchParams(window.location.search).get("ref") || "";
 
   function showMsg(id, text, type) {
     const el = document.getElementById(id);
@@ -156,7 +159,7 @@
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name, email, method: deliveryMethod })
+        body: JSON.stringify({ phone, name, email, method: deliveryMethod, ref: referralCode })
       });
       const data = await res.json();
       if (data.success) {

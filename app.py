@@ -70,6 +70,15 @@ SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Henry Tech Bot Panel")
 REG_STARTER_CREDITS = int(os.environ.get("REG_STARTER_CREDITS", "80"))  # 80 kesh starter credit on verify
+
+# ── Referral program ─────────────────────────────────────────────────────
+# Whoever invited a new user (referrer) gets REFERRAL_REFERRER_BONUS kesh,
+# and the new user themself gets REFERRAL_REFERRED_BONUS kesh — paid out
+# automatically (no human review) the moment the referred user completes
+# OTP verification. This stacks on top of REG_STARTER_CREDITS, which every
+# verified user gets regardless of referral.
+REFERRAL_REFERRER_BONUS = int(os.environ.get("REFERRAL_REFERRER_BONUS", "15"))
+REFERRAL_REFERRED_BONUS = int(os.environ.get("REFERRAL_REFERRED_BONUS", "30"))
 OTP_TTL_SECONDS = 600  # 10 minutes
 
 # NEW: manual top-up / wallet funding via M-Pesa "Send Money" to the admin's
@@ -349,7 +358,32 @@ async def init_db():
                 credits INTEGER NOT NULL DEFAULT 0,
                 badge TEXT NOT NULL DEFAULT 'none',
                 created_at REAL,
-                verified_at REAL
+                verified_at REAL,
+                referred_by TEXT,
+                referral_bonus_given INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        # Best-effort migration for DBs created before the referral columns
+        # existed — ALTER TABLE ... ADD COLUMN throws if the column is
+        # already there, so each is wrapped individually and ignored.
+        for col, ddl in [
+            ("referred_by", "ALTER TABLE registrations ADD COLUMN referred_by TEXT"),
+            ("referral_bonus_given", "ALTER TABLE registrations ADD COLUMN referral_bonus_given INTEGER NOT NULL DEFAULT 0"),
+        ]:
+            try:
+                await db.execute(ddl)
+            except Exception:
+                pass
+        # NEW: referral audit log — one row per successful referral payout,
+        # so .myreferrals / an admin can see who referred whom and when.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS referrals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referrer_phone TEXT NOT NULL,
+                referred_phone TEXT NOT NULL,
+                referrer_bonus INTEGER NOT NULL,
+                referred_bonus INTEGER NOT NULL,
+                created_at REAL
             )
         """)
         # NEW: wallet top-up requests — user claims they sent M-Pesa funds to
@@ -484,6 +518,7 @@ async def api_register():
     name = (data.get("name") or "").strip()
     email = (data.get("email") or "").strip()
     method = (data.get("method") or "whatsapp").strip().lower()
+    ref = (data.get("ref") or "").strip().replace(" ", "").replace("+", "")
 
     if not phone or not phone.isdigit() or len(phone) < 9:
         return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
@@ -493,6 +528,17 @@ async def api_register():
             return jsonify({"success": False, "error": "Enter a valid email address."}), 400
     elif method != "whatsapp":
         return jsonify({"success": False, "error": "Invalid delivery method."}), 400
+
+    # A referral code is just the referrer's own verified phone number.
+    # Reject self-referral and codes that don't match a verified account —
+    # otherwise this becomes a free way to mint bonus credits.
+    valid_ref = None
+    if ref and ref != phone and ref.isdigit():
+        async with aiosqlite.connect(DB_FILE) as db:
+            async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (ref,)) as c:
+                ref_row = await c.fetchone()
+        if ref_row and ref_row[0] == 1:
+            valid_ref = ref
 
     otp = _generate_otp()
     now = time.time()
@@ -504,12 +550,13 @@ async def api_register():
             return jsonify({"success": False, "error": "This number is already verified."}), 400
 
         await db.execute("""
-            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at)
-            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?)
+            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, referred_by)
+            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?, ?)
             ON CONFLICT(phone) DO UPDATE SET
                 name=excluded.name, email=excluded.email, otp=excluded.otp,
-                otp_expiry=excluded.otp_expiry
-        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now))
+                otp_expiry=excluded.otp_expiry,
+                referred_by=COALESCE(registrations.referred_by, excluded.referred_by)
+        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now, valid_ref))
         await db.commit()
 
     if method == "email":
@@ -538,14 +585,14 @@ async def api_verify_otp():
 
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
-            "SELECT otp, otp_expiry, verified, name FROM registrations WHERE phone = ?", (phone,)
+            "SELECT otp, otp_expiry, verified, name, referred_by FROM registrations WHERE phone = ?", (phone,)
         ) as c:
             row = await c.fetchone()
 
         if not row:
             return jsonify({"success": False, "error": "No registration found for this number."}), 404
 
-        stored_otp, expiry, verified, name = row
+        stored_otp, expiry, verified, name, referred_by = row
         if verified:
             return jsonify({"success": False, "error": "Already verified."}), 400
         if time.time() > expiry:
@@ -558,17 +605,76 @@ async def api_verify_otp():
             SET verified = 1, badge = 'Trusted', credits = credits + ?, verified_at = ?
             WHERE phone = ?
         """, (REG_STARTER_CREDITS, time.time(), phone))
+
+        referral_message = ""
+        total_credits = REG_STARTER_CREDITS
+        if referred_by:
+            # Re-check the referrer is still a verified account at payout time
+            # (defensive — they were checked at registration too).
+            async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (referred_by,)) as c:
+                ref_row = await c.fetchone()
+            if ref_row and ref_row[0] == 1:
+                await db.execute(
+                    "UPDATE registrations SET credits = credits + ? WHERE phone = ?",
+                    (REFERRAL_REFERRER_BONUS, referred_by)
+                )
+                await db.execute(
+                    "UPDATE registrations SET credits = credits + ?, referral_bonus_given = 1 WHERE phone = ?",
+                    (REFERRAL_REFERRED_BONUS, phone)
+                )
+                await db.execute("""
+                    INSERT INTO referrals (referrer_phone, referred_phone, referrer_bonus, referred_bonus, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (referred_by, phone, REFERRAL_REFERRER_BONUS, REFERRAL_REFERRED_BONUS, time.time()))
+                total_credits += REFERRAL_REFERRED_BONUS
+                referral_message = f" Plus a {REFERRAL_REFERRED_BONUS} kesh referral bonus for signing up via invite!"
+
         await db.commit()
 
     return jsonify({
         "success": True,
-        "message": f"Number verified! 🛡️ Trust badge unlocked + {REG_STARTER_CREDITS} kesh free credit added.",
+        "message": f"Number verified! 🛡️ Trust badge unlocked + {REG_STARTER_CREDITS} kesh free credit added.{referral_message}",
         "badge": "Trusted",
-        "credits": REG_STARTER_CREDITS
+        "credits": total_credits
     })
 
 
-@app.route("/api/profile", methods=["GET"])
+@app.route("/api/referrals", methods=["GET"])
+async def api_referrals():
+    """Referral summary for a verified user: their referral code (their own
+    phone number), total kesh earned from referrals, and the list of people
+    who signed up using their code."""
+    phone = (request.args.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404
+        if not row[0]:
+            return jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403
+
+        async with db.execute(
+            "SELECT referred_phone, referrer_bonus, created_at FROM referrals WHERE referrer_phone = ? ORDER BY created_at DESC",
+            (phone,)
+        ) as c:
+            rows = await c.fetchall()
+
+    total_earned = sum(r[1] for r in rows)
+    return jsonify({
+        "success": True,
+        "referral_code": phone,
+        "total_referrals": len(rows),
+        "total_earned": total_earned,
+        "referrer_bonus": REFERRAL_REFERRER_BONUS,
+        "referred_bonus": REFERRAL_REFERRED_BONUS,
+        "referrals": [{"phone": r[0], "bonus": r[1], "created_at": r[2]} for r in rows]
+    })
+
+
+
 async def api_profile():
     """Profile panel data for a verified user — wallet balance, badge, and
     recent top-up requests with their review status. Looked up by phone
@@ -1138,6 +1244,19 @@ async def admin_broadcast_pending():
     for b in pending:
         b["sent"] = True
     return jsonify({"broadcasts": pending})
+
+
+@app.route("/admin/contacts/all", methods=["GET"])
+async def admin_contacts_all():
+    """Full, unlimited contact list — used by the broadcast sender so an
+    .announce isn't silently capped at the 20 shown on the dashboard
+    preview. Requires the same admin auth as other /admin/* routes."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT sender, name FROM contacts ORDER BY timestamp DESC") as c:
+            rows = await c.fetchall()
+    return jsonify({"contacts": [{"sender": r[0], "name": r[1]} for r in rows]})
 
 
 # ── ✅ NEW: Restart / health controls ────────────────────────────────────────
