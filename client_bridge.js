@@ -68,6 +68,10 @@ let currentSessionId = "beastbot";
 let lastQRDataUrl = null;  // base64 data URL of the latest QR code for web display
 // Track all active session IDs so /pair-status can report correctly
 const activeSessions = new Set();
+// ✅ NEW: live socket registry, keyed by sessionId — lets HTTP routes (like
+// /send-otp-whatsapp) reach a connected WhatsApp socket to send messages
+// on behalf of the bot, outside the normal messages.upsert flow.
+const activeSockets = new Map();
 
 const pairServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -99,6 +103,44 @@ const pairServer = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST /send-otp-whatsapp — called locally by app.py (Python backend) to
+  // deliver a registration OTP straight to the user's WhatsApp, instead of
+  // email. Internal-only: app.py reaches this over 127.0.0.1, same as the
+  // /pair proxy routes below.
+  if (req.method === "POST" && url.pathname === "/send-otp-whatsapp") {
+    let body = "";
+    req.on("data", d => body += d);
+    req.on("end", async () => {
+      try {
+        const { phone, otp, name } = JSON.parse(body || "{}");
+        const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
+        if (!cleanPhone || !otp) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "phone and otp are required" }));
+        }
+        // Use whichever paired session is currently connected — most
+        // deployments only run one WhatsApp number, so the first live
+        // socket is "the bot" sending the code.
+        const socket = activeSockets.values().next().value;
+        if (!socket) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "No WhatsApp session is connected right now." }));
+        }
+        await socket.sendMessage(`${cleanPhone}@s.whatsapp.net`, {
+          text: `🔐 *Henry Ochibots v19™ — Verification Code*\n\n` +
+                `Hi ${name || "there"}, your code is: *${otp}*\n\n` +
+                `This code expires in 10 minutes. Enter it on the registration page to verify your number and unlock your trust badge + free credit.`
+        });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+      } catch (e) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
   // POST /pair-reset — clear pairing state and start a NEW session
   // OLD sessions keep running — supports 100+ numbers simultaneously
   // POST /pair-abandon — user left the page without pairing; free the session slot
@@ -106,6 +148,7 @@ const pairServer = http.createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/pair-abandon") {
     // Read body (sendBeacon sends JSON)
     let body = "";
+
     req.on("data", d => body += d);
     req.on("end", () => {
       console.log(`🚪 User left pairing page without pairing — auto-releasing slot`);
@@ -279,7 +322,10 @@ const IS_INTERACTIVE = Boolean(process.stdin.isTTY);
 
 const apiClient = axios.create({
   baseURL: BACKEND_URL,
-  timeout: 45000,
+  // ✅ FIX: was 45000ms. Any backend call accidentally left on the hot path
+  // (or any future one) could stall a reply for up to 45 seconds. 8s is
+  // generous for a localhost call and fails fast instead.
+  timeout: 8000,
   maxContentLength: Infinity,
   maxBodyLength: Infinity
 });
@@ -407,6 +453,15 @@ async function startSession(sessionId, opts = {}) {
     // Helps avoid bans — don't look like web browser
     browser: Browsers.ubuntu("Chrome")
   });
+
+  // ✅ FIX (OTP reliability/speed): socket used to be registered here, before
+  // it's authenticated/connected — a half-open or reconnecting socket has no
+  // socket.user yet, so sendMessage() would throw deep inside Baileys
+  // ("Cannot read properties of undefined (reading 'id')"). That crash only
+  // surfaced once the OTP request was already in flight, making failures
+  // slow AND confusing. Now we only mark it active once connection is
+  // actually "open" (below) and immediately drop it on close, so a bad
+  // session fails fast with a clean error instead of a stack trace.
 
   // Pairing code generation
   if (usePairingCode && !state.creds.registered) {
@@ -662,14 +717,18 @@ async function startSession(sessionId, opts = {}) {
       }
 
       // Feature: Auto Save Contacts (silent — no auto-message sent to strangers)
-      try {
-        await apiClient.post("/auto-save", { sender, name });
-      } catch (e) {}
+      // ✅ Welcome DM removed on request — contact still gets saved server-side,
+      // we just no longer fire a message back at first-time DMers.
+      apiClient.post("/auto-save", { sender, name }).catch(() => {});
 
       // Feature: Fake Typing on ALL incoming messages (human-like)
+      // ✅ FIX: shortened — this used to add 0.5-1.5s to literally every
+      // message, then the command dispatcher below added ANOTHER 0.5-1.7s
+      // on top of that. Stacked together that was 1-3s+ of pure artificial
+      // delay before a command even started running.
       try {
         await socket.sendPresenceUpdate("composing", sender);
-        await delay(Math.floor(Math.random() * 1000) + 500);
+        await delay(250);
         await socket.sendPresenceUpdate("paused", sender);
       } catch (e) {}
 
@@ -678,8 +737,9 @@ async function startSession(sessionId, opts = {}) {
 
       // ── Dot-command dispatcher (.menu .ping .tagall etc.) ─────────────────
       if (body.startsWith(CMD_PREFIX)) {
-        const humanDelay = Math.floor(Math.random() * 1200) + 500;
-        await delay(humanDelay);
+        // ✅ FIX: removed a second 0.5-1.7s "human-like" delay that was
+        // stacking on top of the fake-typing delay above — commands like
+        // .ping/.menu were waiting 1-3s+ before they even started running.
         try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
 
         const parts  = body.slice(CMD_PREFIX.length).trim().split(/\s+/);
@@ -746,8 +806,9 @@ async function startSession(sessionId, opts = {}) {
 
       // Core Command Handler (slash commands only)
       if (body.startsWith("/")) {
-        // Feature: Anti-Ban random human-like delay
-        const humanDelay = Math.floor(Math.random() * 1500) + 800;
+        // ✅ FIX: was a forced 0.8-2.3s wait before even calling /webhook
+        // (which then has to call the Groq AI API on top of that).
+        const humanDelay = 300;
         await delay(humanDelay);
 
         // Feature: Fake Typing / Recording simulation
@@ -794,10 +855,10 @@ async function startSession(sessionId, opts = {}) {
         try {
           const aiReply = await apiClient.post('/natural-chat', { body, name });
           if (aiReply?.data?.reply) {
-            const humanDelay = Math.floor(Math.random() * 1500) + 800;
-            await delay(humanDelay);
+            // ✅ FIX: was two stacked delays (0.8-2.3s + 0.6-1.8s = up to 4s)
+            // on top of the AI call itself. One short delay is enough.
             try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
-            await delay(Math.floor(Math.random() * 1200) + 600);
+            await delay(400);
             try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
             await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
           }
@@ -833,9 +894,9 @@ async function startSession(sessionId, opts = {}) {
               context: 'group'
             });
             if (aiReply?.data?.reply) {
-              await delay(Math.floor(Math.random() * 1500) + 800);
+              // ✅ FIX: same double-delay issue as the DM path above.
               try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
-              await delay(Math.floor(Math.random() * 1000) + 500);
+              await delay(400);
               try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
               await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
             }
@@ -938,6 +999,8 @@ async function startSession(sessionId, opts = {}) {
     if (connection === "open") {
       console.log(`\n✅ [${sessionId}] HENRY V19™ BEAST BOT IS ONLINE AND READY! 🔥\n`);
       botOnline = true;
+      // ✅ Only now is the socket actually safe to use for OTP delivery.
+      activeSockets.set(sessionId, socket);
       if (lastPairingCode) lastPairingCode = null;
       lastQRDataUrl = null;  // clear QR — no longer needed
       // Start message scheduler loop (runs once globally)
@@ -1043,6 +1106,7 @@ _Henry Ochibots v19™ — @henrytech254_ 🔥`;
         lastPairingCode = null;
         lastPairingNumber = "";
         activeSessions.delete(sessionId);
+        activeSockets.delete(sessionId);
         delete pendingPairResolves[sessionId];
         // Delete session folder so /pair web UI can re-pair
         try {
@@ -1054,6 +1118,9 @@ _Henry Ochibots v19™ — @henrytech254_ 🔥`;
       } else {
         const reason = statusCode ? `(code: ${statusCode})` : "(unknown reason)";
         console.log(`🔄 [${sessionId}] Reconnecting... ${reason}`);
+        // ✅ Drop it from activeSockets immediately — a closed socket left in
+        // the map is exactly what caused OTP sends to hang/crash before.
+        activeSockets.delete(sessionId);
         const wasQR = sessionId.startsWith('qr_session_');
         setTimeout(() => startSession(sessionId, { forceQR: wasQR }), 3000);
       }

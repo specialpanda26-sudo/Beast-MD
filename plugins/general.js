@@ -125,6 +125,7 @@ ${p}weather [city] - Live weather info
 ${p}dict [word]    - Dictionary definition
 ${p}roll [sides]   - Roll a dice 🎲
 ${p}myperm         - Check your permissions
+${p}register       - Get web panel link (free credits + trust badge)
 
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
@@ -205,6 +206,20 @@ ${ownerSection}
         }, { quoted: msg });
       } catch (_) { /* buttons unsupported here, text/image menu already sent */ }
     }
+  },
+
+  // ── .register ─────────────────────────────────────────────────────────────
+  // Sends the user a link to the web registration panel where they verify
+  // their WhatsApp number via OTP and unlock starter credits + a trust badge.
+  register: async ({ sock, from, msg }) => {
+    const publicUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || `http://localhost:${process.env.WEB_PORT || 3000}`;
+    await sock.sendMessage(from, {
+      text: `🌟 *Register on the Henry Ochibots Web Panel*\n\n` +
+            `Verify your number to unlock:\n` +
+            `✅ Free starter credits\n` +
+            `✅ A trust badge on your profile\n\n` +
+            `👉 ${publicUrl}/register`
+    }, { quoted: msg });
   },
 
   // ── .addadmin ──────────────────────────────────────────────────────────────

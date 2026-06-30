@@ -71,16 +71,14 @@
       <input type="text" id="reg-phone" placeholder="254712345678" inputmode="numeric"/>
       <label>Name</label>
       <input type="text" id="reg-name" placeholder="Your name"/>
-      <label>Email (OTP will be sent here)</label>
-      <input type="email" id="reg-email" placeholder="you@example.com"/>
       <button class="btn" id="btn-register" onclick="doRegister()">Send Verification Code →</button>
-      <div class="hint">No WhatsApp message needed — your 6-digit code goes straight to your email.</div>
+      <div class="hint">Your 6-digit code will be sent as a WhatsApp message from the bot.</div>
       <div class="msg" id="register-msg"></div>
     </div>
 
     <!-- STEP 2: VERIFY OTP -->
     <div class="step" id="step-verify">
-      <label>Enter the 6-digit code sent to your email</label>
+      <label>Enter the 6-digit code sent to your WhatsApp</label>
       <input type="text" id="otp-input" placeholder="000000" inputmode="numeric" maxlength="6"/>
       <button class="btn" id="btn-verify" onclick="doVerify()">Verify Number →</button>
       <div class="msg" id="verify-msg"></div>
@@ -111,7 +109,6 @@
   async function doRegister() {
     const phone = document.getElementById("reg-phone").value.trim();
     const name = document.getElementById("reg-name").value.trim();
-    const email = document.getElementById("reg-email").value.trim();
     const btn = document.getElementById("btn-register");
     btn.disabled = true; btn.textContent = "Sending...";
 
@@ -119,7 +116,7 @@
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name, email })
+        body: JSON.stringify({ phone, name })
       });
       const data = await res.json();
       if (data.success) {

@@ -5,6 +5,17 @@
 
 ---
 
+## 🩹 Recent fixes
+
+- **Faster replies** — every command used to wait through stacked "human-like typing" delays (1–3s+ of pure artificial wait) plus a blocking backend call with a 45s timeout on the hot path. Delays are now minimal and backend logging calls no longer block replies.
+- **Auto-welcome DM removed** — brand-new DMers no longer get an automatic welcome message; the bot still saves their contact silently in the background. Use `.register` or the `/register` page if you want them directed to sign up.
+- **OTP failures now respond fast & cleanly** — registering used to be able to hang and surface a raw crash (`Cannot read properties of undefined (reading 'id')`) if the bot's WhatsApp session was reconnecting when an OTP was requested. The socket is now only used once it's fully connected, stale sockets are dropped immediately on disconnect, and the send timeout was cut from 15s to 5s — so a bad session now fails fast with a clear error instead of hanging.
+- **Register button added to the landing page** — `/register` is now linked directly from the nav bar, mobile menu, and hero section, not just discoverable via `.register` in chat.
+- **SQLite WAL mode enabled** — reduces lock-contention stalls when multiple sessions write to the DB at the same time.
+- **`.register` command added** — DM the bot `.register` to get the web panel link directly in chat, no need to know the URL.
+
+---
+
 ## ✨ Features
 
 | Feature | Description |
@@ -32,6 +43,7 @@
 | 💾 Auto-Save Statuses | Saves contacts' status images/videos to disk before they expire in 24h |
 | 🚫 Anti-Link | Deletes links posted by non-admins in groups, warns, kicks after 3 strikes |
 | 🔘 Tappable Menu | `.menu` includes quick-reply buttons (Ping/Runtime/My Perms) alongside the full text menu — buttons fall back silently if WhatsApp doesn't render them for that client |
+| 🌟 Web Panel Registration | Self-serve `/register` page — WhatsApp OTP verification unlocks starter credits + a trust badge, manageable from the admin panel |
 
 ---
 
@@ -48,6 +60,7 @@
 | `.roll [XdY+Z]` | Roll dice e.g `.roll 3d6+2` 🎲 |
 | `.checklink [url]` | Heuristic check for suspicious/phishing links |
 | `.myperm` | Check your permission level |
+| `.register` | Get the web panel registration link (free credits + trust badge) |
 | `/ask [query]` | Ask AI anything |
 
 ### 🔐 Access / Login
@@ -222,12 +235,12 @@ When a feature is off, the bot replies with a short "currently disabled by the a
 
 A self-serve page at **`/register`** lets anyone register their WhatsApp number on the bot panel and get verified:
 
-1. User enters their **WhatsApp number, name, and email** at `/register`.
-2. A 6-digit OTP is generated and **emailed** to them (free, via SMTP — no WhatsApp message or paid SMS gateway needed).
+1. User enters their **WhatsApp number and name** at `/register`.
+2. A 6-digit OTP is generated and **sent as a WhatsApp message from the bot itself** — no email or paid SMS gateway needed, since the bot already has a live WhatsApp connection.
 3. User enters the OTP on the same page to verify.
 4. On success, the number is awarded a **🛡️ Trusted badge** and **80 kesh free credit** automatically.
 
-**Setup:** set `SMTP_EMAIL` and `SMTP_PASSWORD` in your `.env` (a Gmail account + [app password](https://myaccount.google.com/apppasswords) works out of the box). Adjust the starter credit with `REG_STARTER_CREDITS`.
+**Setup:** nothing extra required — it reuses your already-paired WhatsApp session. Adjust the starter credit with `REG_STARTER_CREDITS`. (An optional email-OTP fallback function still exists in `app.py` for anyone who wants to switch back; set `SMTP_EMAIL`/`SMTP_PASSWORD` to use it.)
 
 **Admin side:** the **🛡️ Registrations** tab in `/admin` lists every registered user (verified status, badge, credit balance) and lets you **manually top up credit** for any number — just enter their phone + name (no OTP required, since the main bot already has their contact saved). This is also how you'd add credit for a number that hasn't self-registered yet.
 

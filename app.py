@@ -77,11 +77,38 @@ def _generate_otp() -> str:
     return f"{random.randint(0, 999999):06d}"
 
 
+# ✅ NEW: WhatsApp OTP delivery — this IS a WhatsApp bot, so the registering
+# user's code is sent straight from the bot's own number instead of email.
+# Talks to the Node bridge's internal pairing server over localhost (same
+# mechanism the /pair proxy routes further down use).
+NODE_PAIR_URL = f"http://127.0.0.1:{os.environ.get('WEB_PORT', 3000)}"
+
+
+async def send_otp_whatsapp(phone: str, otp: str, name: str) -> dict:
+    try:
+        # ✅ FIX (speed): was timeout=15 — a dead/half-open session would make
+        # registering users wait up to 15s just to see "doesn't work". Since
+        # the Node bridge now rejects immediately when there's no live
+        # socket, 5s is plenty and failures show up far faster.
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.post(
+                f"{NODE_PAIR_URL}/send-otp-whatsapp",
+                json={"phone": phone, "otp": otp, "name": name}
+            )
+            data = resp.json()
+            if resp.status_code == 200 and data.get("success"):
+                return {"success": True}
+            return {"success": False, "error": data.get("error", "Failed to send WhatsApp message.")}
+    except Exception as e:
+        logger.error("OTP WhatsApp send failed: %s", e)
+        return {"success": False, "error": "Bot isn't connected to WhatsApp right now. Try again shortly."}
+
+
 async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
     """
-    Sends a 6-digit OTP to the registering user's email via SMTP.
-    Free to run — just needs a Gmail (or any SMTP) account + app password
-    set as SMTP_EMAIL / SMTP_PASSWORD env vars. No paid SMS gateway required.
+    Optional fallback — sends the OTP via email instead of WhatsApp. Only
+    used if SMTP_EMAIL/SMTP_PASSWORD are configured; WhatsApp delivery above
+    is the primary path now.
     """
     if not SMTP_EMAIL or not SMTP_PASSWORD:
         logger.warning("⚠️  SMTP_EMAIL/SMTP_PASSWORD not set — cannot send OTP emails.")
@@ -211,6 +238,14 @@ async def get_audio_url(url: str) -> dict:
 
 async def init_db():
     async with aiosqlite.connect(DB_FILE) as db:
+        # ✅ FIX: every request opens a fresh sqlite connection (auto-save,
+        # log-message, registration, etc. all hit the DB on every WhatsApp
+        # message / panel request). In the default journal mode, concurrent
+        # writes can block each other for the full busy timeout, which stacks
+        # up as multi-second delays on bot replies. WAL mode lets reads/writes
+        # run concurrently instead of serializing on a file lock.
+        await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA busy_timeout=5000")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
                 sender TEXT PRIMARY KEY, name TEXT, timestamp REAL
@@ -383,16 +418,15 @@ async def register_page():
 
 @app.route("/api/register", methods=["POST"])
 async def api_register():
-    """Step 1: user submits phone + name + email -> we generate + email an OTP."""
+    """Step 1: user submits their WhatsApp number (+ optional name/email) ->
+    we generate an OTP and send it as a WhatsApp message from the bot."""
     data = await request.get_json(silent=True) or {}
     phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
     name = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip()
+    email = (data.get("email") or "").strip()  # optional now — WhatsApp is the delivery channel
 
     if not phone or not phone.isdigit() or len(phone) < 9:
         return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
-    if not email or "@" not in email:
-        return jsonify({"success": False, "error": "Enter a valid email address."}), 400
 
     otp = _generate_otp()
     now = time.time()
@@ -412,11 +446,11 @@ async def api_register():
         """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now))
         await db.commit()
 
-    result = await send_otp_email(email, otp, name)
+    result = await send_otp_whatsapp(phone, otp, name)
     if not result["success"]:
         return jsonify({"success": False, "error": result["error"]}), 500
 
-    return jsonify({"success": True, "message": "OTP sent to your email. Enter it below to verify."})
+    return jsonify({"success": True, "message": "OTP sent to your WhatsApp. Enter it below to verify."})
 
 
 @app.route("/api/verify-otp", methods=["POST"])
@@ -934,7 +968,9 @@ async def register_profile():
         try:
             await db.execute("INSERT INTO contacts VALUES (?, ?, ?)", (sender, name, time.time()))
             await db.commit()
-            return jsonify({"status": "new_user_registered", "welcome_message": WELCOME_TEXT})
+            # ✅ Auto-welcome DM removed on request — contact is still saved
+            # silently, but no message gets sent to the stranger anymore.
+            return jsonify({"status": "new_user_registered"})
         except aiosqlite.IntegrityError:
             return jsonify({"status": "already_indexed"})
 
@@ -1156,8 +1192,7 @@ async def process_sentiment():
 # binds to.  Node's pairing web server runs internally on WEB_PORT (3000).
 # These two routes forward /pair traffic through Python so customers can reach
 # the session-link page at your public Render/Railway URL.
-
-NODE_PAIR_URL = f"http://127.0.0.1:{os.environ.get('WEB_PORT', 3000)}"
+# (NODE_PAIR_URL is defined earlier, alongside send_otp_whatsapp, which uses it too.)
 
 @app.route("/pair-abandon", methods=["POST"])
 async def pair_abandon_proxy():
