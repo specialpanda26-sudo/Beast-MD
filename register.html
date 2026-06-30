@@ -58,6 +58,17 @@
   .hint{color:var(--muted);font-size:0.75rem;margin-top:10px;line-height:1.5}
   .back-link{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:0.8rem;text-decoration:none}
   .back-link:hover{color:var(--accent)}
+  .method-toggle{display:flex;gap:8px;margin-top:6px}
+  .method-btn{
+    flex:1;padding:10px 8px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);font-size:0.82rem;font-family:'Space Grotesk',sans-serif;
+    cursor:pointer;text-align:center;transition:all .15s;
+  }
+  .method-btn.active{
+    border-color:var(--accent);color:var(--accent);
+    background:rgba(0,229,255,0.08);box-shadow:0 0 12px rgba(0,229,255,0.15);
+  }
+  .field-hidden{display:none}
 </style>
 </head>
 <body>
@@ -71,14 +82,26 @@
       <input type="text" id="reg-phone" placeholder="254712345678" inputmode="numeric"/>
       <label>Name</label>
       <input type="text" id="reg-name" placeholder="Your name"/>
+
+      <label>Get my code via</label>
+      <div class="method-toggle">
+        <button type="button" class="method-btn active" id="method-whatsapp" onclick="setMethod('whatsapp')">📱 WhatsApp</button>
+        <button type="button" class="method-btn" id="method-email" onclick="setMethod('email')">📧 Email</button>
+      </div>
+
+      <div id="email-field" class="field-hidden">
+        <label>Email Address</label>
+        <input type="email" id="reg-email" placeholder="you@example.com"/>
+      </div>
+
       <button class="btn" id="btn-register" onclick="doRegister()">Send Verification Code →</button>
-      <div class="hint">Your 6-digit code will be sent as a WhatsApp message from the bot.</div>
+      <div class="hint" id="method-hint">Your 6-digit code will be sent as a WhatsApp message from the bot.</div>
       <div class="msg" id="register-msg"></div>
     </div>
 
     <!-- STEP 2: VERIFY OTP -->
     <div class="step" id="step-verify">
-      <label>Enter the 6-digit code sent to your WhatsApp</label>
+      <label id="verify-label">Enter the 6-digit code sent to your WhatsApp</label>
       <input type="text" id="otp-input" placeholder="000000" inputmode="numeric" maxlength="6"/>
       <button class="btn" id="btn-verify" onclick="doVerify()">Verify Number →</button>
       <div class="msg" id="verify-msg"></div>
@@ -99,6 +122,7 @@
 
 <script>
   let registeredPhone = "";
+  let deliveryMethod = "whatsapp";
 
   function showMsg(id, text, type) {
     const el = document.getElementById(id);
@@ -106,21 +130,41 @@
     el.className = "msg " + type;
   }
 
+  function setMethod(method) {
+    deliveryMethod = method;
+    document.getElementById("method-whatsapp").classList.toggle("active", method === "whatsapp");
+    document.getElementById("method-email").classList.toggle("active", method === "email");
+    document.getElementById("email-field").classList.toggle("field-hidden", method !== "email");
+    document.getElementById("method-hint").textContent = method === "email"
+      ? "Your 6-digit code will be sent to your email address."
+      : "Your 6-digit code will be sent as a WhatsApp message from the bot.";
+  }
+
   async function doRegister() {
     const phone = document.getElementById("reg-phone").value.trim();
     const name = document.getElementById("reg-name").value.trim();
+    const email = document.getElementById("reg-email").value.trim();
     const btn = document.getElementById("btn-register");
+
+    if (deliveryMethod === "email" && !email) {
+      return showMsg("register-msg", "Enter your email address to receive the code.", "error");
+    }
+
     btn.disabled = true; btn.textContent = "Sending...";
 
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name })
+        body: JSON.stringify({ phone, name, email, method: deliveryMethod })
       });
       const data = await res.json();
       if (data.success) {
         registeredPhone = phone.replace(/\s+/g, "").replace("+", "");
+        document.getElementById("verify-label").textContent =
+          deliveryMethod === "email"
+            ? "Enter the 6-digit code sent to your email"
+            : "Enter the 6-digit code sent to your WhatsApp";
         document.getElementById("step-register").classList.remove("active");
         document.getElementById("step-verify").classList.add("active");
       } else {

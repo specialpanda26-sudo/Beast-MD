@@ -131,7 +131,9 @@ async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
     msg["To"] = to_email
 
     def _send_sync():
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+        # ✅ FIX (speed): was timeout=15 — matches the same "fail fast,
+        # don't make the user wait" fix applied to WhatsApp OTP delivery.
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=6) as server:
             server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.sendmail(SMTP_EMAIL, [to_email], msg.as_string())
@@ -419,14 +421,23 @@ async def register_page():
 @app.route("/api/register", methods=["POST"])
 async def api_register():
     """Step 1: user submits their WhatsApp number (+ optional name/email) ->
-    we generate an OTP and send it as a WhatsApp message from the bot."""
+    we generate an OTP and send it via whichever delivery method they chose
+    (WhatsApp from the bot, or email as a fallback for anyone whose WhatsApp
+    session/bot isn't reachable right now)."""
     data = await request.get_json(silent=True) or {}
     phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
     name = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip()  # optional now — WhatsApp is the delivery channel
+    email = (data.get("email") or "").strip()
+    method = (data.get("method") or "whatsapp").strip().lower()
 
     if not phone or not phone.isdigit() or len(phone) < 9:
         return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+
+    if method == "email":
+        if not email or "@" not in email or "." not in email.split("@")[-1]:
+            return jsonify({"success": False, "error": "Enter a valid email address."}), 400
+    elif method != "whatsapp":
+        return jsonify({"success": False, "error": "Invalid delivery method."}), 400
 
     otp = _generate_otp()
     now = time.time()
@@ -446,11 +457,18 @@ async def api_register():
         """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now))
         await db.commit()
 
-    result = await send_otp_whatsapp(phone, otp, name)
+    if method == "email":
+        result = await send_otp_email(email, otp, name)
+    else:
+        result = await send_otp_whatsapp(phone, otp, name)
     if not result["success"]:
         return jsonify({"success": False, "error": result["error"]}), 500
 
-    return jsonify({"success": True, "message": "OTP sent to your WhatsApp. Enter it below to verify."})
+    return jsonify({
+        "success": True,
+        "message": "OTP sent to your email. Enter it below to verify." if method == "email"
+                   else "OTP sent to your WhatsApp. Enter it below to verify."
+    })
 
 
 @app.route("/api/verify-otp", methods=["POST"])

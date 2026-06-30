@@ -9,7 +9,10 @@
 
 - **Faster replies** — every command used to wait through stacked "human-like typing" delays (1–3s+ of pure artificial wait) plus a blocking backend call with a 45s timeout on the hot path. Delays are now minimal and backend logging calls no longer block replies.
 - **Auto-welcome DM removed** — brand-new DMers no longer get an automatic welcome message; the bot still saves their contact silently in the background. Use `.register` or the `/register` page if you want them directed to sign up.
-- **OTP failures now respond fast & cleanly** — registering used to be able to hang and surface a raw crash (`Cannot read properties of undefined (reading 'id')`) if the bot's WhatsApp session was reconnecting when an OTP was requested. The socket is now only used once it's fully connected, stale sockets are dropped immediately on disconnect, and the send timeout was cut from 15s to 5s — so a bad session now fails fast with a clear error instead of hanging.
+- **OTP failures now respond fast & cleanly** — registering used to be able to hang and surface a raw crash (`Cannot read properties of undefined (reading 'id')`) if the bot's WhatsApp session was reconnecting when an OTP was requested. The socket is now only used once it's fully connected, stale sockets are dropped immediately on disconnect, and both the WhatsApp and email send timeouts were cut to 5–6s — so a bad session now fails fast with a clear error instead of hanging.
+- **Choice of OTP delivery: WhatsApp or Email** — `/register` now lets the user pick how they want their code delivered, instead of WhatsApp-only. Useful as a fallback if the bot's WhatsApp session is down. Requires `SMTP_EMAIL`/`SMTP_PASSWORD` to be set for the email option to work.
+- **🔒 Security fix — hardcoded login/recovery password removed** — `.login` and `.ownerrecovery` used to fall back to the same hardcoded default password if `BOT_LOGIN_PASS`/`OWNER_RECOVERY_SECRET` weren't set, which meant anyone reading the public source code could log in as owner or hijack bot ownership. Both commands now refuse to run at all until you explicitly set those env vars yourself — no default fallback exists anymore. **If you ever ran an earlier version of this bot, treat the old default password as compromised and set fresh values.**
+- **Dead "Welcome Message" toggle removed from `/admin`** — it used to do nothing since the auto-welcome DM feature was removed; the toggle no longer appears.
 - **Register button added to the landing page** — `/register` is now linked directly from the nav bar, mobile menu, and hero section, not just discoverable via `.register` in chat.
 - **SQLite WAL mode enabled** — reduces lock-contention stalls when multiple sessions write to the DB at the same time.
 - **`.register` command added** — DM the bot `.register` to get the web panel link directly in chat, no need to know the URL.
@@ -235,12 +238,12 @@ When a feature is off, the bot replies with a short "currently disabled by the a
 
 A self-serve page at **`/register`** lets anyone register their WhatsApp number on the bot panel and get verified:
 
-1. User enters their **WhatsApp number and name** at `/register`.
-2. A 6-digit OTP is generated and **sent as a WhatsApp message from the bot itself** — no email or paid SMS gateway needed, since the bot already has a live WhatsApp connection.
+1. User enters their **WhatsApp number and name** at `/register`, and chooses how to receive their code: **📱 WhatsApp** (default — sent as a message from the bot itself, no email/SMS gateway needed) or **📧 Email** (useful if the bot's WhatsApp session is temporarily down).
+2. A 6-digit OTP is generated and sent via the chosen method.
 3. User enters the OTP on the same page to verify.
 4. On success, the number is awarded a **🛡️ Trusted badge** and **80 kesh free credit** automatically.
 
-**Setup:** nothing extra required — it reuses your already-paired WhatsApp session. Adjust the starter credit with `REG_STARTER_CREDITS`. (An optional email-OTP fallback function still exists in `app.py` for anyone who wants to switch back; set `SMTP_EMAIL`/`SMTP_PASSWORD` to use it.)
+**Setup:** the WhatsApp delivery option needs nothing extra — it reuses your already-paired WhatsApp session. Adjust the starter credit with `REG_STARTER_CREDITS`. The **email delivery option requires `SMTP_EMAIL`/`SMTP_PASSWORD`** to be set — without them, picking "Email" on the register page returns a clear "email service not configured" error instead of failing silently.
 
 **Admin side:** the **🛡️ Registrations** tab in `/admin` lists every registered user (verified status, badge, credit balance) and lets you **manually top up credit** for any number — just enter their phone + name (no OTP required, since the main bot already has their contact saved). This is also how you'd add credit for a number that hasn't self-registered yet.
 
