@@ -56,7 +56,8 @@
 | `.sticker` | Reply to image/video to make sticker |
 | `.vv` | Reply to voice note to re-send as audio |
 | `.save` | Reply to video/image to save it |
-| `.getpp [@user]` | Get someone's profile picture |
+| `.getpp [@user]` | Get someone's profile picture (works even unsaved) |
+| `.about [@user]` | Get someone's WhatsApp About status text (works even unsaved) |
 | `.download [url]` | Download video (YT/TikTok/IG) |
 | `.song [url]` | Extract MP3 audio from video URL |
 | `.convert [amt] [from] [to]` | Currency converter e.g `.convert 100 USD KES` |
@@ -184,6 +185,7 @@ If you lose access to your original number:
 | `OWNER_NUMBER` | Your WhatsApp number e.g. `254141915668` |
 | `OWNER_NAME` | `Henry Ochibots` |
 | `BOT_NAME` | `Henry Ochibots v19™` |
+| `BOT_LOGIN_USER` | Login username (default: `Henry`) |
 | `BOT_LOGIN_PASS` | Login password (default: `7lq4mv00`) |
 | `ADMIN_PASSWORD` | Password to protect the `/admin` panel |
 | `OWNER_RECOVERY_SECRET` | Your secret recovery passphrase |
@@ -199,10 +201,12 @@ If you lose access to your original number:
 - `/recover` and `/viewonce` are **owner-only**
 - `.tagall` requires bot admin (owner or sub-admin)
 - `.bcgc` is **owner-only**
-- Admin panel (`/admin`) is password-protected via `ADMIN_PASSWORD`
+- Admin panel (`/admin`) is password-protected via `ADMIN_PASSWORD` — supports blacklist management, message search, and broadcast
 - `.song` and `.download` use `execFile` (no shell injection risk)
 - Mode changes persist across messages (stored in global state)
-- `.login` credentials should be changed via `BOT_LOGIN_PASS` env var
+- `.login` is rate-limited to 3 failed attempts per number per 10 minutes
+- `.login` usage hint never reveals the real username/password — change credentials via `BOT_LOGIN_USER` / `BOT_LOGIN_PASS` env vars
+- `.getpp` and `.about` work even for numbers not saved in contacts (verified via WhatsApp lookup)
 
 ---
 
