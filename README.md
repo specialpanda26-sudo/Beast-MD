@@ -45,6 +45,7 @@
 | `.weather [city]` | Live weather info |
 | `.dict [word]` | Dictionary definition |
 | `.roll [XdY+Z]` | Roll dice e.g `.roll 3d6+2` 🎲 |
+| `.checklink [url]` | Heuristic check for suspicious/phishing links |
 | `.myperm` | Check your permission level |
 | `/ask [query]` | Ask AI anything |
 
@@ -93,6 +94,7 @@
 | `.listadmins` | List all sub-admins |
 | `.addcoowner [number]` | Add a co-owner (full owner powers) |
 | `.removecoowner [number]` | Remove a co-owner |
+| `.settier [number] [subadmin\|coowner]` | Assign any number to any permission tier; auto-DMs them an access notification | Remove a co-owner |
 | `.listcoowners` | List all co-owners |
 | `.bcgc [msg]` | Broadcast message to all groups |
 | `.creategroup [name] \| [numbers]` | Create a new group from a plain list of numbers, e.g. `.creategroup Squad \| 254712345678,254798765432` |

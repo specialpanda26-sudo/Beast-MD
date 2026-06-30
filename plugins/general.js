@@ -52,7 +52,8 @@ ${p}song [url]     - Extract MP3
 ${p}weather [city] - Live weather
 ${p}dict [word]    - Dictionary
 ${p}convert [x y]  - Currency converter
-${p}roll [dice]    - Roll dice e.g 3d6+2` : '';
+${p}roll [dice]    - Roll dice e.g 3d6+2
+${p}checklink [url] - Check if a link looks safe or suspicious` : '';
 
     // ── OWNER-ONLY MENU ────────────────────────────────────────────────────
     const ownerSection = isOwner ? `
@@ -66,6 +67,7 @@ ${p}listadmins        - List all sub-admins
 ${p}addcoowner [num]  - Add a co-owner (full access)
 ${p}removecoowner [n] - Remove co-owner
 ${p}listcoowners      - List co-owners
+${p}settier [num] [subadmin|coowner] - Assign any number to any tier (auto-notifies them)
 ${p}welcome [num]     - Send welcome card
 ${p}status            - Post image as status
 ${p}pp                - Update profile pic
@@ -209,6 +211,54 @@ ${ownerSection}
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .addadmin 254XXXXXXXXX' }, { quoted: msg });
     global.subAdmins.add(num);
     await sock.sendMessage(from, { text: `✅ *${num}* is now a Beast Bot Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
+    // Notify the granted number directly on their own chat
+    try {
+      await sock.sendMessage(`${num}@s.whatsapp.net`, {
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *Sub-Admin* access on Henry Ochibots v19™.\nType *.menu* to see what you can now use.`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
+    }
+  },
+
+  // ── .settier — owner-only, assign ANY number to ANY permission tier ────────
+  // Usage: .settier 254XXXXXXXXX [subadmin|coowner]
+  // Unlike .addadmin (sub-admin only), this lets the main owner grant full
+  // co-owner (same tier as themselves) access too. Always DMs the target.
+  settier: async ({ sock, from, msg, isOwner, args }) => {
+    if (!isOwner) return sock.sendMessage(from, { text: '❌ Only the main owner can assign tiers!' }, { quoted: msg });
+    const num = args[0]?.replace(/[^0-9]/g, '');
+    const tier = (args[1] || '').toLowerCase();
+    if (!num || !['subadmin', 'coowner'].includes(tier)) {
+      return sock.sendMessage(from, {
+        text: '📋 Usage: .settier 254XXXXXXXXX [subadmin|coowner]'
+      }, { quoted: msg });
+    }
+
+    global.subAdmins = global.subAdmins || new Set();
+    global.coOwners = global.coOwners || new Set();
+
+    let tierLabel;
+    if (tier === 'subadmin') {
+      global.subAdmins.add(num);
+      tierLabel = 'Sub-Admin';
+    } else {
+      global.coOwners.add(num);
+      tierLabel = 'Co-Owner (full owner access)';
+    }
+
+    await sock.sendMessage(from, {
+      text: `✅ *${num}* has been set to tier: *${tierLabel}*.`
+    }, { quoted: msg });
+
+    // Notify the granted number directly on their own chat
+    try {
+      await sock.sendMessage(`${num}@s.whatsapp.net`, {
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *${tierLabel}* access on Henry Ochibots v19™.\nType *.menu* to see what you can now use.`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
+    }
   },
 
   // ── .removeadmin ───────────────────────────────────────────────────────────
@@ -490,4 +540,81 @@ module.exports.bio = async ({ sock, from, msg, isOwner, args }) => {
   } catch (e) {
     await sock.sendMessage(from, { text: `❌ Failed: ${e.message}` }, { quoted: msg });
   }
+};
+
+// ── .checklink — heuristic URL safety checker (no external API) ────────────
+// Usage: .checklink [url]
+// Flags common phishing/scam red flags. This is NOT a guarantee of safety —
+// just a fast first-pass screen. Encourage users to still be cautious.
+module.exports.checklink = async ({ sock, from, msg, args }) => {
+  const input = args[0];
+  if (!input) {
+    return sock.sendMessage(from, { text: '🔗 Usage: .checklink [url]' }, { quoted: msg });
+  }
+
+  let url;
+  try {
+    url = new URL(input.startsWith('http') ? input : `http://${input}`);
+  } catch (e) {
+    return sock.sendMessage(from, { text: "❌ That doesn't look like a valid URL." }, { quoted: msg });
+  }
+
+  const host = url.hostname.toLowerCase();
+  const flags = [];
+
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+    flags.push('Uses a raw IP address instead of a domain name');
+  }
+
+  const riskyTlds = ['.zip', '.xyz', '.top', '.tk', '.gq', '.ml', '.cf', '.work', '.click', '.country', '.kim'];
+  if (riskyTlds.some(tld => host.endsWith(tld))) {
+    flags.push('Uses a TLD frequently abused for scams/phishing');
+  }
+
+  const labels = host.split('.');
+  if (labels.length > 4) {
+    flags.push('Unusually long chain of subdomains');
+  }
+
+  const knownBrands = ['paypal', 'whatsapp', 'facebook', 'instagram', 'google', 'apple', 'amazon', 'netflix', 'mpesa', 'safaricom', 'binance'];
+  const rootDomain = labels.slice(-2).join('.');
+  const brandHit = knownBrands.find(b => host.includes(b) && !rootDomain.startsWith(b));
+  if (brandHit) {
+    flags.push(`Mentions "${brandHit}" but that's not the actual root domain — classic lookalike pattern`);
+  }
+
+  const shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'is.gd', 'cutt.ly', 'rebrand.ly', 'shorturl.at'];
+  if (shorteners.includes(host)) {
+    flags.push('This is a shortened link — the real destination is hidden until clicked');
+  }
+
+  if (url.protocol !== 'https:') {
+    flags.push('Not using HTTPS — connection is not encrypted');
+  }
+
+  let verdict, emoji;
+  if (flags.length === 0) {
+    verdict = 'No obvious red flags found.';
+    emoji = '✅';
+  } else if (flags.length <= 2) {
+    verdict = 'A few warning signs — proceed with caution.';
+    emoji = '⚠️';
+  } else {
+    verdict = 'Multiple red flags — this looks risky, avoid entering any info.';
+    emoji = '🚫';
+  }
+
+  const flagText = flags.length ? flags.map(f => `• ${f}`).join('\n') : '• None detected';
+
+  await sock.sendMessage(from, {
+    text:
+`${emoji} *Link Check: ${host}*
+
+${verdict}
+
+*Findings:*
+${flagText}
+
+_This is a heuristic check, not a guarantee. When in doubt, don't enter passwords or payment info._`
+  }, { quoted: msg });
 };
