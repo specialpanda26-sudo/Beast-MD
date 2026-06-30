@@ -63,6 +63,60 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 if not GROQ_API_KEY:
     logger.warning("⚠️  GROQ_API_KEY not set! /ask command will fail.")
 
+# NEW: panel registration OTP — sent via free email SMTP, no WhatsApp/paid SMS needed
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Henry Tech Bot Panel")
+REG_STARTER_CREDITS = int(os.environ.get("REG_STARTER_CREDITS", "80"))  # 80 kesh starter credit on verify
+OTP_TTL_SECONDS = 600  # 10 minutes
+
+
+def _generate_otp() -> str:
+    return f"{random.randint(0, 999999):06d}"
+
+
+async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
+    """
+    Sends a 6-digit OTP to the registering user's email via SMTP.
+    Free to run — just needs a Gmail (or any SMTP) account + app password
+    set as SMTP_EMAIL / SMTP_PASSWORD env vars. No paid SMS gateway required.
+    """
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        logger.warning("⚠️  SMTP_EMAIL/SMTP_PASSWORD not set — cannot send OTP emails.")
+        return {"success": False, "error": "OTP email service not configured on server."}
+
+    import smtplib
+    from email.mime.text import MIMEText
+
+    subject = "Your Henry Tech Bot Panel verification code"
+    body = (
+        f"Hi {name or 'there'},\n\n"
+        f"Your verification code is: {otp}\n\n"
+        f"This code expires in 10 minutes. Enter it on the registration page to verify "
+        f"your number and unlock your trust badge + {REG_STARTER_CREDITS} kesh free credit.\n\n"
+        f"— Henry Tech Bot Panel"
+    )
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_EMAIL}>"
+    msg["To"] = to_email
+
+    def _send_sync():
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, [to_email], msg.as_string())
+
+    try:
+        await asyncio.to_thread(_send_sync)
+        return {"success": True}
+    except Exception as e:
+        logger.error("OTP email send failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
 DB_FILE = "henry_tech_v5.db"
 SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
@@ -211,6 +265,21 @@ async def init_db():
                 PRIMARY KEY (group_id, sender)
             )
         """)
+        # NEW: panel registration — phone+email verification, trust badges, credits
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS registrations (
+                phone TEXT PRIMARY KEY,
+                name TEXT,
+                email TEXT,
+                otp TEXT,
+                otp_expiry REAL,
+                verified INTEGER NOT NULL DEFAULT 0,
+                credits INTEGER NOT NULL DEFAULT 0,
+                badge TEXT NOT NULL DEFAULT 'none',
+                created_at REAL,
+                verified_at REAL
+            )
+        """)
         for default_feature in ("ai_chat", "downloads", "keywords", "welcome_message",
                                  "status_save", "antilink", "menu_buttons"):
             await db.execute(
@@ -302,6 +371,94 @@ async def status_check():
     # route external traffic to whatever port app.py binds to via $PORT —
     # not to the Node bridge's internal-only WEB_PORT.
     return jsonify({"status": "ok"})
+
+
+@app.route("/register")
+async def register_page():
+    reg_path = Path(__file__).parent / "register.html"
+    if reg_path.exists():
+        return Response(reg_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/register", methods=["POST"])
+async def api_register():
+    """Step 1: user submits phone + name + email -> we generate + email an OTP."""
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip()
+
+    if not phone or not phone.isdigit() or len(phone) < 9:
+        return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+    if not email or "@" not in email:
+        return jsonify({"success": False, "error": "Enter a valid email address."}), 400
+
+    otp = _generate_otp()
+    now = time.time()
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
+            row = await c.fetchone()
+        if row and row[0] == 1:
+            return jsonify({"success": False, "error": "This number is already verified."}), 400
+
+        await db.execute("""
+            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at)
+            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?)
+            ON CONFLICT(phone) DO UPDATE SET
+                name=excluded.name, email=excluded.email, otp=excluded.otp,
+                otp_expiry=excluded.otp_expiry
+        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now))
+        await db.commit()
+
+    result = await send_otp_email(email, otp, name)
+    if not result["success"]:
+        return jsonify({"success": False, "error": result["error"]}), 500
+
+    return jsonify({"success": True, "message": "OTP sent to your email. Enter it below to verify."})
+
+
+@app.route("/api/verify-otp", methods=["POST"])
+async def api_verify_otp():
+    """Step 2: user submits phone + OTP -> verify, award trust badge + free credits."""
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    otp = (data.get("otp") or "").strip()
+
+    if not phone or not otp:
+        return jsonify({"success": False, "error": "Phone and OTP are required."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT otp, otp_expiry, verified, name FROM registrations WHERE phone = ?", (phone,)
+        ) as c:
+            row = await c.fetchone()
+
+        if not row:
+            return jsonify({"success": False, "error": "No registration found for this number."}), 404
+
+        stored_otp, expiry, verified, name = row
+        if verified:
+            return jsonify({"success": False, "error": "Already verified."}), 400
+        if time.time() > expiry:
+            return jsonify({"success": False, "error": "OTP expired. Please register again."}), 400
+        if otp != stored_otp:
+            return jsonify({"success": False, "error": "Incorrect OTP."}), 400
+
+        await db.execute("""
+            UPDATE registrations
+            SET verified = 1, badge = 'Trusted', credits = credits + ?, verified_at = ?
+            WHERE phone = ?
+        """, (REG_STARTER_CREDITS, time.time(), phone))
+        await db.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Number verified! 🛡️ Trust badge unlocked + {REG_STARTER_CREDITS} kesh free credit added.",
+        "badge": "Trusted",
+        "credits": REG_STARTER_CREDITS
+    })
 
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
@@ -507,6 +664,61 @@ a{{color:#a78bfa;text-decoration:none}}</style></head>
 
 
 # ── ✅ NEW: Blacklist management ─────────────────────────────────────────────
+@app.route("/admin/registrations", methods=["GET"])
+async def admin_registrations():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("""
+            SELECT phone, name, email, verified, credits, badge, created_at, verified_at
+            FROM registrations ORDER BY created_at DESC
+        """) as c:
+            rows = await c.fetchall()
+    return jsonify({"registrations": [
+        {"phone": r[0], "name": r[1], "email": r[2], "verified": bool(r[3]),
+         "credits": r[4], "badge": r[5], "created_at": r[6], "verified_at": r[7]}
+        for r in rows
+    ]})
+
+
+@app.route("/admin/registrations/add-credit", methods=["POST"])
+async def admin_add_credit():
+    """
+    Admin tops up a verified user's kesh credit manually — just phone + name.
+    If the number isn't registered yet, creates a verified record for it
+    (the main bot already has the contact saved, so identity is trusted).
+    """
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    amount = data.get("amount")
+
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Amount must be a number."}), 400
+
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT phone FROM registrations WHERE phone = ?", (phone,)) as c:
+            exists = await c.fetchone()
+        if exists:
+            await db.execute("UPDATE registrations SET credits = credits + ?, name = COALESCE(NULLIF(?, ''), name) WHERE phone = ?",
+                              (amount, name, phone))
+        else:
+            await db.execute("""
+                INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, verified_at)
+                VALUES (?, ?, '', '', 0, 1, ?, 'Trusted', ?, ?)
+            """, (phone, name, amount, now, now))
+        await db.commit()
+
+    return jsonify({"success": True, "message": f"{amount} kesh added to {phone}."})
+
+
 @app.route("/admin/blacklist", methods=["GET"])
 async def admin_get_blacklist():
     if not _check_admin_auth(request):

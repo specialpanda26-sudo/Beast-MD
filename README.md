@@ -218,6 +218,23 @@ When a feature is off, the bot replies with a short "currently disabled by the a
 
 ---
 
+## 🛡️ Bot Panel Registration, OTP & Trust Badges
+
+A self-serve page at **`/register`** lets anyone register their WhatsApp number on the bot panel and get verified:
+
+1. User enters their **WhatsApp number, name, and email** at `/register`.
+2. A 6-digit OTP is generated and **emailed** to them (free, via SMTP — no WhatsApp message or paid SMS gateway needed).
+3. User enters the OTP on the same page to verify.
+4. On success, the number is awarded a **🛡️ Trusted badge** and **80 kesh free credit** automatically.
+
+**Setup:** set `SMTP_EMAIL` and `SMTP_PASSWORD` in your `.env` (a Gmail account + [app password](https://myaccount.google.com/apppasswords) works out of the box). Adjust the starter credit with `REG_STARTER_CREDITS`.
+
+**Admin side:** the **🛡️ Registrations** tab in `/admin` lists every registered user (verified status, badge, credit balance) and lets you **manually top up credit** for any number — just enter their phone + name (no OTP required, since the main bot already has their contact saved). This is also how you'd add credit for a number that hasn't self-registered yet.
+
+This system is intentionally lightweight (SQLite-backed, same DB as the rest of the bot) so it's ready to plug into a future paid top-up flow without restructuring.
+
+---
+
 ## ⏳ Subscription Expiry (Admin Panel)
 
 For paid/client sessions, set an expiry date and time per session directly from `/admin`:
