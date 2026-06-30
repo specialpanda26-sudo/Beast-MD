@@ -585,7 +585,7 @@ async function startSession(sessionId, opts = {}) {
         }
       }
 
-      // Feature: Auto Save Contacts (silent — welcome is opt-in via .welcome command)
+      // Feature: Auto Save Contacts (silent — no auto-message sent to strangers)
       try {
         await apiClient.post("/auto-save", { sender, name });
       } catch (e) {}
@@ -597,17 +597,8 @@ async function startSession(sessionId, opts = {}) {
         await socket.sendPresenceUpdate("paused", sender);
       } catch (e) {}
 
-      // Feature: Auto React to messages
-      if (body) {
-        try {
-          const sentiment = await apiClient.post("/react", { body });
-          if (sentiment?.data?.emoji) {
-            await socket.sendMessage(sender, {
-              react: { text: sentiment.data.emoji, key: msg.key }
-            });
-          }
-        } catch (e) {}
-      }
+      // ❌ REMOVED: Auto React to every message — was reacting with a sentiment
+      // emoji on literally every incoming message, which felt spammy/unnatural.
 
       // ── Dot-command dispatcher (.menu .ping .tagall etc.) ─────────────────
       if (body.startsWith(CMD_PREFIX)) {
@@ -901,7 +892,6 @@ Your bot is now live and connected. 🌐
 ✅ Auto-view statuses
 ✅ Save view-once media
 ✅ AI DM chat (Swahili/Sheng/EN)
-✅ Auto-react (sentiment emoji)
 ✅ Fake typing (anti-ban)
 ✅ Group react-only (restricted chats)
 ✅ Always online

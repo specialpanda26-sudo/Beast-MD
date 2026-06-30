@@ -283,7 +283,7 @@ Ninaongea Kiswahili, Sheng na English!
 
 💬 *Au niandike tu ujumbe wowote — nitakujibu!* 😄
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🛡️ Auto-react | Always Online | AI Chat Active
+🛡️ Always Online | AI Chat Active
 🔥 _Henry Ochibots v19™ — @henrytech254_`;
     try {
       await sock.sendMessage(jid, { text: card });
