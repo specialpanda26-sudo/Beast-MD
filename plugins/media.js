@@ -252,4 +252,124 @@ module.exports = {
       }
     });
   },
+
+  // ── .dl — UNIVERSAL DOWNLOADER ───────────────────────────────────────────
+  // Usage: .dl [URL] (video, default) | .dl [URL] audio | .dl [URL] mp3
+  // Powered by yt-dlp — works across YouTube, TikTok, Instagram, Facebook,
+  // Twitter/X, SoundCloud, and most other sites yt-dlp supports.
+  // ✅ Uses execFile only (no shell interpolation of user input).
+  dl: async ({ sock, from, msg, args }) => {
+    const url = args[0];
+    const wantAudio = /^(audio|mp3|song)$/i.test(args[1] || '');
+    if (!url) {
+      return sock.sendMessage(from, {
+        text: '🌐 *Universal Downloader*\nUsage: .dl [URL] — gets video\n.dl [URL] audio — gets MP3 audio\n\nWorks with YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud & more.',
+      }, { quoted: msg });
+    }
+    if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
+
+    await sock.sendMessage(from, { text: `⏳ Fetching ${wantAudio ? 'audio' : 'media'}...` }, { quoted: msg });
+
+    const stamp = Date.now();
+    const tmpTemplate = `/tmp/uvdl_${stamp}.%(ext)s`;
+    const ytArgs = wantAudio
+      ? ['-x', '--audio-format', 'mp3', '--no-playlist', '-o', tmpTemplate, url]
+      : ['-f', 'mp4/best', '--no-playlist', '-o', tmpTemplate, url];
+
+    execFile('yt-dlp', ytArgs, { maxBuffer: 1024 * 1024 * 20 }, async (err) => {
+      if (err) {
+        return sock.sendMessage(from, { text: '❌ Download failed. The link may be unsupported or private.' }, { quoted: msg });
+      }
+      try {
+        // yt-dlp resolves the real extension itself, so find the produced file
+        const dir = '/tmp';
+        const produced = fs.readdirSync(dir).find(f => f.startsWith(`uvdl_${stamp}.`));
+        if (!produced) return sock.sendMessage(from, { text: '❌ Could not locate downloaded file.' }, { quoted: msg });
+        const fullPath = path.join(dir, produced);
+        const buffer = fs.readFileSync(fullPath);
+
+        if (wantAudio) {
+          await sock.sendMessage(from, { audio: buffer, mimetype: 'audio/mpeg' }, { quoted: msg });
+        } else {
+          await sock.sendMessage(from, { video: buffer, caption: '✅ Downloaded via universal downloader' }, { quoted: msg });
+        }
+        fs.unlinkSync(fullPath);
+      } catch (e) {
+        await sock.sendMessage(from, { text: `❌ Send failed: ${e.message}` }, { quoted: msg });
+      }
+    });
+  },
+
+  // ── .convertmedia — UNIVERSAL MEDIA CONVERTER ────────────────────────────
+  // Usage: reply to an image/video/audio file with .convertmedia [target format]
+  // e.g. .convertmedia mp3 | .convertmedia mp4 | .convertmedia png | .convertmedia ogg
+  // Distinct from .convert (currency converter in atassa.js) to avoid name collision.
+  // ✅ Uses execFile only (no shell interpolation of user input).
+  convertmedia: async ({ sock, from, msg, args }) => {
+    const target = (args[0] || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const allowed = ['mp3', 'mp4', 'wav', 'ogg', 'opus', 'm4a', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'webm'];
+
+    if (!target || !allowed.includes(target)) {
+      return sock.sendMessage(from, {
+        text: `🔄 *Universal Media Converter*\nReply to an image, video, or audio file with:\n.convertmedia [format]\n\nSupported: ${allowed.join(', ')}`,
+      }, { quoted: msg });
+    }
+
+    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = quoted?.quotedMessage;
+    const imgMsg = quotedMsg?.imageMessage || msg.message?.imageMessage;
+    const vidMsg = quotedMsg?.videoMessage || msg.message?.videoMessage;
+    const audMsg = quotedMsg?.audioMessage || msg.message?.audioMessage;
+
+    if (!imgMsg && !vidMsg && !audMsg) {
+      return sock.sendMessage(from, { text: '❌ Reply to an image, video, or audio file with .convertmedia [format]' }, { quoted: msg });
+    }
+
+    const sourceKind = imgMsg ? 'image' : vidMsg ? 'video' : 'audio';
+    const audioOnlyTargets = ['mp3', 'wav', 'ogg', 'opus', 'm4a'];
+    const imageOnlyTargets = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+
+    if (sourceKind === 'audio' && !audioOnlyTargets.includes(target)) {
+      return sock.sendMessage(from, { text: `❌ Audio can only be converted to: ${audioOnlyTargets.join(', ')}` }, { quoted: msg });
+    }
+    if (sourceKind === 'image' && !imageOnlyTargets.includes(target)) {
+      return sock.sendMessage(from, { text: `❌ Images can only be converted to: ${imageOnlyTargets.join(', ')}` }, { quoted: msg });
+    }
+
+    try {
+      await sock.sendMessage(from, { text: `⏳ Converting ${sourceKind} → ${target}...` }, { quoted: msg });
+
+      const dlMsg = quotedMsg
+        ? { key: { remoteJid: from, id: quoted.stanzaId, participant: quoted.participant }, message: quotedMsg }
+        : msg;
+      const media = await downloadMediaMessage(dlMsg, 'buffer', {});
+
+      const inExt = imgMsg ? 'jpg' : vidMsg ? 'mp4' : 'm4a';
+      const stamp = Date.now();
+      const tmpIn = `/tmp/conv_in_${stamp}.${inExt}`;
+      const tmpOut = `/tmp/conv_out_${stamp}.${target}`;
+      fs.writeFileSync(tmpIn, media);
+
+      const ffArgs = ['-i', tmpIn, tmpOut, '-y'];
+
+      await new Promise((resolve, reject) => {
+        execFile('ffmpeg', ffArgs, (err) => err ? reject(err) : resolve());
+      });
+
+      const outBuffer = fs.readFileSync(tmpOut);
+
+      if (audioOnlyTargets.includes(target)) {
+        await sock.sendMessage(from, { audio: outBuffer, mimetype: `audio/${target}` }, { quoted: msg });
+      } else if (imageOnlyTargets.includes(target)) {
+        await sock.sendMessage(from, { image: outBuffer, caption: `✅ Converted to .${target}` }, { quoted: msg });
+      } else {
+        await sock.sendMessage(from, { document: outBuffer, fileName: `converted.${target}`, mimetype: 'application/octet-stream' }, { quoted: msg });
+      }
+
+      fs.unlinkSync(tmpIn);
+      fs.unlinkSync(tmpOut);
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Conversion failed: ${e.message}` }, { quoted: msg });
+    }
+  },
 };

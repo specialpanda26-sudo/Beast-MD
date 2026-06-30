@@ -15,7 +15,8 @@
 | 📷 View-Once Save | Saves & forwards view-once photos/videos (owner-only to view) |
 | ⏰ Message Scheduler | Schedule messages to any number at any time |
 | 🛡️ Permissions System | Control what commands each member can use |
-| 📥 Media Downloader | YouTube, TikTok, Instagram videos & MP3 |
+| 📥 Media Downloader | YouTube, TikTok, Instagram videos & MP3, plus a universal downloader (`.dl`) covering Facebook, Twitter/X, SoundCloud & more |
+| 🔄 Media Converter | Universal media converter (`.convertmedia`) — convert replied images/video/audio between common formats |
 | 🖼️ Sticker Maker | Convert images/videos to WhatsApp stickers |
 | 🔇 Anti-Call | Auto-rejects all incoming calls |
 | 📢 Broadcast | Send messages to all groups at once (owner only) |
@@ -68,6 +69,8 @@
 | `.about [@user]` | Get someone's WhatsApp About status text (works even unsaved) |
 | `.download [url]` | Download video (YT/TikTok/IG) |
 | `.song [url]` | Extract MP3 audio from video URL |
+| `.dl [url] (audio)` | 🌐 Universal downloader — YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud & most yt-dlp-supported sites. Add `audio` to grab MP3 instead of video |
+| `.convertmedia [format]` | 🔄 Universal media converter — reply to an image/video/audio file to convert it (mp3, mp4, wav, ogg, opus, m4a, png, jpg, webp, gif, webm) |
 | `.convert [amt] [from] [to]` | Currency converter e.g `.convert 100 USD KES` |
 
 ### 🛡️ Group Admin (bot admin / sub-admin)
@@ -260,7 +263,7 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 - ⚠️ If `ADMIN_PASSWORD` is **not** set, `/admin` is fully open to anyone with the URL — always set it before going live (the bot logs a warning on startup if it's missing)
 - Keyword auto-replies are checked before commands but skip blacklisted senders
 - Tappable menu buttons are best-effort: WhatsApp periodically changes how it renders Baileys-sent buttons. If they stop showing up for some users, the text/image menu (which always works) is sent first regardless — disable the toggle in Features if it ever causes errors in your logs
-- `.song` and `.download` use `execFile` (no shell injection risk)
+- `.song`, `.download`, `.dl`, and `.convertmedia` use `execFile` (no shell injection risk)
 - Mode changes persist across messages (stored in global state)
 - `.login` is rate-limited to 3 failed attempts per number per 10 minutes
 - `.login` usage hint never reveals the real username/password — change credentials via `BOT_LOGIN_USER` / `BOT_LOGIN_PASS` env vars

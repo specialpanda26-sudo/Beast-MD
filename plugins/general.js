@@ -49,6 +49,8 @@ ${p}sticker        - Image → Sticker
 ${p}getpp [@user]  - Get profile picture
 ${p}download [url] - Download video
 ${p}song [url]     - Extract MP3
+${p}dl [url] (audio) - Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
+${p}convertmedia [fmt] - Universal media converter (reply to file)
 ${p}weather [city] - Live weather
 ${p}dict [word]    - Dictionary
 ${p}convert [x y]  - Currency converter
@@ -142,7 +144,8 @@ ${p}getpp [@user]  - Get profile picture (works unsaved)
 ${p}about [@user]  - Get About status text (works unsaved)
 ${p}download [url] - Download video (YT/TikTok)
 ${p}song [url]     - Extract MP3 audio
-${p}convert        - Convert media format
+${p}dl [url] (audio) - 🌐 Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
+${p}convertmedia [fmt] - 🔄 Universal media converter (reply to img/video/audio)
 ${isBotAdmin ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛡️ *ADMIN COMMANDS*
