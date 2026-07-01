@@ -15,48 +15,6 @@ module.exports = {
     const cpuLoad = os.loadavg()[0].toFixed(2);
     const p = config.prefix;
 
-    // ── PUBLIC MENU (anyone can see) ──────────────────────────────────────
-    const publicSection = `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💬 *PUBLIC COMMANDS* (everyone)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}menu           - Show this menu
-${p}ping           - Bot response speed
-${p}runtime        - Uptime & system info
-
-🤖 *Just DM me anything!*
-I reply in Swahili, Sheng or English 🇰🇪
-
-/ask [query]   - Ask AI a question
-/recover [n]   - Recover deleted msgs
-/viewonce [n]  - View saved view-once media
-
-💡 Some words trigger instant auto-replies (set by the owner) — just message normally.`;
-
-    // ── SUB-ADMIN MENU ─────────────────────────────────────────────────────
-    const subAdminSection = isBotAdmin ? `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🛡️ *SUB-ADMIN COMMANDS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}tagall         - Tag all group members
-${p}kick [@user]   - Kick a member
-${p}promote [@u]   - Promote to admin
-${p}demote [@u]    - Demote from admin
-${p}mute           - Mute group
-${p}unmute         - Unmute group
-${p}sticker        - Image → Sticker
-${p}getpp [@user]  - Get profile picture
-${p}download [url] - Download video
-${p}song [url]     - Extract MP3
-${p}dl [url] (audio) - Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
-${p}convertmedia [fmt] - Universal media converter (reply to file)
-${p}weather [city] - Live weather
-${p}dict [word]    - Dictionary
-${p}convert [x y]  - Currency converter
-${p}roll [dice]    - Roll dice e.g 3d6+2
-${p}checklink [url] - Check if a link looks safe or suspicious` : '';
-
     // ── OWNER-ONLY MENU ────────────────────────────────────────────────────
     const ownerSection = isOwner ? `
 
@@ -70,6 +28,8 @@ ${p}addcoowner [num]  - Add a co-owner (full access)
 ${p}removecoowner [n] - Remove co-owner
 ${p}listcoowners      - List co-owners
 ${p}settier [num] [subadmin|coowner] - Assign any number to any tier (auto-notifies them)
+${p}announce [message] - Broadcast a message to every bot contact
+${p}checkblocked [num] - Heuristic check if a number has blocked the bot
 ${p}welcome [num]     - Send welcome card
 ${p}status            - Post image as status
 ${p}pp                - Update profile pic
@@ -126,10 +86,15 @@ ${p}dict [word]    - Dictionary definition
 ${p}roll [sides]   - Roll a dice 🎲
 ${p}myperm         - Check your permissions
 ${p}register       - Get web panel link (free credits + trust badge)
+${p}profile        - View your wallet balance & badge
+${p}addfunds [amt] [code] - Top up wallet via M-Pesa (admin reviews it)
+${p}referral       - Get your referral link & track earnings
 
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
 /ask [query]   - Ask AI anything
+/recover [n]   - Recover deleted msgs (owner-only, sent to bot's own number)
+/viewonce [n]  - View saved view-once media (owner-only, sent to bot's own number)
 
 🔐 *ACCESS*
 ${p}login [user] [pass] - Unlock full access
@@ -141,7 +106,7 @@ ${p}logout             - Remove your access
 ${p}sticker        - Image/video → Sticker
 ${p}vv             - View saved view-once media
 ${p}save           - Save view-once as file
-${p}getpp [@user]  - Get profile picture (works unsaved)
+${p}getpp [@user]  - Get profile picture (any number, even unsaved/private)
 ${p}about [@user]  - Get About status text (works unsaved)
 ${p}download [url] - Download video (YT/TikTok)
 ${p}song [url]     - Extract MP3 audio
@@ -162,7 +127,10 @@ ${p}revoke         - Reset invite link
 ${p}antispam on/off- Toggle antispam
 ${p}setperm @u lvl - Set member permissions
 ${p}resetperm @u   - Reset member permissions
-${p}listperms      - List all custom permissions` : ''}
+${p}listperms      - List all custom permissions
+${p}checklink [url] - Check if a link looks safe or suspicious
+
+🌝 React with this emoji on any message (or view-once) to privately recover it to the bot's own number` : ''}
 ${ownerSection}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -218,7 +186,8 @@ ${ownerSection}
             `Verify your number to unlock:\n` +
             `✅ Free starter credits\n` +
             `✅ A trust badge on your profile\n\n` +
-            `👉 ${publicUrl}/register`
+            `👉 ${publicUrl}/register\n\n` +
+            `💡 Already verified? Send *.referral* to get your own invite link and earn kesh for every friend who signs up.`
     }, { quoted: msg });
   },
 
@@ -228,7 +197,7 @@ ${ownerSection}
     const num = args[0]?.replace(/[^0-9]/g, '');
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .addadmin 254XXXXXXXXX' }, { quoted: msg });
     global.subAdmins.add(num);
-    await sock.sendMessage(from, { text: `✅ *${num}* is now a Beast Bot Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `✅ *${num}* is now a Henry Ochibots Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
     // Notify the granted number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
@@ -296,7 +265,7 @@ ${ownerSection}
       return sock.sendMessage(from, { text: '📋 No sub-admins added yet.\nUse .addadmin 254XXXXXXXXX to add one.' }, { quoted: msg });
     }
     const list = admins.map((n, i) => `${i + 1}. +${n}`).join('\n');
-    await sock.sendMessage(from, { text: `🛡️ *Beast Bot Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `🛡️ *Henry Ochibots Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
   },
 
   // ── .login — unlock full access with credentials ───────────────────────────
@@ -435,7 +404,7 @@ Ninaongea Kiswahili, Sheng na English!
     const load = os.loadavg()[0].toFixed(2);
     await sock.sendMessage(from, {
       text:
-`⚡ *Henry v19™ Beast Bot — Runtime*
+`⚡ *Henry Ochibots v19™ — Runtime*
 
 ⏱️ *Uptime:* ${h}h ${m}m ${s}s
 🖥️ *CPU:* ${cpuModel}
@@ -446,7 +415,7 @@ Ninaongea Kiswahili, Sheng na English!
 🏠 *Platform:* ${os.platform()}
 ⚙️ *Node.js:* ${process.version}
 
-🔥 _Henry v19™ Beast Bot — @henrytech254_`
+🔥 _Henry Ochibots v19™ — @henrytech254_`
     }, { quoted: msg });
   },
 
@@ -650,4 +619,40 @@ ${flagText}
 
 _This is a heuristic check, not a guarantee. When in doubt, don't enter passwords or payment info._`
   }, { quoted: msg });
+};
+
+// ── .announce — owner-only broadcast to everyone who's messaged the bot ────
+// Usage: .announce [message]
+// Queues the message on the backend's broadcast queue (same system the
+// admin panel uses), which the Node bridge polls every 20s and sends, with
+// a short delay between each contact, to every number that's ever sent the
+// bot a message (the "contacts" table) — not just people currently in this
+// chat/session. Sending is rate-limited (1.2s between messages) to reduce
+// the chance of WhatsApp flagging the account for spam-like behavior.
+module.exports.announce = async ({ sock, from, msg, isOwner, args }) => {
+  if (!isOwner) {
+    return sock.sendMessage(from, { text: '❌ Only the main owner can send announcements!' }, { quoted: msg });
+  }
+  const text = args.join(' ').trim();
+  if (!text) {
+    return sock.sendMessage(from, { text: '📋 Usage: .announce [message]\n\nThis goes out to every number that has ever messaged the bot.' }, { quoted: msg });
+  }
+
+  const axios = require('axios');
+  const BACKEND_PORT = process.env.PORT || 5000;
+  const adminPass = process.env.ADMIN_PASSWORD || '';
+
+  try {
+    const res = await axios.post(
+      `http://127.0.0.1:${BACKEND_PORT}/admin/broadcast`,
+      { target: 'all_contacts', message: text },
+      { headers: { Authorization: `Bearer ${adminPass}` }, timeout: 8000 }
+    );
+    await sock.sendMessage(from, {
+      text: `📢 *Announcement queued!*\n\nIt'll go out to all bot contacts over the next ~20-40s (small delay between each to stay safe).\n\nQueue size: ${res.data?.queue_size ?? '?'}`
+    }, { quoted: msg });
+  } catch (e) {
+    const apiErr = e.response?.data?.error || e.message;
+    await sock.sendMessage(from, { text: `❌ Couldn't queue the announcement: ${apiErr}` }, { quoted: msg });
+  }
 };

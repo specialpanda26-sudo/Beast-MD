@@ -4,6 +4,8 @@ import asyncio
 import logging
 import json
 import random
+import hashlib
+import secrets
 import httpx
 import aiosqlite
 from urllib.parse import quote_plus
@@ -38,8 +40,8 @@ def print_banner():
 ║   \033[1;35m██████╔╝╚██████╔╝   ██║   ███████║\033[1;36m                    ║
 ║   \033[1;35m╚═════╝  ╚═════╝    ╚═╝   ╚══════╝\033[1;36m                   ║
 ║                                                              ║
-║      \033[1;33m✦ Henry Bots© — created by Henry ✦\033[1;36m              ║
-║      \033[1;32m🦈 AUTOMATION V5.0  |  PYTHON BACKEND\033[1;36m              ║
+║      \033[1;33m✦ Henry Ochibots v19™ — created by Henry ✦\033[1;36m              ║
+║      \033[1;32m⚡ HENRY OCHIBOTS v19™  |  PYTHON BACKEND\033[1;36m              ║
 ║      \033[1;33m⚡ AI  |  DATABASE  |  COMMANDS  |  API\033[1;36m            ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -70,11 +72,52 @@ SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Henry Tech Bot Panel")
 REG_STARTER_CREDITS = int(os.environ.get("REG_STARTER_CREDITS", "80"))  # 80 kesh starter credit on verify
+
+# ── Referral program ─────────────────────────────────────────────────────
+# Whoever invited a new user (referrer) gets REFERRAL_REFERRER_BONUS kesh,
+# and the new user themself gets REFERRAL_REFERRED_BONUS kesh — paid out
+# automatically (no human review) the moment the referred user completes
+# OTP verification. This stacks on top of REG_STARTER_CREDITS, which every
+# verified user gets regardless of referral.
+REFERRAL_REFERRER_BONUS = int(os.environ.get("REFERRAL_REFERRER_BONUS", "15"))
+REFERRAL_REFERRED_BONUS = int(os.environ.get("REFERRAL_REFERRED_BONUS", "30"))
 OTP_TTL_SECONDS = 600  # 10 minutes
+
+# NEW: manual top-up / wallet funding via M-Pesa "Send Money" to the admin's
+# own number. We CANNOT verify in real time whether an M-Pesa code or
+# screenshot is genuine (that needs a Safaricom Daraja API integration this
+# project doesn't have) — so instead of pretending to auto-verify, this
+# queues every submission for a human admin to approve/reject from the
+# Payments tab. Credits only land in the user's wallet once approved.
+import re as _re
+import base64 as _b64
+
+MPESA_CODE_RE = _re.compile(r"^[A-Z0-9]{8,12}$")
+PAYMENT_PROOFS_DIR = Path(__file__).parent / "payment_proofs"
+PAYMENT_PROOFS_DIR.mkdir(exist_ok=True)
+ADMIN_PAYTO_NUMBER = os.environ.get("ADMIN_PAYTO_NUMBER", "")  # e.g. 254712345678 — shown to users as where to send M-Pesa funds
 
 
 def _generate_otp() -> str:
     return f"{random.randint(0, 999999):06d}"
+
+
+def _hash_password(password: str) -> str:
+    """PBKDF2-HMAC-SHA256 with a random per-user salt. Stored as
+    'salt_hex$hash_hex' — no plaintext or reversible encoding ever touches
+    the database."""
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return f"{salt}${digest.hex()}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        salt, digest_hex = stored.split("$", 1)
+    except (ValueError, AttributeError):
+        return False
+    check = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return secrets.compare_digest(check.hex(), digest_hex)
 
 
 # ✅ NEW: WhatsApp OTP delivery — this IS a WhatsApp bot, so the registering
@@ -141,9 +184,30 @@ async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
     try:
         await asyncio.to_thread(_send_sync)
         return {"success": True}
+    except smtplib.SMTPAuthenticationError:
+        logger.error("OTP email send failed: SMTP authentication rejected.")
+        return {
+            "success": False,
+            "error": (
+                "Email login was rejected by the mail server. If you're using Gmail, "
+                "SMTP_PASSWORD must be a 16-character App Password (Google Account → "
+                "Security → 2-Step Verification → App passwords), not your normal Gmail "
+                "password — Gmail blocks regular passwords for SMTP."
+            ),
+        }
+    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, OSError) as e:
+        logger.error("OTP email send failed: could not reach SMTP server: %s", e)
+        return {
+            "success": False,
+            "error": (
+                "Couldn't reach the email server (host/port unreachable or blocked by your "
+                "hosting provider's firewall). Double-check SMTP_HOST/SMTP_PORT, and note "
+                "some free hosts block outbound port 587."
+            ),
+        }
     except Exception as e:
         logger.error("OTP email send failed: %s", e)
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "Couldn't send the email right now. Please try again or use WhatsApp delivery instead."}
 
 
 DB_FILE = "henry_tech_v5.db"
@@ -314,7 +378,54 @@ async def init_db():
                 credits INTEGER NOT NULL DEFAULT 0,
                 badge TEXT NOT NULL DEFAULT 'none',
                 created_at REAL,
-                verified_at REAL
+                verified_at REAL,
+                referred_by TEXT,
+                referral_bonus_given INTEGER NOT NULL DEFAULT 0,
+                password_hash TEXT
+            )
+        """)
+        # Best-effort migration for DBs created before the referral/password
+        # columns existed — ALTER TABLE ... ADD COLUMN throws if the column
+        # is already there, so each is wrapped individually and ignored.
+        for col, ddl in [
+            ("referred_by", "ALTER TABLE registrations ADD COLUMN referred_by TEXT"),
+            ("referral_bonus_given", "ALTER TABLE registrations ADD COLUMN referral_bonus_given INTEGER NOT NULL DEFAULT 0"),
+            ("password_hash", "ALTER TABLE registrations ADD COLUMN password_hash TEXT"),
+        ]:
+            try:
+                await db.execute(ddl)
+            except Exception:
+                pass
+        # NEW: referral audit log — one row per successful referral payout,
+        # so .myreferrals / an admin can see who referred whom and when.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS referrals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referrer_phone TEXT NOT NULL,
+                referred_phone TEXT NOT NULL,
+                referrer_bonus INTEGER NOT NULL,
+                referred_bonus INTEGER NOT NULL,
+                created_at REAL
+            )
+        """)
+        # NEW: wallet top-up requests — user claims they sent M-Pesa funds to
+        # the admin and submits the transaction code (+ optional screenshot).
+        # Nothing here is auto-trusted: status starts 'pending' and only an
+        # admin approving it from /admin moves kesh into the wallet. The
+        # mpesa_code UNIQUE constraint stops the same code being replayed
+        # twice (a common fake-payment trick).
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phone TEXT NOT NULL,
+                name TEXT,
+                amount INTEGER NOT NULL,
+                mpesa_code TEXT NOT NULL UNIQUE,
+                screenshot_path TEXT,
+                status TEXT NOT NULL DEFAULT 'pending',
+                admin_note TEXT,
+                created_at REAL,
+                reviewed_at REAL
             )
         """)
         for default_feature in ("ai_chat", "downloads", "keywords",
@@ -324,36 +435,16 @@ async def init_db():
                 (default_feature,)
             )
         await db.commit()
-        logger.info("\033[1;32m⚡ V5.0 Master Database Synchronized — All tables ready.\033[0m")
+        logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
 
 
 @app.before_serving
 async def startup():
     await init_db()
-    logger.info("\033[1;36m🦈 Henry Tech V5.0 Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
-    logger.info("\033[1;33m📡 Waiting for Shark Bot (Node.js) to connect...\033[0m")
+    logger.info("\033[1;36m🔥 Henry Ochibots v19™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
+    logger.info("\033[1;33m📡 Waiting for WhatsApp bot session (Node.js) to connect...\033[0m")
     if not ADMIN_PASSWORD:
         logger.warning("\033[1;31m⚠️  ADMIN_PASSWORD is not set — /admin has FULL OPEN ACCESS to anyone with the URL. Set ADMIN_PASSWORD in your environment before going live.\033[0m")
-
-
-WELCOME_TEXT = (
-    "╔═══════════════════════════════════════╗\n"
-    "  █░█ █▀▀ █▄░█ █▀█ █▄█   ▀█▀ █▀▀ █▀▀ █░█\n"
-    "  █▀█ ██▄ █░▀█ █▀▄ ░█░   ░█░ ██▄ █▄▄ █▀█\n"
-    "╚═══════════════════════════════════════╝\n\n"
-    "✨ 𝖧𝖤𝖭𝖱𝖸 𝖳𝖤𝖢𝖧 𝖠𝖴𝖳𝖮𝖬𝖠𝖳𝖨𝖮𝖭 𝖵𝖤𝖱𝖲𝖨𝖮𝖭 5.0 ✨\n\n"
-    "Your profile node is securely authenticated. All 19 Automation Core Modules are currently online. 🌐\n\n"
-    "⚡ ENGINE COMMAND MATRIX ⚡\n"
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    "🧠 /ask [query] ➔ Chat with Llama-3 AI\n"
-    "🎨 /paint [text] ➔ Generate text image\n"
-    "📥 /download_video [URL] ➔ Download Videos (YT, IG, FB, TikTok)\n"
-    "🎧 /download_song [URL] ➔ Extract MP3 audio\n"
-    "🗑️ /recover [number] ➔ Recover deleted messages\n"
-    "👁️ /viewonce [number] ➔ View saved view once media\n"
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    "🛡️ Anti-Ban, Fake Typing, Auto Status & Auto React running in background."
-)
 
 
 async def check_db_blacklist(sender: str) -> bool:
@@ -429,9 +520,17 @@ async def api_register():
     name = (data.get("name") or "").strip()
     email = (data.get("email") or "").strip()
     method = (data.get("method") or "whatsapp").strip().lower()
+    ref = (data.get("ref") or "").strip().replace(" ", "").replace("+", "")
+    password = data.get("password") or ""
 
     if not phone or not phone.isdigit() or len(phone) < 9:
         return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+
+    if not name:
+        return jsonify({"success": False, "error": "Enter your name."}), 400
+
+    if len(password) < 6:
+        return jsonify({"success": False, "error": "Password must be at least 6 characters."}), 400
 
     if method == "email":
         if not email or "@" not in email or "." not in email.split("@")[-1]:
@@ -439,22 +538,36 @@ async def api_register():
     elif method != "whatsapp":
         return jsonify({"success": False, "error": "Invalid delivery method."}), 400
 
+    # A referral code is just the referrer's own verified phone number.
+    # Reject self-referral and codes that don't match a verified account —
+    # otherwise this becomes a free way to mint bonus credits.
+    valid_ref = None
+    if ref and ref != phone and ref.isdigit():
+        async with aiosqlite.connect(DB_FILE) as db:
+            async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (ref,)) as c:
+                ref_row = await c.fetchone()
+        if ref_row and ref_row[0] == 1:
+            valid_ref = ref
+
     otp = _generate_otp()
     now = time.time()
+    password_hash = _hash_password(password)
 
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
             row = await c.fetchone()
         if row and row[0] == 1:
-            return jsonify({"success": False, "error": "This number is already verified."}), 400
+            return jsonify({"success": False, "error": "This number is already verified. Use the panel login instead."}), 400
 
         await db.execute("""
-            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at)
-            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?)
+            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, referred_by, password_hash)
+            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?, ?, ?)
             ON CONFLICT(phone) DO UPDATE SET
                 name=excluded.name, email=excluded.email, otp=excluded.otp,
-                otp_expiry=excluded.otp_expiry
-        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now))
+                otp_expiry=excluded.otp_expiry,
+                referred_by=COALESCE(registrations.referred_by, excluded.referred_by),
+                password_hash=excluded.password_hash
+        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now, valid_ref, password_hash))
         await db.commit()
 
     if method == "email":
@@ -483,14 +596,14 @@ async def api_verify_otp():
 
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
-            "SELECT otp, otp_expiry, verified, name FROM registrations WHERE phone = ?", (phone,)
+            "SELECT otp, otp_expiry, verified, name, referred_by FROM registrations WHERE phone = ?", (phone,)
         ) as c:
             row = await c.fetchone()
 
         if not row:
             return jsonify({"success": False, "error": "No registration found for this number."}), 404
 
-        stored_otp, expiry, verified, name = row
+        stored_otp, expiry, verified, name, referred_by = row
         if verified:
             return jsonify({"success": False, "error": "Already verified."}), 400
         if time.time() > expiry:
@@ -503,13 +616,241 @@ async def api_verify_otp():
             SET verified = 1, badge = 'Trusted', credits = credits + ?, verified_at = ?
             WHERE phone = ?
         """, (REG_STARTER_CREDITS, time.time(), phone))
+
+        referral_message = ""
+        total_credits = REG_STARTER_CREDITS
+        if referred_by:
+            # Re-check the referrer is still a verified account at payout time
+            # (defensive — they were checked at registration too).
+            async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (referred_by,)) as c:
+                ref_row = await c.fetchone()
+            if ref_row and ref_row[0] == 1:
+                await db.execute(
+                    "UPDATE registrations SET credits = credits + ? WHERE phone = ?",
+                    (REFERRAL_REFERRER_BONUS, referred_by)
+                )
+                await db.execute(
+                    "UPDATE registrations SET credits = credits + ?, referral_bonus_given = 1 WHERE phone = ?",
+                    (REFERRAL_REFERRED_BONUS, phone)
+                )
+                await db.execute("""
+                    INSERT INTO referrals (referrer_phone, referred_phone, referrer_bonus, referred_bonus, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (referred_by, phone, REFERRAL_REFERRER_BONUS, REFERRAL_REFERRED_BONUS, time.time()))
+                total_credits += REFERRAL_REFERRED_BONUS
+                referral_message = f" Plus a {REFERRAL_REFERRED_BONUS} kesh referral bonus for signing up via invite!"
+
         await db.commit()
 
     return jsonify({
         "success": True,
-        "message": f"Number verified! 🛡️ Trust badge unlocked + {REG_STARTER_CREDITS} kesh free credit added.",
+        "message": f"Number verified! 🛡️ Trust badge unlocked + {REG_STARTER_CREDITS} kesh free credit added.{referral_message}",
         "badge": "Trusted",
-        "credits": REG_STARTER_CREDITS
+        "credits": total_credits
+    })
+
+
+@app.route("/api/referrals", methods=["GET"])
+async def api_referrals():
+    """Referral summary for a verified user: their referral code (their own
+    phone number), total kesh earned from referrals, and the list of people
+    who signed up using their code."""
+    phone = (request.args.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404
+        if not row[0]:
+            return jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403
+
+        async with db.execute(
+            "SELECT referred_phone, referrer_bonus, created_at FROM referrals WHERE referrer_phone = ? ORDER BY created_at DESC",
+            (phone,)
+        ) as c:
+            rows = await c.fetchall()
+
+    total_earned = sum(r[1] for r in rows)
+    return jsonify({
+        "success": True,
+        "referral_code": phone,
+        "total_referrals": len(rows),
+        "total_earned": total_earned,
+        "referrer_bonus": REFERRAL_REFERRER_BONUS,
+        "referred_bonus": REFERRAL_REFERRED_BONUS,
+        "referrals": [{"phone": r[0], "bonus": r[1], "created_at": r[2]} for r in rows]
+    })
+
+
+
+@app.route("/panel")
+async def panel_page():
+    panel_path = Path(__file__).parent / "panel.html"
+    if panel_path.exists():
+        return Response(panel_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/profile", methods=["POST"])
+async def api_profile():
+    """Profile panel data for a verified user — wallet balance, badge, and
+    recent top-up requests with their review status.
+
+    ✅ FIX: this function existed in the codebase with no @app.route above
+    it, so it was dead code — nothing could ever call it, and the profile
+    panel it was written for was never reachable. Now wired up properly.
+
+    ✅ Also fixed: it was designed to trust a bare phone number with no
+    password, which would have exposed wallet balance and M-Pesa payment
+    history to anyone who guessed/knew a registered number. Now requires
+    name + phone + the password set at registration, matching how
+    /api/register and the rest of the panel login work.
+    """
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    password = data.get("password") or ""
+
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+    if not name or not password:
+        return jsonify({"success": False, "error": "Enter your name, WhatsApp number, and password."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT name, email, verified, credits, badge, verified_at, created_at, password_hash FROM registrations WHERE phone = ?",
+            (phone,)
+        ) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404
+
+        stored_name, email, verified, credits, badge, verified_at, created_at, password_hash = row
+
+        if not verified:
+            return jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403
+        if not password_hash or not _verify_password(password, password_hash):
+            return jsonify({"success": False, "error": "Incorrect password."}), 401
+        if stored_name.strip().lower() != name.strip().lower():
+            return jsonify({"success": False, "error": "Name doesn't match our records for this number."}), 403
+
+        async with db.execute(
+            "SELECT id, amount, mpesa_code, status, created_at FROM payments WHERE phone = ? ORDER BY created_at DESC LIMIT 10",
+            (phone,)
+        ) as c:
+            prows = await c.fetchall()
+
+    return jsonify({
+        "success": True,
+        "phone": phone,
+        "name": stored_name,
+        "email": email,
+        "verified": bool(verified),
+        "credits": credits,
+        "badge": badge if verified else "none",
+        "verified_at": verified_at,
+        "member_since": created_at,
+        "recent_payments": [
+            {"id": p[0], "amount": p[1], "mpesa_code": p[2], "status": p[3], "created_at": p[4]}
+            for p in prows
+        ],
+    })
+
+
+@app.route("/api/payment-info", methods=["GET"])
+async def api_payment_info():
+    """Public info the panel's top-up form needs: where to send M-Pesa
+    funds. No auth required — this is just instructions, not user data."""
+    return jsonify({
+        "success": True,
+        "payto_number": ADMIN_PAYTO_NUMBER,
+        "configured": bool(ADMIN_PAYTO_NUMBER)
+    })
+
+
+@app.route("/api/payment/submit", methods=["POST"])
+async def api_payment_submit():
+    """User claims they sent kesh to the admin's M-Pesa number and submits
+    the transaction code (+ optional screenshot as base64) for review.
+
+    Important: this endpoint does NOT and CANNOT confirm the code is real —
+    there's no Safaricom Daraja/M-Pesa API integration here. It only does
+    cheap, honest checks (format looks like a real M-Pesa code, the code
+    hasn't been used before, the user is a verified registrant) and then
+    queues it as 'pending' for a human admin to approve from the Payments
+    tab. Credits are added only on admin approval, never automatically.
+    """
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    amount = data.get("amount")
+    mpesa_code = (data.get("mpesa_code") or "").strip().upper()
+    screenshot_b64 = data.get("screenshot_base64")  # optional, data-URL or raw base64
+
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid phone number required."}), 400
+    try:
+        amount = int(amount)
+        if amount <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Amount must be a positive whole number."}), 400
+    if not MPESA_CODE_RE.match(mpesa_code):
+        return jsonify({"success": False, "error": "That doesn't look like a valid M-Pesa transaction code (8-12 letters/numbers, e.g. QFG7H8J9K0)."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
+            reg = await c.fetchone()
+        if not reg or not reg[0]:
+            return jsonify({"success": False, "error": "Verify your number first — send *.register* to the bot."}), 403
+
+        async with db.execute("SELECT id, status FROM payments WHERE mpesa_code = ?", (mpesa_code,)) as c:
+            dup = await c.fetchone()
+        if dup:
+            return jsonify({"success": False, "error": f"This transaction code was already submitted (status: {dup[1]}). Each code can only be used once."}), 409
+
+        screenshot_path = None
+        if screenshot_b64:
+            try:
+                raw = screenshot_b64.split(",", 1)[-1]  # strip data: URL prefix if present
+                img_bytes = _b64.b64decode(raw)
+                if len(img_bytes) > 6 * 1024 * 1024:
+                    return jsonify({"success": False, "error": "Screenshot too large (max 6MB)."}), 400
+                fname = f"{phone}_{mpesa_code}_{int(time.time())}.jpg"
+                (PAYMENT_PROOFS_DIR / fname).write_bytes(img_bytes)
+                screenshot_path = fname
+            except Exception:
+                return jsonify({"success": False, "error": "Couldn't read that screenshot — try sending it again."}), 400
+
+        now = time.time()
+        await db.execute("""
+            INSERT INTO payments (phone, name, amount, mpesa_code, screenshot_path, status, created_at)
+            VALUES (?, '', ?, ?, ?, 'pending', ?)
+        """, (phone, amount, mpesa_code, screenshot_path, now))
+        await db.commit()
+        async with db.execute("SELECT last_insert_rowid()") as c:
+            new_id = (await c.fetchone())[0]
+
+    # Best-effort nudge to the admin on WhatsApp — never blocks the response
+    try:
+        async with httpx.AsyncClient(timeout=4) as client:
+            await client.post(f"{NODE_PAIR_URL}/notify-owner", json={
+                "text": (
+                    f"💰 *New top-up request* #{new_id}\n"
+                    f"From: {phone}\nAmount: {amount} kesh\nCode: {mpesa_code}\n"
+                    f"{'📸 Screenshot attached' if screenshot_path else '⚠️ No screenshot'}\n\n"
+                    f"Review in /admin → Payments tab."
+                )
+            })
+    except Exception:
+        pass
+
+    return jsonify({
+        "success": True,
+        "id": new_id,
+        "message": "Submitted! Your top-up is pending admin review — you'll be notified once it's approved."
     })
 
 
@@ -771,6 +1112,102 @@ async def admin_add_credit():
     return jsonify({"success": True, "message": f"{amount} kesh added to {phone}."})
 
 
+# ── ✅ NEW: Wallet top-up review queue ───────────────────────────────────────
+@app.route("/admin/payments", methods=["GET"])
+async def admin_get_payments():
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    status_filter = (request.args.get("status") or "").strip().lower()
+    query = "SELECT id, phone, amount, mpesa_code, screenshot_path, status, admin_note, created_at, reviewed_at FROM payments"
+    params = ()
+    if status_filter in ("pending", "approved", "rejected"):
+        query += " WHERE status = ?"
+        params = (status_filter,)
+    query += " ORDER BY created_at DESC LIMIT 200"
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(query, params) as c:
+            rows = await c.fetchall()
+    return jsonify({"payments": [
+        {
+            "id": r[0], "phone": r[1], "amount": r[2], "mpesa_code": r[3],
+            "has_screenshot": bool(r[4]), "status": r[5], "admin_note": r[6],
+            "created_at": r[7], "reviewed_at": r[8],
+        } for r in rows
+    ]})
+
+
+@app.route("/admin/payment-proof/<int:payment_id>", methods=["GET"])
+async def admin_payment_proof(payment_id):
+    """Serves the uploaded screenshot for one payment — gated behind admin
+    auth so users' M-Pesa screenshots (which can contain phone numbers and
+    names) aren't sitting at a guessable public URL."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT screenshot_path FROM payments WHERE id = ?", (payment_id,)) as c:
+            row = await c.fetchone()
+    if not row or not row[0]:
+        return jsonify({"error": "No screenshot for this payment."}), 404
+    fpath = PAYMENT_PROOFS_DIR / row[0]
+    if not fpath.exists():
+        return jsonify({"error": "Screenshot file missing on disk."}), 404
+    return await app.send_file(fpath)
+
+
+@app.route("/admin/payments/review", methods=["POST"])
+async def admin_review_payment():
+    """Approve or reject a top-up request. Approving is the ONLY way kesh
+    credits get added from a user-submitted M-Pesa code — this is the human
+    verification step standing in for a real payment-gateway integration.
+    Always cross-check the code/amount against your own M-Pesa statement
+    before approving; the screenshot is supporting evidence, not proof."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    payment_id = data.get("id")
+    action = (data.get("action") or "").strip().lower()
+    note = (data.get("note") or "").strip()
+    if action not in ("approve", "reject"):
+        return jsonify({"success": False, "error": "action must be 'approve' or 'reject'."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT phone, amount, status FROM payments WHERE id = ?", (payment_id,)
+        ) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Payment request not found."}), 404
+        phone, amount, status = row
+        if status != "pending":
+            return jsonify({"success": False, "error": f"Already reviewed (status: {status})."}), 400
+
+        now = time.time()
+        new_status = "approved" if action == "approve" else "rejected"
+        await db.execute(
+            "UPDATE payments SET status = ?, admin_note = ?, reviewed_at = ? WHERE id = ?",
+            (new_status, note, now, payment_id)
+        )
+        if action == "approve":
+            await db.execute(
+                "UPDATE registrations SET credits = credits + ? WHERE phone = ?",
+                (amount, phone)
+            )
+        await db.commit()
+
+    # Best-effort notify the user of the outcome
+    try:
+        if action == "approve":
+            text = f"✅ Your top-up of {amount} kesh has been approved and added to your wallet! Send *.profile* to check your balance."
+        else:
+            text = f"❌ Your top-up request was rejected.{(' Reason: ' + note) if note else ''} Reply to the bot if you think this is a mistake."
+        async with httpx.AsyncClient(timeout=4) as client:
+            await client.post(f"{NODE_PAIR_URL}/notify-user", json={"phone": phone, "text": text})
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "status": new_status})
+
+
 @app.route("/admin/blacklist", methods=["GET"])
 async def admin_get_blacklist():
     if not _check_admin_auth(request):
@@ -862,6 +1299,19 @@ async def admin_broadcast_pending():
     for b in pending:
         b["sent"] = True
     return jsonify({"broadcasts": pending})
+
+
+@app.route("/admin/contacts/all", methods=["GET"])
+async def admin_contacts_all():
+    """Full, unlimited contact list — used by the broadcast sender so an
+    .announce isn't silently capped at the 20 shown on the dashboard
+    preview. Requires the same admin auth as other /admin/* routes."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT sender, name FROM contacts ORDER BY timestamp DESC") as c:
+            rows = await c.fetchall()
+    return jsonify({"contacts": [{"sender": r[0], "name": r[1]} for r in rows]})
 
 
 # ── ✅ NEW: Restart / health controls ────────────────────────────────────────
@@ -1287,10 +1737,10 @@ async def pair_proxy_post():
 @app.route("/get-bio", methods=["GET"])
 async def generate_auto_bio():
     bios = [
-        f"🤖 Henry Tech V5.0 | Online 24/7 | {time.strftime('%H:%M')} 🌐",
-        f"⚡ Powered by Henry Tech | Always Active | {time.strftime('%H:%M')}",
-        f"🦈 Shark Bot V5 Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
-        f"🔥 Henry Tech Automation | {time.strftime('%H:%M')} | All systems go",
+        f"🤖 Henry Ochibots v19™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
+        f"⚡ Powered by Henry Ochibots | Always Active | {time.strftime('%H:%M')}",
+        f"🔥 Henry Ochibots v19™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
+        f"🔥 Henry Ochibots Automation | {time.strftime('%H:%M')} | All systems go",
     ]
     return jsonify({"bio": random.choice(bios)})
 

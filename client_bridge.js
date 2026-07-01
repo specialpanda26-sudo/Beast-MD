@@ -45,7 +45,7 @@ global.subAdmins = global.subAdmins || new Set(
 // ── Plugin Loader ────────────────────────────────────────────────────────────
 // Loads all command handlers from /plugins/*.js
 const allCommands = {};
-['general', 'group', 'media', 'cypher', 'atassa', 'scheduler'].forEach(name => {
+['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet'].forEach(name => {
   try {
     Object.assign(allCommands, require(`./plugins/${name}`));
   } catch (e) {
@@ -72,6 +72,33 @@ const activeSessions = new Set();
 // /send-otp-whatsapp) reach a connected WhatsApp socket to send messages
 // on behalf of the bot, outside the normal messages.upsert flow.
 const activeSockets = new Map();
+
+// ── 🌝 Reaction-triggered recovery cache ────────────────────────────────────
+// Keeps a short-lived copy of recent messages (key, raw message, sender, name,
+// and — for view-once — the already-downloaded buffer) so that reacting with
+// 🌝 on a view-once or later-deleted message can pull it back up and forward
+// it privately to the bot's own number. Capped + time-pruned so it can't grow
+// unbounded on a busy bot.
+global.recentMsgCache = global.recentMsgCache || new Map();
+const RECENT_MSG_CACHE_MAX = 800;
+const RECENT_MSG_CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+function cacheRecentMessage(msgId, entry) {
+  if (!msgId) return;
+  global.recentMsgCache.set(msgId, { ...entry, cachedAt: Date.now() });
+  if (global.recentMsgCache.size > RECENT_MSG_CACHE_MAX) {
+    const oldestKey = global.recentMsgCache.keys().next().value;
+    global.recentMsgCache.delete(oldestKey);
+  }
+}
+
+function pruneRecentMsgCache() {
+  const cutoff = Date.now() - RECENT_MSG_CACHE_TTL_MS;
+  for (const [id, entry] of global.recentMsgCache) {
+    if (entry.cachedAt < cutoff) global.recentMsgCache.delete(id);
+  }
+}
+setInterval(pruneRecentMsgCache, 15 * 60 * 1000);
 
 const pairServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -103,7 +130,26 @@ const pairServer = http.createServer(async (req, res) => {
     return;
   }
 
-  // POST /send-otp-whatsapp — called locally by app.py (Python backend) to
+// ✅ NEW: optional DEDICATED number for sending OTPs, separate from the main
+// bot number — pair a second WhatsApp session (any spare SIM/eSIM/virtual
+// number you control) and set OTP_SENDER_SESSION_ID to its session name.
+// This is the closest you can get to "Instagram-style" OTP delivery on
+// WhatsApp: there's no free/anonymous SMS-style push channel — WhatsApp
+// only delivers messages from a real, paired WhatsApp account — but a
+// second dedicated number at least keeps OTPs out of your main bot's
+// regular chat history and gives it its own clean identity/profile name.
+const OTP_SENDER_SESSION_ID = (process.env.OTP_SENDER_SESSION_ID || "").trim();
+
+function getOtpSocket() {
+  if (OTP_SENDER_SESSION_ID && activeSockets.has(OTP_SENDER_SESSION_ID)) {
+    return activeSockets.get(OTP_SENDER_SESSION_ID);
+  }
+  // Falls back to whichever session is connected first if no dedicated
+  // OTP session is configured/online — keeps OTPs working even before
+  // you've set one up.
+  return activeSockets.values().next().value;
+}
+
   // deliver a registration OTP straight to the user's WhatsApp, instead of
   // email. Internal-only: app.py reaches this over 127.0.0.1, same as the
   // /pair proxy routes below.
@@ -118,10 +164,10 @@ const pairServer = http.createServer(async (req, res) => {
           res.writeHead(400, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: false, error: "phone and otp are required" }));
         }
-        // Use whichever paired session is currently connected — most
-        // deployments only run one WhatsApp number, so the first live
-        // socket is "the bot" sending the code.
-        const socket = activeSockets.values().next().value;
+        // Prefers a dedicated OTP-sending session (OTP_SENDER_SESSION_ID) if
+        // one is paired and online; otherwise falls back to the first
+        // connected session so OTPs still work without one configured.
+        const socket = getOtpSocket();
         if (!socket) {
           res.writeHead(503, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: false, error: "No WhatsApp session is connected right now." }));
@@ -131,6 +177,56 @@ const pairServer = http.createServer(async (req, res) => {
                 `Hi ${name || "there"}, your code is: *${otp}*\n\n` +
                 `This code expires in 10 minutes. Enter it on the registration page to verify your number and unlock your trust badge + free credit.`
         });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+      } catch (e) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // POST /notify-owner — called locally by app.py whenever something needs
+  // the bot owner's attention right away (e.g. a new wallet top-up request
+  // waiting for approval). Sends a WhatsApp message straight to OWNER_NUMBER.
+  if (req.method === "POST" && url.pathname === "/notify-owner") {
+    let body = "";
+    req.on("data", d => body += d);
+    req.on("end", async () => {
+      try {
+        const { text } = JSON.parse(body || "{}");
+        const socket = activeSockets.values().next().value;
+        if (!socket || !text) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "No WhatsApp session connected, or missing text." }));
+        }
+        await socket.sendMessage(`${OWNER_NUMBER}@s.whatsapp.net`, { text });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+      } catch (e) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // POST /notify-user — called locally by app.py to message a specific
+  // user directly (e.g. their top-up request was approved/rejected).
+  if (req.method === "POST" && url.pathname === "/notify-user") {
+    let body = "";
+    req.on("data", d => body += d);
+    req.on("end", async () => {
+      try {
+        const { phone, text } = JSON.parse(body || "{}");
+        const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
+        const socket = activeSockets.values().next().value;
+        if (!socket || !cleanPhone || !text) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "No WhatsApp session connected, or missing phone/text." }));
+        }
+        await socket.sendMessage(`${cleanPhone}@s.whatsapp.net`, { text });
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true }));
       } catch (e) {
@@ -363,7 +459,7 @@ function prompt(question) {
 
 function printBanner() {
   console.log("\n╔══════════════════════════════════════╗");
-  console.log("   🦈 SHARK BOT — HENRY BOTS© V5.0 🦈   ");
+  console.log("   🔥 HENRY OCHIBOTS v19™ 🔥   ");
   console.log("╚══════════════════════════════════════╝\n");
 }
 
@@ -594,6 +690,85 @@ async function startSession(sessionId, opts = {}) {
       const isSubAdmin   = global.subAdmins.has(senderNumber);
       const isBotAdmin   = isOwner || isSubAdmin;
 
+      // ── 🌝 Cache this message in case it's reacted to later (view-once
+      // recovery, or recovering a message after it gets deleted) ───────────
+      if (!msg.message?.reactionMessage && !msg.message?.protocolMessage) {
+        cacheRecentMessage(msgId, { msg, sender, name, senderJid });
+      }
+
+      // ── 🌝 Reaction-triggered recovery — react with 🌝 on a view-once or
+      // any message to have it privately forwarded to the bot's own number.
+      // Bot-admin only (owner / co-owner / sub-admin) so randoms in a group
+      // can't go fishing for other people's deleted/view-once content.
+      const reactionMsg = msg.message?.reactionMessage;
+      if (reactionMsg && reactionMsg.text === "🌝") {
+        if (!isBotAdmin) {
+          // Silently ignore — don't tip off non-admins that this exists.
+          return;
+        }
+        try {
+          const targetId = reactionMsg.key?.id;
+          const cached = targetId ? global.recentMsgCache.get(targetId) : null;
+          const selfJid = socket.user?.id?.replace(/:.*@/, "@");
+
+          if (!cached || !selfJid) {
+            await socket.sendMessage(sender, { text: "🌝 Couldn't find that message anymore (too old or never cached)." }, { quoted: msg });
+            return;
+          }
+
+          const targetMsg = cached.msg;
+          const viewOnceMsg =
+            targetMsg.message?.viewOnceMessage?.message ||
+            targetMsg.message?.viewOnceMessageV2?.message ||
+            targetMsg.message?.viewOnceMessageV2Extension?.message;
+          const innerMessage = viewOnceMsg || targetMsg.message;
+          const mediaType = cached.viewOnceMediaType ||
+            (innerMessage?.imageMessage ? "imageMessage" :
+            innerMessage?.videoMessage ? "videoMessage" :
+            innerMessage?.audioMessage ? "audioMessage" : null);
+
+          const headerText = `🌝 *Recovered via reaction*
+👤 From: *${cached.name}* (${cached.sender.split("@")[0]})
+🕐 ${new Date().toLocaleTimeString()}`;
+
+          if (mediaType) {
+            // Reuse the already-downloaded buffer if we have one cached
+            // (e.g. view-once media, which often can't be re-fetched).
+            const buffer = cached.viewOnceBuffer || await downloadMediaMessage(
+              { key: targetMsg.key, message: innerMessage }, "buffer", {}, { logger, reuploadRequest: socket.updateMediaMessage }
+            );
+            const caption = innerMessage[mediaType]?.caption ? `\n${innerMessage[mediaType].caption}` : "";
+            await socket.sendMessage(selfJid, { text: headerText });
+            if (mediaType === "imageMessage") {
+              await socket.sendMessage(selfJid, { image: buffer, caption: caption.trim() });
+            } else if (mediaType === "videoMessage") {
+              await socket.sendMessage(selfJid, { video: buffer, caption: caption.trim() });
+            } else {
+              await socket.sendMessage(selfJid, {
+                audio: buffer,
+                mimetype: innerMessage[mediaType]?.mimetype || "audio/ogg; codecs=opus",
+                ptt: true
+              });
+            }
+          } else {
+            const text =
+              targetMsg.message?.conversation ||
+              targetMsg.message?.extendedTextMessage?.text ||
+              "(no text content found)";
+            await socket.sendMessage(selfJid, { text: `${headerText}\n\n${text}` });
+          }
+
+          // Only confirm in the original chat if it's not already the bot's own DM.
+          if (sender !== selfJid) {
+            await socket.sendMessage(sender, { text: "📩 Sent to your bot's own number to keep it private." }, { quoted: msg });
+          }
+        } catch (e) {
+          console.error(`❌ [${sessionId}] 🌝 reaction recovery failed:`, e.message);
+          try { await socket.sendMessage(sender, { text: `❌ Couldn't recover that: ${e.message}` }, { quoted: msg }); } catch (_) {}
+        }
+        return;
+      }
+
       // ── NEW: Anti-link — delete link messages from non-admins, warn, kick at 3 ──
       if (isGroup && !isBotAdmin && body && isFeatureOn("antilink")) {
         const hasLink = /(https?:\/\/|chat\.whatsapp\.com|wa\.me\/)\S+/i.test(body);
@@ -711,6 +886,12 @@ async function startSession(sessionId, opts = {}) {
             });
           }
 
+          // Stash the already-downloaded buffer against this message's id so
+          // a later 🌝 reaction can resend it without re-downloading — once
+          // a view-once is fetched, WhatsApp often won't allow fetching it
+          // again, so this is the only reliable copy.
+          cacheRecentMessage(msgId, { msg, sender, name, senderJid, viewOnceBuffer: buffer, viewOnceMediaType: mediaType });
+
         } catch (e) {
           console.error(`❌ [${sessionId}] View-once save failed:`, e.message);
         }
@@ -821,28 +1002,47 @@ async function startSession(sessionId, opts = {}) {
 
           try { await socket.sendPresenceUpdate("paused", sender); } catch (e) {}
 
+          // ── Privacy/ban-safety: /recover and /viewonce output is sensitive
+          // (deleted messages, view-once media). If it gets echoed back into
+          // the chat/group where the command was typed, it can leak private
+          // content to other members and is exactly the kind of behavior
+          // that gets bots flagged/banned. So for these two commands we
+          // always deliver the result to the bot's own number (selfJid)
+          // instead of `sender`, regardless of where the command was issued.
+          const isSensitiveRecoveryCmd = body.startsWith("/recover") || body.startsWith("/viewonce");
+          const selfJid = socket.user?.id?.replace(/:.*@/, "@");
+          const deliverTo = (isSensitiveRecoveryCmd && selfJid) ? selfJid : sender;
+
+          if (isSensitiveRecoveryCmd && selfJid && selfJid !== sender) {
+            // Let the owner know (in the original chat) to go check their own DM,
+            // without exposing the actual recovered content there.
+            try {
+              await socket.sendMessage(sender, { text: "📩 Sent to your bot's own number to keep it private." });
+            } catch (_) {}
+          }
+
           if (data.type === "image" && data.url) {
             // Send actual image
-            await socket.sendMessage(sender, {
+            await socket.sendMessage(deliverTo, {
               image: { url: data.url },
               caption: data.caption || ""
             });
           } else if (data.type === "video" && data.url) {
             // Send actual video
-            await socket.sendMessage(sender, {
+            await socket.sendMessage(deliverTo, {
               video: { url: data.url },
               caption: data.caption || "",
               mimetype: "video/mp4"
             });
           } else if (data.type === "audio" && data.url) {
             // Send actual audio
-            await socket.sendMessage(sender, {
+            await socket.sendMessage(deliverTo, {
               audio: { url: data.url },
               mimetype: "audio/mpeg",
               ptt: false
             });
           } else if (data.reply) {
-            await socket.sendMessage(sender, { text: data.reply });
+            await socket.sendMessage(deliverTo, { text: data.reply });
           }
         } catch (e) {
           try { await socket.sendPresenceUpdate("paused", sender); } catch (_) {}
@@ -956,9 +1156,12 @@ async function startSession(sessionId, opts = {}) {
               } catch (_) {}
             }
           } else if (b.target === 'all_contacts') {
-            // Pull recent contacts from our own DB via stats endpoint
-            const statsRes = await apiClient.get("/admin/stats");
-            const contacts = statsRes.data?.recent_contacts || [];
+            // Pull the FULL contact list (not the 20-row dashboard preview)
+            // so .announce actually reaches everyone who's messaged the bot.
+            const contactsRes = await apiClient.get("/admin/contacts/all", {
+              headers: { Authorization: `Bearer ${process.env.ADMIN_PASSWORD || ''}` }
+            });
+            const contacts = contactsRes.data?.contacts || [];
             for (const c of contacts) {
               try {
                 await socket.sendMessage(c.sender, { text: b.message });
@@ -997,7 +1200,7 @@ async function startSession(sessionId, opts = {}) {
     }
 
     if (connection === "open") {
-      console.log(`\n✅ [${sessionId}] HENRY V19™ BEAST BOT IS ONLINE AND READY! 🔥\n`);
+      console.log(`\n✅ [${sessionId}] HENRY OCHIBOTS v19™ IS ONLINE AND READY! 🔥\n`);
       botOnline = true;
       // ✅ Only now is the socket actually safe to use for OTP delivery.
       activeSockets.set(sessionId, socket);

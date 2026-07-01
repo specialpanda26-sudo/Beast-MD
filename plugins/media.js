@@ -7,7 +7,11 @@ module.exports = {
 
   // ── .getpp (upgraded) ────────────────────────────────────────────────────
   // Usage: .getpp (your own pfp) | .getpp @user | .getpp 254712345678 | reply to someone's msg with .getpp
-  // ✅ Works even for numbers NOT saved in contacts — verifies via sock.onWhatsApp()
+  // ✅ Works for ANY number — saved, unsaved, or even ones WhatsApp's lookup
+  // can't confirm (privacy settings can make onWhatsApp() return a false
+  // negative). We no longer hard-block on "not on WhatsApp" — we just try.
+  // ✅ On failure, folds in the .checkblocked heuristic so the error message
+  // tells you *why* it likely failed instead of a generic "private or no pfp".
   getpp: async ({ sock, from, msg, args, senderJid, isGroup }) => {
     const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
@@ -25,19 +29,17 @@ module.exports = {
       target = senderJid;
     }
 
-    // ✅ FIX: if a raw number was given (unsaved contact), verify it's on WhatsApp
-    // and use the JID WhatsApp returns — this is what makes it work for numbers
-    // not saved in your phone contacts.
+    // ✅ If a raw number was given, try to resolve it to WhatsApp's official
+    // JID for accuracy — but treat the number as valid either way. A failed
+    // or negative onWhatsApp() lookup doesn't mean the number is invalid; it
+    // can just mean their privacy settings hide them from contact lookups.
+    // We always fall through and attempt the profile picture fetch directly.
     if (rawArgNumber && !mentioned && !quotedParticipant) {
       try {
         const [result] = await sock.onWhatsApp(target);
-        if (result?.exists) {
-          target = result.jid;
-        } else {
-          return sock.sendMessage(from, { text: `❌ +${rawArgNumber} is not on WhatsApp.` }, { quoted: msg });
-        }
+        if (result?.exists) target = result.jid;
       } catch {
-        // If lookup fails, fall back to the raw constructed JID and try anyway
+        // Lookup itself errored (network blip etc.) — keep the constructed JID and try anyway.
       }
     }
 
@@ -55,9 +57,18 @@ module.exports = {
         caption: `📸 Profile picture of @${target.split('@')[0]}`,
         mentions: [target],
       }, { quoted: msg });
-    } catch {
+    } catch (err) {
+      // ── Folded-in block-check heuristic (same logic as .checkblocked) ──
+      // A "401 not authorized" on the picture fetch usually means they've
+      // blocked the bot's number. Anything else more likely means no photo
+      // set or privacy settings — not necessarily a block.
+      const code = err?.output?.statusCode || err?.status;
+      const blockedHint = code === 401
+        ? `🚫 This usually means *they've blocked the bot's number* — not a 100% guarantee, but a strong signal.`
+        : `🤷 They likely just have *no profile photo set* or *privacy settings* hiding it — not necessarily a block.`;
+
       await sock.sendMessage(from, {
-        text: `❌ Could not get profile picture of @${target.split('@')[0]} — it may be private or they don't have one set.`,
+        text: `❌ Could not get profile picture of @${target.split('@')[0]}.\n\n${blockedHint}\n\n_Heuristic only — WhatsApp doesn't expose a real "blocked" status._`,
         mentions: [target],
       }, { quoted: msg });
     }

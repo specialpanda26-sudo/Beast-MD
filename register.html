@@ -82,6 +82,8 @@
       <input type="text" id="reg-phone" placeholder="254712345678" inputmode="numeric"/>
       <label>Name</label>
       <input type="text" id="reg-name" placeholder="Your name"/>
+      <label>Create a Password (for your bot panel login)</label>
+      <input type="password" id="reg-password" placeholder="At least 6 characters"/>
 
       <label>Get my code via</label>
       <div class="method-toggle">
@@ -113,7 +115,8 @@
         <div class="badge-icon">🛡️</div>
         <div class="badge-title">TRUSTED BADGE UNLOCKED</div>
         <div class="credit-line" id="credit-result"></div>
-        <div class="hint" style="margin-top:14px">Your number is now verified on the bot panel. Contact the admin or use the bot directly to start using your credit.</div>
+        <div class="hint" style="margin-top:14px">Your number is now verified on the bot panel.</div>
+        <a class="btn" style="display:block;text-decoration:none;text-align:center;margin-top:20px" href="/panel">🔓 Open Bot Panel →</a>
       </div>
     </div>
 
@@ -123,6 +126,9 @@
 <script>
   let registeredPhone = "";
   let deliveryMethod = "whatsapp";
+  // Referral code passed via ?ref=<referrer phone> — captured once on load
+  // and sent along with /api/register so the backend can credit them.
+  const referralCode = new URLSearchParams(window.location.search).get("ref") || "";
 
   function showMsg(id, text, type) {
     const el = document.getElementById(id);
@@ -144,8 +150,15 @@
     const phone = document.getElementById("reg-phone").value.trim();
     const name = document.getElementById("reg-name").value.trim();
     const email = document.getElementById("reg-email").value.trim();
+    const password = document.getElementById("reg-password").value;
     const btn = document.getElementById("btn-register");
 
+    if (!name) {
+      return showMsg("register-msg", "Enter your name.", "error");
+    }
+    if (!password || password.length < 6) {
+      return showMsg("register-msg", "Password must be at least 6 characters.", "error");
+    }
     if (deliveryMethod === "email" && !email) {
       return showMsg("register-msg", "Enter your email address to receive the code.", "error");
     }
@@ -156,7 +169,7 @@
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name, email, method: deliveryMethod })
+        body: JSON.stringify({ phone, name, email, password, method: deliveryMethod, ref: referralCode })
       });
       const data = await res.json();
       if (data.success) {

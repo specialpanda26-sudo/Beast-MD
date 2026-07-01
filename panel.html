@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bot Panel — Henry Ochibots v19™</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#020408;--surface:#080f1a;--border:#112030;--accent:#00e5ff;--accent2:#7c3aed;
+    --green:#00ff88;--text:#e2eaf4;--muted:#4a6070;--card:#060e18;--red:#ff3b5c;--yellow:#ffb020;
+  }
+  body{
+    background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size:50px 50px;
+  }
+  .card{
+    width:100%;max-width:460px;background:var(--card);border:1px solid var(--border);
+    border-radius:18px;padding:34px 28px;box-shadow:0 0 60px rgba(0,229,255,0.08);
+    position:relative;overflow:hidden;
+  }
+  .card::before{
+    content:"";position:absolute;top:-80px;left:50%;transform:translateX(-50%);
+    width:300px;height:300px;background:var(--accent);filter:blur(100px);opacity:0.15;pointer-events:none;
+  }
+  h1{
+    font-family:'JetBrains Mono',monospace;font-size:1.05rem;color:var(--accent);
+    text-shadow:0 0 18px rgba(0,229,255,0.5);text-align:center;margin-bottom:4px;letter-spacing:0.04em;
+  }
+  .sub{text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:24px}
+  label{display:block;font-size:0.78rem;color:var(--muted);margin:14px 0 6px;font-family:'JetBrains Mono',monospace}
+  input{
+    width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:12px 14px;color:var(--text);font-size:0.95rem;outline:none;transition:border-color .2s;
+  }
+  input:focus{border-color:var(--accent)}
+  .btn{
+    width:100%;margin-top:22px;padding:13px;border:none;border-radius:10px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));color:#000;font-weight:700;
+    font-size:0.95rem;cursor:pointer;transition:opacity .2s;
+  }
+  .btn:hover{opacity:0.88}
+  .btn:disabled{opacity:0.5;cursor:not-allowed}
+  .btn-secondary{
+    width:100%;margin-top:10px;padding:11px;border:1px solid var(--border);border-radius:10px;
+    background:var(--surface);color:var(--text);font-weight:600;font-size:0.88rem;cursor:pointer;
+  }
+  .btn-secondary:hover{border-color:var(--accent)}
+  .msg{margin-top:16px;font-size:0.85rem;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
+  .msg.error{background:rgba(255,59,92,0.1);color:var(--red);border:1px solid rgba(255,59,92,0.25);display:block}
+  .msg.success{background:rgba(0,255,136,0.08);color:var(--green);border:1px solid rgba(0,255,136,0.25);display:block}
+  .step{display:none}
+  .step.active{display:block}
+  .hint{color:var(--muted);font-size:0.75rem;margin-top:10px;line-height:1.5}
+  .back-link{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:0.8rem;text-decoration:none}
+  .back-link:hover{color:var(--accent)}
+
+  /* Profile menu */
+  .profile-head{text-align:center;padding:6px 0 20px}
+  .profile-badge{font-size:44px;margin-bottom:8px}
+  .profile-name{font-family:'JetBrains Mono',monospace;font-size:1.15rem;color:var(--text);font-weight:700}
+  .profile-phone{color:var(--muted);font-size:0.82rem;margin-top:2px}
+  .stat-row{display:flex;gap:10px;margin:18px 0}
+  .stat-box{
+    flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px;text-align:center;
+  }
+  .stat-value{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:1.3rem;font-weight:700}
+  .stat-label{color:var(--muted);font-size:0.7rem;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em}
+  .menu-section-title{
+    font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted);
+    text-transform:uppercase;letter-spacing:0.08em;margin:20px 0 8px;
+  }
+  .menu-list{list-style:none;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .menu-list li{
+    padding:13px 16px;border-bottom:1px solid var(--border);font-size:0.88rem;
+    display:flex;justify-content:space-between;align-items:center;background:var(--surface);
+  }
+  .menu-list li:last-child{border-bottom:none}
+  .menu-list .cmd{font-family:'JetBrains Mono',monospace;color:var(--accent2);font-size:0.82rem}
+  .menu-list .desc{color:var(--muted);font-size:0.78rem;text-align:right;flex-shrink:0;margin-left:12px}
+  .status-pill{
+    font-size:0.68rem;padding:3px 9px;border-radius:20px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  .status-pending{background:rgba(255,176,32,0.12);color:var(--yellow)}
+  .status-approved{background:rgba(0,255,136,0.12);color:var(--green)}
+  .status-rejected{background:rgba(255,59,92,0.12);color:var(--red)}
+  .referral-box{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:8px;
+  }
+  .referral-link{
+    font-family:'JetBrains Mono',monospace;font-size:0.76rem;color:var(--accent);word-break:break-all;
+    background:var(--bg);padding:8px 10px;border-radius:8px;margin-top:8px;cursor:pointer;
+  }
+  .logout-btn{
+    width:100%;margin-top:22px;padding:11px;border:1px solid var(--border);border-radius:10px;
+    background:transparent;color:var(--muted);font-size:0.85rem;cursor:pointer;font-family:'Space Grotesk',sans-serif;
+  }
+  .logout-btn:hover{border-color:var(--red);color:var(--red)}
+  .field-hidden{display:none}
+</style>
+</head>
+<body>
+  <div class="card">
+
+    <!-- STEP 1: LOGIN -->
+    <div class="step active" id="step-login">
+      <h1>🦈 BOT PANEL LOGIN</h1>
+      <p class="sub">Sign in with your registered name, number & password</p>
+
+      <label>Name</label>
+      <input type="text" id="login-name" placeholder="Your name"/>
+      <label>WhatsApp Number (with country code)</label>
+      <input type="text" id="login-phone" placeholder="254712345678" inputmode="numeric"/>
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="Your password"/>
+
+      <button class="btn" id="btn-login" onclick="doLogin()">Login →</button>
+      <div class="hint">Not registered yet? <a href="/register" style="color:var(--accent)">Register here</a> first.</div>
+      <div class="msg" id="login-msg"></div>
+      <a class="back-link" href="/">← Back to home</a>
+    </div>
+
+    <!-- STEP 2: PROFILE MENU -->
+    <div class="step" id="step-menu">
+      <div class="profile-head">
+        <div class="profile-badge" id="profile-badge-icon">🛡️</div>
+        <div class="profile-name" id="profile-name"></div>
+        <div class="profile-phone" id="profile-phone"></div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="stat-value" id="profile-credits">0</div>
+          <div class="stat-label">Kesh Wallet</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="profile-badge-name">—</div>
+          <div class="stat-label">Trust Badge</div>
+        </div>
+      </div>
+
+      <div class="menu-section-title">🎁 Your Referral Link</div>
+      <div class="referral-box">
+        <div class="hint" style="margin-top:0">Share this — you earn kesh every time someone registers using it.</div>
+        <div class="referral-link" id="referral-link" onclick="copyReferralLink()">Loading...</div>
+      </div>
+
+      <div class="menu-section-title">💳 Top Up Wallet (M-Pesa)</div>
+      <div class="referral-box" id="topup-box">
+        <div class="hint" id="payto-hint" style="margin-top:0">Loading payment info...</div>
+        <label>Amount (kesh)</label>
+        <input type="number" id="topup-amount" placeholder="e.g. 100" min="1"/>
+        <label>M-Pesa Transaction Code</label>
+        <input type="text" id="topup-code" placeholder="e.g. QFG7H8J9K0" style="text-transform:uppercase"/>
+        <button class="btn-secondary" id="btn-topup" onclick="submitTopup()">Submit for Review</button>
+        <div class="msg" id="topup-msg"></div>
+      </div>
+
+      <div class="menu-section-title">🧾 Recent Top-Up Requests</div>
+      <ul class="menu-list" id="payments-list">
+        <li><span class="desc">No top-up requests yet.</span></li>
+      </ul>
+
+      <div class="menu-section-title">💬 Public Bot Commands</div>
+      <ul class="menu-list">
+        <li><span class="cmd">.menu</span><span class="desc">Show full bot menu</span></li>
+        <li><span class="cmd">.ping</span><span class="desc">Bot response speed</span></li>
+        <li><span class="cmd">/ask [query]</span><span class="desc">Ask AI a question</span></li>
+        <li><span class="cmd">/recover [n]</span><span class="desc">Recover deleted msgs</span></li>
+      </ul>
+
+      <div class="hint" style="margin-top:16px;text-align:center">
+        Open WhatsApp and message the bot directly to use any command above.
+      </div>
+
+      <button class="logout-btn" onclick="doLogout()">Log out</button>
+    </div>
+
+  </div>
+
+<script>
+  let session = null; // { name, phone, password } — kept only in memory, never persisted to disk/localStorage
+
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = "msg " + type;
+  }
+
+  function formatDate(unixSeconds) {
+    if (!unixSeconds) return "—";
+    const d = new Date(unixSeconds * 1000);
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  async function doLogin() {
+    const name = document.getElementById("login-name").value.trim();
+    const phone = document.getElementById("login-phone").value.trim().replace(/\s+/g, "").replace("+", "");
+    const password = document.getElementById("login-password").value;
+    const btn = document.getElementById("btn-login");
+
+    if (!name || !phone || !password) {
+      return showMsg("login-msg", "Enter your name, number, and password.", "error");
+    }
+
+    btn.disabled = true; btn.textContent = "Logging in...";
+
+    try {
+      const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        session = { name, phone, password };
+        renderProfile(data);
+        loadReferrals();
+        loadPaymentInfo();
+        document.getElementById("step-login").classList.remove("active");
+        document.getElementById("step-menu").classList.add("active");
+      } else {
+        showMsg("login-msg", data.error || "Login failed.", "error");
+      }
+    } catch (e) {
+      showMsg("login-msg", "Network error. Try again.", "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Login →";
+    }
+  }
+
+  function renderProfile(data) {
+    document.getElementById("profile-name").textContent = data.name;
+    document.getElementById("profile-phone").textContent = "+" + data.phone;
+    document.getElementById("profile-credits").textContent = data.credits;
+    document.getElementById("profile-badge-name").textContent = data.badge || "—";
+
+    const list = document.getElementById("payments-list");
+    if (!data.recent_payments || data.recent_payments.length === 0) {
+      list.innerHTML = '<li><span class="desc">No top-up requests yet.</span></li>';
+    } else {
+      list.innerHTML = data.recent_payments.map(p => `
+        <li>
+          <span class="cmd">${p.amount} kesh — ${p.mpesa_code}</span>
+          <span class="status-pill status-${p.status}">${p.status}</span>
+        </li>`).join("");
+    }
+  }
+
+  async function loadReferrals() {
+    try {
+      const res = await fetch(`/api/referrals?phone=${encodeURIComponent(session.phone)}`);
+      const data = await res.json();
+      const el = document.getElementById("referral-link");
+      if (data.success) {
+        const link = `${window.location.origin}/register?ref=${session.phone}`;
+        el.textContent = link;
+        el.dataset.link = link;
+        el.title = `Tap to copy — you've earned ${data.total_earned} kesh from ${data.total_referrals} referral(s) so far.`;
+      } else {
+        el.textContent = "Referral info unavailable.";
+      }
+    } catch (e) {
+      document.getElementById("referral-link").textContent = "Referral info unavailable.";
+    }
+  }
+
+  function copyReferralLink() {
+    const el = document.getElementById("referral-link");
+    const link = el.dataset.link;
+    if (!link) return;
+    navigator.clipboard.writeText(link).then(() => {
+      const original = el.textContent;
+      el.textContent = "✅ Copied!";
+      setTimeout(() => { el.textContent = original; }, 1500);
+    }).catch(() => {});
+  }
+
+  async function loadPaymentInfo() {
+    try {
+      const res = await fetch("/api/payment-info");
+      const data = await res.json();
+      const hint = document.getElementById("payto-hint");
+      if (data.success && data.configured) {
+        hint.innerHTML = `Send M-Pesa funds to <strong style="color:var(--accent)">${data.payto_number}</strong>, then submit the transaction code below for admin review.`;
+      } else {
+        hint.textContent = "Top-ups are not configured yet — contact the admin directly.";
+        document.getElementById("btn-topup").disabled = true;
+      }
+    } catch (e) {
+      document.getElementById("payto-hint").textContent = "Couldn't load payment info right now.";
+    }
+  }
+
+  async function submitTopup() {
+    const amount = document.getElementById("topup-amount").value.trim();
+    const mpesa_code = document.getElementById("topup-code").value.trim().toUpperCase();
+    const btn = document.getElementById("btn-topup");
+
+    if (!amount || Number(amount) <= 0) {
+      return showMsg("topup-msg", "Enter a valid amount.", "error");
+    }
+    if (!mpesa_code) {
+      return showMsg("topup-msg", "Enter your M-Pesa transaction code.", "error");
+    }
+
+    btn.disabled = true; btn.textContent = "Submitting...";
+
+    try {
+      const res = await fetch("/api/payment/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: session.phone, amount: Number(amount), mpesa_code })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMsg("topup-msg", "Submitted! An admin will review it shortly.", "success");
+        document.getElementById("topup-amount").value = "";
+        document.getElementById("topup-code").value = "";
+        // Refresh profile to show the new pending entry
+        const profRes = await fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(session)
+        });
+        const profData = await profRes.json();
+        if (profData.success) renderProfile(profData);
+      } else {
+        showMsg("topup-msg", data.error || "Submission failed.", "error");
+      }
+    } catch (e) {
+      showMsg("topup-msg", "Network error. Try again.", "error");
+    } finally {
+      btn.disabled = false; btn.textContent = "Submit for Review";
+    }
+  }
+
+  function doLogout() {
+    session = null;
+    document.getElementById("login-name").value = "";
+    document.getElementById("login-phone").value = "";
+    document.getElementById("login-password").value = "";
+    document.getElementById("step-menu").classList.remove("active");
+    document.getElementById("step-login").classList.add("active");
+  }
+</script>
+</body>
+</html>
