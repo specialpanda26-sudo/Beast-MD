@@ -7,6 +7,12 @@
 
 ## 🩹 Recent fixes
 
+- **🎨 `.imagine [prompt]` added** — free AI image generation via [Pollinations.ai](https://pollinations.ai) (no DALL-E/Flux API key required). Send `.imagine a lion wearing sunglasses, cyberpunk style` and the bot sends back a generated image. Available to everyone.
+- **🔊 `.tts [text]` added** — free text-to-speech via Google Translate's TTS endpoint. Converts your text (up to 200 chars) into a WhatsApp voice note instantly. Available to everyone.
+- **🤖 `.model [name]` added** — per-chat AI model switcher. Switch the Groq model used for `/ask` replies in any individual chat without touching global config. Choices: `llama` (llama3-70b), `llama8` (llama3-8b), `mixtral` (mixtral-8x7b), `gemma` (gemma2-9b). Send `.model` with no args to see what's active.
+- **📋 `.menu` updated** — all new commands (`.imagine`, `.tts`, `.model`, `.checklink`) now appear in the public section so users can actually discover them. The old `/paint` alias in the owner section now correctly points to `.imagine`.
+- **🌐 Web UI consistency** — `register.html` and `panel.html` now share the same navbar, particle canvas, grid background, and radial glow effects as the main landing page (`index.html`). Navigating between the main site, register, panel, and admin now feels like one unified product instead of jumping between mismatched screens.
+
 - **🖼️ Personal photo removed from `.menu` and the landing page** — `assets/menu-bg.jpg` used to be a personal photo; it's now a generated neon/cyberpunk banner instead, so nothing personal ships in the public repo image.
 - **🆕 `.share <number>` added** — reply to any message (text or media) with `.share <number>` to forward it to that number, without re-typing or re-uploading anything.
 - **🐛 Group AI trigger tightened** — it used to fire on any message containing the plain word "bot" anywhere ("I saw a robot," "chatbot," anyone named Henry in the group, etc.), spamming AI replies into groups. Now it only replies on an `@mention` or a direct reply to one of the bot's own messages.
@@ -79,6 +85,9 @@
 | 🔘 Tappable Menu | `.menu` includes quick-reply buttons (Ping/Runtime/My Perms) alongside the full text menu — buttons fall back silently if WhatsApp doesn't render them for that client |
 | 🌟 Web Panel Registration | Self-serve `/register` page — WhatsApp OTP verification unlocks starter credits + a trust badge, manageable from the admin panel |
 | 📤 Share/Forward | `.share <number>` — reply to any message to forward it (text or media) to another number |
+| 🎨 AI Image Gen | `.imagine [prompt]` — free keyless image generation via Pollinations.ai, no DALL-E/Flux API key needed |
+| 🔊 Text-to-Speech | `.tts [text]` — converts any text (up to 200 chars) into a WhatsApp voice note via Google TTS |
+| 🤖 Per-Chat AI Model | `.model [name]` — switch the Groq AI model per-chat without changing global config (`llama`, `llama8`, `mixtral`, `gemma`) |
 | ⏰ Scheduler Admin View | `/admin → Scheduler` — view & cancel any pending `.schedule`d message without WhatsApp access |
 | 👁️ View-Once Admin Browser | `/admin → View-Once` — browse recently intercepted view-once media from the panel |
 | 💾 Persistent Storage | DB, WhatsApp sessions, and saved media all live under a configurable `DATA_DIR`, survivable across redeploys with a mounted disk |
@@ -102,6 +111,9 @@
 | `.profile` | View your wallet balance, trust badge & recent top-up requests |
 | `.addfunds [amount] [mpesa_code]` | Submit an M-Pesa top-up for admin review (attach a screenshot for faster approval) |
 | `.referral` | Get your referral link, track signups & kesh earned |
+| `.imagine [prompt]` | 🎨 AI image generation via Pollinations.ai — free, no API key needed (e.g. `.imagine a lion in cyberpunk style`) |
+| `.tts [text]` | 🔊 Text-to-speech — converts text to a WhatsApp voice note (max 200 chars) |
+| `.model [name]` | 🤖 Switch AI model per-chat: `llama`, `llama8`, `mixtral`, `gemma` — uses your existing Groq key |
 | `/ask [query]` | Ask AI anything |
 
 ### 🔐 Access / Login

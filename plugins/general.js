@@ -52,7 +52,9 @@ ${p}schedule del <ID> - Cancel a scheduled msg
 ${p}schedule repeat <ID> daily|weekly - Repeat it
 _Time: 14:30 / 9:00am / 30m / 2h_
 
-/paint [text]    - Generate text image
+${p}imagine [desc]   - 🎨 AI image generation (free, no API key)
+${p}tts [text]       - 🔊 Text-to-speech voice note
+${p}model [name]     - 🤖 Per-chat AI model (llama/llama8/mixtral/gemma)
 /download_video  - Download video
 /download_song   - Download MP3
 
@@ -89,6 +91,10 @@ ${p}register       - Get web panel link (free credits + trust badge)
 ${p}profile        - View your wallet balance & badge
 ${p}addfunds [amt] [code] - Top up wallet via M-Pesa (admin reviews it)
 ${p}referral       - Get your referral link & track earnings
+${p}imagine [desc] - 🎨 AI image generation (free, no API key)
+${p}tts [text]     - 🔊 Text-to-speech voice note
+${p}model [name]   - 🤖 Switch AI model (llama/llama8/mixtral/gemma)
+${p}checklink [url] - 🔗 Check if a link is safe or suspicious
 
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
