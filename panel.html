@@ -6,349 +6,452 @@
 <title>Bot Panel — Henry Ochibots v19™</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --bg:#020408;--surface:#080f1a;--border:#112030;--accent:#00e5ff;--accent2:#7c3aed;
-    --green:#00ff88;--text:#e2eaf4;--muted:#4a6070;--card:#060e18;--red:#ff3b5c;--yellow:#ffb020;
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #020408; --surface: #080f1a; --border: #112030;
+    --accent: #00e5ff; --accent2: #7c3aed; --green: #00ff88;
+    --text: #e2eaf4; --muted: #4a6070; --card: #060e18;
+    --red: #ff3b5c; --yellow: #ffb020;
   }
-  body{
-    background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh; overflow-x: hidden;
+    display: flex; flex-direction: column;
+  }
+  #particles-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background-image:
-      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-    background-size:50px 50px;
+      linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+    background-size: 50px 50px;
   }
-  .card{
-    width:100%;max-width:460px;background:var(--card);border:1px solid var(--border);
-    border-radius:18px;padding:34px 28px;box-shadow:0 0 60px rgba(0,229,255,0.08);
-    position:relative;overflow:hidden;
+  .radial-glow {
+    position: fixed; width: 700px; height: 700px; border-radius: 50%;
+    pointer-events: none; z-index: 0; filter: blur(120px); opacity: 0.18;
   }
-  .card::before{
-    content:"";position:absolute;top:-80px;left:50%;transform:translateX(-50%);
-    width:300px;height:300px;background:var(--accent);filter:blur(100px);opacity:0.15;pointer-events:none;
-  }
-  h1{
-    font-family:'JetBrains Mono',monospace;font-size:1.05rem;color:var(--accent);
-    text-shadow:0 0 18px rgba(0,229,255,0.5);text-align:center;margin-bottom:4px;letter-spacing:0.04em;
-  }
-  .sub{text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:24px}
-  label{display:block;font-size:0.78rem;color:var(--muted);margin:14px 0 6px;font-family:'JetBrains Mono',monospace}
-  input{
-    width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;
-    padding:12px 14px;color:var(--text);font-size:0.95rem;outline:none;transition:border-color .2s;
-  }
-  input:focus{border-color:var(--accent)}
-  .btn{
-    width:100%;margin-top:22px;padding:13px;border:none;border-radius:10px;
-    background:linear-gradient(90deg,var(--accent),var(--accent2));color:#000;font-weight:700;
-    font-size:0.95rem;cursor:pointer;transition:opacity .2s;
-  }
-  .btn:hover{opacity:0.88}
-  .btn:disabled{opacity:0.5;cursor:not-allowed}
-  .btn-secondary{
-    width:100%;margin-top:10px;padding:11px;border:1px solid var(--border);border-radius:10px;
-    background:var(--surface);color:var(--text);font-weight:600;font-size:0.88rem;cursor:pointer;
-  }
-  .btn-secondary:hover{border-color:var(--accent)}
-  .msg{margin-top:16px;font-size:0.85rem;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
-  .msg.error{background:rgba(255,59,92,0.1);color:var(--red);border:1px solid rgba(255,59,92,0.25);display:block}
-  .msg.success{background:rgba(0,255,136,0.08);color:var(--green);border:1px solid rgba(0,255,136,0.25);display:block}
-  .step{display:none}
-  .step.active{display:block}
-  .hint{color:var(--muted);font-size:0.75rem;margin-top:10px;line-height:1.5}
-  .back-link{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:0.8rem;text-decoration:none}
-  .back-link:hover{color:var(--accent)}
+  .radial-glow.top { background: var(--accent); top: -200px; left: 50%; transform: translateX(-50%); }
+  .radial-glow.bottom { background: var(--accent2); bottom: -200px; right: -100px; }
 
-  /* Profile menu */
-  .profile-head{text-align:center;padding:6px 0 20px}
-  .profile-badge{font-size:44px;margin-bottom:8px}
-  .profile-name{font-family:'JetBrains Mono',monospace;font-size:1.15rem;color:var(--text);font-weight:700}
-  .profile-phone{color:var(--muted);font-size:0.82rem;margin-top:2px}
-  .stat-row{display:flex;gap:10px;margin:18px 0}
-  .stat-box{
-    flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;
-    padding:14px;text-align:center;
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 2.5rem;
+    background: rgba(2,4,8,0.7); backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,229,255,0.08);
   }
-  .stat-value{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:1.3rem;font-weight:700}
-  .stat-label{color:var(--muted);font-size:0.7rem;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em}
-  .menu-section-title{
-    font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--muted);
-    text-transform:uppercase;letter-spacing:0.08em;margin:20px 0 8px;
+  .nav-logo {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.08em;
+    text-shadow: 0 0 20px rgba(0,229,255,0.5); text-decoration: none;
   }
-  .menu-list{list-style:none;border:1px solid var(--border);border-radius:12px;overflow:hidden}
-  .menu-list li{
-    padding:13px 16px;border-bottom:1px solid var(--border);font-size:0.88rem;
-    display:flex;justify-content:space-between;align-items:center;background:var(--surface);
+  .nav-logo span { color: var(--text); }
+  .nav-logo .v { color: var(--muted); }
+  .nav-links {
+    display: flex; align-items: center; gap: 1.8rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; letter-spacing: 0.05em;
   }
-  .menu-list li:last-child{border-bottom:none}
-  .menu-list .cmd{font-family:'JetBrains Mono',monospace;color:var(--accent2);font-size:0.82rem}
-  .menu-list .desc{color:var(--muted);font-size:0.78rem;text-align:right;flex-shrink:0;margin-left:12px}
-  .status-pill{
-    font-size:0.68rem;padding:3px 9px;border-radius:20px;font-weight:700;text-transform:uppercase;
-    letter-spacing:0.03em;
+  .nav-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links .nav-cta {
+    color: #000; background: var(--green); padding: 0.4rem 0.9rem;
+    border-radius: 6px; font-weight: 700; box-shadow: 0 0 14px rgba(0,255,136,0.25);
   }
-  .status-pending{background:rgba(255,176,32,0.12);color:var(--yellow)}
-  .status-approved{background:rgba(0,255,136,0.12);color:var(--green)}
-  .status-rejected{background:rgba(255,59,92,0.12);color:var(--red)}
-  .referral-box{
-    background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:8px;
+  .nav-links .nav-cta:hover { color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+  .nav-status {
+    display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem;
+    color: var(--green); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
+    text-shadow: 0 0 10px rgba(0,255,136,0.4);
   }
-  .referral-link{
-    font-family:'JetBrains Mono',monospace;font-size:0.76rem;color:var(--accent);word-break:break-all;
-    background:var(--bg);padding:8px 10px;border-radius:8px;margin-top:8px;cursor:pointer;
+  .pulse { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.8); } }
+  @media (max-width: 760px) { .nav-links { display: none; } }
+
+  .page-body {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    flex: 1; padding: 6rem 1.5rem 3rem;
   }
-  .logout-btn{
-    width:100%;margin-top:22px;padding:11px;border:1px solid var(--border);border-radius:10px;
-    background:transparent;color:var(--muted);font-size:0.85rem;cursor:pointer;font-family:'Space Grotesk',sans-serif;
+  .card {
+    width: 100%; max-width: 460px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 36px 30px;
+    box-shadow: 0 0 60px rgba(0,229,255,0.08), 0 0 0 1px rgba(0,229,255,0.04);
+    position: relative; overflow: hidden;
   }
-  .logout-btn:hover{border-color:var(--red);color:var(--red)}
-  .field-hidden{display:none}
+  .card::before {
+    content: ""; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+    width: 300px; height: 300px; background: var(--accent);
+    filter: blur(100px); opacity: 0.12; pointer-events: none;
+  }
+  .card-header { text-align: center; margin-bottom: 26px; }
+  .card-icon { font-size: 2.2rem; margin-bottom: 10px; }
+  h1 {
+    font-family: 'JetBrains Mono', monospace; font-size: 1.05rem; color: var(--accent);
+    text-shadow: 0 0 18px rgba(0,229,255,0.5); letter-spacing: 0.04em; margin-bottom: 6px;
+  }
+  .sub { color: var(--muted); font-size: 0.85rem; }
+
+  label { display: block; font-size: 0.78rem; color: var(--muted); margin: 16px 0 6px; font-family: 'JetBrains Mono', monospace; }
+  input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 15px; color: var(--text);
+    font-size: 0.95rem; outline: none; transition: border-color .2s, box-shadow .2s;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.1); }
+
+  .btn {
+    width: 100%; margin-top: 22px; padding: 14px;
+    border: none; border-radius: 10px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    color: #000; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: opacity .2s, transform .15s;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    width: 100%; margin-top: 10px; padding: 13px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); color: var(--text);
+    font-weight: 600; font-size: 0.88rem; cursor: pointer;
+    transition: border-color .2s; font-family: 'Space Grotesk', sans-serif;
+  }
+  .btn-secondary:hover { border-color: var(--accent); }
+
+  .msg { margin-top: 14px; font-size: 0.84rem; padding: 10px 13px; border-radius: 8px; display: none; line-height: 1.5; }
+  .msg.error { background: rgba(255,59,92,0.1); color: var(--red); border: 1px solid rgba(255,59,92,0.25); display: block; }
+  .msg.success { background: rgba(0,255,136,0.08); color: var(--green); border: 1px solid rgba(0,255,136,0.25); display: block; }
+  .step { display: none; }
+  .step.active { display: block; }
+  .hint { color: var(--muted); font-size: 0.75rem; margin-top: 10px; line-height: 1.5; }
+  .btn-link { display: block; text-align: center; margin-top: 16px; color: var(--muted); font-size: 0.8rem; text-decoration: none; transition: color .2s; }
+  .btn-link:hover { color: var(--accent); }
+
+  /* ── Profile Panel ── */
+  .profile-head { text-align: center; padding: 6px 0 20px; }
+  .profile-badge-icon { font-size: 50px; margin-bottom: 10px; }
+  .profile-name { font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; color: var(--text); font-weight: 700; }
+  .profile-phone { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
+  .stat-row { display: flex; gap: 10px; margin: 18px 0; }
+  .stat-box {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; text-align: center;
+  }
+  .stat-value { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-size: 1.3rem; font-weight: 700; }
+  .stat-label { color: var(--muted); font-size: 0.7rem; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .section-title {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin: 20px 0 8px;
+  }
+  .menu-list { list-style: none; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .menu-list li {
+    padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 0.88rem;
+    display: flex; justify-content: space-between; align-items: center; background: var(--surface);
+  }
+  .menu-list li:last-child { border-bottom: none; }
+  .menu-list .cmd { font-family: 'JetBrains Mono', monospace; color: var(--accent2); font-size: 0.82rem; }
+  .menu-list .desc { color: var(--muted); font-size: 0.78rem; text-align: right; flex-shrink: 0; margin-left: 12px; }
+  .status-pill {
+    font-size: 0.68rem; padding: 3px 9px; border-radius: 20px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .status-pending { background: rgba(255,176,32,0.12); color: var(--yellow); }
+  .status-approved { background: rgba(0,255,136,0.12); color: var(--green); }
+  .status-rejected { background: rgba(255,59,92,0.12); color: var(--red); }
+  .referral-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 8px; }
+  .referral-link {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; color: var(--accent);
+    word-break: break-all; background: var(--bg); padding: 8px 10px;
+    border-radius: 8px; margin-top: 8px; cursor: pointer; display: block;
+  }
+  .logout-btn {
+    width: 100%; margin-top: 22px; padding: 12px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: transparent; color: var(--muted); font-size: 0.85rem;
+    cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: border-color .2s, color .2s;
+  }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
 </style>
 </head>
 <body>
+
+<canvas id="particles-canvas"></canvas>
+<div class="grid-bg"></div>
+<div class="radial-glow top"></div>
+<div class="radial-glow bottom"></div>
+
+<nav>
+  <a href="/" class="nav-logo">HENRY <span>OCHIBOTS</span> <span class="v">V19™</span></a>
+  <div class="nav-links">
+    <a href="/#commands">Commands</a>
+    <a href="/register">Register</a>
+    <a href="/admin">Admin</a>
+    <a href="/pair" class="nav-cta">📱 Pair Now</a>
+  </div>
+  <div class="nav-status"><div class="pulse"></div> BOT ONLINE</div>
+</nav>
+
+<div class="page-body">
   <div class="card">
 
     <!-- STEP 1: LOGIN -->
     <div class="step active" id="step-login">
-      <h1>🦈 BOT PANEL LOGIN</h1>
-      <p class="sub">Sign in with your registered name, number & password</p>
-
+      <div class="card-header">
+        <div class="card-icon">🦈</div>
+        <h1>BOT PANEL LOGIN</h1>
+        <p class="sub">Sign in with your registered name, number &amp; password</p>
+      </div>
       <label>Name</label>
       <input type="text" id="login-name" placeholder="Your name"/>
       <label>WhatsApp Number (with country code)</label>
       <input type="text" id="login-phone" placeholder="254712345678" inputmode="numeric"/>
       <label>Password</label>
-      <input type="password" id="login-password" placeholder="Your password"/>
-
-      <button class="btn" id="btn-login" onclick="doLogin()">Login →</button>
-      <div class="hint">Not registered yet? <a href="/register" style="color:var(--accent)">Register here</a> first.</div>
+      <input type="password" id="login-password" placeholder="Your panel password"/>
+      <button class="btn" id="btn-login" onclick="doLogin()">Sign In →</button>
       <div class="msg" id="login-msg"></div>
-      <a class="back-link" href="/">← Back to home</a>
+      <a class="btn-link" href="#" onclick="showForgotPassword();return false" style="margin-top:6px">Forgot password?</a>
+      <a class="btn-link" href="/register" style="margin-top:14px">Don't have an account? Register →</a>
+      <a class="btn-link" href="/">← Back to home</a>
     </div>
 
-    <!-- STEP 2: PROFILE MENU -->
-    <div class="step" id="step-menu">
-      <div class="profile-head">
-        <div class="profile-badge" id="profile-badge-icon">🛡️</div>
-        <div class="profile-name" id="profile-name"></div>
-        <div class="profile-phone" id="profile-phone"></div>
+    <!-- STEP FORGOT-1: REQUEST CODE -->
+    <div class="step" id="step-forgot-request">
+      <div class="card-header">
+        <div class="card-icon">🔑</div>
+        <h1>RESET PASSWORD</h1>
+        <p class="sub">Enter your registered WhatsApp number and we'll send you a code</p>
       </div>
+      <label>WhatsApp Number (with country code)</label>
+      <input type="text" id="forgot-phone" placeholder="254712345678" inputmode="numeric"/>
+      <button class="btn" id="btn-forgot-request" onclick="requestForgotCode()">Send Code →</button>
+      <div class="msg" id="forgot-request-msg"></div>
+      <a class="btn-link" href="#" onclick="backToLoginFromForgot()">← Back to login</a>
+    </div>
 
+    <!-- STEP FORGOT-2: ENTER CODE + NEW PASSWORD -->
+    <div class="step" id="step-forgot-reset">
+      <div class="card-header">
+        <div class="card-icon">🔑</div>
+        <h1>ENTER NEW PASSWORD</h1>
+        <p class="sub">Check your WhatsApp for the 6-digit code</p>
+      </div>
+      <label>Code</label>
+      <input type="text" id="forgot-otp" placeholder="123456" inputmode="numeric" maxlength="6"/>
+      <label>New Password</label>
+      <input type="password" id="forgot-new-password" placeholder="At least 6 characters"/>
+      <button class="btn" id="btn-forgot-reset" onclick="submitForgotReset()">Reset Password →</button>
+      <div class="msg" id="forgot-reset-msg"></div>
+      <a class="btn-link" href="#" onclick="backToLoginFromForgot()">← Back to login</a>
+    </div>
+
+    <!-- STEP 2: PROFILE -->
+    <div class="step" id="step-profile">
+      <div class="profile-head">
+        <div class="profile-badge-icon" id="profile-badge-icon">🛡️</div>
+        <div class="profile-name" id="profile-name">—</div>
+        <div class="profile-phone" id="profile-phone">—</div>
+      </div>
       <div class="stat-row">
         <div class="stat-box">
-          <div class="stat-value" id="profile-credits">0</div>
-          <div class="stat-label">Kesh Wallet</div>
+          <div class="stat-value" id="profile-balance">—</div>
+          <div class="stat-label">kesh balance</div>
         </div>
         <div class="stat-box">
-          <div class="stat-value" id="profile-badge-name">—</div>
-          <div class="stat-label">Trust Badge</div>
+          <div class="stat-value" id="profile-badge-label">—</div>
+          <div class="stat-label">trust level</div>
         </div>
       </div>
 
-      <div class="menu-section-title">🎁 Your Referral Link</div>
-      <div class="referral-box">
-        <div class="hint" style="margin-top:0">Share this — you earn kesh every time someone registers using it.</div>
-        <div class="referral-link" id="referral-link" onclick="copyReferralLink()">Loading...</div>
-      </div>
-
-      <div class="menu-section-title">💳 Top Up Wallet (M-Pesa)</div>
-      <div class="referral-box" id="topup-box">
-        <div class="hint" id="payto-hint" style="margin-top:0">Loading payment info...</div>
-        <label>Amount (kesh)</label>
-        <input type="number" id="topup-amount" placeholder="e.g. 100" min="1"/>
-        <label>M-Pesa Transaction Code</label>
-        <input type="text" id="topup-code" placeholder="e.g. QFG7H8J9K0" style="text-transform:uppercase"/>
-        <button class="btn-secondary" id="btn-topup" onclick="submitTopup()">Submit for Review</button>
-        <div class="msg" id="topup-msg"></div>
-      </div>
-
-      <div class="menu-section-title">🧾 Recent Top-Up Requests</div>
-      <ul class="menu-list" id="payments-list">
-        <li><span class="desc">No top-up requests yet.</span></li>
-      </ul>
-
-      <div class="menu-section-title">💬 Public Bot Commands</div>
+      <div class="section-title">📋 Bot Commands</div>
       <ul class="menu-list">
-        <li><span class="cmd">.menu</span><span class="desc">Show full bot menu</span></li>
-        <li><span class="cmd">.ping</span><span class="desc">Bot response speed</span></li>
-        <li><span class="cmd">/ask [query]</span><span class="desc">Ask AI a question</span></li>
-        <li><span class="cmd">/recover [n]</span><span class="desc">Recover deleted msgs</span></li>
+        <li><span class="cmd">.menu</span><span class="desc">Full command list</span></li>
+        <li><span class="cmd">.ping</span><span class="desc">Bot speed check</span></li>
+        <li><span class="cmd">.imagine [desc]</span><span class="desc">AI image gen</span></li>
+        <li><span class="cmd">.tts [text]</span><span class="desc">Text-to-speech</span></li>
+        <li><span class="cmd">.model [name]</span><span class="desc">Switch AI model</span></li>
+        <li><span class="cmd">.dl [url]</span><span class="desc">Universal downloader</span></li>
+        <li><span class="cmd">.sticker</span><span class="desc">Image to sticker</span></li>
+        <li><span class="cmd">.profile</span><span class="desc">Wallet &amp; balance</span></li>
+        <li><span class="cmd">.addfunds [amt] [code]</span><span class="desc">Top up wallet</span></li>
+        <li><span class="cmd">.referral</span><span class="desc">Referral link</span></li>
+        <li><span class="cmd">.schedule add ...</span><span class="desc">Schedule a message</span></li>
+        <li><span class="cmd">/ask [query]</span><span class="desc">Ask AI anything</span></li>
+        <li><span class="cmd">.checklink [url]</span><span class="desc">Link safety check</span></li>
       </ul>
 
-      <div class="hint" style="margin-top:16px;text-align:center">
-        Open WhatsApp and message the bot directly to use any command above.
+      <div class="section-title">🤝 Your Referral Link</div>
+      <div class="referral-box">
+        <div style="color:var(--muted);font-size:0.8rem">Share this link to earn kesh for every verified signup:</div>
+        <div class="referral-link" id="referral-link" onclick="copyReferral()">Loading...</div>
+        <div class="hint" id="referral-stats"></div>
       </div>
 
-      <button class="logout-btn" onclick="doLogout()">Log out</button>
+      <div class="section-title">💰 Recent Top-Up Requests</div>
+      <ul class="menu-list" id="topup-list">
+        <li style="color:var(--muted);font-size:0.82rem">Loading...</li>
+      </ul>
+
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
     </div>
 
   </div>
+</div>
 
 <script>
-  let session = null; // { name, phone, password } — kept only in memory, never persisted to disk/localStorage
+  // ── Particles ──────────────────────────────────────────────────────────────
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+  for (let i = 0; i < 55; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.3, a: Math.random() * 0.5 + 0.1
+    });
+  }
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,229,255,${p.a})`; ctx.fill();
+    });
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ── Panel logic ────────────────────────────────────────────────────────────
+  let sessionData = null;
 
   function showMsg(id, text, type) {
     const el = document.getElementById(id);
-    el.textContent = text;
-    el.className = "msg " + type;
-  }
-
-  function formatDate(unixSeconds) {
-    if (!unixSeconds) return "—";
-    const d = new Date(unixSeconds * 1000);
-    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    el.textContent = text; el.className = "msg " + type;
   }
 
   async function doLogin() {
-    const name = document.getElementById("login-name").value.trim();
-    const phone = document.getElementById("login-phone").value.trim().replace(/\s+/g, "").replace("+", "");
-    const password = document.getElementById("login-password").value;
-    const btn = document.getElementById("btn-login");
-
-    if (!name || !phone || !password) {
-      return showMsg("login-msg", "Enter your name, number, and password.", "error");
-    }
-
-    btn.disabled = true; btn.textContent = "Logging in...";
-
+    const name = document.getElementById('login-name').value.trim();
+    const phone = document.getElementById('login-phone').value.trim();
+    const password = document.getElementById('login-password').value;
+    const btn = document.getElementById('btn-login');
+    if (!name || !phone || !password) return showMsg('login-msg', 'Please fill in all fields.', 'error');
+    btn.disabled = true; btn.textContent = 'Signing in...';
     try {
-      const res = await fetch("/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/profile', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone, password })
       });
       const data = await res.json();
       if (data.success) {
-        session = { name, phone, password };
+        sessionData = data;
         renderProfile(data);
-        loadReferrals();
-        loadPaymentInfo();
-        document.getElementById("step-login").classList.remove("active");
-        document.getElementById("step-menu").classList.add("active");
-      } else {
-        showMsg("login-msg", data.error || "Login failed.", "error");
-      }
-    } catch (e) {
-      showMsg("login-msg", "Network error. Try again.", "error");
-    } finally {
-      btn.disabled = false; btn.textContent = "Login →";
-    }
+        document.getElementById('step-login').classList.remove('active');
+        document.getElementById('step-profile').classList.add('active');
+      } else { showMsg('login-msg', data.error || 'Login failed.', 'error'); }
+    } catch (e) { showMsg('login-msg', 'Network error. Try again.', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Sign In →'; }
   }
 
-  function renderProfile(data) {
-    document.getElementById("profile-name").textContent = data.name;
-    document.getElementById("profile-phone").textContent = "+" + data.phone;
-    document.getElementById("profile-credits").textContent = data.credits;
-    document.getElementById("profile-badge-name").textContent = data.badge || "—";
-
-    const list = document.getElementById("payments-list");
-    if (!data.recent_payments || data.recent_payments.length === 0) {
-      list.innerHTML = '<li><span class="desc">No top-up requests yet.</span></li>';
-    } else {
-      list.innerHTML = data.recent_payments.map(p => `
-        <li>
-          <span class="cmd">${p.amount} kesh — ${p.mpesa_code}</span>
-          <span class="status-pill status-${p.status}">${p.status}</span>
-        </li>`).join("");
-    }
+  function showForgotPassword() {
+    document.getElementById('step-login').classList.remove('active');
+    document.getElementById('step-forgot-request').classList.add('active');
+    const phone = document.getElementById('login-phone').value.trim();
+    if (phone) document.getElementById('forgot-phone').value = phone;
   }
 
-  async function loadReferrals() {
+  function backToLoginFromForgot() {
+    document.getElementById('step-forgot-request').classList.remove('active');
+    document.getElementById('step-forgot-reset').classList.remove('active');
+    document.getElementById('step-login').classList.add('active');
+    document.getElementById('forgot-request-msg').textContent = '';
+    document.getElementById('forgot-reset-msg').textContent = '';
+  }
+
+  async function requestForgotCode() {
+    const phone = document.getElementById('forgot-phone').value.trim();
+    const btn = document.getElementById('btn-forgot-request');
+    if (!phone) return showMsg('forgot-request-msg', 'Enter your WhatsApp number.', 'error');
+    btn.disabled = true; btn.textContent = 'Sending...';
     try {
-      const res = await fetch(`/api/referrals?phone=${encodeURIComponent(session.phone)}`);
-      const data = await res.json();
-      const el = document.getElementById("referral-link");
-      if (data.success) {
-        const link = `${window.location.origin}/register?ref=${session.phone}`;
-        el.textContent = link;
-        el.dataset.link = link;
-        el.title = `Tap to copy — you've earned ${data.total_earned} kesh from ${data.total_referrals} referral(s) so far.`;
-      } else {
-        el.textContent = "Referral info unavailable.";
-      }
-    } catch (e) {
-      document.getElementById("referral-link").textContent = "Referral info unavailable.";
-    }
-  }
-
-  function copyReferralLink() {
-    const el = document.getElementById("referral-link");
-    const link = el.dataset.link;
-    if (!link) return;
-    navigator.clipboard.writeText(link).then(() => {
-      const original = el.textContent;
-      el.textContent = "✅ Copied!";
-      setTimeout(() => { el.textContent = original; }, 1500);
-    }).catch(() => {});
-  }
-
-  async function loadPaymentInfo() {
-    try {
-      const res = await fetch("/api/payment-info");
-      const data = await res.json();
-      const hint = document.getElementById("payto-hint");
-      if (data.success && data.configured) {
-        hint.innerHTML = `Send M-Pesa funds to <strong style="color:var(--accent)">${data.payto_number}</strong>, then submit the transaction code below for admin review.`;
-      } else {
-        hint.textContent = "Top-ups are not configured yet — contact the admin directly.";
-        document.getElementById("btn-topup").disabled = true;
-      }
-    } catch (e) {
-      document.getElementById("payto-hint").textContent = "Couldn't load payment info right now.";
-    }
-  }
-
-  async function submitTopup() {
-    const amount = document.getElementById("topup-amount").value.trim();
-    const mpesa_code = document.getElementById("topup-code").value.trim().toUpperCase();
-    const btn = document.getElementById("btn-topup");
-
-    if (!amount || Number(amount) <= 0) {
-      return showMsg("topup-msg", "Enter a valid amount.", "error");
-    }
-    if (!mpesa_code) {
-      return showMsg("topup-msg", "Enter your M-Pesa transaction code.", "error");
-    }
-
-    btn.disabled = true; btn.textContent = "Submitting...";
-
-    try {
-      const res = await fetch("/api/payment/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: session.phone, amount: Number(amount), mpesa_code })
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
       });
       const data = await res.json();
       if (data.success) {
-        showMsg("topup-msg", "Submitted! An admin will review it shortly.", "success");
-        document.getElementById("topup-amount").value = "";
-        document.getElementById("topup-code").value = "";
-        // Refresh profile to show the new pending entry
-        const profRes = await fetch("/api/profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(session)
-        });
-        const profData = await profRes.json();
-        if (profData.success) renderProfile(profData);
-      } else {
-        showMsg("topup-msg", data.error || "Submission failed.", "error");
-      }
-    } catch (e) {
-      showMsg("topup-msg", "Network error. Try again.", "error");
-    } finally {
-      btn.disabled = false; btn.textContent = "Submit for Review";
+        document.getElementById('step-forgot-request').classList.remove('active');
+        document.getElementById('step-forgot-reset').classList.add('active');
+        showMsg('forgot-reset-msg', data.message, 'success');
+      } else { showMsg('forgot-request-msg', data.error || 'Could not send code.', 'error'); }
+    } catch (e) { showMsg('forgot-request-msg', 'Network error. Try again.', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Send Code →'; }
+  }
+
+  async function submitForgotReset() {
+    const phone = document.getElementById('forgot-phone').value.trim();
+    const otp = document.getElementById('forgot-otp').value.trim();
+    const newPassword = document.getElementById('forgot-new-password').value;
+    const btn = document.getElementById('btn-forgot-reset');
+    if (!otp || !newPassword) return showMsg('forgot-reset-msg', 'Enter the code and a new password.', 'error');
+    btn.disabled = true; btn.textContent = 'Resetting...';
+    try {
+      const res = await fetch('/api/reset-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp, new_password: newPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMsg('forgot-reset-msg', data.message, 'success');
+        setTimeout(backToLoginFromForgot, 1800);
+      } else { showMsg('forgot-reset-msg', data.error || 'Could not reset password.', 'error'); }
+    } catch (e) { showMsg('forgot-reset-msg', 'Network error. Try again.', 'error'); }
+    finally { btn.disabled = false; btn.textContent = 'Reset Password →'; }
+  }
+
+  function renderProfile(data) {
+    const publicUrl = window.location.origin;
+    document.getElementById('profile-name').textContent = data.name || '—';
+    document.getElementById('profile-phone').textContent = '+' + (data.phone || '');
+    document.getElementById('profile-balance').textContent = data.balance ?? '—';
+    document.getElementById('profile-badge-label').textContent = data.badge || '—';
+    document.getElementById('profile-badge-icon').textContent = data.badge === 'trusted' ? '🛡️' : data.badge === 'premium' ? '💎' : '👤';
+    const refLink = `${publicUrl}/register?ref=${data.phone}`;
+    document.getElementById('referral-link').textContent = refLink;
+    if (data.referral_stats) {
+      document.getElementById('referral-stats').textContent = `${data.referral_stats.count || 0} signups · ${data.referral_stats.earned || 0} kesh earned`;
+    }
+    const topupList = document.getElementById('topup-list');
+    if (data.payments && data.payments.length) {
+      topupList.innerHTML = data.payments.map(p => `
+        <li>
+          <span>KES ${p.amount} · <span style="color:var(--muted);font-size:0.78rem">${p.mpesa_code}</span></span>
+          <span class="status-pill status-${p.status}">${p.status}</span>
+        </li>`).join('');
+    } else {
+      topupList.innerHTML = '<li style="color:var(--muted);font-size:0.82rem">No top-up requests yet. Use .addfunds to submit one.</li>';
     }
   }
 
+  function copyReferral() {
+    const link = document.getElementById('referral-link').textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(link);
+    const el = document.getElementById('referral-link');
+    el.textContent = '✅ Copied!';
+    setTimeout(() => { if (sessionData) el.textContent = `${window.location.origin}/register?ref=${sessionData.phone}`; }, 1500);
+  }
+
   function doLogout() {
-    session = null;
-    document.getElementById("login-name").value = "";
-    document.getElementById("login-phone").value = "";
-    document.getElementById("login-password").value = "";
-    document.getElementById("step-menu").classList.remove("active");
-    document.getElementById("step-login").classList.add("active");
+    sessionData = null;
+    document.getElementById('step-profile').classList.remove('active');
+    document.getElementById('step-login').classList.add('active');
+    document.getElementById('login-password').value = '';
   }
 </script>
 </body>

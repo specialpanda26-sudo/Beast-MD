@@ -44,6 +44,7 @@ ${p}summarize [text]  - AI text summarizer (cypher.js)
 ${p}pbp [text]        - RPG session tracker
 
 🔑 Manage keyword auto-replies & feature toggles from the *Admin Panel* (/admin → Keywords / Features tabs)
+🔑 Forgot the /admin panel password? Tap "Forgot password?" on its login screen — a reset code is sent here to your own WhatsApp number.
 
 ⏰ *MESSAGE SCHEDULER*
 ${p}schedule add <time> <to> <msg> - Schedule a message
@@ -52,7 +53,9 @@ ${p}schedule del <ID> - Cancel a scheduled msg
 ${p}schedule repeat <ID> daily|weekly - Repeat it
 _Time: 14:30 / 9:00am / 30m / 2h_
 
-/paint [text]    - Generate text image
+${p}imagine [desc]   - 🎨 AI image generation (free, no API key)
+${p}tts [text]       - 🔊 Text-to-speech voice note
+${p}model [name]     - 🤖 Per-chat AI model (llama/llama8/mixtral/gemma)
 /download_video  - Download video
 /download_song   - Download MP3
 
@@ -89,6 +92,29 @@ ${p}register       - Get web panel link (free credits + trust badge)
 ${p}profile        - View your wallet balance & badge
 ${p}addfunds [amt] [code] - Top up wallet via M-Pesa (admin reviews it)
 ${p}referral       - Get your referral link & track earnings
+${p}imagine [desc] - 🎨 AI image generation (free, no API key)
+${p}tts [text]     - 🔊 Text-to-speech voice note
+${p}model [name]   - 🤖 Switch AI model (llama/llama8/mixtral/gemma)
+${p}checklink [url] - 🔗 Check if a link is safe or suspicious
+
+🔑 Forgot your panel password? Open the panel and tap "Forgot password?" — a reset code is sent right here on WhatsApp.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 *GAMES*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}hangman        - Start hangman (reply with letters)
+${p}trivia         - Random trivia question
+${p}guess [max]    - Number guessing game (default 1-100)
+${p}truth          - Truth or Dare: Truth
+${p}dare           - Truth or Dare: Dare
+${p}wyr            - Would You Rather
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔎 *LOOKUP TOOLS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}validate [num] - Check a phone number's format/region
+${p}ipinfo [ip]    - Public geo/ASN info for an IP address
+${p}whois [domain] - Public WHOIS/RDAP data for a domain
 
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
@@ -490,6 +516,101 @@ Ninaongea Kiswahili, Sheng na English!
 
 };
 
+// ── .model — per-chat AI model switcher ─────────────────────────────────────
+// ✅ NEW: this command was advertised in the menu/README for a while but
+// never actually implemented. Stores the choice in-memory per chat (`from`),
+// read by client_bridge.js and forwarded to /webhook and /natural-chat,
+// which already both accept a `model` override — they just never had
+// anything upstream setting it. Resets on process restart, same durability
+// model as botMode/subAdmins.
+const MODEL_ALIASES = {
+  llama:   'llama3-70b-8192',
+  llama8:  'llama3-8b-8192',
+  mixtral: 'mixtral-8x7b-32768',
+  gemma:   'gemma2-9b-it',
+};
+global.chatModel = global.chatModel || new Map();
+
+module.exports.model = async ({ sock, from, msg, args }) => {
+  const choice = (args[0] || '').toLowerCase();
+  if (!choice) {
+    const current = global.chatModel.get(from);
+    const currentAlias = Object.keys(MODEL_ALIASES).find(k => MODEL_ALIASES[k] === current) || 'llama8 (default)';
+    return sock.sendMessage(from, {
+      text: `🤖 *AI Model*\n\nCurrent for this chat: *${currentAlias}*\n\nChoices:\n• llama — llama3-70b (smartest, slower)\n• llama8 — llama3-8b (fast, default)\n• mixtral — mixtral-8x7b\n• gemma — gemma2-9b\n\nUsage: .model llama`
+    }, { quoted: msg });
+  }
+  if (choice === 'reset' || choice === 'default') {
+    global.chatModel.delete(from);
+    return sock.sendMessage(from, { text: '✅ Model reset to default (llama8) for this chat.' }, { quoted: msg });
+  }
+  const resolved = MODEL_ALIASES[choice];
+  if (!resolved) {
+    return sock.sendMessage(from, { text: `❌ Unknown model "${choice}". Choices: ${Object.keys(MODEL_ALIASES).join(', ')}` }, { quoted: msg });
+  }
+  global.chatModel.set(from, resolved);
+  await sock.sendMessage(from, { text: `✅ This chat now uses *${choice}* (${resolved}) for /ask and AI replies.` }, { quoted: msg });
+};
+
+// ── .tts — free text-to-speech via Google Translate's TTS endpoint ─────────
+// ✅ NEW: same story as .model — advertised, never implemented. No API key
+// required; Google Translate's public TTS endpoint caps at ~200 characters
+// per request, so longer text is chunked into multiple voice notes.
+module.exports.tts = async ({ sock, from, msg, args }) => {
+  const text = args.join(' ').trim() ||
+    msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation;
+  if (!text) return sock.sendMessage(from, { text: '🔊 Usage: .tts [text]\n(or reply to a text message with .tts)' }, { quoted: msg });
+  if (text.length > 600) return sock.sendMessage(from, { text: '❌ Max 600 characters — trim it down a bit.' }, { quoted: msg });
+
+  const axios = require('axios');
+  // Split into <=200 char chunks on sentence/word boundaries so Google's
+  // endpoint (which silently truncates longer input) doesn't cut it off.
+  const chunks = [];
+  let remaining = text;
+  while (remaining.length > 0) {
+    if (remaining.length <= 200) { chunks.push(remaining); break; }
+    let cut = remaining.lastIndexOf(' ', 200);
+    if (cut <= 0) cut = 200;
+    chunks.push(remaining.slice(0, cut));
+    remaining = remaining.slice(cut).trim();
+  }
+
+  try {
+    for (const chunk of chunks) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(chunk)}`;
+      const res = await axios.get(url, {
+        responseType: 'arraybuffer',
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        timeout: 15000,
+      });
+      await sock.sendMessage(from, { audio: Buffer.from(res.data), mimetype: 'audio/mpeg', ptt: true }, { quoted: msg });
+    }
+  } catch (e) {
+    await sock.sendMessage(from, { text: `❌ TTS failed: ${e.message}` }, { quoted: msg });
+  }
+};
+
+// ── .imagine — free, keyless AI image generation via Pollinations.ai ──────
+// ✅ NEW: same story again. Pollinations.ai serves generated images straight
+// off a GET URL with no API key/signup, so this just needs to fetch and
+// re-send it — no separate image-gen backend required.
+module.exports.imagine = async ({ sock, from, msg, args }) => {
+  const prompt = args.join(' ').trim();
+  if (!prompt) return sock.sendMessage(from, { text: '🎨 Usage: .imagine [description]\ne.g. .imagine a lion wearing sunglasses, cyberpunk style' }, { quoted: msg });
+  if (prompt.length > 500) return sock.sendMessage(from, { text: '❌ Keep the prompt under 500 characters.' }, { quoted: msg });
+
+  await sock.sendMessage(from, { text: '🎨 Generating your image...' }, { quoted: msg });
+  const axios = require('axios');
+  try {
+    const seed = Math.floor(Math.random() * 1_000_000);
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&nologo=true`;
+    const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 45000 });
+    await sock.sendMessage(from, { image: Buffer.from(res.data), caption: `🎨 ${prompt}` }, { quoted: msg });
+  } catch (e) {
+    await sock.sendMessage(from, { text: `❌ Image generation failed: ${e.message}\n\nPollinations.ai may be slow/unreachable right now — try again in a bit.` }, { quoted: msg });
+  }
+};
+
 // ── .status ────────────────────────────────────────────────────────────────
 module.exports.status = async ({ sock, from, msg, isOwner }) => {
   if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
@@ -655,5 +776,57 @@ module.exports.announce = async ({ sock, from, msg, isOwner, args }) => {
   } catch (e) {
     const apiErr = e.response?.data?.error || e.message;
     await sock.sendMessage(from, { text: `❌ Couldn't queue the announcement: ${apiErr}` }, { quoted: msg });
+  }
+};
+
+// ── .maintenance ──────────────────────────────────────────────────────────
+// Owner only. Puts the bot in maintenance mode — non-owners get a polite
+// "back soon" reply instead of any command running. Owner/co-owner is always
+// exempt so you can keep testing/fixing while it's on.
+module.exports.maintenance = async ({ sock, from, msg, isOwner, args }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  const toggle = args[0]?.toLowerCase();
+  if (!['on', 'off'].includes(toggle)) {
+    const state = global.botMaintenance ? 'ON' : 'OFF';
+    return sock.sendMessage(from, { text: `🛠️ Maintenance mode is currently *${state}*.\n\nUsage: .maintenance on/off` }, { quoted: msg });
+  }
+  global.botMaintenance = toggle === 'on';
+  await sock.sendMessage(from, {
+    text: global.botMaintenance
+      ? '🛠️ Maintenance mode *enabled*. Only the owner/co-owners can use commands now.'
+      : '✅ Maintenance mode *disabled*. Bot is back to normal for everyone.'
+  }, { quoted: msg });
+};
+
+// ── .reload ───────────────────────────────────────────────────────────────
+// Owner only. Hot-reloads all plugin files from disk without restarting the
+// whole process — handy after editing a plugin.js file directly on the
+// server (e.g. via Termux/SSH) without wanting a full redeploy.
+module.exports.reload = async ({ sock, from, msg, isOwner }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  try {
+    const pluginNames = ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet', 'games', 'osint'];
+    const freshCommands = {};
+    let loadedCount = 0;
+    const failed = [];
+    for (const name of pluginNames) {
+      try {
+        const resolved = require.resolve(`./${name}`);
+        delete require.cache[resolved]; // force Node to re-read the file from disk
+        Object.assign(freshCommands, require(`./${name}`));
+        loadedCount++;
+      } catch (e) {
+        failed.push(`${name} (${e.message})`);
+      }
+    }
+    // Swap in place so the reference client_bridge.js already holds stays valid
+    Object.keys(global.allCommandsRef || {}).forEach(k => delete global.allCommandsRef[k]);
+    Object.assign(global.allCommandsRef || {}, freshCommands);
+
+    let text = `🔄 Reloaded ${loadedCount}/${pluginNames.length} plugins — ${Object.keys(freshCommands).length} commands active.`;
+    if (failed.length) text += `\n⚠️ Failed: ${failed.join(', ')}`;
+    await sock.sendMessage(from, { text }, { quoted: msg });
+  } catch (e) {
+    await sock.sendMessage(from, { text: `❌ Reload failed: ${e.message}` }, { quoted: msg });
   }
 };

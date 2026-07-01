@@ -7,6 +7,22 @@
 
 ## 🩹 Recent fixes
 
+- **🐛 Full command/feature audit — see [`REMEDY.md`](./REMEDY.md) for details.** Highlights: `.hangman`/`.trivia`/`.guess`/`.truth`/`.dare`/`.wyr`/`.validate`/`.ipinfo`/`.whois` were coded but never loaded (missing from the plugin loader) — fixed. `/natural-chat` (all AI DM chat + group AI replies) was missing its route decorator and silently 404'd on every call — fixed, this was the single biggest bug in the repo. Active-game replies (a letter for `.hangman`, an answer for `.trivia`, a number for `.guess`) were never wired to the message handler — fixed. `.reload` didn't actually reload the live command table — fixed. `.imagine`, `.tts`, and `.model` were documented in this very changelog but never implemented — all three now work for real (Pollinations.ai image gen, Google TTS voice notes, per-chat Groq model switching).
+- **🔑 Admin panel password reset added** — if you (the owner) forget the `/admin` panel password, tap "Forgot password?" on the login screen. A one-time 6-digit code is sent via WhatsApp to your fixed `OWNER_NUMBER` (never anywhere else, so it can't be redirected). Enter it with a new password (8+ chars) to regain access — this updates a hashed password stored in the database and does **not** touch your `ADMIN_PASSWORD` env var, so it survives redeploys.
+- **🔑 Bot Panel (`/panel`) password reset added** — registered users who forget their panel password can tap "Forgot password?", get a 6-digit code sent to their own registered WhatsApp number, and set a new password (6+ chars). Reuses the same OTP columns as registration verification with no collision risk (one only ever acts on unverified accounts, the other only on verified ones).
+- **🔒 Brute-force lockout added to all three logins** — `/admin`, `/panel`, and the reset-code entry step for both now lock out after 5 wrong attempts (5-minute cooldown for logins, "request a new code" for expired attempt limits on resets). Previously none of these had *any* limit — a weak password was crackable by simple repeated guessing.
+- **🔒 Admin password comparison hardened** — switched from a plain `==` string comparison to `secrets.compare_digest`, which can't leak timing information about how many characters of a guess were correct.
+- **🔒 New security response headers on every request** — `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Strict-Transport-Security`, and a strict `Referrer-Policy: no-referrer`. The referrer policy matters specifically because `/admin` authenticates via a `?pass=` query string — without it, clicking any outbound link from an authenticated admin page could leak the password to a third-party site's server logs via the `Referer` header.
+- **🎮 Games added** — `.hangman`, `.trivia`, `.guess`, `.truth`, `.dare`, `.wyr`. Per-chat state, hooked into the message handler so plain-text replies (a letter, an answer, a number) resolve the active game before falling through to AI chat.
+- **🔎 Lookup tools added** — `.validate`, `.ipinfo`, `.whois`. Scoped to public infrastructure data only (number format, IP/ASN, domain WHOIS) — no person lookups.
+- **🔒 `.getpp` gated for arbitrary-number lookups** — self-lookups and reply/@mention lookups still work for everyone; typing in someone else's raw number now requires owner/co-owner/sub-admin.
+- **🔒 5 unauthenticated `/admin/*` endpoints fixed** — `session-detail`, `register-session`, `update-session`, `check-terminate`, `broadcast/pending` were missing the `ADMIN_PASSWORD` check every other admin route already has. `session-detail` additionally had its message content injected into HTML unescaped (stored XSS) — now `html.escape()`'d. The Node bridge now sends `ADMIN_PASSWORD` as a Bearer token on its own internal calls so none of this changes how the bot behaves for you.
+- **🎨 `.imagine [prompt]` added** — free AI image generation via [Pollinations.ai](https://pollinations.ai) (no DALL-E/Flux API key required). Send `.imagine a lion wearing sunglasses, cyberpunk style` and the bot sends back a generated image. Available to everyone.
+- **🔊 `.tts [text]` added** — free text-to-speech via Google Translate's TTS endpoint. Converts your text (up to 200 chars) into a WhatsApp voice note instantly. Available to everyone.
+- **🤖 `.model [name]` added** — per-chat AI model switcher. Switch the Groq model used for `/ask` replies in any individual chat without touching global config. Choices: `llama` (llama3-70b), `llama8` (llama3-8b), `mixtral` (mixtral-8x7b), `gemma` (gemma2-9b). Send `.model` with no args to see what's active.
+- **📋 `.menu` updated** — all new commands (`.imagine`, `.tts`, `.model`, `.checklink`) now appear in the public section so users can actually discover them. The old `/paint` alias in the owner section now correctly points to `.imagine`.
+- **🌐 Web UI consistency** — `register.html` and `panel.html` now share the same navbar, particle canvas, grid background, and radial glow effects as the main landing page (`index.html`). Navigating between the main site, register, panel, and admin now feels like one unified product instead of jumping between mismatched screens.
+
 - **🖼️ Personal photo removed from `.menu` and the landing page** — `assets/menu-bg.jpg` used to be a personal photo; it's now a generated neon/cyberpunk banner instead, so nothing personal ships in the public repo image.
 - **🆕 `.share <number>` added** — reply to any message (text or media) with `.share <number>` to forward it to that number, without re-typing or re-uploading anything.
 - **🐛 Group AI trigger tightened** — it used to fire on any message containing the plain word "bot" anywhere ("I saw a robot," "chatbot," anyone named Henry in the group, etc.), spamming AI replies into groups. Now it only replies on an `@mention` or a direct reply to one of the bot's own messages.
@@ -79,6 +95,9 @@
 | 🔘 Tappable Menu | `.menu` includes quick-reply buttons (Ping/Runtime/My Perms) alongside the full text menu — buttons fall back silently if WhatsApp doesn't render them for that client |
 | 🌟 Web Panel Registration | Self-serve `/register` page — WhatsApp OTP verification unlocks starter credits + a trust badge, manageable from the admin panel |
 | 📤 Share/Forward | `.share <number>` — reply to any message to forward it (text or media) to another number |
+| 🎨 AI Image Gen | `.imagine [prompt]` — free keyless image generation via Pollinations.ai, no DALL-E/Flux API key needed |
+| 🔊 Text-to-Speech | `.tts [text]` — converts any text (up to 200 chars) into a WhatsApp voice note via Google TTS |
+| 🤖 Per-Chat AI Model | `.model [name]` — switch the Groq AI model per-chat without changing global config (`llama`, `llama8`, `mixtral`, `gemma`) |
 | ⏰ Scheduler Admin View | `/admin → Scheduler` — view & cancel any pending `.schedule`d message without WhatsApp access |
 | 👁️ View-Once Admin Browser | `/admin → View-Once` — browse recently intercepted view-once media from the panel |
 | 💾 Persistent Storage | DB, WhatsApp sessions, and saved media all live under a configurable `DATA_DIR`, survivable across redeploys with a mounted disk |
@@ -102,6 +121,9 @@
 | `.profile` | View your wallet balance, trust badge & recent top-up requests |
 | `.addfunds [amount] [mpesa_code]` | Submit an M-Pesa top-up for admin review (attach a screenshot for faster approval) |
 | `.referral` | Get your referral link, track signups & kesh earned |
+| `.imagine [prompt]` | 🎨 AI image generation via Pollinations.ai — free, no API key needed (e.g. `.imagine a lion in cyberpunk style`) |
+| `.tts [text]` | 🔊 Text-to-speech — converts text to a WhatsApp voice note (max 200 chars) |
+| `.model [name]` | 🤖 Switch AI model per-chat: `llama`, `llama8`, `mixtral`, `gemma` — uses your existing Groq key |
 | `/ask [query]` | Ask AI anything |
 
 ### 🔐 Access / Login
@@ -119,7 +141,7 @@
 | `.sticker` | Reply to image/video to make sticker |
 | `.vv` | Reply to voice note to re-send as audio |
 | `.save` | Reply to video/image to save it |
-| `.getpp [@user]` | Get someone's profile picture — works for any number, even unsaved/private ones, and tells you if it looks blocked |
+| `.getpp [@user]` | Get a profile picture. Your own picture, or one from a reply/@mention in the current chat, works for everyone. Looking it up by typing an arbitrary phone number is owner/co-owner/sub-admin only. |
 | `.share <number>` | Reply to any message (text or media) to forward it to that number |
 | `.about [@user]` | Get someone's WhatsApp About status text (works even unsaved) |
 | `.download [url]` | Download video (YT/TikTok/IG) |
@@ -127,6 +149,25 @@
 | `.dl [url] (audio)` | 🌐 Universal downloader — YouTube, TikTok, Instagram, Facebook, Twitter/X, SoundCloud & most yt-dlp-supported sites. Add `audio` to grab MP3 instead of video |
 | `.convertmedia [format]` | 🔄 Universal media converter — reply to an image/video/audio file to convert it (mp3, mp4, wav, ogg, opus, m4a, png, jpg, webp, gif, webm) |
 | `.convert [amt] [from] [to]` | Currency converter e.g `.convert 100 USD KES` |
+
+### 🎮 Games (everyone)
+| Command | Description |
+|---|---|
+| `.hangman` | Start a hangman game — reply with single letters to guess. `.hangman stop` ends it |
+| `.trivia` | Random trivia question — reply with your answer |
+| `.guess [max]` | Number guessing game, default range 1–100 — reply with a number |
+| `.truth` | Truth or Dare: get a Truth prompt |
+| `.dare` | Truth or Dare: get a Dare prompt |
+| `.wyr` | Would You Rather — random prompt |
+
+### 🔎 Lookup Tools (everyone)
+| Command | Description |
+|---|---|
+| `.validate [number]` | Check a phone number's format/region — parsing only, no lookup of any account |
+| `.ipinfo [ip]` | Public geo/ASN info for an IP address (ip-api.com) |
+| `.whois [domain]` | Public WHOIS/RDAP registration data for a domain (rdap.org) |
+
+> Deliberately scoped to public infrastructure data. No username/person reverse-lookup, no WhatsApp-registration checking on arbitrary numbers, no profile data pulled without the target's consent.
 
 ### 🛡️ Group Admin (bot admin / sub-admin)
 | Command | Description |
@@ -287,6 +328,8 @@ A self-serve page at **`/register`** lets anyone register their WhatsApp number 
 3. User enters the OTP on the same page to verify.
 4. On success, the number is awarded a **🛡️ Trusted badge** and **80 kesh free credit** automatically.
 
+**Forgot your panel password?** On the `/panel` login screen, tap **"Forgot password?"**, enter your registered WhatsApp number, and a 6-digit reset code is sent to that same number. Enter it with a new password (6+ characters) to regain access — no admin involvement needed. The reset code expires after 10 minutes and allows 5 wrong guesses before you have to request a new one.
+
 **Setup:** the WhatsApp delivery option needs nothing extra — it reuses your already-paired WhatsApp session. Adjust the starter credit with `REG_STARTER_CREDITS`. The **email delivery option requires `SMTP_EMAIL`/`SMTP_PASSWORD`** to be set (see `.env.example`) — without them, picking "Email" on the register page returns a clear "email service not configured" error instead of failing silently. **Using Gmail:** `SMTP_PASSWORD` must be a 16-character **App Password** (Google Account → Security → 2-Step Verification → App passwords) — Gmail rejects your normal account password for SMTP logins.
 
 **Optional — a separate number just for OTPs:** by default OTP WhatsApp messages are sent from the same number the main bot runs on. If you'd rather they came from a dedicated number (so OTPs don't sit in your main bot's chat history), pair a second WhatsApp number at `/pair` and set its session name as `OTP_SENDER_SESSION_ID`. Note there's no free/anonymous "push notification" channel like Instagram's own verified sender numbers — WhatsApp only delivers from a real, paired account, so this still needs an actual second SIM/eSIM behind it.
@@ -375,6 +418,12 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 
 ## 🔒 Security Notes
 
+- `/admin` password can be reset via "Forgot password?" — sends a WhatsApp OTP to `OWNER_NUMBER` only. Requires `OWNER_NUMBER` to be set; if it isn't, the reset button tells you so instead of silently failing.
+- `/panel` password can be reset via "Forgot password?" — sends a WhatsApp OTP to the account's own registered number. No admin involvement needed.
+- Both logins (`/admin`, `/panel`) lock out for 5 minutes after 5 wrong password attempts, tracked server-side (per client IP for `/admin`, per account for `/panel`) — the error message doesn't distinguish "wrong password" from "locked out," so an attacker can't detect when they've been rate-limited.
+- Both reset-code entry steps allow at most 5 wrong-code guesses before the code is invalidated and a new one must be requested — a 6-digit code otherwise has only 1,000,000 possibilities, so an attempt limit is essential.
+- Admin password comparisons use `secrets.compare_digest` (constant-time), not `==`, to avoid timing side-channels.
+- Every response includes `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security`, and `Referrer-Policy: no-referrer` — the last one specifically protects the `?pass=` query-string token used by `/admin` from leaking via the `Referer` header on outbound links.
 - `/recover` and `/viewonce` are **owner-only**, and now always reply to the **bot's own number** instead of the chat the command was typed in — keeps deleted messages/view-once media from leaking into groups
 - 🌝 reaction recovery is **bot-admin only** (owner/co-owner/sub-admin) — reactions from anyone else are silently ignored, and results always go to the bot's own number
 - `.tagall` requires bot admin (owner or sub-admin)
@@ -390,6 +439,8 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 - `.getpp` and `.about` work even for numbers not saved in contacts (verified via WhatsApp lookup where possible). `.getpp` no longer hard-rejects numbers WhatsApp's lookup can't confirm (privacy settings can cause false negatives) — it always attempts the fetch, and folds in the same heuristic as `.checkblocked` into the error message if it fails, so you immediately see whether it looks like a block vs. just no photo/private settings
 - `/admin → View-Once` and its underlying file endpoint (`/admin/viewonce/file/<name>`) require `ADMIN_PASSWORD` just like every other `/admin/*` data route — this serves private media intercepted from other people's chats, not public assets. The filename is sanitized to its basename server-side so it can't be used for path traversal.
 - `.share` only forwards content the requester can already see (something in a chat the bot is in) — it doesn't grant access to anything the requester couldn't otherwise reach
+- `session-detail`, `register-session`, `update-session`, `check-terminate`, and `broadcast/pending` now all require `ADMIN_PASSWORD` too — these were previously missing it while every other `/admin/*` route had it. `session-detail` also had its message content HTML-escaped to close a stored-XSS hole. The bridge sends the password itself now, so this doesn't affect your own bot's session tracking or broadcasts.
+- `.getpp` on an arbitrary typed-in number (not a reply/@mention/self-lookup) now requires owner/co-owner/sub-admin — arbitrary phone-number-to-photo lookups by any random user were previously wide open.
 
 ---
 

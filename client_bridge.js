@@ -44,14 +44,32 @@ global.subAdmins = global.subAdmins || new Set(
 
 // ── Plugin Loader ────────────────────────────────────────────────────────────
 // Loads all command handlers from /plugins/*.js
+// ✅ FIX: 'games' and 'osint' plugin files existed on disk but were never
+// in this list, so .hangman/.trivia/.guess/.truth/.dare/.wyr/.validate/
+// .ipinfo/.whois all resolved to "Unknown command" even though fully coded.
+const PLUGIN_NAMES = ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet', 'games', 'osint'];
 const allCommands = {};
-['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet'].forEach(name => {
+PLUGIN_NAMES.forEach(name => {
   try {
     Object.assign(allCommands, require(`./plugins/${name}`));
   } catch (e) {
     console.warn(`⚠️  Plugin "${name}" failed to load: ${e.message}`);
   }
 });
+// ✅ FIX: some plugin files export internal helpers alongside real commands
+// (games.js#_handleGameReply, group.js#canUseCommand) via the same
+// module.exports object. Left in, a user could type ".canUseCommand" or
+// "._handleGameReply" and the dispatcher would blindly call it with the
+// wrong argument shape. These are consumed directly by name elsewhere in
+// this file, not through the .command dispatcher, so strip them here.
+const NON_COMMAND_KEYS = ['_handleGameReply', 'canUseCommand', 'startSchedulerLoop'];
+NON_COMMAND_KEYS.forEach(k => delete allCommands[k]);
+
+// ✅ FIX: .reload (plugins/general.js) mutated global.allCommandsRef, but
+// nothing ever pointed that at the real dispatch table below — so .reload
+// silently did nothing to the commands actually being used. Now it does.
+global.allCommandsRef = allCommands;
+
 const loadedCmds = Object.keys(allCommands);
 console.log(`✅ Plugins loaded — ${loadedCmds.length} commands: ${loadedCmds.join(', ')}`);
 
@@ -1008,7 +1026,7 @@ async function startSession(sessionId, opts = {}) {
         try { await socket.sendPresenceUpdate(presenceType, sender); } catch (e) {}
 
         try {
-          const response = await apiClient.post("/webhook", { body, sender });
+          const response = await apiClient.post("/webhook", { body, sender, model: global.chatModel?.get(sender) });
           const data = response.data;
 
           try { await socket.sendPresenceUpdate("paused", sender); } catch (e) {}
@@ -1061,10 +1079,26 @@ async function startSession(sessionId, opts = {}) {
         }
       }
 
+      // ── Active game reply (hangman letter, trivia answer, number guess) ───
+      // ✅ FIX: games.js exported _handleGameReply specifically so plain-text
+      // replies during an active .hangman/.trivia/.guess game would resolve
+      // the game instead of falling through to AI chat — but nothing ever
+      // called it, so starting a game worked but replying to it just
+      // triggered a normal AI reply instead. Checked before AI chat for
+      // both DMs and groups.
+      if (body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/')) {
+        try {
+          const { _handleGameReply } = require('./plugins/games');
+          if (_handleGameReply && await _handleGameReply({ sock: socket, from: sender, msg, text: body })) {
+            return;
+          }
+        } catch (e) {}
+      }
+
       // ── Natural AI Chat (DM only, non-command messages) ───────────────────
       if (!isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/')) {
         try {
-          const aiReply = await apiClient.post('/natural-chat', { body, name });
+          const aiReply = await apiClient.post('/natural-chat', { body, name, model: global.chatModel?.get(sender) });
           if (aiReply?.data?.reply) {
             // ✅ FIX: was two stacked delays (0.8-2.3s + 0.6-1.8s = up to 4s)
             // on top of the AI call itself. One short delay is enough.
@@ -1108,7 +1142,8 @@ async function startSession(sessionId, opts = {}) {
             const aiReply = await apiClient.post('/natural-chat', {
               body,
               name,
-              context: 'group'
+              context: 'group',
+              model: global.chatModel?.get(sender)
             });
             if (aiReply?.data?.reply) {
               // ✅ FIX: same double-delay issue as the DM path above.
