@@ -45,6 +45,7 @@ global.subAdmins = global.subAdmins || new Set(
 // ── Plugin Loader ────────────────────────────────────────────────────────────
 // Loads all command handlers from /plugins/*.js
 const allCommands = {};
+global.allCommandsRef = allCommands; // exposed so plugins/general.js .reload can hot-swap commands in place
 ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet'].forEach(name => {
   try {
     Object.assign(allCommands, require(`./plugins/${name}`));
@@ -443,8 +444,18 @@ function isFeatureOn(name) {
   return featureCache[name] !== false; // unknown/missing = treated as on
 }
 
+// ── Persistent data directory ───────────────────────────────────────────────
+// ✅ FIX: everything that needs to survive a restart/redeploy (WhatsApp auth
+// sessions, saved view-once media) now lives under one DATA_DIR root instead
+// of scattered relative paths. On Render/Railway, mount a persistent disk at
+// this path (see render.yaml) or it'll still be wiped on redeploy — but at
+// least a plain process restart / crash / sleep-wake no longer loses data,
+// and app.py's DB now lives in the same place for the same reason.
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
 // Sessions directory
-const SESSIONS_DIR = "./sessions";
+const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
 if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
 
 function prompt(question) {
@@ -582,6 +593,69 @@ async function startSession(sessionId, opts = {}) {
   }
 
   socket.ev.on("creds.update", saveCreds);
+
+  // ── NEW: Group participant events — welcome / goodbye / promotion notify ──
+  socket.ev.on("group-participants.update", async (update) => {
+    try {
+      const { id: groupId, participants, action } = update;
+      const settings = global.groupSettings?.[groupId] || {};
+
+      if (action === "add" && settings.welcome !== false) {
+        for (const jid of participants) {
+          const num = jid.split('@')[0];
+          const template = settings.welcomeMsg || `👋 Welcome @user to the group!`;
+          const text = template.replace(/@user/gi, `@${num}`);
+          try { await socket.sendMessage(groupId, { text, mentions: [jid] }); } catch (_) {}
+        }
+      }
+
+      if (action === "remove" && settings.goodbye !== false) {
+        for (const jid of participants) {
+          const num = jid.split('@')[0];
+          const template = settings.goodbyeMsg || `👋 @user has left the group. Goodbye!`;
+          const text = template.replace(/@user/gi, `@${num}`);
+          try { await socket.sendMessage(groupId, { text, mentions: [jid] }); } catch (_) {}
+        }
+      }
+
+      // ── Admin promotion notification (Henry's requested feature) ─────────
+      // When someone is promoted to admin (by the owner or anyone), DM them
+      // privately with what they can now do + a heads-up they'll get pinged
+      // for future bot upgrades relevant to their new admin role.
+      if (action === "promote") {
+        let groupMeta = null;
+        try { groupMeta = await socket.groupMetadata(groupId); } catch (_) {}
+        const groupName = groupMeta?.subject || "the group";
+        for (const jid of participants) {
+          global.groupAdmins = global.groupAdmins || {};
+          global.groupAdmins[groupId] = global.groupAdmins[groupId] || new Set();
+          global.groupAdmins[groupId].add(jid);
+
+          const text = `👑 *You've been promoted to admin!*\n\n` +
+            `You're now an admin in *${groupName}*.\n\n` +
+            `⚡ *Admin commands you can use:*\n` +
+            `${CMD_PREFIX}kick @user — remove a member\n` +
+            `${CMD_PREFIX}add [number] — add a member\n` +
+            `${CMD_PREFIX}promote / ${CMD_PREFIX}demote @user\n` +
+            `${CMD_PREFIX}mute / ${CMD_PREFIX}unmute — lock/unlock chat\n` +
+            `${CMD_PREFIX}warn / ${CMD_PREFIX}unwarn @user\n` +
+            `${CMD_PREFIX}antilink, ${CMD_PREFIX}antibadword — toggle filters\n` +
+            `${CMD_PREFIX}hidetag / ${CMD_PREFIX}tagall — mention everyone\n` +
+            `${CMD_PREFIX}setwelcome / ${CMD_PREFIX}setgoodbye — custom join/leave messages\n\n` +
+            `📣 You'll get a DM here whenever the bot ships an update or new feature that affects admin tools in your group, so you're always in the loop.`;
+          try { await socket.sendMessage(jid, { text }); } catch (_) {}
+        }
+      }
+
+      if (action === "demote") {
+        for (const jid of participants) {
+          global.groupAdmins?.[groupId]?.delete(jid);
+        }
+      }
+    } catch (e) {
+      console.error(`❌ [${sessionId}] group-participants.update handler failed:`, e.message);
+    }
+  });
 
   // Feature: Anti-Call
   socket.ev.on("call", async (inboundCall) => {
@@ -792,6 +866,32 @@ async function startSession(sessionId, opts = {}) {
         }
       }
 
+      // ── NEW: Antibadword — delete + warn on custom per-group word list ────
+      if (isGroup && !isBotAdmin && body && global.groupSettings?.[sender]?.antibadword) {
+        const badWords = global.groupSettings[sender].badWords || [];
+        const lowerBody = body.toLowerCase();
+        const hit = badWords.find(w => lowerBody.includes(w));
+        if (hit) {
+          try { await socket.sendMessage(sender, { delete: msg.key }); } catch (_) {}
+          global.warnings = global.warnings || {};
+          global.warnings[sender] = global.warnings[sender] || {};
+          global.warnings[sender][senderJid] = (global.warnings[sender][senderJid] || 0) + 1;
+          const count = global.warnings[sender][senderJid];
+          if (count >= 3) {
+            try {
+              await socket.groupParticipantsUpdate(sender, [senderJid], "remove");
+              await socket.sendMessage(sender, { text: `🚫 @${senderNumber} removed — 3 bad-word warnings reached.`, mentions: [senderJid] });
+            } catch (_) {
+              await socket.sendMessage(sender, { text: `⚠️ @${senderNumber} hit 3 bad-word warnings but I couldn't remove them (need admin rights).`, mentions: [senderJid] });
+            }
+            delete global.warnings[sender][senderJid];
+          } else {
+            await socket.sendMessage(sender, { text: `⚠️ @${senderNumber} watch your language. Warning ${count}/3.`, mentions: [senderJid] });
+          }
+          return;
+        }
+      }
+
       // ── fromMe guard — allow owner commands even from the bot number ──────
       if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) return;
 
@@ -847,7 +947,7 @@ async function startSession(sessionId, opts = {}) {
           );
 
           // Save to disk
-          const mediaDir = path.join(__dirname, "viewonce_media");
+          const mediaDir = path.join(DATA_DIR, "viewonce_media");
           if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir, { recursive: true });
           const ext = mediaType === "imageMessage" ? "jpg" : mediaType === "videoMessage" ? "mp4" : "ogg";
           const filename = `${sender.split("@")[0]}_${timestamp}.${ext}`;
@@ -941,6 +1041,12 @@ async function startSession(sessionId, opts = {}) {
         };
 
         if (allCommands[cmd]) {
+          // ── Maintenance mode gate — owner/co-owner exempt ─────────────────
+          if (global.botMaintenance && !isOwner) {
+            await socket.sendMessage(sender, { text: '🛠️ Bot is currently under maintenance. Please try again shortly!' }, { quoted: msg });
+            return;
+          }
+
           // ── Permission check (skip for owner/admins) ──────────────────────
           if (!isOwner && !isSubAdmin && isGroup) {
             const { canUseCommand } = require('./plugins/group');
@@ -964,6 +1070,7 @@ async function startSession(sessionId, opts = {}) {
               senderJid,
               args,
               config,
+              apiClient, // used by plugins/scheduler.js to persist across restarts
             });
           } catch (e) {
             console.error(`❌ [${sessionId}] .${cmd} error:`, e.message);
@@ -1079,15 +1186,21 @@ async function startSession(sessionId, opts = {}) {
             return;
           }
 
-          // ✅ NEW: Reply in group if bot is mentioned or name called
+          // ✅ FIX: Reply in group only on @mention or a direct reply to one of
+          // the bot's own messages — NOT on loose keyword matching. The old
+          // "bot"/"henry"/"ochibots" substring check fired on completely
+          // unrelated messages ("I saw a robot", "chatbot", anyone named
+          // Henry in the group, etc.), spamming AI replies into groups.
           const botNumber = socket.user?.id?.split(':')[0]?.split('@')[0] || '';
           const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
           const botMentioned = mentions.some(j => j.includes(botNumber));
-          const nameCalledInGroup = body.toLowerCase().includes('henry') ||
-            body.toLowerCase().includes('ochibots') ||
-            body.toLowerCase().includes('bot');
 
-          if (botMentioned || nameCalledInGroup) {
+          const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+          const isReplyToBot = Boolean(
+            quotedParticipant && botNumber && quotedParticipant.includes(botNumber)
+          );
+
+          if (botMentioned || isReplyToBot) {
             const aiReply = await apiClient.post('/natural-chat', {
               body,
               name,
@@ -1209,7 +1322,7 @@ async function startSession(sessionId, opts = {}) {
       // Start message scheduler loop (runs once globally)
       try {
         const { startSchedulerLoop } = require('./plugins/scheduler');
-        startSchedulerLoop(socket);
+        startSchedulerLoop(socket, apiClient);
         console.log('⏰ Message scheduler started');
       } catch(e) { console.warn('⚠️ Scheduler not loaded:', e.message); }
       // Register session with admin panel

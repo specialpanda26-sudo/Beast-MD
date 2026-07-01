@@ -7,6 +7,14 @@
 
 ## 🩹 Recent fixes
 
+- **🖼️ Personal photo removed from `.menu` and the landing page** — `assets/menu-bg.jpg` used to be a personal photo; it's now a generated neon/cyberpunk banner instead, so nothing personal ships in the public repo image.
+- **🆕 `.share <number>` added** — reply to any message (text or media) with `.share <number>` to forward it to that number, without re-typing or re-uploading anything.
+- **🐛 Group AI trigger tightened** — it used to fire on any message containing the plain word "bot" anywhere ("I saw a robot," "chatbot," anyone named Henry in the group, etc.), spamming AI replies into groups. Now it only replies on an `@mention` or a direct reply to one of the bot's own messages.
+- **💾 Scheduler now survives restarts** — `.schedule` used to store everything in memory only, so a redeploy silently dropped every pending scheduled message. It's now backed by the SQLite DB and reloaded automatically on boot.
+- **💾 Persistent data directory (`DATA_DIR`)** — the SQLite DB, WhatsApp auth sessions, saved view-once media, and payment proof screenshots now all live under one shared, configurable `DATA_DIR` instead of scattered relative paths. `render.yaml` mounts a 1GB persistent disk at `/app/data` so this actually survives redeploys, not just process restarts — see `.env.example` for the Railway equivalent (add a Volume in the dashboard).
+- **🗑️ Removed the dead `henry19v/` folder** — a full second, unused bot codebase (its own `index.js`, `lib/`, `plugins/`) that nothing in `Dockerfile`/`render.yaml`/`railway.json` ever referenced. Pure leftover from an earlier merge — deleted to avoid confusion about which copy is live.
+- **⏰ New admin panel tab: Scheduler** — view every pending `.schedule`d message and cancel one directly from `/admin`, no WhatsApp access needed.
+- **👁️ New admin panel tab: View-Once Media** — browse recently intercepted view-once photos/videos/audio from `/admin` instead of digging through the bot's own WhatsApp DMs. Gated behind the same `ADMIN_PASSWORD` auth as everything else, since this is private content from other people's chats.
 - **🏷️ Brand name unified to "Henry Ochibots v19™" everywhere** — leftover text from earlier dev iterations ("Shark Bot," "Beast Bot," "Henry Tech V5.0," "Henry Bots©") was still showing up in the bot's rotating WhatsApp bio, startup console banners/logs, and a few command replies (`.addadmin`, `.listadmins`, `.runtime`). All scrubbed to one consistent name. Also removed a dead, never-called old-branded welcome template that was sitting unused in the backend.
 - **🐛 `.menu` was silently rendering dead duplicate text** — the menu builder had `publicSection` and `subAdminSection` variables that were fully written out (including `.checklink` and the `/recover`/`/viewonce` privacy notes) but never actually inserted into the message that gets sent — the live menu had its own separate, never-updated copy instead. Fixed by editing the actual live menu text directly and deleting the dead variables so this can't silently regress again.
 - **📸 `.getpp` now works for any number, no exceptions** — it used to hard-reject a number if WhatsApp's `onWhatsApp()` lookup couldn't confirm it (which can false-negative on numbers with tighter privacy settings). Now it always attempts the profile picture fetch regardless of what the lookup says, and if it fails, the error message folds in the same blocked-vs-private heuristic as `.checkblocked` so you know right away whether it looks like a block or just no photo set.
@@ -70,6 +78,10 @@
 | 🚫 Anti-Link | Deletes links posted by non-admins in groups, warns, kicks after 3 strikes |
 | 🔘 Tappable Menu | `.menu` includes quick-reply buttons (Ping/Runtime/My Perms) alongside the full text menu — buttons fall back silently if WhatsApp doesn't render them for that client |
 | 🌟 Web Panel Registration | Self-serve `/register` page — WhatsApp OTP verification unlocks starter credits + a trust badge, manageable from the admin panel |
+| 📤 Share/Forward | `.share <number>` — reply to any message to forward it (text or media) to another number |
+| ⏰ Scheduler Admin View | `/admin → Scheduler` — view & cancel any pending `.schedule`d message without WhatsApp access |
+| 👁️ View-Once Admin Browser | `/admin → View-Once` — browse recently intercepted view-once media from the panel |
+| 💾 Persistent Storage | DB, WhatsApp sessions, and saved media all live under a configurable `DATA_DIR`, survivable across redeploys with a mounted disk |
 
 ---
 
@@ -108,6 +120,7 @@
 | `.vv` | Reply to voice note to re-send as audio |
 | `.save` | Reply to video/image to save it |
 | `.getpp [@user]` | Get someone's profile picture — works for any number, even unsaved/private ones, and tells you if it looks blocked |
+| `.share <number>` | Reply to any message (text or media) to forward it to that number |
 | `.about [@user]` | Get someone's WhatsApp About status text (works even unsaved) |
 | `.download [url]` | Download video (YT/TikTok/IG) |
 | `.song [url]` | Extract MP3 audio from video URL |
@@ -179,7 +192,9 @@ Replies to every plain message in DMs — detects language automatically and res
 ### Group Replies
 Replies in groups when someone:
 - **Mentions** the bot (`@bot`)
-- **Calls its name** — says "henry", "ochibots", or "bot" in the message
+- **Replies directly** to one of the bot's own messages
+
+(No longer triggers on the word "bot"/"henry" appearing anywhere in a message — that used to cause false triggers on unrelated chat.)
 
 Replies are short and casual, like a real group member.
 
@@ -350,8 +365,11 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 | `OWNER_RECOVERY_SECRET` | Your secret recovery passphrase |
 | `CO_OWNERS` | Comma-separated numbers for co-owners (optional) |
 | `SUB_ADMINS` | Comma-separated numbers for sub-admins (optional) |
+| `DATA_DIR` | Where the DB, sessions & media live — `render.yaml` already sets this to `/app/data` and mounts a persistent disk there for you |
 
 4. Visit `your-app.onrender.com/pair` to link your WhatsApp number
+
+> ⚠️ **Railway users:** `railway.json` doesn't declare a disk the way `render.yaml` does. Add a **Volume** in your Railway service settings, mount it at e.g. `/app/data`, and set `DATA_DIR` to that same path — otherwise every redeploy wipes your WhatsApp session, DB, and scheduled messages, and you'll have to re-pair from scratch.
 
 ---
 
@@ -370,6 +388,8 @@ Expiry status (active/expired countdown) is checked automatically every 30 secon
 - `.login` is rate-limited to 3 failed attempts per number per 10 minutes
 - `.login` usage hint never reveals the real username/password — change credentials via `BOT_LOGIN_USER` / `BOT_LOGIN_PASS` env vars
 - `.getpp` and `.about` work even for numbers not saved in contacts (verified via WhatsApp lookup where possible). `.getpp` no longer hard-rejects numbers WhatsApp's lookup can't confirm (privacy settings can cause false negatives) — it always attempts the fetch, and folds in the same heuristic as `.checkblocked` into the error message if it fails, so you immediately see whether it looks like a block vs. just no photo/private settings
+- `/admin → View-Once` and its underlying file endpoint (`/admin/viewonce/file/<name>`) require `ADMIN_PASSWORD` just like every other `/admin/*` data route — this serves private media intercepted from other people's chats, not public assets. The filename is sanitized to its basename server-side so it can't be used for path traversal.
+- `.share` only forwards content the requester can already see (something in a chat the bot is in) — it doesn't grant access to anything the requester couldn't otherwise reach
 
 ---
 

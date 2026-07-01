@@ -130,6 +130,185 @@ module.exports = {
     global.antispam[from] = toggle === 'on';
     await sock.sendMessage(from, { text: `🛡️ Antispam ${toggle === 'on' ? '*enabled*' : '*disabled*'} for this group.` }, { quoted: msg });
   },
+
+  // ── .antibadword ───────────────────────────────────────────────────────────
+  // Toggle per-group bad-word filter. Uses global.badWordList (default set,
+  // extendable via .addbadword) and warns/kicks the same way antilink does.
+  antibadword: async ({ sock, from, msg, isGroup, sender }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    global.groupSettings = global.groupSettings || {};
+    global.groupSettings[from] = global.groupSettings[from] || {};
+    const current = global.groupSettings[from].antibadword || false;
+    global.groupSettings[from].antibadword = !current;
+    await sock.sendMessage(from, { text: `🚫 Antibadword ${!current ? '*enabled*' : '*disabled*'} for this group.` }, { quoted: msg });
+  },
+
+  // ── .addbadword / .delbadword / .badwords ────────────────────────────────
+  addbadword: async ({ sock, from, msg, isGroup, sender, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    const word = args.join(' ').toLowerCase().trim();
+    if (!word) return sock.sendMessage(from, { text: '❌ Usage: .addbadword [word]' });
+    global.groupSettings = global.groupSettings || {};
+    global.groupSettings[from] = global.groupSettings[from] || {};
+    global.groupSettings[from].badWords = global.groupSettings[from].badWords || [];
+    if (!global.groupSettings[from].badWords.includes(word)) global.groupSettings[from].badWords.push(word);
+    await sock.sendMessage(from, { text: `✅ Added "${word}" to this group's bad-word list.` }, { quoted: msg });
+  },
+
+  delbadword: async ({ sock, from, msg, isGroup, sender, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    const word = args.join(' ').toLowerCase().trim();
+    if (global.groupSettings?.[from]?.badWords) {
+      global.groupSettings[from].badWords = global.groupSettings[from].badWords.filter(w => w !== word);
+    }
+    await sock.sendMessage(from, { text: `✅ Removed "${word}" from this group's bad-word list.` }, { quoted: msg });
+  },
+
+  badwords: async ({ sock, from, msg, isGroup }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const words = global.groupSettings?.[from]?.badWords || [];
+    await sock.sendMessage(from, { text: words.length ? `🚫 *Bad words list:*\n${words.join(', ')}` : 'ℹ️ No custom bad words set. Add one with .addbadword [word]' }, { quoted: msg });
+  },
+
+  // ── .warn / .unwarn / .warnings ───────────────────────────────────────────
+  // Generic warning system (separate from the antilink 3-strike counter).
+  // At 3 warnings the member is auto-kicked if the bot has admin rights.
+  warn: async ({ sock, from, msg, isGroup, sender, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+      || (args[0] ? args[0].replace('@', '') + '@s.whatsapp.net' : null);
+    if (!target) return sock.sendMessage(from, { text: '❌ Tag someone to warn! Usage: .warn @user [reason]' });
+    const reason = args.slice(1).join(' ') || 'No reason given';
+
+    global.warnings = global.warnings || {};
+    global.warnings[from] = global.warnings[from] || {};
+    global.warnings[from][target] = (global.warnings[from][target] || 0) + 1;
+    const count = global.warnings[from][target];
+    const tag = target.split('@')[0];
+
+    if (count >= 3) {
+      try {
+        await sock.groupParticipantsUpdate(from, [target], 'remove');
+        await sock.sendMessage(from, { text: `🚫 @${tag} removed — reached 3 warnings.\nLast reason: ${reason}`, mentions: [target] }, { quoted: msg });
+      } catch (e) {
+        await sock.sendMessage(from, { text: `⚠️ @${tag} hit 3 warnings but I couldn't remove them (need admin rights).`, mentions: [target] }, { quoted: msg });
+      }
+      delete global.warnings[from][target];
+    } else {
+      await sock.sendMessage(from, { text: `⚠️ @${tag} warned (${count}/3)\nReason: ${reason}`, mentions: [target] }, { quoted: msg });
+    }
+  },
+
+  unwarn: async ({ sock, from, msg, isGroup, sender, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+      || (args[0] ? args[0].replace('@', '') + '@s.whatsapp.net' : null);
+    if (!target) return sock.sendMessage(from, { text: '❌ Tag someone to unwarn!' });
+    const tag = target.split('@')[0];
+    if (global.warnings?.[from]?.[target]) {
+      global.warnings[from][target] = Math.max(0, global.warnings[from][target] - 1);
+      await sock.sendMessage(from, { text: `✅ @${tag} warning removed (${global.warnings[from][target]}/3)`, mentions: [target] }, { quoted: msg });
+    } else {
+      await sock.sendMessage(from, { text: `ℹ️ @${tag} has no warnings.`, mentions: [target] }, { quoted: msg });
+    }
+  },
+
+  warnings: async ({ sock, from, msg, isGroup }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupWarns = global.warnings?.[from] || {};
+    const entries = Object.entries(groupWarns).filter(([, c]) => c > 0);
+    if (entries.length === 0) return sock.sendMessage(from, { text: 'ℹ️ No warnings in this group.' }, { quoted: msg });
+    let text = '⚠️ *Group Warnings*\n\n';
+    const mentions = [];
+    for (const [jid, count] of entries) {
+      text += `@${jid.split('@')[0]} — ${count}/3\n`;
+      mentions.push(jid);
+    }
+    await sock.sendMessage(from, { text: text.trim(), mentions }, { quoted: msg });
+  },
+
+  // ── .hidetag ───────────────────────────────────────────────────────────────
+  // Like tagall, but the mentions are invisible (no @numbers printed in the text)
+  hidetag: async ({ sock, from, msg, isGroup, isBotAdmin, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only command!' });
+    if (!isBotAdmin) return sock.sendMessage(from, { text: '❌ Bot admin only!' }, { quoted: msg });
+    const groupMeta = await sock.groupMetadata(from);
+    const members = groupMeta.participants;
+    const text = args.join(' ') || '📢 Attention everyone';
+    const mentions = members.map(m => m.id);
+    await sock.sendMessage(from, { text, mentions }, { quoted: msg });
+  },
+
+  // ── .welcome (toggle) / .goodbye (toggle) / .setwelcome / .setgoodbye ─────
+  // NOTE: this is different from the existing .welcome DM-card command in
+  // general.js — these toggle the AUTO group-join/leave message, handled by
+  // the group-participants.update listener in client_bridge.js.
+  welcometoggle: async ({ sock, from, msg, isGroup, sender, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    const toggle = args[0]?.toLowerCase();
+    if (!['on', 'off'].includes(toggle)) return sock.sendMessage(from, { text: '📋 Usage: .welcometoggle on/off' });
+    global.groupSettings = global.groupSettings || {};
+    global.groupSettings[from] = global.groupSettings[from] || {};
+    global.groupSettings[from].welcome = toggle === 'on';
+    await sock.sendMessage(from, { text: `👋 Welcome messages ${toggle === 'on' ? '*enabled*' : '*disabled*'} for this group.` }, { quoted: msg });
+  },
+
+  goodbyetoggle: async ({ sock, from, msg, isGroup, sender, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    const toggle = args[0]?.toLowerCase();
+    if (!['on', 'off'].includes(toggle)) return sock.sendMessage(from, { text: '📋 Usage: .goodbyetoggle on/off' });
+    global.groupSettings = global.groupSettings || {};
+    global.groupSettings[from] = global.groupSettings[from] || {};
+    global.groupSettings[from].goodbye = toggle === 'on';
+    await sock.sendMessage(from, { text: `👋 Goodbye messages ${toggle === 'on' ? '*enabled*' : '*disabled*'} for this group.` }, { quoted: msg });
+  },
+
+  setwelcome: async ({ sock, from, msg, isGroup, sender, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    const text = args.join(' ');
+    if (!text) return sock.sendMessage(from, { text: '📋 Usage: .setwelcome Welcome @user to the group! (use @user as placeholder)' });
+    global.groupSettings = global.groupSettings || {};
+    global.groupSettings[from] = global.groupSettings[from] || {};
+    global.groupSettings[from].welcomeMsg = text;
+    await sock.sendMessage(from, { text: '✅ Custom welcome message set.' }, { quoted: msg });
+  },
+
+  setgoodbye: async ({ sock, from, msg, isGroup, sender, args }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
+    const groupMeta = await sock.groupMetadata(from);
+    const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
+    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    const text = args.join(' ');
+    if (!text) return sock.sendMessage(from, { text: '📋 Usage: .setgoodbye Bye @user, we\'ll miss you! (use @user as placeholder)' });
+    global.groupSettings = global.groupSettings || {};
+    global.groupSettings[from] = global.groupSettings[from] || {};
+    global.groupSettings[from].goodbyeMsg = text;
+    await sock.sendMessage(from, { text: '✅ Custom goodbye message set.' }, { quoted: msg });
+  },
 };
 
 // ── PERMISSIONS SYSTEM ───────────────────────────────────────────────────────

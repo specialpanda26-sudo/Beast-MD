@@ -107,6 +107,7 @@ ${p}sticker        - Image/video → Sticker
 ${p}vv             - View saved view-once media
 ${p}save           - Save view-once as file
 ${p}getpp [@user]  - Get profile picture (any number, even unsaved/private)
+${p}share <number>  - Reply to a message to forward it to that number
 ${p}about [@user]  - Get About status text (works unsaved)
 ${p}download [url] - Download video (YT/TikTok)
 ${p}song [url]     - Extract MP3 audio
@@ -654,5 +655,57 @@ module.exports.announce = async ({ sock, from, msg, isOwner, args }) => {
   } catch (e) {
     const apiErr = e.response?.data?.error || e.message;
     await sock.sendMessage(from, { text: `❌ Couldn't queue the announcement: ${apiErr}` }, { quoted: msg });
+  }
+};
+
+// ── .maintenance ──────────────────────────────────────────────────────────
+// Owner only. Puts the bot in maintenance mode — non-owners get a polite
+// "back soon" reply instead of any command running. Owner/co-owner is always
+// exempt so you can keep testing/fixing while it's on.
+module.exports.maintenance = async ({ sock, from, msg, isOwner, args }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  const toggle = args[0]?.toLowerCase();
+  if (!['on', 'off'].includes(toggle)) {
+    const state = global.botMaintenance ? 'ON' : 'OFF';
+    return sock.sendMessage(from, { text: `🛠️ Maintenance mode is currently *${state}*.\n\nUsage: .maintenance on/off` }, { quoted: msg });
+  }
+  global.botMaintenance = toggle === 'on';
+  await sock.sendMessage(from, {
+    text: global.botMaintenance
+      ? '🛠️ Maintenance mode *enabled*. Only the owner/co-owners can use commands now.'
+      : '✅ Maintenance mode *disabled*. Bot is back to normal for everyone.'
+  }, { quoted: msg });
+};
+
+// ── .reload ───────────────────────────────────────────────────────────────
+// Owner only. Hot-reloads all plugin files from disk without restarting the
+// whole process — handy after editing a plugin.js file directly on the
+// server (e.g. via Termux/SSH) without wanting a full redeploy.
+module.exports.reload = async ({ sock, from, msg, isOwner }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  try {
+    const pluginNames = ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet'];
+    const freshCommands = {};
+    let loadedCount = 0;
+    const failed = [];
+    for (const name of pluginNames) {
+      try {
+        const resolved = require.resolve(`./${name}`);
+        delete require.cache[resolved]; // force Node to re-read the file from disk
+        Object.assign(freshCommands, require(`./${name}`));
+        loadedCount++;
+      } catch (e) {
+        failed.push(`${name} (${e.message})`);
+      }
+    }
+    // Swap in place so the reference client_bridge.js already holds stays valid
+    Object.keys(global.allCommandsRef || {}).forEach(k => delete global.allCommandsRef[k]);
+    Object.assign(global.allCommandsRef || {}, freshCommands);
+
+    let text = `🔄 Reloaded ${loadedCount}/${pluginNames.length} plugins — ${Object.keys(freshCommands).length} commands active.`;
+    if (failed.length) text += `\n⚠️ Failed: ${failed.join(', ')}`;
+    await sock.sendMessage(from, { text }, { quoted: msg });
+  } catch (e) {
+    await sock.sendMessage(from, { text: `❌ Reload failed: ${e.message}` }, { quoted: msg });
   }
 };

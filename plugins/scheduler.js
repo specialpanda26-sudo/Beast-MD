@@ -64,11 +64,42 @@ function resolveJid(to, currentChat) {
   return num + '@s.whatsapp.net';
 }
 
+// ── PERSISTENCE ────────────────────────────────────────────────────────────
+// ✅ FIX: this used to be pure in-memory (global.scheduledMessages), so any
+// restart/redeploy silently dropped every pending scheduled message with no
+// warning to whoever set it. Now backed by app.py's SQLite DB via a simple
+// full-list load-on-boot / save-after-every-mutation sync.
+
+async function persistScheduler(apiClient) {
+  if (!apiClient) return; // no backend reachable — degrade to in-memory only
+  try {
+    await apiClient.post('/scheduler/save', { messages: global.scheduledMessages });
+  } catch (e) {
+    console.error('❌ Scheduler persist failed (will retry on next change):', e.message);
+  }
+}
+
+async function loadScheduler(apiClient) {
+  if (!apiClient) return;
+  try {
+    const res = await apiClient.get('/scheduler/load');
+    const rows = res?.data?.messages || [];
+    if (rows.length) {
+      global.scheduledMessages = rows;
+      console.log(`⏰ Scheduler restored ${rows.length} pending message(s) from disk`);
+    }
+  } catch (e) {
+    console.error('❌ Scheduler load failed — starting empty:', e.message);
+  }
+}
+
 // ── SCHEDULER LOOP (called once from client_bridge.js) ───────────────────────
 
-function startSchedulerLoop(sock) {
+function startSchedulerLoop(sock, apiClient) {
   if (_schedulerStarted) return;
   _schedulerStarted = true;
+
+  loadScheduler(apiClient);
 
   setInterval(async () => {
     const now = Date.now();
@@ -96,6 +127,8 @@ function startSchedulerLoop(sock) {
     global.scheduledMessages = global.scheduledMessages.filter(s =>
       !s.sent || (Date.now() - s.nextRun) < 3_600_000
     );
+
+    if (due.length) await persistScheduler(apiClient); // only write when something changed
   }, 15_000); // check every 15 seconds
 }
 
@@ -103,7 +136,7 @@ module.exports.startSchedulerLoop = startSchedulerLoop;
 
 // ── COMMANDS ─────────────────────────────────────────────────────────────────
 
-module.exports.schedule = async ({ sock, from, msg, isOwner, isSubAdmin, args }) => {
+module.exports.schedule = async ({ sock, from, msg, isOwner, isSubAdmin, args, apiClient }) => {
   if (!isOwner && !isSubAdmin) {
     return sock.sendMessage(from, { text: '❌ Owner/admin only!' });
   }
@@ -134,6 +167,7 @@ module.exports.schedule = async ({ sock, from, msg, isOwner, isSubAdmin, args })
 
     const id = genId();
     global.scheduledMessages.push({ id, to, message, nextRun, repeat: null, sent: false, createdBy: from });
+    await persistScheduler(apiClient);
 
     const toDisplay = toStr.toLowerCase() === 'here' ? 'this chat' : `+${to.split('@')[0]}`;
     await sock.sendMessage(from, {
@@ -166,6 +200,7 @@ module.exports.schedule = async ({ sock, from, msg, isOwner, isSubAdmin, args })
     const idx = global.scheduledMessages.findIndex(s => s.id === id);
     if (idx === -1) return sock.sendMessage(from, { text: `❌ No scheduled message with ID \`${id}\`` });
     global.scheduledMessages.splice(idx, 1);
+    await persistScheduler(apiClient);
     return sock.sendMessage(from, { text: `🗑️ Scheduled message \`${id}\` deleted.` }, { quoted: msg });
   }
 
@@ -173,6 +208,7 @@ module.exports.schedule = async ({ sock, from, msg, isOwner, isSubAdmin, args })
   if (sub === 'clear') {
     const count = global.scheduledMessages.length;
     global.scheduledMessages = [];
+    await persistScheduler(apiClient);
     return sock.sendMessage(from, { text: `🗑️ Cleared all ${count} scheduled messages.` }, { quoted: msg });
   }
 
@@ -189,6 +225,7 @@ module.exports.schedule = async ({ sock, from, msg, isOwner, isSubAdmin, args })
     const s = global.scheduledMessages.find(s => s.id === id);
     if (!s) return sock.sendMessage(from, { text: `❌ No scheduled message with ID \`${id}\`` });
     s.repeat = interval === 'none' ? null : interval;
+    await persistScheduler(apiClient);
     const label = interval === 'none' ? 'removed (sends once)' : `set to *${interval}*`;
     return sock.sendMessage(from, { text: `🔁 Repeat for \`${id}\` ${label}` }, { quoted: msg });
   }

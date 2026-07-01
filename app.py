@@ -50,6 +50,15 @@ def print_banner():
 
 print_banner()
 
+# ── Persistent data directory ───────────────────────────────────────────────
+# ✅ FIX: DB file, view-once media, and payment proofs were all scattered as
+# plain relative/local paths, so a redeploy on Render/Railway silently wiped
+# all of them. They now share one DATA_DIR root with client_bridge.js's
+# sessions folder — set DATA_DIR in your env to a mounted persistent disk
+# path (see render.yaml) to survive redeploys, not just process restarts.
+DATA_DIR = Path(os.environ.get("DATA_DIR", str(Path(__file__).parent / "data")))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 app = Quart(__name__, static_folder="assets", static_url_path="/assets")
 
 # ✅ Force browsers to always fetch the latest HTML instead of using a stale
@@ -93,7 +102,7 @@ import re as _re
 import base64 as _b64
 
 MPESA_CODE_RE = _re.compile(r"^[A-Z0-9]{8,12}$")
-PAYMENT_PROOFS_DIR = Path(__file__).parent / "payment_proofs"
+PAYMENT_PROOFS_DIR = DATA_DIR / "payment_proofs"
 PAYMENT_PROOFS_DIR.mkdir(exist_ok=True)
 ADMIN_PAYTO_NUMBER = os.environ.get("ADMIN_PAYTO_NUMBER", "")  # e.g. 254712345678 — shown to users as where to send M-Pesa funds
 
@@ -210,7 +219,7 @@ async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
         return {"success": False, "error": "Couldn't send the email right now. Please try again or use WhatsApp delivery instead."}
 
 
-DB_FILE = "henry_tech_v5.db"
+DB_FILE = str(DATA_DIR / "henry_tech_v5.db")
 SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
 PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
@@ -330,6 +339,19 @@ async def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sender TEXT, name TEXT, filename TEXT,
                 media_type TEXT, caption TEXT, timestamp REAL
+            )
+        """)
+        # ✅ FIX: .schedule used to live only in client_bridge.js's in-memory
+        # global.scheduledMessages — any restart/redeploy silently dropped
+        # every pending scheduled message with no warning to whoever set it.
+        # Now persisted here so client_bridge.js can reload it on boot.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS scheduled_messages (
+                id TEXT PRIMARY KEY,
+                to_jid TEXT, message TEXT,
+                next_run REAL, repeat TEXT,
+                sent INTEGER DEFAULT 0,
+                created_by TEXT
             )
         """)
         # NEW: keyword auto-reply table - admin-managed trigger/response pairs
@@ -894,6 +916,8 @@ async def admin_stats():
             messages = (await c.fetchone())[0]
         async with db.execute("SELECT COUNT(*) FROM viewonce_media") as c:
             viewonce = (await c.fetchone())[0]
+        async with db.execute("SELECT COUNT(*) FROM scheduled_messages WHERE sent = 0") as c:
+            scheduled_pending = (await c.fetchone())[0]
         async with db.execute(
             "SELECT name, sender, timestamp FROM contacts ORDER BY timestamp DESC LIMIT 20"
         ) as c:
@@ -940,6 +964,7 @@ async def admin_stats():
         "messages": messages,
         "messages_today": messages_today,
         "viewonce": viewonce,
+        "scheduled_pending": scheduled_pending,
         "session_list": session_list,
         "recent_contacts": recent_contacts,
         "server_time": time.strftime("%d %b %Y, %H:%M:%S", time.localtime()),
@@ -1479,6 +1504,122 @@ async def log_viewonce():
         )
         await db.commit()
     return jsonify({"status": "saved"})
+
+
+@app.route("/scheduler/load", methods=["GET"])
+async def scheduler_load():
+    """Internal — client_bridge.js calls this once on boot to rehydrate
+    global.scheduledMessages so a restart/redeploy doesn't drop pending
+    scheduled messages."""
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, to_jid, message, next_run, repeat, sent, created_by FROM scheduled_messages"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "messages": [
+            {
+                "id": r[0], "to": r[1], "message": r[2],
+                "nextRun": r[3], "repeat": r[4],
+                "sent": bool(r[5]), "createdBy": r[6],
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/scheduler/save", methods=["POST"])
+async def scheduler_save():
+    """Internal — client_bridge.js calls this after every add/delete/clear
+    so the schedule survives process restarts. Full-list replace is simplest
+    and safe here since scheduling volume is low (personal/small-business
+    use, not a high-throughput queue)."""
+    data = await request.get_json() or {}
+    messages = data.get("messages", [])
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM scheduled_messages")
+        for m in messages:
+            await db.execute(
+                "INSERT INTO scheduled_messages (id, to_jid, message, next_run, repeat, sent, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (m.get("id"), m.get("to"), m.get("message"), m.get("nextRun"),
+                 m.get("repeat"), int(bool(m.get("sent"))), m.get("createdBy")),
+            )
+        await db.commit()
+    return jsonify({"status": "saved", "count": len(messages)})
+
+
+@app.route("/admin/scheduler", methods=["GET"])
+async def admin_scheduler():
+    """Admin panel view of pending scheduled messages (the .schedule command).
+    Read-only mirror of the scheduled_messages table client_bridge.js persists to."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, to_jid, message, next_run, repeat, sent, created_by FROM scheduled_messages ORDER BY next_run ASC"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "messages": [
+            {
+                "id": r[0], "to": r[1], "message": r[2],
+                "next_run": time.strftime("%d %b %Y, %H:%M", time.localtime(r[3])) if r[3] else None,
+                "repeat": r[4], "sent": bool(r[5]), "created_by": r[6],
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/admin/scheduler/<msg_id>", methods=["DELETE"])
+async def admin_scheduler_delete(msg_id):
+    """Lets the admin cancel a scheduled message from the panel instead of
+    needing WhatsApp access to run .schedule del."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM scheduled_messages WHERE id = ?", (msg_id,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/viewonce", methods=["GET"])
+async def admin_viewonce():
+    """Browse recently intercepted view-once media from the admin panel,
+    instead of digging through the bot's own WhatsApp DMs for it."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, sender, name, filename, media_type, caption, timestamp FROM viewonce_media ORDER BY timestamp DESC LIMIT 50"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "items": [
+            {
+                "id": r[0], "sender": r[1], "name": r[2], "filename": r[3],
+                "media_type": r[4], "caption": r[5],
+                "time": time.strftime("%d %b %Y, %H:%M", time.localtime(r[6])),
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/admin/viewonce/file/<path:filename>", methods=["GET"])
+async def admin_viewonce_file(filename):
+    """Serves the actual saved view-once file. Gated behind admin auth for
+    the same reason payment screenshots are — this is private content
+    intercepted from other people's chats, not public static assets.
+    Path is sanitized to the basename so this can't be used to read
+    arbitrary files elsewhere on disk."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    safe_name = Path(filename).name  # strip any directory traversal attempt
+    file_path = DATA_DIR / "viewonce_media" / safe_name
+    if not file_path.exists():
+        return jsonify({"error": "File not found"}), 404
+    return Response(file_path.read_bytes(), mimetype="application/octet-stream")
 
 
 @app.route("/bot/features", methods=["GET"])
