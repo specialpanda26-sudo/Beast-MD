@@ -1,0 +1,48 @@
+{
+  "name": "Henry Agent19v",
+  "description": "Henry Agent19v™ — Ultimate WhatsApp Bot by Henrydev.ke",
+  "repository": "",
+  "logo": "",
+  "keywords": ["whatsapp", "bot", "henrydev"],
+  "env": {
+    "BOT_NAME": {
+      "description": "Name of the bot",
+      "value": "Henry Agent19v"
+    },
+    "BOT_OWNER_NAME": {
+      "description": "Your name (owner)",
+      "value": "Henrydev.ke"
+    },
+    "OWNER_NUMBER": {
+      "description": "Your WhatsApp number (with country code, no +)",
+      "value": "254775351698"
+    },
+    "PREFIX": {
+      "description": "Command prefix",
+      "value": "!"
+    },
+    "BOT_MODE": {
+      "description": "Bot mode: public / private / groups",
+      "value": "public"
+    },
+    "GROQ_API_KEY": {
+      "description": "Groq AI API key (optional — for AI chat)",
+      "required": false
+    },
+    "TZ": {
+      "description": "Timezone",
+      "value": "Africa/Nairobi"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}
