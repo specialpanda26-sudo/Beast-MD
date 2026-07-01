@@ -6,89 +6,191 @@
 <title>Register — Henry Ochibots v19™</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --bg:#020408;--surface:#080f1a;--border:#112030;--accent:#00e5ff;--accent2:#7c3aed;
-    --green:#00ff88;--text:#e2eaf4;--muted:#4a6070;--card:#060e18;--red:#ff3b5c;
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #020408; --surface: #080f1a; --border: #112030;
+    --accent: #00e5ff; --accent2: #7c3aed; --green: #00ff88;
+    --text: #e2eaf4; --muted: #4a6070; --card: #060e18; --red: #ff3b5c;
   }
-  body{
-    background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh; overflow-x: hidden;
+    display: flex; flex-direction: column;
+  }
+  /* ── BACKGROUND ── */
+  #particles-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
     background-image:
-      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-    background-size:50px 50px;
+      linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+    background-size: 50px 50px;
   }
-  .card{
-    width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);
-    border-radius:18px;padding:34px 28px;box-shadow:0 0 60px rgba(0,229,255,0.08);
-    position:relative;overflow:hidden;
+  .radial-glow {
+    position: fixed; width: 700px; height: 700px; border-radius: 50%;
+    pointer-events: none; z-index: 0; filter: blur(120px); opacity: 0.18;
   }
-  .card::before{
-    content:"";position:absolute;top:-80px;left:50%;transform:translateX(-50%);
-    width:300px;height:300px;background:var(--accent);filter:blur(100px);opacity:0.15;pointer-events:none;
+  .radial-glow.top { background: var(--accent); top: -200px; left: 50%; transform: translateX(-50%); }
+  .radial-glow.bottom { background: var(--accent2); bottom: -200px; right: -100px; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 2.5rem;
+    background: rgba(2,4,8,0.7); backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,229,255,0.08);
   }
-  h1{
-    font-family:'JetBrains Mono',monospace;font-size:1.05rem;color:var(--accent);
-    text-shadow:0 0 18px rgba(0,229,255,0.5);text-align:center;margin-bottom:4px;letter-spacing:0.04em;
+  .nav-logo {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.08em;
+    text-shadow: 0 0 20px rgba(0,229,255,0.5); text-decoration: none;
   }
-  .sub{text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:24px}
-  label{display:block;font-size:0.78rem;color:var(--muted);margin:14px 0 6px;font-family:'JetBrains Mono',monospace}
-  input{
-    width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;
-    padding:12px 14px;color:var(--text);font-size:0.95rem;outline:none;transition:border-color .2s;
+  .nav-logo span { color: var(--text); }
+  .nav-logo .v { color: var(--muted); }
+  .nav-links {
+    display: flex; align-items: center; gap: 1.8rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; letter-spacing: 0.05em;
   }
-  input:focus{border-color:var(--accent)}
-  .btn{
-    width:100%;margin-top:22px;padding:13px;border:none;border-radius:10px;
-    background:linear-gradient(90deg,var(--accent),var(--accent2));color:#000;font-weight:700;
-    font-size:0.95rem;cursor:pointer;transition:opacity .2s;
+  .nav-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links .nav-cta {
+    color: #000; background: var(--green); padding: 0.4rem 0.9rem;
+    border-radius: 6px; font-weight: 700; box-shadow: 0 0 14px rgba(0,255,136,0.25);
   }
-  .btn:hover{opacity:0.88}
-  .btn:disabled{opacity:0.5;cursor:not-allowed}
-  .msg{margin-top:16px;font-size:0.85rem;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
-  .msg.error{background:rgba(255,59,92,0.1);color:var(--red);border:1px solid rgba(255,59,92,0.25);display:block}
-  .msg.success{background:rgba(0,255,136,0.08);color:var(--green);border:1px solid rgba(0,255,136,0.25);display:block}
-  .step{display:none}
-  .step.active{display:block}
-  .badge-result{text-align:center;padding:20px 0}
-  .badge-icon{font-size:48px;margin-bottom:10px}
-  .badge-title{font-family:'JetBrains Mono',monospace;color:var(--green);font-size:1.1rem;font-weight:700;margin-bottom:6px}
-  .credit-line{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:1rem;margin-top:8px}
-  .hint{color:var(--muted);font-size:0.75rem;margin-top:10px;line-height:1.5}
-  .back-link{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:0.8rem;text-decoration:none}
-  .back-link:hover{color:var(--accent)}
-  .method-toggle{display:flex;gap:8px;margin-top:6px}
-  .method-btn{
-    flex:1;padding:10px 8px;border-radius:10px;border:1px solid var(--border);
-    background:var(--surface);color:var(--muted);font-size:0.82rem;font-family:'Space Grotesk',sans-serif;
-    cursor:pointer;text-align:center;transition:all .15s;
+  .nav-links .nav-cta:hover { color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+  .nav-status {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.72rem; color: var(--green);
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
+    text-shadow: 0 0 10px rgba(0,255,136,0.4);
   }
-  .method-btn.active{
-    border-color:var(--accent);color:var(--accent);
-    background:rgba(0,229,255,0.08);box-shadow:0 0 12px rgba(0,229,255,0.15);
+  .pulse {
+    width: 8px; height: 8px; background: var(--green); border-radius: 50%;
+    box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite;
   }
-  .field-hidden{display:none}
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+  @media (max-width: 760px) { .nav-links { display: none; } }
+
+  /* ── MAIN CONTENT ── */
+  .page-body {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    flex: 1; padding: 6rem 1.5rem 3rem;
+  }
+  .card {
+    width: 100%; max-width: 440px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 36px 30px;
+    box-shadow: 0 0 60px rgba(0,229,255,0.08), 0 0 0 1px rgba(0,229,255,0.04);
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+    width: 300px; height: 300px; background: var(--accent);
+    filter: blur(100px); opacity: 0.12; pointer-events: none;
+  }
+  .card-header { text-align: center; margin-bottom: 28px; }
+  .card-icon { font-size: 2.2rem; margin-bottom: 10px; }
+  h1 {
+    font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: var(--accent);
+    text-shadow: 0 0 18px rgba(0,229,255,0.5); letter-spacing: 0.04em; margin-bottom: 6px;
+  }
+  .sub { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+
+  label { display: block; font-size: 0.78rem; color: var(--muted); margin: 16px 0 6px; font-family: 'JetBrains Mono', monospace; }
+  input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 15px; color: var(--text);
+    font-size: 0.95rem; outline: none; transition: border-color .2s, box-shadow .2s;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.1); }
+
+  .btn {
+    width: 100%; margin-top: 22px; padding: 14px;
+    border: none; border-radius: 10px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    color: #000; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: opacity .2s, transform .15s;
+    font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.02em;
+  }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .msg { margin-top: 14px; font-size: 0.84rem; padding: 10px 13px; border-radius: 8px; display: none; line-height: 1.5; }
+  .msg.error { background: rgba(255,59,92,0.1); color: var(--red); border: 1px solid rgba(255,59,92,0.25); display: block; }
+  .msg.success { background: rgba(0,255,136,0.08); color: var(--green); border: 1px solid rgba(0,255,136,0.25); display: block; }
+  .step { display: none; }
+  .step.active { display: block; }
+
+  .method-toggle { display: flex; gap: 8px; margin-top: 6px; }
+  .method-btn {
+    flex: 1; padding: 10px 8px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); font-size: 0.82rem;
+    font-family: 'Space Grotesk', sans-serif; cursor: pointer; text-align: center; transition: all .15s;
+  }
+  .method-btn.active {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(0,229,255,0.08); box-shadow: 0 0 12px rgba(0,229,255,0.15);
+  }
+  .field-hidden { display: none; }
+  .hint { color: var(--muted); font-size: 0.75rem; margin-top: 10px; line-height: 1.5; }
+
+  .badge-result { text-align: center; padding: 16px 0; }
+  .badge-icon { font-size: 52px; margin-bottom: 12px; }
+  .badge-title { font-family: 'JetBrains Mono', monospace; color: var(--green); font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+  .credit-line { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 1rem; margin-top: 8px; }
+  .btn-link { display: block; text-align: center; margin-top: 16px; color: var(--muted); font-size: 0.8rem; text-decoration: none; transition: color .2s; }
+  .btn-link:hover { color: var(--accent); }
 </style>
 </head>
 <body>
+
+<canvas id="particles-canvas"></canvas>
+<div class="grid-bg"></div>
+<div class="radial-glow top"></div>
+<div class="radial-glow bottom"></div>
+
+<nav>
+  <a href="/" class="nav-logo">HENRY <span>OCHIBOTS</span> <span class="v">V19™</span></a>
+  <div class="nav-links">
+    <a href="/#commands">Commands</a>
+    <a href="/panel">Bot Panel</a>
+    <a href="/admin">Admin</a>
+    <a href="/pair" class="nav-cta">📱 Pair Now</a>
+  </div>
+  <div class="nav-status"><div class="pulse"></div> BOT ONLINE</div>
+</nav>
+
+<div class="page-body">
   <div class="card">
-    <h1>🦈 BOT PANEL ACCESS</h1>
-    <p class="sub">Register your WhatsApp number — verify to unlock your Trust Badge</p>
 
     <!-- STEP 1: REGISTER -->
     <div class="step active" id="step-register">
+      <div class="card-header">
+        <div class="card-icon">🛡️</div>
+        <h1>BOT PANEL ACCESS</h1>
+        <p class="sub">Register your WhatsApp number to unlock your Trust Badge &amp; free credits</p>
+      </div>
+
       <label>WhatsApp Number (with country code)</label>
       <input type="text" id="reg-phone" placeholder="254712345678" inputmode="numeric"/>
       <label>Name</label>
       <input type="text" id="reg-name" placeholder="Your name"/>
+      <label>Create a Password (for your bot panel login)</label>
+      <input type="password" id="reg-password" placeholder="At least 6 characters"/>
 
       <label>Get my code via</label>
       <div class="method-toggle">
         <button type="button" class="method-btn active" id="method-whatsapp" onclick="setMethod('whatsapp')">📱 WhatsApp</button>
         <button type="button" class="method-btn" id="method-email" onclick="setMethod('email')">📧 Email</button>
       </div>
-
       <div id="email-field" class="field-hidden">
         <label>Email Address</label>
         <input type="email" id="reg-email" placeholder="you@example.com"/>
@@ -97,11 +199,17 @@
       <button class="btn" id="btn-register" onclick="doRegister()">Send Verification Code →</button>
       <div class="hint" id="method-hint">Your 6-digit code will be sent as a WhatsApp message from the bot.</div>
       <div class="msg" id="register-msg"></div>
+      <a class="btn-link" href="/">← Back to home</a>
     </div>
 
     <!-- STEP 2: VERIFY OTP -->
     <div class="step" id="step-verify">
-      <label id="verify-label">Enter the 6-digit code sent to your WhatsApp</label>
+      <div class="card-header">
+        <div class="card-icon">🔢</div>
+        <h1>VERIFY CODE</h1>
+        <p class="sub" id="verify-label">Enter the 6-digit code sent to your WhatsApp</p>
+      </div>
+      <label>6-Digit Code</label>
       <input type="text" id="otp-input" placeholder="000000" inputmode="numeric" maxlength="6"/>
       <button class="btn" id="btn-verify" onclick="doVerify()">Verify Number →</button>
       <div class="msg" id="verify-msg"></div>
@@ -113,26 +221,51 @@
         <div class="badge-icon">🛡️</div>
         <div class="badge-title">TRUSTED BADGE UNLOCKED</div>
         <div class="credit-line" id="credit-result"></div>
-        <div class="hint" style="margin-top:14px">Your number is now verified on the bot panel. Contact the admin or use the bot directly to start using your credit.</div>
+        <p class="hint" style="margin-top:14px">Your number is now verified on the bot panel.</p>
+        <a class="btn" style="display:block;text-decoration:none;text-align:center;margin-top:22px" href="/panel">🔓 Open Bot Panel →</a>
+        <a class="btn-link" href="/">← Back to home</a>
       </div>
     </div>
 
-    <a class="back-link" href="/">← Back to home</a>
   </div>
+</div>
 
 <script>
+  // ── Particles ──────────────────────────────────────────────────────────────
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+  for (let i = 0; i < 55; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.3, a: Math.random() * 0.5 + 0.1
+    });
+  }
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,229,255,${p.a})`; ctx.fill();
+    });
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ── Register logic ─────────────────────────────────────────────────────────
   let registeredPhone = "";
   let deliveryMethod = "whatsapp";
-  // Referral code passed via ?ref=<referrer phone> — captured once on load
-  // and sent along with /api/register so the backend can credit them.
   const referralCode = new URLSearchParams(window.location.search).get("ref") || "";
 
   function showMsg(id, text, type) {
     const el = document.getElementById(id);
-    el.textContent = text;
-    el.className = "msg " + type;
+    el.textContent = text; el.className = "msg " + type;
   }
-
   function setMethod(method) {
     deliveryMethod = method;
     document.getElementById("method-whatsapp").classList.toggle("active", method === "whatsapp");
@@ -142,53 +275,39 @@
       ? "Your 6-digit code will be sent to your email address."
       : "Your 6-digit code will be sent as a WhatsApp message from the bot.";
   }
-
   async function doRegister() {
     const phone = document.getElementById("reg-phone").value.trim();
     const name = document.getElementById("reg-name").value.trim();
     const email = document.getElementById("reg-email").value.trim();
+    const password = document.getElementById("reg-password").value;
     const btn = document.getElementById("btn-register");
-
-    if (deliveryMethod === "email" && !email) {
-      return showMsg("register-msg", "Enter your email address to receive the code.", "error");
-    }
-
+    if (!name) return showMsg("register-msg", "Enter your name.", "error");
+    if (!password || password.length < 6) return showMsg("register-msg", "Password must be at least 6 characters.", "error");
+    if (deliveryMethod === "email" && !email) return showMsg("register-msg", "Enter your email address to receive the code.", "error");
     btn.disabled = true; btn.textContent = "Sending...";
-
     try {
       const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name, email, method: deliveryMethod, ref: referralCode })
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, name, email, password, method: deliveryMethod, ref: referralCode })
       });
       const data = await res.json();
       if (data.success) {
         registeredPhone = phone.replace(/\s+/g, "").replace("+", "");
         document.getElementById("verify-label").textContent =
-          deliveryMethod === "email"
-            ? "Enter the 6-digit code sent to your email"
-            : "Enter the 6-digit code sent to your WhatsApp";
+          deliveryMethod === "email" ? "Enter the 6-digit code sent to your email" : "Enter the 6-digit code sent to your WhatsApp";
         document.getElementById("step-register").classList.remove("active");
         document.getElementById("step-verify").classList.add("active");
-      } else {
-        showMsg("register-msg", data.error || "Something went wrong.", "error");
-      }
-    } catch (e) {
-      showMsg("register-msg", "Network error. Try again.", "error");
-    } finally {
-      btn.disabled = false; btn.textContent = "Send Verification Code →";
-    }
+      } else { showMsg("register-msg", data.error || "Something went wrong.", "error"); }
+    } catch (e) { showMsg("register-msg", "Network error. Try again.", "error"); }
+    finally { btn.disabled = false; btn.textContent = "Send Verification Code →"; }
   }
-
   async function doVerify() {
     const otp = document.getElementById("otp-input").value.trim();
     const btn = document.getElementById("btn-verify");
     btn.disabled = true; btn.textContent = "Verifying...";
-
     try {
       const res = await fetch("/api/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: registeredPhone, otp })
       });
       const data = await res.json();
@@ -196,14 +315,9 @@
         document.getElementById("step-verify").classList.remove("active");
         document.getElementById("step-success").classList.add("active");
         document.getElementById("credit-result").textContent = `+ ${data.credits} kesh free credit added`;
-      } else {
-        showMsg("verify-msg", data.error || "Incorrect code.", "error");
-      }
-    } catch (e) {
-      showMsg("verify-msg", "Network error. Try again.", "error");
-    } finally {
-      btn.disabled = false; btn.textContent = "Verify Number →";
-    }
+      } else { showMsg("verify-msg", data.error || "Incorrect code.", "error"); }
+    } catch (e) { showMsg("verify-msg", "Network error. Try again.", "error"); }
+    finally { btn.disabled = false; btn.textContent = "Verify Number →"; }
   }
 </script>
 </body>

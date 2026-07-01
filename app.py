@@ -4,6 +4,9 @@ import asyncio
 import logging
 import json
 import random
+import hashlib
+import secrets
+import html
 import httpx
 import aiosqlite
 from urllib.parse import quote_plus
@@ -48,6 +51,15 @@ def print_banner():
 
 print_banner()
 
+# ── Persistent data directory ───────────────────────────────────────────────
+# ✅ FIX: DB file, view-once media, and payment proofs were all scattered as
+# plain relative/local paths, so a redeploy on Render/Railway silently wiped
+# all of them. They now share one DATA_DIR root with client_bridge.js's
+# sessions folder — set DATA_DIR in your env to a mounted persistent disk
+# path (see render.yaml) to survive redeploys, not just process restarts.
+DATA_DIR = Path(os.environ.get("DATA_DIR", str(Path(__file__).parent / "data")))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 app = Quart(__name__, static_folder="assets", static_url_path="/assets")
 
 # ✅ Force browsers to always fetch the latest HTML instead of using a stale
@@ -91,13 +103,31 @@ import re as _re
 import base64 as _b64
 
 MPESA_CODE_RE = _re.compile(r"^[A-Z0-9]{8,12}$")
-PAYMENT_PROOFS_DIR = Path(__file__).parent / "payment_proofs"
+PAYMENT_PROOFS_DIR = DATA_DIR / "payment_proofs"
 PAYMENT_PROOFS_DIR.mkdir(exist_ok=True)
 ADMIN_PAYTO_NUMBER = os.environ.get("ADMIN_PAYTO_NUMBER", "")  # e.g. 254712345678 — shown to users as where to send M-Pesa funds
 
 
 def _generate_otp() -> str:
     return f"{random.randint(0, 999999):06d}"
+
+
+def _hash_password(password: str) -> str:
+    """PBKDF2-HMAC-SHA256 with a random per-user salt. Stored as
+    'salt_hex$hash_hex' — no plaintext or reversible encoding ever touches
+    the database."""
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return f"{salt}${digest.hex()}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        salt, digest_hex = stored.split("$", 1)
+    except (ValueError, AttributeError):
+        return False
+    check = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return secrets.compare_digest(check.hex(), digest_hex)
 
 
 # ✅ NEW: WhatsApp OTP delivery — this IS a WhatsApp bot, so the registering
@@ -190,21 +220,22 @@ async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
         return {"success": False, "error": "Couldn't send the email right now. Please try again or use WhatsApp delivery instead."}
 
 
-DB_FILE = "henry_tech_v5.db"
+DB_FILE = str(DATA_DIR / "henry_tech_v5.db")
 SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
 PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
 
-async def call_groq_ai(prompt: str) -> str:
+async def call_groq_ai(prompt: str, model: str = None) -> str:
     if not GROQ_API_KEY:
         return "❌ AI not configured. Set GROQ_API_KEY in your .env file."
+    chosen_model = model or "llama3-8b-8192"
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
                 json={
-                    "model": "llama3-8b-8192",
+                    "model": chosen_model,
                     "messages": [
                         {"role": "system", "content": "You are a helpful WhatsApp assistant. Keep replies concise and friendly."},
                         {"role": "user", "content": prompt}
@@ -312,6 +343,19 @@ async def init_db():
                 media_type TEXT, caption TEXT, timestamp REAL
             )
         """)
+        # ✅ FIX: .schedule used to live only in client_bridge.js's in-memory
+        # global.scheduledMessages — any restart/redeploy silently dropped
+        # every pending scheduled message with no warning to whoever set it.
+        # Now persisted here so client_bridge.js can reload it on boot.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS scheduled_messages (
+                id TEXT PRIMARY KEY,
+                to_jid TEXT, message TEXT,
+                next_run REAL, repeat TEXT,
+                sent INTEGER DEFAULT 0,
+                created_by TEXT
+            )
+        """)
         # NEW: keyword auto-reply table - admin-managed trigger/response pairs
         await db.execute("""
             CREATE TABLE IF NOT EXISTS keywords (
@@ -360,15 +404,17 @@ async def init_db():
                 created_at REAL,
                 verified_at REAL,
                 referred_by TEXT,
-                referral_bonus_given INTEGER NOT NULL DEFAULT 0
+                referral_bonus_given INTEGER NOT NULL DEFAULT 0,
+                password_hash TEXT
             )
         """)
-        # Best-effort migration for DBs created before the referral columns
-        # existed — ALTER TABLE ... ADD COLUMN throws if the column is
-        # already there, so each is wrapped individually and ignored.
+        # Best-effort migration for DBs created before the referral/password
+        # columns existed — ALTER TABLE ... ADD COLUMN throws if the column
+        # is already there, so each is wrapped individually and ignored.
         for col, ddl in [
             ("referred_by", "ALTER TABLE registrations ADD COLUMN referred_by TEXT"),
             ("referral_bonus_given", "ALTER TABLE registrations ADD COLUMN referral_bonus_given INTEGER NOT NULL DEFAULT 0"),
+            ("password_hash", "ALTER TABLE registrations ADD COLUMN password_hash TEXT"),
         ]:
             try:
                 await db.execute(ddl)
@@ -499,9 +545,16 @@ async def api_register():
     email = (data.get("email") or "").strip()
     method = (data.get("method") or "whatsapp").strip().lower()
     ref = (data.get("ref") or "").strip().replace(" ", "").replace("+", "")
+    password = data.get("password") or ""
 
     if not phone or not phone.isdigit() or len(phone) < 9:
         return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+
+    if not name:
+        return jsonify({"success": False, "error": "Enter your name."}), 400
+
+    if len(password) < 6:
+        return jsonify({"success": False, "error": "Password must be at least 6 characters."}), 400
 
     if method == "email":
         if not email or "@" not in email or "." not in email.split("@")[-1]:
@@ -522,21 +575,23 @@ async def api_register():
 
     otp = _generate_otp()
     now = time.time()
+    password_hash = _hash_password(password)
 
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
             row = await c.fetchone()
         if row and row[0] == 1:
-            return jsonify({"success": False, "error": "This number is already verified."}), 400
+            return jsonify({"success": False, "error": "This number is already verified. Use the panel login instead."}), 400
 
         await db.execute("""
-            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, referred_by)
-            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?, ?)
+            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, referred_by, password_hash)
+            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?, ?, ?)
             ON CONFLICT(phone) DO UPDATE SET
                 name=excluded.name, email=excluded.email, otp=excluded.otp,
                 otp_expiry=excluded.otp_expiry,
-                referred_by=COALESCE(registrations.referred_by, excluded.referred_by)
-        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now, valid_ref))
+                referred_by=COALESCE(registrations.referred_by, excluded.referred_by),
+                password_hash=excluded.password_hash
+        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now, valid_ref, password_hash))
         await db.commit()
 
     if method == "email":
@@ -655,23 +710,56 @@ async def api_referrals():
 
 
 
+@app.route("/panel")
+async def panel_page():
+    panel_path = Path(__file__).parent / "panel.html"
+    if panel_path.exists():
+        return Response(panel_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/profile", methods=["POST"])
 async def api_profile():
     """Profile panel data for a verified user — wallet balance, badge, and
-    recent top-up requests with their review status. Looked up by phone
-    only (no password); this mirrors how /api/verify-otp already trusts a
-    WhatsApp number once it's been OTP-verified."""
-    phone = (request.args.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    recent top-up requests with their review status.
+
+    ✅ FIX: this function existed in the codebase with no @app.route above
+    it, so it was dead code — nothing could ever call it, and the profile
+    panel it was written for was never reachable. Now wired up properly.
+
+    ✅ Also fixed: it was designed to trust a bare phone number with no
+    password, which would have exposed wallet balance and M-Pesa payment
+    history to anyone who guessed/knew a registered number. Now requires
+    name + phone + the password set at registration, matching how
+    /api/register and the rest of the panel login work.
+    """
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    password = data.get("password") or ""
+
     if not phone or not phone.isdigit():
         return jsonify({"success": False, "error": "Valid phone number required."}), 400
+    if not name or not password:
+        return jsonify({"success": False, "error": "Enter your name, WhatsApp number, and password."}), 400
 
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
-            "SELECT name, email, verified, credits, badge, verified_at FROM registrations WHERE phone = ?",
+            "SELECT name, email, verified, credits, badge, verified_at, created_at, password_hash FROM registrations WHERE phone = ?",
             (phone,)
         ) as c:
             row = await c.fetchone()
         if not row:
             return jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404
+
+        stored_name, email, verified, credits, badge, verified_at, created_at, password_hash = row
+
+        if not verified:
+            return jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403
+        if not password_hash or not _verify_password(password, password_hash):
+            return jsonify({"success": False, "error": "Incorrect password."}), 401
+        if stored_name.strip().lower() != name.strip().lower():
+            return jsonify({"success": False, "error": "Name doesn't match our records for this number."}), 403
 
         async with db.execute(
             "SELECT id, amount, mpesa_code, status, created_at FROM payments WHERE phone = ? ORDER BY created_at DESC LIMIT 10",
@@ -679,20 +767,31 @@ async def api_profile():
         ) as c:
             prows = await c.fetchall()
 
-    name, email, verified, credits, badge, verified_at = row
     return jsonify({
         "success": True,
         "phone": phone,
-        "name": name,
+        "name": stored_name,
         "email": email,
         "verified": bool(verified),
         "credits": credits,
         "badge": badge if verified else "none",
         "verified_at": verified_at,
+        "member_since": created_at,
         "recent_payments": [
             {"id": p[0], "amount": p[1], "mpesa_code": p[2], "status": p[3], "created_at": p[4]}
             for p in prows
         ],
+    })
+
+
+@app.route("/api/payment-info", methods=["GET"])
+async def api_payment_info():
+    """Public info the panel's top-up form needs: where to send M-Pesa
+    funds. No auth required — this is just instructions, not user data."""
+    return jsonify({
+        "success": True,
+        "payto_number": ADMIN_PAYTO_NUMBER,
+        "configured": bool(ADMIN_PAYTO_NUMBER)
     })
 
 
@@ -819,6 +918,8 @@ async def admin_stats():
             messages = (await c.fetchone())[0]
         async with db.execute("SELECT COUNT(*) FROM viewonce_media") as c:
             viewonce = (await c.fetchone())[0]
+        async with db.execute("SELECT COUNT(*) FROM scheduled_messages WHERE sent = 0") as c:
+            scheduled_pending = (await c.fetchone())[0]
         async with db.execute(
             "SELECT name, sender, timestamp FROM contacts ORDER BY timestamp DESC LIMIT 20"
         ) as c:
@@ -865,6 +966,7 @@ async def admin_stats():
         "messages": messages,
         "messages_today": messages_today,
         "viewonce": viewonce,
+        "scheduled_pending": scheduled_pending,
         "session_list": session_list,
         "recent_contacts": recent_contacts,
         "server_time": time.strftime("%d %b %Y, %H:%M:%S", time.localtime()),
@@ -885,6 +987,10 @@ async def admin_terminate():
 
 @app.route("/admin/register-session", methods=["POST"])
 async def register_session():
+    # ✅ FIX: was missing the auth check every other /admin/* route has —
+    # let anyone on the internet spoof/overwrite session registry entries.
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "unknown")
     now = time.time()
@@ -905,6 +1011,9 @@ async def register_session():
 
 @app.route("/admin/update-session", methods=["POST"])
 async def update_session():
+    # ✅ FIX: was missing the auth check every other /admin/* route has.
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "")
     if name in SESSION_REGISTRY:
@@ -939,6 +1048,9 @@ async def admin_set_expiry():
 
 @app.route("/admin/check-terminate", methods=["POST"])
 async def check_terminate():
+    # ✅ FIX: was missing the auth check every other /admin/* route has.
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "")
     info = SESSION_REGISTRY.get(name, {})
@@ -954,6 +1066,11 @@ async def check_terminate():
 
 @app.route("/admin/session-detail", methods=["GET"])
 async def session_detail():
+    # ✅ FIX: this was the one /admin/* route with NO auth check at all —
+    # anyone with the URL could read up to 100 real chat messages for any
+    # session. Now requires the same admin password as every other route.
+    if not _check_admin_auth(request):
+        return "Unauthorized", 401
     session_name = request.args.get("session", "")
     try:
         async with aiosqlite.connect(DB_FILE) as db:
@@ -965,20 +1082,32 @@ async def session_detail():
         msgs = [{"sender": r[0], "name": r[1], "body": r[2], "time": r[3]} for r in rows]
     except Exception:
         msgs = []
-    html = f"""<!DOCTYPE html>
+    # ✅ FIX: message name/body/session_name are user-controlled (they come
+    # straight from WhatsApp chats) and were being dropped into this HTML
+    # unescaped — a message containing "<script>" became stored XSS on this
+    # page. Everything user-controlled is now html.escape()'d before it's
+    # inserted into the template.
+    safe_session_name = html.escape(session_name)
+    html_body = "".join(
+        f'<div class="msg"><div class="meta">{html.escape(m["name"] or "")} ({html.escape(m["sender"] or "")}) · '
+        f'{time.strftime("%Y-%m-%d %H:%M", time.localtime(m["time"]))}</div>'
+        f'<div class="body">{html.escape(m["body"] or "")}</div></div>'
+        for m in msgs
+    ) if msgs else '<p style="color:#555">No messages found for this session.</p>'
+    html_page = f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/>
-<title>Session: {session_name}</title>
+<title>Session: {safe_session_name}</title>
 <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{background:#08090f;color:#e2eaf4;font-family:'Segoe UI',sans-serif;padding:20px}}
 h2{{color:#a78bfa;margin-bottom:16px}}
 .msg{{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:10px}}
 .meta{{font-size:11px;color:#555;margin-bottom:4px}}
 .body{{font-size:14px;color:#ccc;word-break:break-word}}
 a{{color:#a78bfa;text-decoration:none}}</style></head>
-<body><h2>📋 Session Messages — {session_name}</h2>
+<body><h2>📋 Session Messages — {safe_session_name}</h2>
 <p style="color:#555;font-size:12px;margin-bottom:16px">Last 100 messages · <a href="/admin">← Back to Admin</a></p>
-{"".join(f'<div class="msg"><div class="meta">{m["name"]} ({m["sender"]}) · {__import__("time").strftime("%Y-%m-%d %H:%M", __import__("time").localtime(m["time"]))}</div><div class="body">{m["body"]}</div></div>' for m in msgs) if msgs else '<p style="color:#555">No messages found for this session.</p>'}
+{html_body}
 </body></html>"""
-    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+    return html_page, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 # ── ✅ NEW: Blacklist management ─────────────────────────────────────────────
@@ -1219,7 +1348,13 @@ async def admin_broadcast():
 
 @app.route("/admin/broadcast/pending", methods=["GET"])
 async def admin_broadcast_pending():
-    """Polled by the Node bridge to pick up queued broadcasts."""
+    """Polled by the Node bridge to pick up queued broadcasts.
+    ✅ FIX: was missing auth — anyone could hit this and silently drain the
+    queue (marks broadcasts sent=True) before the real bridge polled it.
+    The Node bridge already sends the admin password on its other calls, so
+    this doesn't change how legitimate polling works."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
     pending = [b for b in BROADCAST_QUEUE if not b["sent"]]
     for b in pending:
         b["sent"] = True
@@ -1404,6 +1539,122 @@ async def log_viewonce():
         )
         await db.commit()
     return jsonify({"status": "saved"})
+
+
+@app.route("/scheduler/load", methods=["GET"])
+async def scheduler_load():
+    """Internal — client_bridge.js calls this once on boot to rehydrate
+    global.scheduledMessages so a restart/redeploy doesn't drop pending
+    scheduled messages."""
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, to_jid, message, next_run, repeat, sent, created_by FROM scheduled_messages"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "messages": [
+            {
+                "id": r[0], "to": r[1], "message": r[2],
+                "nextRun": r[3], "repeat": r[4],
+                "sent": bool(r[5]), "createdBy": r[6],
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/scheduler/save", methods=["POST"])
+async def scheduler_save():
+    """Internal — client_bridge.js calls this after every add/delete/clear
+    so the schedule survives process restarts. Full-list replace is simplest
+    and safe here since scheduling volume is low (personal/small-business
+    use, not a high-throughput queue)."""
+    data = await request.get_json() or {}
+    messages = data.get("messages", [])
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM scheduled_messages")
+        for m in messages:
+            await db.execute(
+                "INSERT INTO scheduled_messages (id, to_jid, message, next_run, repeat, sent, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (m.get("id"), m.get("to"), m.get("message"), m.get("nextRun"),
+                 m.get("repeat"), int(bool(m.get("sent"))), m.get("createdBy")),
+            )
+        await db.commit()
+    return jsonify({"status": "saved", "count": len(messages)})
+
+
+@app.route("/admin/scheduler", methods=["GET"])
+async def admin_scheduler():
+    """Admin panel view of pending scheduled messages (the .schedule command).
+    Read-only mirror of the scheduled_messages table client_bridge.js persists to."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, to_jid, message, next_run, repeat, sent, created_by FROM scheduled_messages ORDER BY next_run ASC"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "messages": [
+            {
+                "id": r[0], "to": r[1], "message": r[2],
+                "next_run": time.strftime("%d %b %Y, %H:%M", time.localtime(r[3])) if r[3] else None,
+                "repeat": r[4], "sent": bool(r[5]), "created_by": r[6],
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/admin/scheduler/<msg_id>", methods=["DELETE"])
+async def admin_scheduler_delete(msg_id):
+    """Lets the admin cancel a scheduled message from the panel instead of
+    needing WhatsApp access to run .schedule del."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM scheduled_messages WHERE id = ?", (msg_id,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/viewonce", methods=["GET"])
+async def admin_viewonce():
+    """Browse recently intercepted view-once media from the admin panel,
+    instead of digging through the bot's own WhatsApp DMs for it."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, sender, name, filename, media_type, caption, timestamp FROM viewonce_media ORDER BY timestamp DESC LIMIT 50"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "items": [
+            {
+                "id": r[0], "sender": r[1], "name": r[2], "filename": r[3],
+                "media_type": r[4], "caption": r[5],
+                "time": time.strftime("%d %b %Y, %H:%M", time.localtime(r[6])),
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/admin/viewonce/file/<path:filename>", methods=["GET"])
+async def admin_viewonce_file(filename):
+    """Serves the actual saved view-once file. Gated behind admin auth for
+    the same reason payment screenshots are — this is private content
+    intercepted from other people's chats, not public static assets.
+    Path is sanitized to the basename so this can't be used to read
+    arbitrary files elsewhere on disk."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    safe_name = Path(filename).name  # strip any directory traversal attempt
+    file_path = DATA_DIR / "viewonce_media" / safe_name
+    if not file_path.exists():
+        return jsonify({"error": "File not found"}), 404
+    return Response(file_path.read_bytes(), mimetype="application/octet-stream")
 
 
 @app.route("/bot/features", methods=["GET"])
@@ -1675,6 +1926,7 @@ async def process_command_pipeline():
     data = await request.get_json() or {}
     incoming_text = data.get("body", "").strip()
     sender = data.get("sender", "").strip()
+    model_pref = data.get("model", "").strip() or None
 
     if await check_db_blacklist(sender):
         return jsonify({"reply": "❌ Access Denied. Your profile node remains blacklisted."})
@@ -1693,7 +1945,7 @@ async def process_command_pipeline():
         prompt = incoming_text[5:].strip()
         if not prompt:
             return jsonify({"reply": "⚠️ Please provide a query after /ask"})
-        reply = await call_groq_ai(prompt)
+        reply = await call_groq_ai(prompt, model=model_pref)
         return jsonify({"reply": reply})
 
     # 2. Paint Command — sends actual image

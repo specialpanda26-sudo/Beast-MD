@@ -14,6 +14,12 @@
       --card: #060e18;
     }
     body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', Arial, sans-serif; min-height: 100vh; }
+    #particles-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .grid-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: linear-gradient(rgba(0,229,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.02) 1px, transparent 1px); background-size: 50px 50px; }
+    .radial-glow { position: fixed; width: 700px; height: 700px; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(120px); opacity: 0.12; }
+    .radial-glow.top { background: var(--accent); top: -200px; left: 50%; transform: translateX(-50%); }
+    .radial-glow.bottom { background: #7c3aed; bottom: -200px; right: -100px; }
+    #login-page, #admin-page { position: relative; z-index: 1; }
     code, .mono { font-family: 'JetBrains Mono', monospace; }
 
     /* ── LOGIN PAGE ── */
@@ -154,6 +160,11 @@
   </style>
 </head>
 <body>
+<canvas id="particles-canvas"></canvas>
+<div class="grid-bg"></div>
+<div class="radial-glow top"></div>
+<div class="radial-glow bottom"></div>
+
 
 <!-- LOGIN PAGE -->
 <div id="login-page">
@@ -176,7 +187,7 @@
     <div class="topbar-right">
       <span class="server-time" id="server-time"></span>
       <span class="badge" id="online-badge">● ONLINE</span>
-      <button class="logout-btn" onclick="doLogout()">Logout</button>
+      <a href="/" style="color:var(--muted);text-decoration:none;font-size:13px;font-family:JetBrains Mono,monospace">← Home</a><button class="logout-btn" onclick="doLogout()">Logout</button>
       <button class="logout-btn" id="admin-hamburger" onclick="toggleAdminMenu()" aria-label="Menu" style="font-size:16px;">☰</button>
     </div>
   </div>
@@ -197,6 +208,8 @@
       <a href="#" onclick="switchTab('broadcast');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">📢 Broadcast</a>
       <a href="#" onclick="switchTab('registrations');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🛡️ Registrations</a>
       <a href="#" onclick="switchTab('payments');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">💰 Payments</a>
+      <a href="#" onclick="switchTab('scheduler');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">⏰ Scheduler</a>
+      <a href="#" onclick="switchTab('viewonce');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">👁️ View-Once</a>
     </div>
   </div>
 
@@ -212,6 +225,8 @@
       <div class="tab" data-tab="broadcast" onclick="switchTab('broadcast')">📢 Broadcast</div>
       <div class="tab" data-tab="registrations" onclick="switchTab('registrations')">🛡️ Registrations</div>
       <div class="tab" data-tab="payments" onclick="switchTab('payments')">💰 Payments</div>
+      <div class="tab" data-tab="scheduler" onclick="switchTab('scheduler')">⏰ Scheduler</div>
+      <div class="tab" data-tab="viewonce" onclick="switchTab('viewonce')">👁️ View-Once</div>
     </div>
 
     <!-- OVERVIEW TAB -->
@@ -222,6 +237,7 @@
         <div class="stat-card"><div class="stat-num" id="stat-messages">0</div><div class="stat-label">Messages Logged</div></div>
         <div class="stat-card"><div class="stat-num" id="stat-messages-today">0</div><div class="stat-label">Messages Today</div></div>
         <div class="stat-card"><div class="stat-num" id="stat-viewonce">0</div><div class="stat-label">View Once Saved</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-scheduled">0</div><div class="stat-label">Pending Scheduled</div></div>
       </div>
       <div class="form-card">
         <div class="section-title">⏱️ Server Uptime</div>
@@ -354,6 +370,30 @@
       </div>
       <div id="payments-list"><div class="empty">Loading...</div></div>
     </div>
+
+    <!-- SCHEDULER TAB -->
+    <div class="tab-content" id="tab-scheduler">
+      <div class="form-card">
+        <div class="hint">Pending messages queued via the *.schedule* WhatsApp command. Cancel one here instead of needing WhatsApp access.</div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">⏰ Scheduled Messages</div>
+        <button class="refresh-btn" onclick="loadScheduler()">↻ Refresh</button>
+      </div>
+      <div id="scheduler-list"><div class="empty">Loading...</div></div>
+    </div>
+
+    <!-- VIEW-ONCE TAB -->
+    <div class="tab-content" id="tab-viewonce">
+      <div class="form-card">
+        <div class="hint">Media auto-intercepted from view-once messages, most recent first. This is private content from other people's chats — access is logged the same way it would be if you'd checked your own WhatsApp DMs.</div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">👁️ Recent View-Once Media</div>
+        <button class="refresh-btn" onclick="loadViewOnce()">↻ Refresh</button>
+      </div>
+      <div id="viewonce-list"><div class="empty">Loading...</div></div>
+    </div>
   </div>
 </div>
 
@@ -407,6 +447,8 @@
     if (name === "features") loadFeatures();
     if (name === "registrations") loadRegistrations();
     if (name === "payments") loadPayments();
+    if (name === "scheduler") loadScheduler();
+    if (name === "viewonce") loadViewOnce();
   }
 
   function toggleAdminMenu() { document.getElementById('adminMenuOverlay').style.display = 'block'; }
@@ -528,6 +570,82 @@
     }
   }
 
+  /* ── SCHEDULER ── */
+  async function loadScheduler() {
+    const list = document.getElementById('scheduler-list');
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await authedFetch('/admin/scheduler');
+      const data = await res.json();
+      const items = (data.messages || []).filter(m => !m.sent);
+      if (items.length === 0) {
+        list.innerHTML = '<div class="empty">No pending scheduled messages.</div>';
+        return;
+      }
+      list.innerHTML = items.map(m => `
+        <div class="contact-row">
+          <div>
+            <strong>${escapeHtml(m.to || '')}</strong>${m.repeat ? ` <span style="color:var(--muted);font-size:12px">(🔁 ${m.repeat})</span>` : ''}<br/>
+            <span style="color:var(--muted);font-size:12px">${escapeHtml((m.message || '').slice(0, 80))}</span><br/>
+            <span style="color:var(--accent);font-size:12px">⏰ ${m.next_run || 'unknown time'}</span>
+          </div>
+          <button class="btn-sm btn-red" onclick="cancelScheduled('${m.id}')">Cancel</button>
+        </div>
+      `).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  async function cancelScheduled(id) {
+    if (!confirm(`Cancel scheduled message ${id}?`)) return;
+    try {
+      const res = await authedFetch(`/admin/scheduler/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.success) { alert(data.error || 'Failed.'); return; }
+      loadScheduler();
+    } catch (e) {
+      alert('Network error.');
+    }
+  }
+
+  /* ── VIEW-ONCE MEDIA ── */
+  async function loadViewOnce() {
+    const list = document.getElementById('viewonce-list');
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await authedFetch('/admin/viewonce');
+      const data = await res.json();
+      const items = data.items || [];
+      if (items.length === 0) {
+        list.innerHTML = '<div class="empty">Nothing intercepted yet.</div>';
+        return;
+      }
+      list.innerHTML = items.map(v => {
+        const fileUrl = token
+          ? `/admin/viewonce/file/${encodeURIComponent(v.filename)}?pass=${encodeURIComponent(token)}`
+          : `/admin/viewonce/file/${encodeURIComponent(v.filename)}`;
+        const isImage = v.media_type === 'imageMessage';
+        const preview = isImage
+          ? `<img src="${fileUrl}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>`
+          : `<div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:var(--card);border-radius:8px;border:1px solid var(--border);font-size:22px">${v.media_type === 'videoMessage' ? '🎥' : '🎙️'}</div>`;
+        return `
+        <div class="contact-row">
+          <div style="display:flex;gap:12px;align-items:center">
+            ${preview}
+            <div>
+              <strong>${escapeHtml(v.name || 'Unknown')}</strong> — ${escapeHtml(v.sender || '')}<br/>
+              <span style="color:var(--muted);font-size:12px">${v.time}${v.caption ? ' · ' + escapeHtml(v.caption.slice(0, 40)) : ''}</span>
+            </div>
+          </div>
+          <a href="${fileUrl}" target="_blank" class="btn-sm" style="background:var(--border);color:var(--text);text-decoration:none;display:inline-block">Open</a>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
   /* ── KEYWORDS ── */
   async function loadKeywords() {
     const list = document.getElementById('keywords-list');
@@ -636,6 +754,7 @@
       document.getElementById("stat-messages").textContent = stats.messages || 0;
       document.getElementById("stat-messages-today").textContent = stats.messages_today || 0;
       document.getElementById("stat-viewonce").textContent = stats.viewonce || 0;
+      document.getElementById("stat-scheduled").textContent = stats.scheduled_pending || 0;
       document.getElementById("server-time").textContent = stats.server_time || "";
 
       const sessionsEl = document.getElementById("sessions-list");
@@ -856,6 +975,21 @@
       if (res.status === 401) { token = null; sessionStorage.removeItem("admin_pass"); }
       else showAdmin();
     }).catch(() => {});
+  }
+</script>
+<script>
+  const _pc = document.getElementById('particles-canvas');
+  if (_pc) {
+    const _ctx = _pc.getContext('2d');
+    let _pts = [];
+    function _rsz() { _pc.width = window.innerWidth; _pc.height = window.innerHeight; }
+    _rsz(); window.addEventListener('resize', _rsz);
+    for (let i = 0; i < 50; i++) _pts.push({x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.2+.3,a:Math.random()*.4+.1});
+    (function _anim() {
+      _ctx.clearRect(0,0,_pc.width,_pc.height);
+      _pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=_pc.width;if(p.x>_pc.width)p.x=0;if(p.y<0)p.y=_pc.height;if(p.y>_pc.height)p.y=0;_ctx.beginPath();_ctx.arc(p.x,p.y,p.r,0,Math.PI*2);_ctx.fillStyle='rgba(0,229,255,'+p.a+')';_ctx.fill();});
+      requestAnimationFrame(_anim);
+    })();
   }
 </script>
 </body>

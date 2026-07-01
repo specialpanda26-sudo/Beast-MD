@@ -1,7 +1,75 @@
 // ── CYPHER X - RPG & Utility ──────────────────────────────────────────────────
 const sessions = {};
+const axios = require('axios');
 
 module.exports = {
+
+  // ── .imagine [prompt] ──────────────────────────────────────────────────────
+  // Free, keyless AI image generation via Pollinations.ai (no API key needed —
+  // unlike DALL-E/Flux which require paid accounts). Good enough quality for
+  // a WhatsApp bot feature without asking Henry to manage another API key.
+  imagine: async ({ sock, from, msg, args }) => {
+    const prompt = args.join(' ');
+    if (!prompt) return sock.sendMessage(from, { text: '🎨 Usage: .imagine [description]\nExample: .imagine a lion wearing sunglasses, cyberpunk style' }, { quoted: msg });
+
+    await sock.sendMessage(from, { text: '🎨 Generating image...' }, { quoted: msg });
+    try {
+      const seed = Math.floor(Math.random() * 1000000);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=768&seed=${seed}&nologo=true`;
+      const res = await axios.get(url, { responseType: 'arraybuffer', timeout: 60000 });
+      await sock.sendMessage(from, { image: Buffer.from(res.data), caption: `🎨 *${prompt}*` }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Image generation failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  // ── .tts [text] ────────────────────────────────────────────────────────────
+  // Free, keyless text-to-speech via Google Translate's public TTS endpoint.
+  // Good for short phrases; splits long text into <200 char chunks since
+  // that endpoint caps input length.
+  tts: async ({ sock, from, msg, args }) => {
+    const text = args.join(' ');
+    if (!text) return sock.sendMessage(from, { text: '🔊 Usage: .tts [text]' }, { quoted: msg });
+    if (text.length > 200) return sock.sendMessage(from, { text: '❌ Keep it under 200 characters for .tts.' }, { quoted: msg });
+
+    try {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(text)}`;
+      const res = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 15000,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+      });
+      await sock.sendMessage(from, { audio: Buffer.from(res.data), mimetype: 'audio/mpeg', ptt: true }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ TTS failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  // ── .model ─────────────────────────────────────────────────────────────────
+  // Switch which Groq model /ask uses, per chat. Reuses the Groq key Henry
+  // already has configured — no new API key needed. Stored in global so
+  // client_bridge.js's /ask handler can read it if wired up to check it.
+  model: async ({ sock, from, msg, args }) => {
+    const available = {
+      llama:  'llama3-70b-8192',
+      llama8: 'llama3-8b-8192',
+      mixtral: 'mixtral-8x7b-32768',
+      gemma:  'gemma2-9b-it',
+    };
+    const choice = (args[0] || '').toLowerCase();
+    if (!choice) {
+      const current = global.aiModel?.[from] || 'llama3-8b-8192 (default)';
+      return sock.sendMessage(from, {
+        text: `🤖 *AI Model*\n\nCurrent: ${current}\n\nAvailable: ${Object.keys(available).join(', ')}\nUsage: .model llama`
+      }, { quoted: msg });
+    }
+    if (!available[choice]) {
+      return sock.sendMessage(from, { text: `❌ Unknown model. Choose from: ${Object.keys(available).join(', ')}` }, { quoted: msg });
+    }
+    global.aiModel = global.aiModel || {};
+    global.aiModel[from] = available[choice];
+    await sock.sendMessage(from, { text: `✅ AI model for this chat set to *${available[choice]}*` }, { quoted: msg });
+  },
 
   // ── .roll [dice] e.g .roll 3d6+2 ──────────────────────────────────────────
   roll: async ({ sock, from, msg, args }) => {

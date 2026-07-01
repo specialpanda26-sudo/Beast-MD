@@ -40,4 +40,14 @@ services:
       # ── Optional: the admin's M-Pesa number shown to users for top-ups ──
       - key: ADMIN_PAYTO_NUMBER
         sync: false
+      # ✅ FIX: without a mounted disk, the SQLite DB, WhatsApp auth sessions,
+      # and saved view-once media all lived on Render's ephemeral filesystem
+      # and were wiped on every redeploy. DATA_DIR now points at the disk
+      # mounted below — both app.py and client_bridge.js read this same var.
+      - key: DATA_DIR
+        value: /app/data
     healthCheckPath: /status
+    disk:
+      name: beast-bot-data
+      mountPath: /app/data
+      sizeGB: 1
