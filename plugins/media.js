@@ -74,6 +74,61 @@ module.exports = {
     }
   },
 
+  // ── .share — forward a replied-to message (text/image/video/audio/doc) ─────
+  // Usage: reply to any message with .share <number>
+  // Forwards the exact quoted message to that number without re-typing or
+  // re-uploading it — works for media too, not just text.
+  share: async ({ sock, from, msg, args }) => {
+    const ctx = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMessage = ctx?.quotedMessage;
+
+    if (!quotedMessage) {
+      return sock.sendMessage(from, {
+        text: `❌ Reply to the message you want to share, then type:\n*.share <number>*\n\nExample: reply to a photo, then send *.share 254712345678*`,
+      }, { quoted: msg });
+    }
+
+    const target = args[0]?.replace(/[^0-9]/g, '');
+    if (!target) {
+      return sock.sendMessage(from, {
+        text: `❌ Give a number to share to.\nExample: *.share 254712345678*`,
+      }, { quoted: msg });
+    }
+
+    const targetJid = `${target}@s.whatsapp.net`;
+
+    // Reconstruct a minimal message object pointing at the quoted content so
+    // Baileys can relay it as a genuine forward (works for text and media).
+    const forwardable = {
+      key: {
+        remoteJid: from,
+        id: ctx.stanzaId,
+        participant: ctx.participant,
+        fromMe: false,
+      },
+      message: quotedMessage,
+    };
+
+    try {
+      const [result] = await sock.onWhatsApp(targetJid).catch(() => [null]);
+      if (result && result.exists === false) {
+        return sock.sendMessage(from, {
+          text: `❌ ${target} doesn't look like it's on WhatsApp — double-check the number.`,
+        }, { quoted: msg });
+      }
+
+      await sock.sendMessage(targetJid, { forward: forwardable });
+      await sock.sendMessage(from, {
+        text: `✅ Shared to @${target}`,
+        mentions: [targetJid],
+      }, { quoted: msg });
+    } catch (err) {
+      await sock.sendMessage(from, {
+        text: `❌ Couldn't share that: ${err.message}`,
+      }, { quoted: msg });
+    }
+  },
+
   // ── .about — get someone's WhatsApp "About" status text ────────────────────
   // Usage: .about (your own) | .about @user | .about 254712345678 | reply with .about
   // ✅ Works even for numbers NOT saved in contacts

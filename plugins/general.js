@@ -107,6 +107,7 @@ ${p}sticker        - Image/video → Sticker
 ${p}vv             - View saved view-once media
 ${p}save           - Save view-once as file
 ${p}getpp [@user]  - Get profile picture (any number, even unsaved/private)
+${p}share <number>  - Reply to a message to forward it to that number
 ${p}about [@user]  - Get About status text (works unsaved)
 ${p}download [url] - Download video (YT/TikTok)
 ${p}song [url]     - Extract MP3 audio

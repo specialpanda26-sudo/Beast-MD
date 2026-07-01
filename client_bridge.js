@@ -443,8 +443,18 @@ function isFeatureOn(name) {
   return featureCache[name] !== false; // unknown/missing = treated as on
 }
 
+// ── Persistent data directory ───────────────────────────────────────────────
+// ✅ FIX: everything that needs to survive a restart/redeploy (WhatsApp auth
+// sessions, saved view-once media) now lives under one DATA_DIR root instead
+// of scattered relative paths. On Render/Railway, mount a persistent disk at
+// this path (see render.yaml) or it'll still be wiped on redeploy — but at
+// least a plain process restart / crash / sleep-wake no longer loses data,
+// and app.py's DB now lives in the same place for the same reason.
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
 // Sessions directory
-const SESSIONS_DIR = "./sessions";
+const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
 if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
 
 function prompt(question) {
@@ -847,7 +857,7 @@ async function startSession(sessionId, opts = {}) {
           );
 
           // Save to disk
-          const mediaDir = path.join(__dirname, "viewonce_media");
+          const mediaDir = path.join(DATA_DIR, "viewonce_media");
           if (!fs.existsSync(mediaDir)) fs.mkdirSync(mediaDir, { recursive: true });
           const ext = mediaType === "imageMessage" ? "jpg" : mediaType === "videoMessage" ? "mp4" : "ogg";
           const filename = `${sender.split("@")[0]}_${timestamp}.${ext}`;
@@ -964,6 +974,7 @@ async function startSession(sessionId, opts = {}) {
               senderJid,
               args,
               config,
+              apiClient, // used by plugins/scheduler.js to persist across restarts
             });
           } catch (e) {
             console.error(`❌ [${sessionId}] .${cmd} error:`, e.message);
@@ -1079,15 +1090,21 @@ async function startSession(sessionId, opts = {}) {
             return;
           }
 
-          // ✅ NEW: Reply in group if bot is mentioned or name called
+          // ✅ FIX: Reply in group only on @mention or a direct reply to one of
+          // the bot's own messages — NOT on loose keyword matching. The old
+          // "bot"/"henry"/"ochibots" substring check fired on completely
+          // unrelated messages ("I saw a robot", "chatbot", anyone named
+          // Henry in the group, etc.), spamming AI replies into groups.
           const botNumber = socket.user?.id?.split(':')[0]?.split('@')[0] || '';
           const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
           const botMentioned = mentions.some(j => j.includes(botNumber));
-          const nameCalledInGroup = body.toLowerCase().includes('henry') ||
-            body.toLowerCase().includes('ochibots') ||
-            body.toLowerCase().includes('bot');
 
-          if (botMentioned || nameCalledInGroup) {
+          const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+          const isReplyToBot = Boolean(
+            quotedParticipant && botNumber && quotedParticipant.includes(botNumber)
+          );
+
+          if (botMentioned || isReplyToBot) {
             const aiReply = await apiClient.post('/natural-chat', {
               body,
               name,
@@ -1209,7 +1226,7 @@ async function startSession(sessionId, opts = {}) {
       // Start message scheduler loop (runs once globally)
       try {
         const { startSchedulerLoop } = require('./plugins/scheduler');
-        startSchedulerLoop(socket);
+        startSchedulerLoop(socket, apiClient);
         console.log('⏰ Message scheduler started');
       } catch(e) { console.warn('⚠️ Scheduler not loaded:', e.message); }
       // Register session with admin panel

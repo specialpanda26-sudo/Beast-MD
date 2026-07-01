@@ -50,6 +50,15 @@ def print_banner():
 
 print_banner()
 
+# ── Persistent data directory ───────────────────────────────────────────────
+# ✅ FIX: DB file, view-once media, and payment proofs were all scattered as
+# plain relative/local paths, so a redeploy on Render/Railway silently wiped
+# all of them. They now share one DATA_DIR root with client_bridge.js's
+# sessions folder — set DATA_DIR in your env to a mounted persistent disk
+# path (see render.yaml) to survive redeploys, not just process restarts.
+DATA_DIR = Path(os.environ.get("DATA_DIR", str(Path(__file__).parent / "data")))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 app = Quart(__name__, static_folder="assets", static_url_path="/assets")
 
 # ✅ Force browsers to always fetch the latest HTML instead of using a stale
@@ -93,7 +102,7 @@ import re as _re
 import base64 as _b64
 
 MPESA_CODE_RE = _re.compile(r"^[A-Z0-9]{8,12}$")
-PAYMENT_PROOFS_DIR = Path(__file__).parent / "payment_proofs"
+PAYMENT_PROOFS_DIR = DATA_DIR / "payment_proofs"
 PAYMENT_PROOFS_DIR.mkdir(exist_ok=True)
 ADMIN_PAYTO_NUMBER = os.environ.get("ADMIN_PAYTO_NUMBER", "")  # e.g. 254712345678 — shown to users as where to send M-Pesa funds
 
@@ -210,7 +219,7 @@ async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
         return {"success": False, "error": "Couldn't send the email right now. Please try again or use WhatsApp delivery instead."}
 
 
-DB_FILE = "henry_tech_v5.db"
+DB_FILE = str(DATA_DIR / "henry_tech_v5.db")
 SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
 PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
@@ -330,6 +339,19 @@ async def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sender TEXT, name TEXT, filename TEXT,
                 media_type TEXT, caption TEXT, timestamp REAL
+            )
+        """)
+        # ✅ FIX: .schedule used to live only in client_bridge.js's in-memory
+        # global.scheduledMessages — any restart/redeploy silently dropped
+        # every pending scheduled message with no warning to whoever set it.
+        # Now persisted here so client_bridge.js can reload it on boot.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS scheduled_messages (
+                id TEXT PRIMARY KEY,
+                to_jid TEXT, message TEXT,
+                next_run REAL, repeat TEXT,
+                sent INTEGER DEFAULT 0,
+                created_by TEXT
             )
         """)
         # NEW: keyword auto-reply table - admin-managed trigger/response pairs
@@ -1479,6 +1501,48 @@ async def log_viewonce():
         )
         await db.commit()
     return jsonify({"status": "saved"})
+
+
+@app.route("/scheduler/load", methods=["GET"])
+async def scheduler_load():
+    """Internal — client_bridge.js calls this once on boot to rehydrate
+    global.scheduledMessages so a restart/redeploy doesn't drop pending
+    scheduled messages."""
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, to_jid, message, next_run, repeat, sent, created_by FROM scheduled_messages"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "messages": [
+            {
+                "id": r[0], "to": r[1], "message": r[2],
+                "nextRun": r[3], "repeat": r[4],
+                "sent": bool(r[5]), "createdBy": r[6],
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/scheduler/save", methods=["POST"])
+async def scheduler_save():
+    """Internal — client_bridge.js calls this after every add/delete/clear
+    so the schedule survives process restarts. Full-list replace is simplest
+    and safe here since scheduling volume is low (personal/small-business
+    use, not a high-throughput queue)."""
+    data = await request.get_json() or {}
+    messages = data.get("messages", [])
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM scheduled_messages")
+        for m in messages:
+            await db.execute(
+                "INSERT INTO scheduled_messages (id, to_jid, message, next_run, repeat, sent, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (m.get("id"), m.get("to"), m.get("message"), m.get("nextRun"),
+                 m.get("repeat"), int(bool(m.get("sent"))), m.get("createdBy")),
+            )
+        await db.commit()
+    return jsonify({"status": "saved", "count": len(messages)})
 
 
 @app.route("/bot/features", methods=["GET"])
