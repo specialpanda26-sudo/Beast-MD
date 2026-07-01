@@ -1,5 +1,0 @@
-quart
-aiosqlite
-httpx
-yt-dlp
-python-dotenv
