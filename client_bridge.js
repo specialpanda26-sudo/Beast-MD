@@ -1104,7 +1104,8 @@ async function startSession(sessionId, opts = {}) {
         try { await socket.sendPresenceUpdate(presenceType, sender); } catch (e) {}
 
         try {
-          const response = await apiClient.post("/webhook", { body, sender });
+          const modelPref = global.aiModel?.[sender] || '';
+          const response = await apiClient.post("/webhook", { body, sender, model: modelPref });
           const data = response.data;
 
           try { await socket.sendPresenceUpdate("paused", sender); } catch (e) {}

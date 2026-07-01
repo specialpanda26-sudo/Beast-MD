@@ -224,16 +224,17 @@ SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
 PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
 
-async def call_groq_ai(prompt: str) -> str:
+async def call_groq_ai(prompt: str, model: str = None) -> str:
     if not GROQ_API_KEY:
         return "❌ AI not configured. Set GROQ_API_KEY in your .env file."
+    chosen_model = model or "llama3-8b-8192"
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
                 json={
-                    "model": "llama3-8b-8192",
+                    "model": chosen_model,
                     "messages": [
                         {"role": "system", "content": "You are a helpful WhatsApp assistant. Keep replies concise and friendly."},
                         {"role": "user", "content": prompt}
@@ -1891,6 +1892,7 @@ async def process_command_pipeline():
     data = await request.get_json() or {}
     incoming_text = data.get("body", "").strip()
     sender = data.get("sender", "").strip()
+    model_pref = data.get("model", "").strip() or None
 
     if await check_db_blacklist(sender):
         return jsonify({"reply": "❌ Access Denied. Your profile node remains blacklisted."})
@@ -1909,7 +1911,7 @@ async def process_command_pipeline():
         prompt = incoming_text[5:].strip()
         if not prompt:
             return jsonify({"reply": "⚠️ Please provide a query after /ask"})
-        reply = await call_groq_ai(prompt)
+        reply = await call_groq_ai(prompt, model=model_pref)
         return jsonify({"reply": reply})
 
     # 2. Paint Command — sends actual image
