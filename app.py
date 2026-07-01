@@ -4,6 +4,8 @@ import asyncio
 import logging
 import json
 import random
+import hashlib
+import secrets
 import httpx
 import aiosqlite
 from urllib.parse import quote_plus
@@ -98,6 +100,24 @@ ADMIN_PAYTO_NUMBER = os.environ.get("ADMIN_PAYTO_NUMBER", "")  # e.g. 2547123456
 
 def _generate_otp() -> str:
     return f"{random.randint(0, 999999):06d}"
+
+
+def _hash_password(password: str) -> str:
+    """PBKDF2-HMAC-SHA256 with a random per-user salt. Stored as
+    'salt_hex$hash_hex' — no plaintext or reversible encoding ever touches
+    the database."""
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return f"{salt}${digest.hex()}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        salt, digest_hex = stored.split("$", 1)
+    except (ValueError, AttributeError):
+        return False
+    check = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return secrets.compare_digest(check.hex(), digest_hex)
 
 
 # ✅ NEW: WhatsApp OTP delivery — this IS a WhatsApp bot, so the registering
@@ -360,15 +380,17 @@ async def init_db():
                 created_at REAL,
                 verified_at REAL,
                 referred_by TEXT,
-                referral_bonus_given INTEGER NOT NULL DEFAULT 0
+                referral_bonus_given INTEGER NOT NULL DEFAULT 0,
+                password_hash TEXT
             )
         """)
-        # Best-effort migration for DBs created before the referral columns
-        # existed — ALTER TABLE ... ADD COLUMN throws if the column is
-        # already there, so each is wrapped individually and ignored.
+        # Best-effort migration for DBs created before the referral/password
+        # columns existed — ALTER TABLE ... ADD COLUMN throws if the column
+        # is already there, so each is wrapped individually and ignored.
         for col, ddl in [
             ("referred_by", "ALTER TABLE registrations ADD COLUMN referred_by TEXT"),
             ("referral_bonus_given", "ALTER TABLE registrations ADD COLUMN referral_bonus_given INTEGER NOT NULL DEFAULT 0"),
+            ("password_hash", "ALTER TABLE registrations ADD COLUMN password_hash TEXT"),
         ]:
             try:
                 await db.execute(ddl)
@@ -499,9 +521,16 @@ async def api_register():
     email = (data.get("email") or "").strip()
     method = (data.get("method") or "whatsapp").strip().lower()
     ref = (data.get("ref") or "").strip().replace(" ", "").replace("+", "")
+    password = data.get("password") or ""
 
     if not phone or not phone.isdigit() or len(phone) < 9:
         return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+
+    if not name:
+        return jsonify({"success": False, "error": "Enter your name."}), 400
+
+    if len(password) < 6:
+        return jsonify({"success": False, "error": "Password must be at least 6 characters."}), 400
 
     if method == "email":
         if not email or "@" not in email or "." not in email.split("@")[-1]:
@@ -522,21 +551,23 @@ async def api_register():
 
     otp = _generate_otp()
     now = time.time()
+    password_hash = _hash_password(password)
 
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
             row = await c.fetchone()
         if row and row[0] == 1:
-            return jsonify({"success": False, "error": "This number is already verified."}), 400
+            return jsonify({"success": False, "error": "This number is already verified. Use the panel login instead."}), 400
 
         await db.execute("""
-            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, referred_by)
-            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?, ?)
+            INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, referred_by, password_hash)
+            VALUES (?, ?, ?, ?, ?, 0, 0, 'none', ?, ?, ?)
             ON CONFLICT(phone) DO UPDATE SET
                 name=excluded.name, email=excluded.email, otp=excluded.otp,
                 otp_expiry=excluded.otp_expiry,
-                referred_by=COALESCE(registrations.referred_by, excluded.referred_by)
-        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now, valid_ref))
+                referred_by=COALESCE(registrations.referred_by, excluded.referred_by),
+                password_hash=excluded.password_hash
+        """, (phone, name, email, otp, now + OTP_TTL_SECONDS, now, valid_ref, password_hash))
         await db.commit()
 
     if method == "email":
@@ -655,23 +686,56 @@ async def api_referrals():
 
 
 
+@app.route("/panel")
+async def panel_page():
+    panel_path = Path(__file__).parent / "panel.html"
+    if panel_path.exists():
+        return Response(panel_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/profile", methods=["POST"])
 async def api_profile():
     """Profile panel data for a verified user — wallet balance, badge, and
-    recent top-up requests with their review status. Looked up by phone
-    only (no password); this mirrors how /api/verify-otp already trusts a
-    WhatsApp number once it's been OTP-verified."""
-    phone = (request.args.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    recent top-up requests with their review status.
+
+    ✅ FIX: this function existed in the codebase with no @app.route above
+    it, so it was dead code — nothing could ever call it, and the profile
+    panel it was written for was never reachable. Now wired up properly.
+
+    ✅ Also fixed: it was designed to trust a bare phone number with no
+    password, which would have exposed wallet balance and M-Pesa payment
+    history to anyone who guessed/knew a registered number. Now requires
+    name + phone + the password set at registration, matching how
+    /api/register and the rest of the panel login work.
+    """
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    password = data.get("password") or ""
+
     if not phone or not phone.isdigit():
         return jsonify({"success": False, "error": "Valid phone number required."}), 400
+    if not name or not password:
+        return jsonify({"success": False, "error": "Enter your name, WhatsApp number, and password."}), 400
 
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
-            "SELECT name, email, verified, credits, badge, verified_at FROM registrations WHERE phone = ?",
+            "SELECT name, email, verified, credits, badge, verified_at, created_at, password_hash FROM registrations WHERE phone = ?",
             (phone,)
         ) as c:
             row = await c.fetchone()
         if not row:
             return jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404
+
+        stored_name, email, verified, credits, badge, verified_at, created_at, password_hash = row
+
+        if not verified:
+            return jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403
+        if not password_hash or not _verify_password(password, password_hash):
+            return jsonify({"success": False, "error": "Incorrect password."}), 401
+        if stored_name.strip().lower() != name.strip().lower():
+            return jsonify({"success": False, "error": "Name doesn't match our records for this number."}), 403
 
         async with db.execute(
             "SELECT id, amount, mpesa_code, status, created_at FROM payments WHERE phone = ? ORDER BY created_at DESC LIMIT 10",
@@ -679,20 +743,31 @@ async def api_profile():
         ) as c:
             prows = await c.fetchall()
 
-    name, email, verified, credits, badge, verified_at = row
     return jsonify({
         "success": True,
         "phone": phone,
-        "name": name,
+        "name": stored_name,
         "email": email,
         "verified": bool(verified),
         "credits": credits,
         "badge": badge if verified else "none",
         "verified_at": verified_at,
+        "member_since": created_at,
         "recent_payments": [
             {"id": p[0], "amount": p[1], "mpesa_code": p[2], "status": p[3], "created_at": p[4]}
             for p in prows
         ],
+    })
+
+
+@app.route("/api/payment-info", methods=["GET"])
+async def api_payment_info():
+    """Public info the panel's top-up form needs: where to send M-Pesa
+    funds. No auth required — this is just instructions, not user data."""
+    return jsonify({
+        "success": True,
+        "payto_number": ADMIN_PAYTO_NUMBER,
+        "configured": bool(ADMIN_PAYTO_NUMBER)
     })
 
 
