@@ -2,8 +2,159 @@ const { downloadMediaMessage } = require('@whiskeysockets/baileys');
 const { execFile } = require('child_process');  // ✅ FIX: use execFile (no shell injection)
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
 module.exports = {
+
+  // ── .toimg ─────────────────────────────────────────────────────────────────
+  // Reverse of .sticker — reply to a sticker to get it back as a PNG image.
+  toimg: async ({ sock, from, msg }) => {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = quoted?.quotedMessage;
+    const stickerMsg = quotedMsg?.stickerMessage || msg.message?.stickerMessage;
+
+    if (!stickerMsg) {
+      return sock.sendMessage(from, { text: '❌ Reply to a sticker with .toimg' }, { quoted: msg });
+    }
+
+    try {
+      const dlMsg = quotedMsg
+        ? { key: { remoteJid: from, id: quoted.stanzaId, participant: quoted.participant }, message: quotedMsg }
+        : msg;
+      const media = await downloadMediaMessage(dlMsg, 'buffer', {});
+      const tmpIn = `/tmp/toimg_in_${Date.now()}.webp`;
+      const tmpOut = `/tmp/toimg_out_${Date.now()}.png`;
+      fs.writeFileSync(tmpIn, media);
+
+      await new Promise((resolve, reject) => {
+        execFile('ffmpeg', ['-i', tmpIn, tmpOut, '-y'], (err) => err ? reject(err) : resolve());
+      });
+
+      await sock.sendMessage(from, { image: fs.readFileSync(tmpOut), caption: '✅ Converted to image' }, { quoted: msg });
+      fs.unlinkSync(tmpIn);
+      fs.unlinkSync(tmpOut);
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Conversion failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  // ── .scrop ─────────────────────────────────────────────────────────────────
+  // Like .sticker but center-crops to a tight square instead of padding with
+  // transparent bars — gives a fuller/zoomed sticker look, no dead space.
+  scrop: async ({ sock, from, msg }) => {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = quoted?.quotedMessage;
+    const imgMsg = quotedMsg?.imageMessage || msg.message?.imageMessage;
+    const vidMsg = quotedMsg?.videoMessage || msg.message?.videoMessage;
+
+    if (!imgMsg && !vidMsg) {
+      return sock.sendMessage(from, { text: '❌ Reply to an image or short video with .scrop' }, { quoted: msg });
+    }
+
+    try {
+      const dlMsg = quotedMsg
+        ? { key: { remoteJid: from, id: quoted.stanzaId, participant: quoted.participant }, message: quotedMsg }
+        : msg;
+
+      const media = await downloadMediaMessage(dlMsg, 'buffer', {});
+      const ext = imgMsg ? 'jpg' : 'mp4';
+      const tmpIn = `/tmp/scrop_in_${Date.now()}.${ext}`;
+      const tmpOut = `/tmp/scrop_out_${Date.now()}.webp`;
+      fs.writeFileSync(tmpIn, media);
+
+      await new Promise((resolve, reject) => {
+        // crop to the largest centered square, then scale — no padding bars
+        const cropFilter = "crop='min(iw,ih)':'min(iw,ih)',scale=512:512";
+        const args = imgMsg
+          ? ['-i', tmpIn, '-vf', cropFilter, tmpOut, '-y']
+          : ['-i', tmpIn, '-vf', `${cropFilter},fps=15`, '-t', '6', tmpOut, '-y'];
+        execFile('ffmpeg', args, (err) => err ? reject(err) : resolve());
+      });
+
+      await sock.sendMessage(from, { sticker: fs.readFileSync(tmpOut) }, { quoted: msg });
+      fs.unlinkSync(tmpIn);
+      fs.unlinkSync(tmpOut);
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Crop-sticker failed: ${e.message}` }, { quoted: msg });
+    }
+  },
+
+  // ── .emojimix ──────────────────────────────────────────────────────────────
+  // Usage: .emojimix 😂+😍  (or .emojimix 😂 😍)
+  // Uses Google's public Emoji Kitchen combiner (same one Gboard uses).
+  emojimix: async ({ sock, from, msg, args }) => {
+    const raw = args.join(' ').replace(/\s+/g, '');
+    const parts = raw.split('+');
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      return sock.sendMessage(from, { text: '❌ Usage: .emojimix 😂+😍' }, { quoted: msg });
+    }
+    const toCodepoint = (e) => [...e].map(c => c.codePointAt(0).toString(16)).join('-');
+    const e1 = toCodepoint(parts[0]);
+    const e2 = toCodepoint(parts[1]);
+
+    try {
+      // Emoji Kitchen's static render endpoint (used by Gboard/Tenor mirrors).
+      // Not every emoji pair has a combo — handled by the catch below.
+      const directUrl = `https://www.gstatic.com/android/keyboard/emojikitchen/20220815/u${e1}/u${e1}_u${e2}.png`;
+      const altUrl = `https://www.gstatic.com/android/keyboard/emojikitchen/20220815/u${e2}/u${e2}_u${e1}.png`;
+
+      let imgRes;
+      try {
+        imgRes = await axios.get(directUrl, { responseType: 'arraybuffer', timeout: 10000 });
+      } catch (_) {
+        imgRes = await axios.get(altUrl, { responseType: 'arraybuffer', timeout: 10000 });
+      }
+
+      const tmpOut = `/tmp/emojimix_${Date.now()}.webp`;
+      const tmpPng = `/tmp/emojimix_${Date.now()}.png`;
+      fs.writeFileSync(tmpPng, imgRes.data);
+      await new Promise((resolve, reject) => {
+        execFile('ffmpeg', ['-i', tmpPng, '-vf', 'scale=512:512', tmpOut, '-y'], (err) => err ? reject(err) : resolve());
+      });
+
+      await sock.sendMessage(from, { sticker: fs.readFileSync(tmpOut) }, { quoted: msg });
+      fs.unlinkSync(tmpPng);
+      fs.unlinkSync(tmpOut);
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ That emoji combo isn't available, or the mix service is down. Try a different pair.` }, { quoted: msg });
+    }
+  },
+
+  // ── .mediafire ─────────────────────────────────────────────────────────────
+  // Usage: .mediafire [mediafire.com link]
+  // Mediafire doesn't expose a direct-download API — the real file URL is
+  // embedded in the page HTML, so this scrapes the download button's href.
+  mediafire: async ({ sock, from, msg, args }) => {
+    const url = args[0];
+    if (!url || !/mediafire\.com/i.test(url)) {
+      return sock.sendMessage(from, { text: '📁 Usage: .mediafire [mediafire.com link]' }, { quoted: msg });
+    }
+    await sock.sendMessage(from, { text: '⏳ Fetching file...' }, { quoted: msg });
+    try {
+      const page = await axios.get(url, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const html = page.data;
+      const match = html.match(/href="(https:\/\/download[^"]+)"/i);
+      if (!match) {
+        return sock.sendMessage(from, { text: '❌ Could not find a direct download link on that page — the file may have been removed or the link is invalid.' }, { quoted: msg });
+      }
+      const directUrl = match[1];
+      const nameMatch = html.match(/<div class="dl-btn-label"[^>]*>([^<]+)<\/div>/i) || html.match(/aria-label="([^"]+)"/i);
+      const filename = nameMatch ? nameMatch[1].trim() : 'file';
+
+      const fileRes = await axios.get(directUrl, { responseType: 'arraybuffer', timeout: 60000, maxContentLength: 100 * 1024 * 1024 });
+      await sock.sendMessage(from, {
+        document: fileRes.data,
+        fileName: filename,
+        mimetype: fileRes.headers['content-type'] || 'application/octet-stream',
+        caption: `✅ *${filename}*`,
+      }, { quoted: msg });
+    } catch (e) {
+      const reason = e.response?.status === 400 || (e.message || '').includes('maxContentLength')
+        ? 'File is too large (100MB+ limit over WhatsApp).'
+        : e.message;
+      await sock.sendMessage(from, { text: `❌ Mediafire download failed: ${reason}` }, { quoted: msg });
+    }
+  },
 
   // ── .getpp (upgraded) ────────────────────────────────────────────────────
   // Usage: .getpp (your own pfp) | .getpp @user | .getpp 254712345678 | reply to someone's msg with .getpp
