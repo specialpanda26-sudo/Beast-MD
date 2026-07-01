@@ -44,6 +44,7 @@ ${p}summarize [text]  - AI text summarizer (cypher.js)
 ${p}pbp [text]        - RPG session tracker
 
 🔑 Manage keyword auto-replies & feature toggles from the *Admin Panel* (/admin → Keywords / Features tabs)
+🔑 Forgot the /admin panel password? Tap "Forgot password?" on its login screen — a reset code is sent here to your own WhatsApp number.
 
 ⏰ *MESSAGE SCHEDULER*
 ${p}schedule add <time> <to> <msg> - Schedule a message
@@ -52,7 +53,9 @@ ${p}schedule del <ID> - Cancel a scheduled msg
 ${p}schedule repeat <ID> daily|weekly - Repeat it
 _Time: 14:30 / 9:00am / 30m / 2h_
 
-/paint [text]    - Generate text image
+${p}imagine [desc]   - 🎨 AI image generation (free, no API key)
+${p}tts [text]       - 🔊 Text-to-speech voice note
+${p}model [name]     - 🤖 Per-chat AI model (llama/llama8/mixtral/gemma)
 /download_video  - Download video
 /download_song   - Download MP3
 
@@ -89,6 +92,29 @@ ${p}register       - Get web panel link (free credits + trust badge)
 ${p}profile        - View your wallet balance & badge
 ${p}addfunds [amt] [code] - Top up wallet via M-Pesa (admin reviews it)
 ${p}referral       - Get your referral link & track earnings
+${p}imagine [desc] - 🎨 AI image generation (free, no API key)
+${p}tts [text]     - 🔊 Text-to-speech voice note
+${p}model [name]   - 🤖 Switch AI model (llama/llama8/mixtral/gemma)
+${p}checklink [url] - 🔗 Check if a link is safe or suspicious
+
+🔑 Forgot your panel password? Open the panel and tap "Forgot password?" — a reset code is sent right here on WhatsApp.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 *GAMES*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}hangman        - Start hangman (reply with letters)
+${p}trivia         - Random trivia question
+${p}guess [max]    - Number guessing game (default 1-100)
+${p}truth          - Truth or Dare: Truth
+${p}dare           - Truth or Dare: Dare
+${p}wyr            - Would You Rather
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔎 *LOOKUP TOOLS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}validate [num] - Check a phone number's format/region
+${p}ipinfo [ip]    - Public geo/ASN info for an IP address
+${p}whois [domain] - Public WHOIS/RDAP data for a domain
 
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
@@ -655,5 +681,57 @@ module.exports.announce = async ({ sock, from, msg, isOwner, args }) => {
   } catch (e) {
     const apiErr = e.response?.data?.error || e.message;
     await sock.sendMessage(from, { text: `❌ Couldn't queue the announcement: ${apiErr}` }, { quoted: msg });
+  }
+};
+
+// ── .maintenance ──────────────────────────────────────────────────────────
+// Owner only. Puts the bot in maintenance mode — non-owners get a polite
+// "back soon" reply instead of any command running. Owner/co-owner is always
+// exempt so you can keep testing/fixing while it's on.
+module.exports.maintenance = async ({ sock, from, msg, isOwner, args }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  const toggle = args[0]?.toLowerCase();
+  if (!['on', 'off'].includes(toggle)) {
+    const state = global.botMaintenance ? 'ON' : 'OFF';
+    return sock.sendMessage(from, { text: `🛠️ Maintenance mode is currently *${state}*.\n\nUsage: .maintenance on/off` }, { quoted: msg });
+  }
+  global.botMaintenance = toggle === 'on';
+  await sock.sendMessage(from, {
+    text: global.botMaintenance
+      ? '🛠️ Maintenance mode *enabled*. Only the owner/co-owners can use commands now.'
+      : '✅ Maintenance mode *disabled*. Bot is back to normal for everyone.'
+  }, { quoted: msg });
+};
+
+// ── .reload ───────────────────────────────────────────────────────────────
+// Owner only. Hot-reloads all plugin files from disk without restarting the
+// whole process — handy after editing a plugin.js file directly on the
+// server (e.g. via Termux/SSH) without wanting a full redeploy.
+module.exports.reload = async ({ sock, from, msg, isOwner }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  try {
+    const pluginNames = ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet'];
+    const freshCommands = {};
+    let loadedCount = 0;
+    const failed = [];
+    for (const name of pluginNames) {
+      try {
+        const resolved = require.resolve(`./${name}`);
+        delete require.cache[resolved]; // force Node to re-read the file from disk
+        Object.assign(freshCommands, require(`./${name}`));
+        loadedCount++;
+      } catch (e) {
+        failed.push(`${name} (${e.message})`);
+      }
+    }
+    // Swap in place so the reference client_bridge.js already holds stays valid
+    Object.keys(global.allCommandsRef || {}).forEach(k => delete global.allCommandsRef[k]);
+    Object.assign(global.allCommandsRef || {}, freshCommands);
+
+    let text = `🔄 Reloaded ${loadedCount}/${pluginNames.length} plugins — ${Object.keys(freshCommands).length} commands active.`;
+    if (failed.length) text += `\n⚠️ Failed: ${failed.join(', ')}`;
+    await sock.sendMessage(from, { text }, { quoted: msg });
+  } catch (e) {
+    await sock.sendMessage(from, { text: `❌ Reload failed: ${e.message}` }, { quoted: msg });
   }
 };

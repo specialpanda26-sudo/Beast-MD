@@ -6,6 +6,7 @@ import json
 import random
 import hashlib
 import secrets
+import html
 import httpx
 import aiosqlite
 from urllib.parse import quote_plus
@@ -69,6 +70,31 @@ NO_CACHE_HEADERS = {
     "Pragma": "no-cache",
     "Expires": "0",
 }
+
+# ✅ NEW: baseline security headers on every response.
+# Referrer-Policy matters a lot here specifically because the admin panel
+# authenticates via a ?pass=PASSWORD query string — without a strict
+# referrer policy, clicking any outbound link (or loading any external
+# resource) from an authenticated admin page could leak the password to
+# a third-party site via the Referer header. no-referrer stops that.
+@app.after_request
+async def _apply_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+    return response
+
+
+def _client_ip(req) -> str:
+    """Best-effort real client IP behind a reverse proxy (Render/Railway
+    etc. sit in front of this app), falling back to the direct socket addr."""
+    fwd = req.headers.get("X-Forwarded-For", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return req.remote_addr or "unknown"
+
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 if not GROQ_API_KEY:
@@ -224,16 +250,17 @@ SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
 PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
 
-async def call_groq_ai(prompt: str) -> str:
+async def call_groq_ai(prompt: str, model: str = None) -> str:
     if not GROQ_API_KEY:
         return "❌ AI not configured. Set GROQ_API_KEY in your .env file."
+    chosen_model = model or "llama3-8b-8192"
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
                 json={
-                    "model": "llama3-8b-8192",
+                    "model": chosen_model,
                     "messages": [
                         {"role": "system", "content": "You are a helpful WhatsApp assistant. Keep replies concise and friendly."},
                         {"role": "user", "content": prompt}
@@ -413,6 +440,7 @@ async def init_db():
             ("referred_by", "ALTER TABLE registrations ADD COLUMN referred_by TEXT"),
             ("referral_bonus_given", "ALTER TABLE registrations ADD COLUMN referral_bonus_given INTEGER NOT NULL DEFAULT 0"),
             ("password_hash", "ALTER TABLE registrations ADD COLUMN password_hash TEXT"),
+            ("reset_otp_attempts", "ALTER TABLE registrations ADD COLUMN reset_otp_attempts INTEGER NOT NULL DEFAULT 0"),
         ]:
             try:
                 await db.execute(ddl)
@@ -456,6 +484,16 @@ async def init_db():
                 "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
                 (default_feature,)
             )
+        # ✅ NEW: admin_settings — lets the admin password be changed at
+        # runtime (via "forgot password" reset) instead of being permanently
+        # fixed to whatever ADMIN_PASSWORD was set to at deploy time.
+        # Also holds the (hashed, one-time) reset code state.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS admin_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """)
         await db.commit()
         logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
 
@@ -672,6 +710,110 @@ async def api_verify_otp():
     })
 
 
+@app.route("/api/forgot-password", methods=["POST"])
+async def api_forgot_password():
+    """
+    ✅ NEW: "forgot panel password" for regular registered users (the
+    Name/Number/Password login at /panel — separate from /admin).
+    Sends a one-time 6-digit code to the user's OWN registered WhatsApp
+    number (reusing send_otp_whatsapp), reusing the same otp/otp_expiry
+    columns already on `registrations` for the registration-verify flow.
+    Safe to reuse: /api/verify-otp only acts on accounts that are NOT YET
+    verified, and this only acts on accounts that ARE verified, so the two
+    flows never collide on the same row.
+    """
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid WhatsApp number required."}), 400
+
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT name, verified, otp_expiry FROM registrations WHERE phone = ?", (phone,)
+        ) as c:
+            row = await c.fetchone()
+
+        if not row:
+            return jsonify({"success": False, "error": "No account found for this number. Register first."}), 404
+        name, verified, otp_expiry = row
+        if not verified:
+            return jsonify({"success": False, "error": "This number isn't verified yet. Complete registration first."}), 403
+
+        # Cooldown: block re-requesting while a still-fresh code was sent
+        # less than 60s ago, so this can't be used to spam a number.
+        if otp_expiry and (otp_expiry - OTP_TTL_SECONDS) > (now - RESET_REQUEST_COOLDOWN_SECONDS):
+            wait = int(RESET_REQUEST_COOLDOWN_SECONDS - (now - (otp_expiry - OTP_TTL_SECONDS)))
+            return jsonify({"success": False, "error": f"Please wait {max(wait, 1)}s before requesting another code."}), 429
+
+        otp = _generate_otp()
+        await db.execute(
+            "UPDATE registrations SET otp = ?, otp_expiry = ?, reset_otp_attempts = 0 WHERE phone = ?",
+            (otp, now + OTP_TTL_SECONDS, phone)
+        )
+        await db.commit()
+
+    result = await send_otp_whatsapp(phone, otp, name)
+    if not result.get("success"):
+        return jsonify({"success": False, "error": result.get("error", "Couldn't send the reset code. Is the bot connected to WhatsApp?")}), 502
+
+    return jsonify({"success": True, "message": "A reset code was sent to your WhatsApp. It expires in 10 minutes."})
+
+
+@app.route("/api/reset-password", methods=["POST"])
+async def api_reset_password():
+    """Step 2 of panel password reset: verify the code and set a new password."""
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    otp = (data.get("otp") or "").strip()
+    new_password = data.get("new_password") or ""
+
+    if not phone or not phone.isdigit():
+        return jsonify({"success": False, "error": "Valid WhatsApp number required."}), 400
+    if not otp:
+        return jsonify({"success": False, "error": "Enter the code sent to your WhatsApp."}), 400
+    if len(new_password) < 6:
+        return jsonify({"success": False, "error": "Password must be at least 6 characters."}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT otp, otp_expiry, verified, reset_otp_attempts FROM registrations WHERE phone = ?", (phone,)
+        ) as c:
+            row = await c.fetchone()
+
+        if not row:
+            return jsonify({"success": False, "error": "No account found for this number."}), 404
+        stored_otp, expiry, verified, attempts = row
+        if not verified:
+            return jsonify({"success": False, "error": "This number isn't verified yet."}), 403
+        if not stored_otp or not expiry:
+            return jsonify({"success": False, "error": "No reset code was requested. Tap 'Forgot password' first."}), 400
+        if (attempts or 0) >= RESET_OTP_MAX_ATTEMPTS:
+            await db.execute(
+                "UPDATE registrations SET otp = NULL, otp_expiry = NULL, reset_otp_attempts = 0 WHERE phone = ?",
+                (phone,)
+            )
+            await db.commit()
+            return jsonify({"success": False, "error": "Too many wrong attempts. Request a new code."}), 429
+        if time.time() > expiry:
+            return jsonify({"success": False, "error": "That code expired. Request a new one."}), 400
+        if otp != stored_otp:
+            await db.execute(
+                "UPDATE registrations SET reset_otp_attempts = reset_otp_attempts + 1 WHERE phone = ?",
+                (phone,)
+            )
+            await db.commit()
+            return jsonify({"success": False, "error": "Incorrect code."}), 401
+
+        await db.execute(
+            "UPDATE registrations SET password_hash = ?, otp = NULL, otp_expiry = NULL, reset_otp_attempts = 0 WHERE phone = ?",
+            (_hash_password(new_password), phone)
+        )
+        await db.commit()
+
+    return jsonify({"success": True, "message": "Password updated! You can log in with your new password now."})
+
+
 @app.route("/api/referrals", methods=["GET"])
 async def api_referrals():
     """Referral summary for a verified user: their referral code (their own
@@ -741,6 +883,15 @@ async def api_profile():
     if not name or not password:
         return jsonify({"success": False, "error": "Enter your name, WhatsApp number, and password."}), 400
 
+    # ✅ SECURITY: brute-force lockout, tracked per phone number (the account
+    # being targeted) rather than per IP — this stops someone brute-forcing
+    # one specific victim's password even if they rotate IPs, which is the
+    # more realistic threat here than someone trying many accounts from one IP.
+    now = time.time()
+    lock_entry = _panel_login_failures.get(phone)
+    if lock_entry and lock_entry.get("locked_until", 0) > now:
+        return jsonify({"success": False, "error": "Too many failed attempts. Try again in a few minutes."}), 429
+
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
             "SELECT name, email, verified, credits, badge, verified_at, created_at, password_hash FROM registrations WHERE phone = ?",
@@ -755,9 +906,17 @@ async def api_profile():
         if not verified:
             return jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403
         if not password_hash or not _verify_password(password, password_hash):
+            if not lock_entry or now - lock_entry.get("window_start", now) > ADMIN_LOCKOUT_WINDOW_SECONDS:
+                lock_entry = {"fails": 0, "window_start": now}
+            lock_entry["fails"] = lock_entry.get("fails", 0) + 1
+            if lock_entry["fails"] >= ADMIN_LOCKOUT_THRESHOLD:
+                lock_entry["locked_until"] = now + ADMIN_LOCKOUT_DURATION_SECONDS
+            _panel_login_failures[phone] = lock_entry
             return jsonify({"success": False, "error": "Incorrect password."}), 401
         if stored_name.strip().lower() != name.strip().lower():
             return jsonify({"success": False, "error": "Name doesn't match our records for this number."}), 403
+
+        _panel_login_failures.pop(phone, None)
 
         async with db.execute(
             "SELECT id, amount, mpesa_code, status, created_at FROM payments WHERE phone = ? ORDER BY created_at DESC LIMIT 10",
@@ -878,6 +1037,55 @@ async def api_payment_submit():
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
+# ✅ NEW: in-memory cooldown so /admin/forgot-password can't be spammed to
+# flood the owner's WhatsApp with reset codes. Not persisted on purpose —
+# a restart clearing this is a harmless edge case, not a security hole.
+_last_reset_request_time = 0.0
+RESET_REQUEST_COOLDOWN_SECONDS = 60
+RESET_OTP_TTL_SECONDS = 10 * 60
+RESET_OTP_MAX_ATTEMPTS = 5
+
+# ✅ NEW: brute-force lockout for the admin login itself. Before this,
+# _check_admin_auth was a bare string comparison with NO limit on how many
+# times someone could guess — a short/weak ADMIN_PASSWORD was crackable by
+# just hammering /admin/stats with different values. Now tracked per client
+# IP, in-memory: 5 wrong attempts within 5 minutes locks that IP out for 5
+# minutes, even if the very next guess would've been correct. A restart
+# clearing this table is an acceptable trade-off for a single-admin tool.
+_admin_login_failures: dict[str, dict] = {}
+ADMIN_LOCKOUT_THRESHOLD = 5
+ADMIN_LOCKOUT_WINDOW_SECONDS = 5 * 60
+ADMIN_LOCKOUT_DURATION_SECONDS = 5 * 60
+
+# ✅ NEW: same brute-force protection for the /panel user login, tracked
+# per registered phone number (see api_profile below for why per-account
+# rather than per-IP fits this threat better).
+_panel_login_failures: dict[str, dict] = {}
+
+
+async def _get_admin_setting(key: str):
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT value FROM admin_settings WHERE key = ?", (key,)) as c:
+            row = await c.fetchone()
+            return row[0] if row else None
+
+
+async def _set_admin_setting(key: str, value: str):
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO admin_settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value)
+        )
+        await db.commit()
+
+
+async def _clear_admin_settings(*keys: str):
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.executemany("DELETE FROM admin_settings WHERE key = ?", [(k,) for k in keys])
+        await db.commit()
+
+
 def _check_admin_auth(req) -> bool:
     """
     ✅ FIX: admin panel had no server-side auth — anyone who found the URL
@@ -885,11 +1093,128 @@ def _check_admin_auth(req) -> bool:
     - ?pass=PASSWORD query param, or
     - Authorization: Bearer PASSWORD header
     Falls back to open if ADMIN_PASSWORD env var is not set (dev mode).
+
+    NOTE: kept as a sync check using the env-var password only, for all the
+    existing call sites below. The DB-stored (resettable) password is
+    checked by _check_admin_auth_async, used at the login/stats entry point
+    so a password reset via WhatsApp OTP actually takes effect.
+
+    ✅ SECURITY: uses secrets.compare_digest instead of `==` so this can't
+    leak timing information about how many leading characters of the
+    password were guessed correctly.
     """
     if not ADMIN_PASSWORD:
         return True  # dev mode: no password set
     token = req.args.get("pass") or req.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-    return token == ADMIN_PASSWORD
+    return secrets.compare_digest(token or "", ADMIN_PASSWORD)
+
+
+async def _check_admin_auth_async(req) -> bool:
+    """
+    Same as _check_admin_auth, but also:
+    - accepts a password that was reset via the "forgot password" WhatsApp
+      OTP flow (stored hashed in admin_settings)
+    - enforces the brute-force lockout described above
+
+    Deliberately returns a plain False for both "wrong password" and
+    "locked out" (never distinguishing the two in the response) so an
+    attacker can't use the error message to detect when they're being
+    rate-limited vs just guessing wrong.
+    """
+    ip = _client_ip(req)
+    now = time.time()
+    entry = _admin_login_failures.get(ip)
+    if entry and entry.get("locked_until", 0) > now:
+        return False
+
+    token = req.args.get("pass") or req.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    stored_hash = await _get_admin_setting("password_hash")
+    if stored_hash:
+        ok = _verify_password(token or "", stored_hash)
+    elif not ADMIN_PASSWORD:
+        ok = True  # dev mode: no password set, and no reset has ever happened
+    else:
+        ok = secrets.compare_digest(token or "", ADMIN_PASSWORD)
+
+    if ok:
+        _admin_login_failures.pop(ip, None)
+        return True
+
+    if not entry or now - entry.get("window_start", now) > ADMIN_LOCKOUT_WINDOW_SECONDS:
+        entry = {"fails": 0, "window_start": now}
+    entry["fails"] = entry.get("fails", 0) + 1
+    if entry["fails"] >= ADMIN_LOCKOUT_THRESHOLD:
+        entry["locked_until"] = now + ADMIN_LOCKOUT_DURATION_SECONDS
+    _admin_login_failures[ip] = entry
+    return False
+
+
+@app.route("/admin/forgot-password", methods=["POST"])
+async def admin_forgot_password():
+    """
+    ✅ NEW: "forgot admin password" — sends a one-time 6-digit reset code
+    to the BOT OWNER'S OWN WhatsApp number (OWNER_NUMBER), reusing the same
+    send_otp_whatsapp() delivery path already used for user registration.
+    Deliberately does NOT accept any phone number from the requester — the
+    code always goes to the fixed owner number configured on the server,
+    so this can't be abused to send codes to an attacker-controlled number.
+    """
+    global _last_reset_request_time
+    now = time.time()
+    if now - _last_reset_request_time < RESET_REQUEST_COOLDOWN_SECONDS:
+        wait = int(RESET_REQUEST_COOLDOWN_SECONDS - (now - _last_reset_request_time))
+        return jsonify({"success": False, "error": f"Please wait {wait}s before requesting another code."}), 429
+
+    owner_number = os.environ.get("OWNER_NUMBER", "").replace("+", "").replace(" ", "")
+    if not owner_number:
+        return jsonify({"success": False, "error": "No OWNER_NUMBER configured on the server — password reset isn't available. Set it manually via ADMIN_PASSWORD instead."}), 400
+
+    _last_reset_request_time = now
+    otp = _generate_otp()
+    await _set_admin_setting("reset_otp_hash", _hash_password(otp))
+    await _set_admin_setting("reset_otp_expires", str(now + RESET_OTP_TTL_SECONDS))
+    await _set_admin_setting("reset_otp_attempts", "0")
+
+    result = await send_otp_whatsapp(owner_number, otp, "Admin")
+    if not result.get("success"):
+        return jsonify({"success": False, "error": result.get("error", "Couldn't send the reset code. Is the bot connected to WhatsApp?")}), 502
+
+    return jsonify({"success": True, "message": "A reset code was sent to the owner's WhatsApp. It expires in 10 minutes."})
+
+
+@app.route("/admin/reset-password", methods=["POST"])
+async def admin_reset_password():
+    """✅ NEW: verify the OTP from /admin/forgot-password and set a new admin password."""
+    data = await request.get_json(force=True, silent=True) or {}
+    otp = str(data.get("otp", "")).strip()
+    new_password = str(data.get("new_password", ""))
+
+    if len(new_password) < 8:
+        return jsonify({"success": False, "error": "New password must be at least 8 characters."}), 400
+
+    stored_hash = await _get_admin_setting("reset_otp_hash")
+    expires_raw = await _get_admin_setting("reset_otp_expires")
+    attempts_raw = await _get_admin_setting("reset_otp_attempts")
+    if not stored_hash or not expires_raw:
+        return jsonify({"success": False, "error": "No reset code was requested. Tap 'Forgot password' first."}), 400
+
+    attempts = int(attempts_raw or "0")
+    if attempts >= RESET_OTP_MAX_ATTEMPTS:
+        await _clear_admin_settings("reset_otp_hash", "reset_otp_expires", "reset_otp_attempts")
+        return jsonify({"success": False, "error": "Too many wrong attempts. Request a new code."}), 429
+
+    if time.time() > float(expires_raw):
+        await _clear_admin_settings("reset_otp_hash", "reset_otp_expires", "reset_otp_attempts")
+        return jsonify({"success": False, "error": "That code expired. Request a new one."}), 400
+
+    if not _verify_password(otp, stored_hash):
+        await _set_admin_setting("reset_otp_attempts", str(attempts + 1))
+        return jsonify({"success": False, "error": "Incorrect code."}), 401
+
+    await _set_admin_setting("password_hash", _hash_password(new_password))
+    await _clear_admin_settings("reset_otp_hash", "reset_otp_expires", "reset_otp_attempts")
+    logger.info("🔑 Admin password was reset via WhatsApp OTP.")
+    return jsonify({"success": True, "message": "Password updated. You can log in with your new password now."})
 
 
 @app.route("/admin")
@@ -907,7 +1232,7 @@ async def admin_panel():
 
 @app.route("/admin/stats", methods=["GET"])
 async def admin_stats():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT COUNT(*) FROM contacts") as c:
@@ -973,7 +1298,7 @@ async def admin_stats():
 
 @app.route("/admin/terminate", methods=["POST"])
 async def admin_terminate():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     session_name = data.get("session", "")
@@ -985,6 +1310,10 @@ async def admin_terminate():
 
 @app.route("/admin/register-session", methods=["POST"])
 async def register_session():
+    # ✅ FIX: was missing the auth check every other /admin/* route has —
+    # let anyone on the internet spoof/overwrite session registry entries.
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "unknown")
     now = time.time()
@@ -1005,6 +1334,9 @@ async def register_session():
 
 @app.route("/admin/update-session", methods=["POST"])
 async def update_session():
+    # ✅ FIX: was missing the auth check every other /admin/* route has.
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "")
     if name in SESSION_REGISTRY:
@@ -1019,7 +1351,7 @@ async def update_session():
 
 @app.route("/admin/set-expiry", methods=["POST"])
 async def admin_set_expiry():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     session_name = data.get("session", "")
@@ -1039,6 +1371,9 @@ async def admin_set_expiry():
 
 @app.route("/admin/check-terminate", methods=["POST"])
 async def check_terminate():
+    # ✅ FIX: was missing the auth check every other /admin/* route has.
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "")
     info = SESSION_REGISTRY.get(name, {})
@@ -1054,6 +1389,11 @@ async def check_terminate():
 
 @app.route("/admin/session-detail", methods=["GET"])
 async def session_detail():
+    # ✅ FIX: this was the one /admin/* route with NO auth check at all —
+    # anyone with the URL could read up to 100 real chat messages for any
+    # session. Now requires the same admin password as every other route.
+    if not await _check_admin_auth_async(request):
+        return "Unauthorized", 401
     session_name = request.args.get("session", "")
     try:
         async with aiosqlite.connect(DB_FILE) as db:
@@ -1065,26 +1405,38 @@ async def session_detail():
         msgs = [{"sender": r[0], "name": r[1], "body": r[2], "time": r[3]} for r in rows]
     except Exception:
         msgs = []
-    html = f"""<!DOCTYPE html>
+    # ✅ FIX: message name/body/session_name are user-controlled (they come
+    # straight from WhatsApp chats) and were being dropped into this HTML
+    # unescaped — a message containing "<script>" became stored XSS on this
+    # page. Everything user-controlled is now html.escape()'d before it's
+    # inserted into the template.
+    safe_session_name = html.escape(session_name)
+    html_body = "".join(
+        f'<div class="msg"><div class="meta">{html.escape(m["name"] or "")} ({html.escape(m["sender"] or "")}) · '
+        f'{time.strftime("%Y-%m-%d %H:%M", time.localtime(m["time"]))}</div>'
+        f'<div class="body">{html.escape(m["body"] or "")}</div></div>'
+        for m in msgs
+    ) if msgs else '<p style="color:#555">No messages found for this session.</p>'
+    html_page = f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/>
-<title>Session: {session_name}</title>
+<title>Session: {safe_session_name}</title>
 <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{background:#08090f;color:#e2eaf4;font-family:'Segoe UI',sans-serif;padding:20px}}
 h2{{color:#a78bfa;margin-bottom:16px}}
 .msg{{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:10px}}
 .meta{{font-size:11px;color:#555;margin-bottom:4px}}
 .body{{font-size:14px;color:#ccc;word-break:break-word}}
 a{{color:#a78bfa;text-decoration:none}}</style></head>
-<body><h2>📋 Session Messages — {session_name}</h2>
+<body><h2>📋 Session Messages — {safe_session_name}</h2>
 <p style="color:#555;font-size:12px;margin-bottom:16px">Last 100 messages · <a href="/admin">← Back to Admin</a></p>
-{"".join(f'<div class="msg"><div class="meta">{m["name"]} ({m["sender"]}) · {__import__("time").strftime("%Y-%m-%d %H:%M", __import__("time").localtime(m["time"]))}</div><div class="body">{m["body"]}</div></div>' for m in msgs) if msgs else '<p style="color:#555">No messages found for this session.</p>'}
+{html_body}
 </body></html>"""
-    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+    return html_page, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 # ── ✅ NEW: Blacklist management ─────────────────────────────────────────────
 @app.route("/admin/registrations", methods=["GET"])
 async def admin_registrations():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("""
@@ -1106,7 +1458,7 @@ async def admin_add_credit():
     If the number isn't registered yet, creates a verified record for it
     (the main bot already has the contact saved, so identity is trusted).
     """
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "unauthorized"}), 401
     data = await request.get_json(silent=True) or {}
     phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
@@ -1140,7 +1492,7 @@ async def admin_add_credit():
 # ── ✅ NEW: Wallet top-up review queue ───────────────────────────────────────
 @app.route("/admin/payments", methods=["GET"])
 async def admin_get_payments():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "unauthorized"}), 401
     status_filter = (request.args.get("status") or "").strip().lower()
     query = "SELECT id, phone, amount, mpesa_code, screenshot_path, status, admin_note, created_at, reviewed_at FROM payments"
@@ -1166,7 +1518,7 @@ async def admin_payment_proof(payment_id):
     """Serves the uploaded screenshot for one payment — gated behind admin
     auth so users' M-Pesa screenshots (which can contain phone numbers and
     names) aren't sitting at a guessable public URL."""
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT screenshot_path FROM payments WHERE id = ?", (payment_id,)) as c:
@@ -1186,7 +1538,7 @@ async def admin_review_payment():
     verification step standing in for a real payment-gateway integration.
     Always cross-check the code/amount against your own M-Pesa statement
     before approving; the screenshot is supporting evidence, not proof."""
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "unauthorized"}), 401
     data = await request.get_json(silent=True) or {}
     payment_id = data.get("id")
@@ -1235,7 +1587,7 @@ async def admin_review_payment():
 
 @app.route("/admin/blacklist", methods=["GET"])
 async def admin_get_blacklist():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT sender FROM blacklist") as c:
@@ -1245,7 +1597,7 @@ async def admin_get_blacklist():
 
 @app.route("/admin/blacklist/add", methods=["POST"])
 async def admin_add_blacklist():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     sender = data.get("sender", "").strip()
@@ -1264,7 +1616,7 @@ async def admin_add_blacklist():
 
 @app.route("/admin/blacklist/remove", methods=["POST"])
 async def admin_remove_blacklist():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     sender = data.get("sender", "").strip()
@@ -1277,7 +1629,7 @@ async def admin_remove_blacklist():
 # ── ✅ NEW: Search messages ──────────────────────────────────────────────────
 @app.route("/admin/search-messages", methods=["GET"])
 async def admin_search_messages():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     q = request.args.get("q", "").strip()
     if not q:
@@ -1301,7 +1653,7 @@ BROADCAST_QUEUE = []
 
 @app.route("/admin/broadcast", methods=["POST"])
 async def admin_broadcast():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     target = data.get("target", "all_contacts")  # all_contacts | all_groups | custom
@@ -1319,7 +1671,13 @@ async def admin_broadcast():
 
 @app.route("/admin/broadcast/pending", methods=["GET"])
 async def admin_broadcast_pending():
-    """Polled by the Node bridge to pick up queued broadcasts."""
+    """Polled by the Node bridge to pick up queued broadcasts.
+    ✅ FIX: was missing auth — anyone could hit this and silently drain the
+    queue (marks broadcasts sent=True) before the real bridge polled it.
+    The Node bridge already sends the admin password on its other calls, so
+    this doesn't change how legitimate polling works."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
     pending = [b for b in BROADCAST_QUEUE if not b["sent"]]
     for b in pending:
         b["sent"] = True
@@ -1331,7 +1689,7 @@ async def admin_contacts_all():
     """Full, unlimited contact list — used by the broadcast sender so an
     .announce isn't silently capped at the 20 shown on the dashboard
     preview. Requires the same admin auth as other /admin/* routes."""
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT sender, name FROM contacts ORDER BY timestamp DESC") as c:
@@ -1342,7 +1700,7 @@ async def admin_contacts_all():
 # ── ✅ NEW: Restart / health controls ────────────────────────────────────────
 @app.route("/admin/uptime", methods=["GET"])
 async def admin_uptime():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     uptime_seconds = time.time() - PROCESS_START_TIME
     return jsonify({
@@ -1354,7 +1712,7 @@ async def admin_uptime():
 
 @app.route("/admin/keywords", methods=["GET"])
 async def admin_get_keywords():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
@@ -1368,7 +1726,7 @@ async def admin_get_keywords():
 
 @app.route("/admin/keywords/add", methods=["POST"])
 async def admin_add_keyword():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     trigger = (data.get("trigger") or "").strip()
@@ -1392,7 +1750,7 @@ async def admin_add_keyword():
 
 @app.route("/admin/keywords/remove", methods=["POST"])
 async def admin_remove_keyword():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     trigger = (data.get("trigger") or "").strip()
@@ -1406,7 +1764,7 @@ async def admin_remove_keyword():
 
 @app.route("/admin/keywords/toggle", methods=["POST"])
 async def admin_toggle_keyword():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     trigger = (data.get("trigger") or "").strip()
@@ -1421,7 +1779,7 @@ async def admin_toggle_keyword():
 
 @app.route("/admin/features", methods=["GET"])
 async def admin_get_features():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT name, enabled FROM features ORDER BY name") as c:
@@ -1431,7 +1789,7 @@ async def admin_get_features():
 
 @app.route("/admin/features/toggle", methods=["POST"])
 async def admin_toggle_feature():
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = (data.get("name") or "").strip()
@@ -1552,7 +1910,7 @@ async def scheduler_save():
 async def admin_scheduler():
     """Admin panel view of pending scheduled messages (the .schedule command).
     Read-only mirror of the scheduled_messages table client_bridge.js persists to."""
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
@@ -1575,7 +1933,7 @@ async def admin_scheduler():
 async def admin_scheduler_delete(msg_id):
     """Lets the admin cancel a scheduled message from the panel instead of
     needing WhatsApp access to run .schedule del."""
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute("DELETE FROM scheduled_messages WHERE id = ?", (msg_id,))
@@ -1587,7 +1945,7 @@ async def admin_scheduler_delete(msg_id):
 async def admin_viewonce():
     """Browse recently intercepted view-once media from the admin panel,
     instead of digging through the bot's own WhatsApp DMs for it."""
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
@@ -1613,7 +1971,7 @@ async def admin_viewonce_file(filename):
     intercepted from other people's chats, not public static assets.
     Path is sanitized to the basename so this can't be used to read
     arbitrary files elsewhere on disk."""
-    if not _check_admin_auth(request):
+    if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     safe_name = Path(filename).name  # strip any directory traversal attempt
     file_path = DATA_DIR / "viewonce_media" / safe_name
@@ -1891,6 +2249,7 @@ async def process_command_pipeline():
     data = await request.get_json() or {}
     incoming_text = data.get("body", "").strip()
     sender = data.get("sender", "").strip()
+    model_pref = data.get("model", "").strip() or None
 
     if await check_db_blacklist(sender):
         return jsonify({"reply": "❌ Access Denied. Your profile node remains blacklisted."})
@@ -1909,7 +2268,7 @@ async def process_command_pipeline():
         prompt = incoming_text[5:].strip()
         if not prompt:
             return jsonify({"reply": "⚠️ Please provide a query after /ask"})
-        reply = await call_groq_ai(prompt)
+        reply = await call_groq_ai(prompt, model=model_pref)
         return jsonify({"reply": reply})
 
     # 2. Paint Command — sends actual image
