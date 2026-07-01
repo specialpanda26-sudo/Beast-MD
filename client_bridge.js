@@ -45,8 +45,7 @@ global.subAdmins = global.subAdmins || new Set(
 // ── Plugin Loader ────────────────────────────────────────────────────────────
 // Loads all command handlers from /plugins/*.js
 const allCommands = {};
-global.allCommandsRef = allCommands; // exposed so plugins/general.js .reload can hot-swap commands in place
-['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet', 'games', 'osint'].forEach(name => {
+['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet'].forEach(name => {
   try {
     Object.assign(allCommands, require(`./plugins/${name}`));
   } catch (e) {
@@ -424,18 +423,7 @@ const apiClient = axios.create({
   // generous for a localhost call and fails fast instead.
   timeout: 8000,
   maxContentLength: Infinity,
-  maxBodyLength: Infinity,
-  // ✅ FIX: several /admin/* routes (register-session, update-session,
-  // check-terminate, broadcast/pending) were unauthenticated and got the
-  // same admin-password gate added that every other /admin/* route already
-  // has. This bridge is the legitimate internal caller for all of them, so
-  // it now sends ADMIN_PASSWORD (when set) on every request — same var
-  // app.py reads — so those calls keep working exactly as before. If
-  // ADMIN_PASSWORD isn't set, app.py's dev-mode fallback still leaves
-  // everything open, so this is a no-op in that case.
-  headers: process.env.ADMIN_PASSWORD
-    ? { Authorization: `Bearer ${process.env.ADMIN_PASSWORD}` }
-    : {},
+  maxBodyLength: Infinity
 });
 
 // ── Feature flag cache ──────────────────────────────────────────────────────
@@ -604,69 +592,6 @@ async function startSession(sessionId, opts = {}) {
   }
 
   socket.ev.on("creds.update", saveCreds);
-
-  // ── NEW: Group participant events — welcome / goodbye / promotion notify ──
-  socket.ev.on("group-participants.update", async (update) => {
-    try {
-      const { id: groupId, participants, action } = update;
-      const settings = global.groupSettings?.[groupId] || {};
-
-      if (action === "add" && settings.welcome !== false) {
-        for (const jid of participants) {
-          const num = jid.split('@')[0];
-          const template = settings.welcomeMsg || `👋 Welcome @user to the group!`;
-          const text = template.replace(/@user/gi, `@${num}`);
-          try { await socket.sendMessage(groupId, { text, mentions: [jid] }); } catch (_) {}
-        }
-      }
-
-      if (action === "remove" && settings.goodbye !== false) {
-        for (const jid of participants) {
-          const num = jid.split('@')[0];
-          const template = settings.goodbyeMsg || `👋 @user has left the group. Goodbye!`;
-          const text = template.replace(/@user/gi, `@${num}`);
-          try { await socket.sendMessage(groupId, { text, mentions: [jid] }); } catch (_) {}
-        }
-      }
-
-      // ── Admin promotion notification (Henry's requested feature) ─────────
-      // When someone is promoted to admin (by the owner or anyone), DM them
-      // privately with what they can now do + a heads-up they'll get pinged
-      // for future bot upgrades relevant to their new admin role.
-      if (action === "promote") {
-        let groupMeta = null;
-        try { groupMeta = await socket.groupMetadata(groupId); } catch (_) {}
-        const groupName = groupMeta?.subject || "the group";
-        for (const jid of participants) {
-          global.groupAdmins = global.groupAdmins || {};
-          global.groupAdmins[groupId] = global.groupAdmins[groupId] || new Set();
-          global.groupAdmins[groupId].add(jid);
-
-          const text = `👑 *You've been promoted to admin!*\n\n` +
-            `You're now an admin in *${groupName}*.\n\n` +
-            `⚡ *Admin commands you can use:*\n` +
-            `${CMD_PREFIX}kick @user — remove a member\n` +
-            `${CMD_PREFIX}add [number] — add a member\n` +
-            `${CMD_PREFIX}promote / ${CMD_PREFIX}demote @user\n` +
-            `${CMD_PREFIX}mute / ${CMD_PREFIX}unmute — lock/unlock chat\n` +
-            `${CMD_PREFIX}warn / ${CMD_PREFIX}unwarn @user\n` +
-            `${CMD_PREFIX}antilink, ${CMD_PREFIX}antibadword — toggle filters\n` +
-            `${CMD_PREFIX}hidetag / ${CMD_PREFIX}tagall — mention everyone\n` +
-            `${CMD_PREFIX}setwelcome / ${CMD_PREFIX}setgoodbye — custom join/leave messages\n\n` +
-            `📣 You'll get a DM here whenever the bot ships an update or new feature that affects admin tools in your group, so you're always in the loop.`;
-          try { await socket.sendMessage(jid, { text }); } catch (_) {}
-        }
-      }
-
-      if (action === "demote") {
-        for (const jid of participants) {
-          global.groupAdmins?.[groupId]?.delete(jid);
-        }
-      }
-    } catch (e) {
-      console.error(`❌ [${sessionId}] group-participants.update handler failed:`, e.message);
-    }
-  });
 
   // Feature: Anti-Call
   socket.ev.on("call", async (inboundCall) => {
@@ -877,32 +802,6 @@ async function startSession(sessionId, opts = {}) {
         }
       }
 
-      // ── NEW: Antibadword — delete + warn on custom per-group word list ────
-      if (isGroup && !isBotAdmin && body && global.groupSettings?.[sender]?.antibadword) {
-        const badWords = global.groupSettings[sender].badWords || [];
-        const lowerBody = body.toLowerCase();
-        const hit = badWords.find(w => lowerBody.includes(w));
-        if (hit) {
-          try { await socket.sendMessage(sender, { delete: msg.key }); } catch (_) {}
-          global.warnings = global.warnings || {};
-          global.warnings[sender] = global.warnings[sender] || {};
-          global.warnings[sender][senderJid] = (global.warnings[sender][senderJid] || 0) + 1;
-          const count = global.warnings[sender][senderJid];
-          if (count >= 3) {
-            try {
-              await socket.groupParticipantsUpdate(sender, [senderJid], "remove");
-              await socket.sendMessage(sender, { text: `🚫 @${senderNumber} removed — 3 bad-word warnings reached.`, mentions: [senderJid] });
-            } catch (_) {
-              await socket.sendMessage(sender, { text: `⚠️ @${senderNumber} hit 3 bad-word warnings but I couldn't remove them (need admin rights).`, mentions: [senderJid] });
-            }
-            delete global.warnings[sender][senderJid];
-          } else {
-            await socket.sendMessage(sender, { text: `⚠️ @${senderNumber} watch your language. Warning ${count}/3.`, mentions: [senderJid] });
-          }
-          return;
-        }
-      }
-
       // ── fromMe guard — allow owner commands even from the bot number ──────
       if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) return;
 
@@ -1052,12 +951,6 @@ async function startSession(sessionId, opts = {}) {
         };
 
         if (allCommands[cmd]) {
-          // ── Maintenance mode gate — owner/co-owner exempt ─────────────────
-          if (global.botMaintenance && !isOwner) {
-            await socket.sendMessage(sender, { text: '🛠️ Bot is currently under maintenance. Please try again shortly!' }, { quoted: msg });
-            return;
-          }
-
           // ── Permission check (skip for owner/admins) ──────────────────────
           if (!isOwner && !isSubAdmin && isGroup) {
             const { canUseCommand } = require('./plugins/group');
@@ -1115,8 +1008,7 @@ async function startSession(sessionId, opts = {}) {
         try { await socket.sendPresenceUpdate(presenceType, sender); } catch (e) {}
 
         try {
-          const modelPref = global.aiModel?.[sender] || '';
-          const response = await apiClient.post("/webhook", { body, sender, model: modelPref });
+          const response = await apiClient.post("/webhook", { body, sender });
           const data = response.data;
 
           try { await socket.sendPresenceUpdate("paused", sender); } catch (e) {}
@@ -1166,19 +1058,6 @@ async function startSession(sessionId, opts = {}) {
         } catch (e) {
           try { await socket.sendPresenceUpdate("paused", sender); } catch (_) {}
           await socket.sendMessage(sender, { text: `❌ Bot error: ${e.message}` });
-        }
-      }
-
-      // ── Active game reply check (hangman letter / trivia answer / number
-      // guess) — runs before AI chat so games don't get swallowed by the
-      // "natural chat" reply, in both DMs and groups.
-      if (body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/') && global.gameState?.has(sender)) {
-        try {
-          const { _handleGameReply } = require('./plugins/games');
-          const consumed = await _handleGameReply({ sock: socket, from: sender, msg, text: body });
-          if (consumed) return;
-        } catch (e) {
-          console.error('❌ game reply handler error:', e.message);
         }
       }
 

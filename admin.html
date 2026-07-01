@@ -14,12 +14,6 @@
       --card: #060e18;
     }
     body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', Arial, sans-serif; min-height: 100vh; }
-    #particles-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-    .grid-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: linear-gradient(rgba(0,229,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.02) 1px, transparent 1px); background-size: 50px 50px; }
-    .radial-glow { position: fixed; width: 700px; height: 700px; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(120px); opacity: 0.12; }
-    .radial-glow.top { background: var(--accent); top: -200px; left: 50%; transform: translateX(-50%); }
-    .radial-glow.bottom { background: #7c3aed; bottom: -200px; right: -100px; }
-    #login-page, #admin-page { position: relative; z-index: 1; }
     code, .mono { font-family: 'JetBrains Mono', monospace; }
 
     /* ── LOGIN PAGE ── */
@@ -160,11 +154,6 @@
   </style>
 </head>
 <body>
-<canvas id="particles-canvas"></canvas>
-<div class="grid-bg"></div>
-<div class="radial-glow top"></div>
-<div class="radial-glow bottom"></div>
-
 
 <!-- LOGIN PAGE -->
 <div id="login-page">
@@ -187,7 +176,7 @@
     <div class="topbar-right">
       <span class="server-time" id="server-time"></span>
       <span class="badge" id="online-badge">● ONLINE</span>
-      <a href="/" style="color:var(--muted);text-decoration:none;font-size:13px;font-family:JetBrains Mono,monospace">← Home</a><button class="logout-btn" onclick="doLogout()">Logout</button>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
       <button class="logout-btn" id="admin-hamburger" onclick="toggleAdminMenu()" aria-label="Menu" style="font-size:16px;">☰</button>
     </div>
   </div>
@@ -975,21 +964,6 @@
       if (res.status === 401) { token = null; sessionStorage.removeItem("admin_pass"); }
       else showAdmin();
     }).catch(() => {});
-  }
-</script>
-<script>
-  const _pc = document.getElementById('particles-canvas');
-  if (_pc) {
-    const _ctx = _pc.getContext('2d');
-    let _pts = [];
-    function _rsz() { _pc.width = window.innerWidth; _pc.height = window.innerHeight; }
-    _rsz(); window.addEventListener('resize', _rsz);
-    for (let i = 0; i < 50; i++) _pts.push({x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.2+.3,a:Math.random()*.4+.1});
-    (function _anim() {
-      _ctx.clearRect(0,0,_pc.width,_pc.height);
-      _pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=_pc.width;if(p.x>_pc.width)p.x=0;if(p.y<0)p.y=_pc.height;if(p.y>_pc.height)p.y=0;_ctx.beginPath();_ctx.arc(p.x,p.y,p.r,0,Math.PI*2);_ctx.fillStyle='rgba(0,229,255,'+p.a+')';_ctx.fill();});
-      requestAnimationFrame(_anim);
-    })();
   }
 </script>
 </body>

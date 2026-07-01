@@ -6,7 +6,6 @@ import json
 import random
 import hashlib
 import secrets
-import html
 import httpx
 import aiosqlite
 from urllib.parse import quote_plus
@@ -225,17 +224,16 @@ SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
 PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
 
-async def call_groq_ai(prompt: str, model: str = None) -> str:
+async def call_groq_ai(prompt: str) -> str:
     if not GROQ_API_KEY:
         return "❌ AI not configured. Set GROQ_API_KEY in your .env file."
-    chosen_model = model or "llama3-8b-8192"
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
                 json={
-                    "model": chosen_model,
+                    "model": "llama3-8b-8192",
                     "messages": [
                         {"role": "system", "content": "You are a helpful WhatsApp assistant. Keep replies concise and friendly."},
                         {"role": "user", "content": prompt}
@@ -987,10 +985,6 @@ async def admin_terminate():
 
 @app.route("/admin/register-session", methods=["POST"])
 async def register_session():
-    # ✅ FIX: was missing the auth check every other /admin/* route has —
-    # let anyone on the internet spoof/overwrite session registry entries.
-    if not _check_admin_auth(request):
-        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "unknown")
     now = time.time()
@@ -1011,9 +1005,6 @@ async def register_session():
 
 @app.route("/admin/update-session", methods=["POST"])
 async def update_session():
-    # ✅ FIX: was missing the auth check every other /admin/* route has.
-    if not _check_admin_auth(request):
-        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "")
     if name in SESSION_REGISTRY:
@@ -1048,9 +1039,6 @@ async def admin_set_expiry():
 
 @app.route("/admin/check-terminate", methods=["POST"])
 async def check_terminate():
-    # ✅ FIX: was missing the auth check every other /admin/* route has.
-    if not _check_admin_auth(request):
-        return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json() or {}
     name = data.get("name", "")
     info = SESSION_REGISTRY.get(name, {})
@@ -1066,11 +1054,6 @@ async def check_terminate():
 
 @app.route("/admin/session-detail", methods=["GET"])
 async def session_detail():
-    # ✅ FIX: this was the one /admin/* route with NO auth check at all —
-    # anyone with the URL could read up to 100 real chat messages for any
-    # session. Now requires the same admin password as every other route.
-    if not _check_admin_auth(request):
-        return "Unauthorized", 401
     session_name = request.args.get("session", "")
     try:
         async with aiosqlite.connect(DB_FILE) as db:
@@ -1082,32 +1065,20 @@ async def session_detail():
         msgs = [{"sender": r[0], "name": r[1], "body": r[2], "time": r[3]} for r in rows]
     except Exception:
         msgs = []
-    # ✅ FIX: message name/body/session_name are user-controlled (they come
-    # straight from WhatsApp chats) and were being dropped into this HTML
-    # unescaped — a message containing "<script>" became stored XSS on this
-    # page. Everything user-controlled is now html.escape()'d before it's
-    # inserted into the template.
-    safe_session_name = html.escape(session_name)
-    html_body = "".join(
-        f'<div class="msg"><div class="meta">{html.escape(m["name"] or "")} ({html.escape(m["sender"] or "")}) · '
-        f'{time.strftime("%Y-%m-%d %H:%M", time.localtime(m["time"]))}</div>'
-        f'<div class="body">{html.escape(m["body"] or "")}</div></div>'
-        for m in msgs
-    ) if msgs else '<p style="color:#555">No messages found for this session.</p>'
-    html_page = f"""<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/>
-<title>Session: {safe_session_name}</title>
+<title>Session: {session_name}</title>
 <style>*{{margin:0;padding:0;box-sizing:border-box}}body{{background:#08090f;color:#e2eaf4;font-family:'Segoe UI',sans-serif;padding:20px}}
 h2{{color:#a78bfa;margin-bottom:16px}}
 .msg{{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;margin-bottom:10px}}
 .meta{{font-size:11px;color:#555;margin-bottom:4px}}
 .body{{font-size:14px;color:#ccc;word-break:break-word}}
 a{{color:#a78bfa;text-decoration:none}}</style></head>
-<body><h2>📋 Session Messages — {safe_session_name}</h2>
+<body><h2>📋 Session Messages — {session_name}</h2>
 <p style="color:#555;font-size:12px;margin-bottom:16px">Last 100 messages · <a href="/admin">← Back to Admin</a></p>
-{html_body}
+{"".join(f'<div class="msg"><div class="meta">{m["name"]} ({m["sender"]}) · {__import__("time").strftime("%Y-%m-%d %H:%M", __import__("time").localtime(m["time"]))}</div><div class="body">{m["body"]}</div></div>' for m in msgs) if msgs else '<p style="color:#555">No messages found for this session.</p>'}
 </body></html>"""
-    return html_page, 200, {"Content-Type": "text/html; charset=utf-8"}
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 # ── ✅ NEW: Blacklist management ─────────────────────────────────────────────
@@ -1348,13 +1319,7 @@ async def admin_broadcast():
 
 @app.route("/admin/broadcast/pending", methods=["GET"])
 async def admin_broadcast_pending():
-    """Polled by the Node bridge to pick up queued broadcasts.
-    ✅ FIX: was missing auth — anyone could hit this and silently drain the
-    queue (marks broadcasts sent=True) before the real bridge polled it.
-    The Node bridge already sends the admin password on its other calls, so
-    this doesn't change how legitimate polling works."""
-    if not _check_admin_auth(request):
-        return jsonify({"error": "Unauthorized"}), 401
+    """Polled by the Node bridge to pick up queued broadcasts."""
     pending = [b for b in BROADCAST_QUEUE if not b["sent"]]
     for b in pending:
         b["sent"] = True
@@ -1926,7 +1891,6 @@ async def process_command_pipeline():
     data = await request.get_json() or {}
     incoming_text = data.get("body", "").strip()
     sender = data.get("sender", "").strip()
-    model_pref = data.get("model", "").strip() or None
 
     if await check_db_blacklist(sender):
         return jsonify({"reply": "❌ Access Denied. Your profile node remains blacklisted."})
@@ -1945,7 +1909,7 @@ async def process_command_pipeline():
         prompt = incoming_text[5:].strip()
         if not prompt:
             return jsonify({"reply": "⚠️ Please provide a query after /ask"})
-        reply = await call_groq_ai(prompt, model=model_pref)
+        reply = await call_groq_ai(prompt)
         return jsonify({"reply": reply})
 
     # 2. Paint Command — sends actual image
