@@ -916,6 +916,8 @@ async def admin_stats():
             messages = (await c.fetchone())[0]
         async with db.execute("SELECT COUNT(*) FROM viewonce_media") as c:
             viewonce = (await c.fetchone())[0]
+        async with db.execute("SELECT COUNT(*) FROM scheduled_messages WHERE sent = 0") as c:
+            scheduled_pending = (await c.fetchone())[0]
         async with db.execute(
             "SELECT name, sender, timestamp FROM contacts ORDER BY timestamp DESC LIMIT 20"
         ) as c:
@@ -962,6 +964,7 @@ async def admin_stats():
         "messages": messages,
         "messages_today": messages_today,
         "viewonce": viewonce,
+        "scheduled_pending": scheduled_pending,
         "session_list": session_list,
         "recent_contacts": recent_contacts,
         "server_time": time.strftime("%d %b %Y, %H:%M:%S", time.localtime()),
@@ -1543,6 +1546,80 @@ async def scheduler_save():
             )
         await db.commit()
     return jsonify({"status": "saved", "count": len(messages)})
+
+
+@app.route("/admin/scheduler", methods=["GET"])
+async def admin_scheduler():
+    """Admin panel view of pending scheduled messages (the .schedule command).
+    Read-only mirror of the scheduled_messages table client_bridge.js persists to."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, to_jid, message, next_run, repeat, sent, created_by FROM scheduled_messages ORDER BY next_run ASC"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "messages": [
+            {
+                "id": r[0], "to": r[1], "message": r[2],
+                "next_run": time.strftime("%d %b %Y, %H:%M", time.localtime(r[3])) if r[3] else None,
+                "repeat": r[4], "sent": bool(r[5]), "created_by": r[6],
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/admin/scheduler/<msg_id>", methods=["DELETE"])
+async def admin_scheduler_delete(msg_id):
+    """Lets the admin cancel a scheduled message from the panel instead of
+    needing WhatsApp access to run .schedule del."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM scheduled_messages WHERE id = ?", (msg_id,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/viewonce", methods=["GET"])
+async def admin_viewonce():
+    """Browse recently intercepted view-once media from the admin panel,
+    instead of digging through the bot's own WhatsApp DMs for it."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, sender, name, filename, media_type, caption, timestamp FROM viewonce_media ORDER BY timestamp DESC LIMIT 50"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "items": [
+            {
+                "id": r[0], "sender": r[1], "name": r[2], "filename": r[3],
+                "media_type": r[4], "caption": r[5],
+                "time": time.strftime("%d %b %Y, %H:%M", time.localtime(r[6])),
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/admin/viewonce/file/<path:filename>", methods=["GET"])
+async def admin_viewonce_file(filename):
+    """Serves the actual saved view-once file. Gated behind admin auth for
+    the same reason payment screenshots are — this is private content
+    intercepted from other people's chats, not public static assets.
+    Path is sanitized to the basename so this can't be used to read
+    arbitrary files elsewhere on disk."""
+    if not _check_admin_auth(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    safe_name = Path(filename).name  # strip any directory traversal attempt
+    file_path = DATA_DIR / "viewonce_media" / safe_name
+    if not file_path.exists():
+        return jsonify({"error": "File not found"}), 404
+    return Response(file_path.read_bytes(), mimetype="application/octet-stream")
 
 
 @app.route("/bot/features", methods=["GET"])
