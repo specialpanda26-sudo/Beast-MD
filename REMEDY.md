@@ -106,3 +106,43 @@ one-liner used.
   changelog (password hashing, rate limits, XSS fixes, etc.) — those were
   spot-checked, not re-derived from scratch, and no regressions were found
   in the files touched.
+
+---
+
+## Pass 2 — paid pairing merge + `.login` permission audit
+
+### 7. Admin panel session list never detected a session going offline
+`SESSION_REGISTRY["online"]` was set `true` on connect and on every incoming
+message, but nothing ever set it back to `false` on disconnect — only a
+manual "Terminate" click in `/admin` did. A crashed, logged-out, or
+mid-reconnect session sat showing as "online"/"active" in the admin panel's
+Sessions list indefinitely.
+**Fix:** `client_bridge.js`'s `connection.update` "close" handler now posts
+`online: false` to `/admin/update-session` immediately on any disconnect,
+before deciding whether to fully re-pair (logged out) or just reconnect.
+
+### 8. `.login` didn't unlock 10 group-management commands
+`.kick`, `.add`, `.promote`, `.demote`, `.mute`, `.unmute`, `.revoke`,
+`.setperm`, `.resetperm`, and `.listperms` all checked *only* whether the
+sender was a real WhatsApp group admin (via `groupMetadata`), ignoring
+`isOwner`/`isBotAdmin` entirely — so `.login`-granted co-owner access didn't
+unlock them in any group where that number wasn't already a WhatsApp admin.
+**Fix:** each now accepts `isAdmin || isBotAdmin`, matching how `.tagall`
+already worked.
+
+### 9. `pair.html` didn't match the rest of the site's theme
+No shared Google Fonts import (fell back to Segoe UI/Courier New) and a
+5-stop rainbow `conic-gradient` logo instead of the cyan/purple two-tone used
+on `index.html`/`admin.html`/`panel.html`/`register.html`.
+**Fix:** added the same font import and `--accent`/--accent2`/`--bg`/`--card`
+variables; normalized the logo gradients and stray purple/cyan hex codes to
+the shared two-tone palette.
+
+## Not changed — flagged for a decision, not silently fixed
+
+`.addcoowner`, `.removecoowner`, `.listcoowners`, and `.ownerrecovery` still
+require the *primary* owner even after a successful `.login`. This is
+intentional: it stops a shared/leaked login password from being used to
+permanently take over the bot (unlimited co-owners, or changing the owner
+number outright). Left as-is pending explicit confirmation this should be
+loosened.

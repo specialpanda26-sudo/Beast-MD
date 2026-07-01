@@ -41,11 +41,11 @@ module.exports = {
   },
 
   // ── .kick ──────────────────────────────────────────────────────────────────
-  kick: async ({ sock, from, msg, isGroup, sender, args }) => {
+  kick: async ({ sock, from, msg, isGroup, sender, args , isBotAdmin }) => {
     if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
     const groupMeta = await sock.groupMetadata(from);
     const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
     const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
       || (args[0] ? args[0].replace('@', '') + '@s.whatsapp.net' : null);
     if (!target) return sock.sendMessage(from, { text: '❌ Tag someone to kick!' });
@@ -54,11 +54,11 @@ module.exports = {
   },
 
   // ── .add ───────────────────────────────────────────────────────────────────
-  add: async ({ sock, from, msg, isGroup, sender, args }) => {
+  add: async ({ sock, from, msg, isGroup, sender, args , isBotAdmin }) => {
     if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
     const groupMeta = await sock.groupMetadata(from);
     const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
     const number = args[0]?.replace(/[^0-9]/g, '');
     if (!number) return sock.sendMessage(from, { text: '❌ Usage: .add [number with country code]' });
     const jid = number + '@s.whatsapp.net';
@@ -67,11 +67,11 @@ module.exports = {
   },
 
   // ── .promote ───────────────────────────────────────────────────────────────
-  promote: async ({ sock, from, msg, isGroup, sender, args }) => {
+  promote: async ({ sock, from, msg, isGroup, sender, args , isBotAdmin }) => {
     if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
     const groupMeta = await sock.groupMetadata(from);
     const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
     const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
       || (args[0] ? args[0].replace('@', '') + '@s.whatsapp.net' : null);
     if (!target) return sock.sendMessage(from, { text: '❌ Tag someone to promote!' });
@@ -80,11 +80,11 @@ module.exports = {
   },
 
   // ── .demote ────────────────────────────────────────────────────────────────
-  demote: async ({ sock, from, msg, isGroup, sender, args }) => {
+  demote: async ({ sock, from, msg, isGroup, sender, args , isBotAdmin }) => {
     if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
     const groupMeta = await sock.groupMetadata(from);
     const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
     const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
       || (args[0] ? args[0].replace('@', '') + '@s.whatsapp.net' : null);
     if (!target) return sock.sendMessage(from, { text: '❌ Tag someone to demote!' });
@@ -93,30 +93,30 @@ module.exports = {
   },
 
   // ── .mute / .unmute ────────────────────────────────────────────────────────
-  mute: async ({ sock, from, msg, isGroup, sender }) => {
+  mute: async ({ sock, from, msg, isGroup, sender , isBotAdmin }) => {
     if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
     const groupMeta = await sock.groupMetadata(from);
     const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
     await sock.groupSettingUpdate(from, 'announcement');
     await sock.sendMessage(from, { text: '🔇 Group *muted*.' }, { quoted: msg });
   },
 
-  unmute: async ({ sock, from, msg, isGroup, sender }) => {
+  unmute: async ({ sock, from, msg, isGroup, sender , isBotAdmin }) => {
     if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
     const groupMeta = await sock.groupMetadata(from);
     const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
     await sock.groupSettingUpdate(from, 'not_announcement');
     await sock.sendMessage(from, { text: '🔊 Group *unmuted*.' }, { quoted: msg });
   },
 
   // ── .revoke ────────────────────────────────────────────────────────────────
-  revoke: async ({ sock, from, msg, isGroup, sender }) => {
+  revoke: async ({ sock, from, msg, isGroup, sender , isBotAdmin }) => {
     if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
     const groupMeta = await sock.groupMetadata(from);
     const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-    if (!isAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
+    if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ You must be admin!' });
     const code = await sock.groupRevokeInvite(from);
     await sock.sendMessage(from, { text: `🔄 Group invite link revoked!\nNew link: https://chat.whatsapp.com/${code}` }, { quoted: msg });
   },
@@ -160,12 +160,12 @@ module.exports.canUseCommand = canUseCommand;
 
 const PERM_LEVELS = ['restricted', 'member', 'trusted', 'superadmin'];
 
-module.exports.setperm = async ({ sock, from, msg, isGroup, sender, args }) => {
+module.exports.setperm = async ({ sock, from, msg, isGroup, sender, args , isBotAdmin }) => {
   if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
   const groupMeta = await sock.groupMetadata(from);
   const senderInfo = groupMeta.participants.find(p => p.id === sender);
   const isAdmin = senderInfo?.admin;
-  if (!isAdmin) return sock.sendMessage(from, { text: '❌ Admin only!' });
+  if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ Admin only!' });
 
   // Usage: .setperm @user <level> [+cmd1,cmd2 / -cmd1,cmd2]
   // Example: .setperm @henry trusted +sticker,ai
@@ -207,11 +207,11 @@ module.exports.setperm = async ({ sock, from, msg, isGroup, sender, args }) => {
   await sock.sendMessage(from, { text: reply, mentions: [target] }, { quoted: msg });
 };
 
-module.exports.resetperm = async ({ sock, from, msg, isGroup, sender, args }) => {
+module.exports.resetperm = async ({ sock, from, msg, isGroup, sender, args , isBotAdmin }) => {
   if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
   const groupMeta = await sock.groupMetadata(from);
   const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-  if (!isAdmin) return sock.sendMessage(from, { text: '❌ Admin only!' });
+  if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ Admin only!' });
   const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
   if (!target) return sock.sendMessage(from, { text: '❌ Tag the user to reset!' });
   if (global.memberPerms?.[from]) delete global.memberPerms[from][target];
@@ -231,11 +231,11 @@ module.exports.myperm = async ({ sock, from, msg, isGroup, sender }) => {
   await sock.sendMessage(from, { text: reply, mentions: [sender] }, { quoted: msg });
 };
 
-module.exports.listperms = async ({ sock, from, msg, isGroup, sender }) => {
+module.exports.listperms = async ({ sock, from, msg, isGroup, sender , isBotAdmin }) => {
   if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' });
   const groupMeta = await sock.groupMetadata(from);
   const isAdmin = groupMeta.participants.find(p => p.id === sender)?.admin;
-  if (!isAdmin) return sock.sendMessage(from, { text: '❌ Admin only!' });
+  if (!isAdmin && !isBotAdmin) return sock.sendMessage(from, { text: '❌ Admin only!' });
   const groupPerms = global.memberPerms?.[from] || {};
   const entries = Object.entries(groupPerms);
   if (entries.length === 0) return sock.sendMessage(from, { text: '📋 No custom permissions set in this group.' });
