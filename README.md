@@ -88,6 +88,7 @@
 | 🔑 Owner Recovery | Emergency passphrase to change owner number at runtime |
 | 👥 Bulk Group Add | Create a group or add to one from a plain list of numbers |
 | ⏳ Subscription Expiry | Set a paid-access expiry date per session from the admin panel |
+| 🔒 Paid Pairing / Activation Keys | New customer sessions come up locked until the admin approves them from WhatsApp with a plain `yes`/`no` — see [Paid Pairing](#-paid-pairing--activation-keys) below |
 | 🔑 Keyword Auto-Replies | Set custom trigger words/phrases in the admin panel — bot auto-replies instantly, no AI call needed |
 | ⚙️ Feature Toggles | Turn AI chat, downloads, keywords, or welcome message on/off for the whole bot from the admin panel |
 | 💾 Auto-Save Statuses | Saves contacts' status images/videos to disk before they expire in 24h |
@@ -125,6 +126,12 @@
 | `.tts [text]` | 🔊 Text-to-speech — converts text to a WhatsApp voice note (max 200 chars) |
 | `.model [name]` | 🤖 Switch AI model per-chat: `llama`, `llama8`, `mixtral`, `gemma` — uses your existing Groq key |
 | `/ask [query]` | Ask AI anything |
+
+### 🔒 Paid Pairing (unactivated sessions only)
+| Command | Description |
+|---|---|
+| `.pair key` | Request activation — pings the admin on WhatsApp for approval |
+| `.key XXXXXXXX` | Redeem the 8-character key the admin sent you (valid 10 minutes) |
 
 ### 🔐 Access / Login
 | Command | Description |
@@ -387,6 +394,23 @@ For paid/client sessions, set an expiry date and time per session directly from 
 4. Click **Clear** on a session to remove its expiry and restore full access
 
 Expiry status (active/expired countdown) is checked automatically every 30 seconds and survives the bot reconnecting/restarting since it lives in the admin server, not the bot session itself.
+
+---
+
+## 🔒 Paid Pairing / Activation Keys
+
+Every **new customer session** that pairs (via `/pair` in the browser or scanning the QR code) comes up **locked** by default — separate from, and prior to, the manual expiry system above. It's the flow for selling access to strangers who pair their own number to your bot:
+
+1. A freshly-paired customer sends `.pair key`
+2. You (the admin, on `OWNER_NUMBER`) get a WhatsApp message with their number and session ID
+3. Reply **`yes`** to approve for the default number of days, **`yes 45`** for a custom day count, or **`no`** to decline — right from the chat, no panel needed
+4. On approval, the customer automatically receives an 8-character activation key, valid **10 minutes**
+5. They send it back as `.key XXXXXXXX` and their session unlocks for however many days you granted
+6. Your own `OWNER_NUMBER` session is **never** locked and is exempt from this whole flow
+
+**Master bypass key:** a permanent override key is auto-generated the first time a session needs one. Any customer can send `.key <bypass key>` to activate instantly and permanently, skipping the approval step — useful for VIPs or test numbers. View or change it, plus the default day count new approvals grant, from `/admin` → **🔑 Activation** tab, which also lists every session's lock/pending/active status and lets you approve or deny requests from the browser instead of WhatsApp.
+
+> ⚠️ Treat the bypass key like a password — anyone who has it can activate any session for free, forever.
 
 ---
 

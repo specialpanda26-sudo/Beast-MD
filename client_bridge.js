@@ -91,6 +91,32 @@ const activeSessions = new Set();
 // on behalf of the bot, outside the normal messages.upsert flow.
 const activeSockets = new Map();
 
+// ── Paid Pairing / Activation Keys ───────────────────────────────────────
+// Per-session lock state for the customer-paid activation flow. Every
+// session gets its own entry (unlike global.subscriptionExpired, which is
+// shared across sessions and only really correct for a single-session
+// deploy) — keyed by sessionId, since one process here can run many
+// customer sessions at once.
+//   { activated, expiryTs, pendingRequest, requesterChat }
+const sessionActivation = new Map();
+
+function getActivation(sessionId) {
+  if (!sessionActivation.has(sessionId)) {
+    sessionActivation.set(sessionId, {
+      activated: false, expiryTs: null, pendingRequest: false, requesterChat: null
+    });
+  }
+  return sessionActivation.get(sessionId);
+}
+
+function isSessionLive(sessionId) {
+  const a = sessionActivation.get(sessionId);
+  if (!a) return false;
+  if (!a.activated) return false;
+  if (a.expiryTs && (Date.now() / 1000) >= a.expiryTs) return false;
+  return true;
+}
+
 // ── 🌝 Reaction-triggered recovery cache ────────────────────────────────────
 // Keeps a short-lived copy of recent messages (key, raw message, sender, name,
 // and — for view-once — the already-downloaded buffer) so that reacting with
@@ -823,6 +849,123 @@ async function startSession(sessionId, opts = {}) {
       // ── fromMe guard — allow owner commands even from the bot number ──────
       if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) return;
 
+      // ── Paid Pairing / Activation Key gate ─────────────────────────────────
+      // Freshly-paired customer sessions come up locked. The customer has to
+      // send ".pair key" (routed to the admin for a yes/no), then redeem the
+      // random key it issues with ".key XXXXXX" within 10 minutes. Until
+      // that happens, every other command is blocked with a short notice.
+      // The admin's own OWNER_NUMBER session is exempt (auto-activated
+      // server-side), and the admin can approve/deny with a plain reply.
+      if (!isGroup && body) {
+        const bodyLower = body.trim().toLowerCase();
+        const activation = getActivation(sessionId);
+
+        // Admin approving/denying a pending request with a plain yes/no,
+        // optionally with a day count: "yes", "yes 30", "no".
+        if (isPrimaryOwner && activation.pendingRequest) {
+          const yesMatch = bodyLower.match(/^(yes|y)(\s+(\d+))?$/);
+          const noMatch  = bodyLower.match(/^(no|n)$/);
+          if (yesMatch || noMatch) {
+            const targetChat = activation.requesterChat;
+            if (yesMatch) {
+              const days = yesMatch[3] ? parseInt(yesMatch[3], 10) : undefined;
+              try {
+                const res = await apiClient.post("/admin/activation-approve", { session: sessionId, days });
+                const { key, days: grantedDays } = res.data || {};
+                activation.pendingRequest = false;
+                if (key && targetChat) {
+                  await socket.sendMessage(targetChat, {
+                    text: `🔑 *Access Approved!*\n\nYour activation key: *${key}*\n⏳ Valid for *10 minutes* — send it back as:\n*.key ${key}*\n\n📅 Grants *${grantedDays} day(s)* of access.\n\n📌 *Tip:* save this bot's number to your contacts — it helps avoid the number getting flagged/banned.`
+                  });
+                }
+                await socket.sendMessage(sender, { text: `✅ Key sent (${grantedDays} day${grantedDays === 1 ? '' : 's'}).` }, { quoted: msg });
+              } catch (e) {
+                await socket.sendMessage(sender, { text: `❌ Couldn't approve: ${e.message}` }, { quoted: msg });
+              }
+            } else {
+              try {
+                await apiClient.post("/admin/activation-deny", { session: sessionId });
+                activation.pendingRequest = false;
+                if (targetChat) {
+                  await socket.sendMessage(targetChat, { text: `❌ Your access request was declined. Please message the admin directly to arrange access.` });
+                }
+                await socket.sendMessage(sender, { text: `🚫 Denied.` }, { quoted: msg });
+              } catch (e) {
+                await socket.sendMessage(sender, { text: `❌ Couldn't deny: ${e.message}` }, { quoted: msg });
+              }
+            }
+            return;
+          }
+        }
+
+        // ".pair key" — customer requests activation from the admin.
+        if (bodyLower === ".pair key" || bodyLower === "pair key") {
+          if (isSessionLive(sessionId)) {
+            await socket.sendMessage(sender, { text: `✅ This session is already active.` }, { quoted: msg });
+            return;
+          }
+          if (activation.pendingRequest) {
+            await socket.sendMessage(sender, { text: `⏳ A request is already pending with the admin. Please wait.` }, { quoted: msg });
+            return;
+          }
+          try {
+            const res = await apiClient.post("/admin/activation-request", {
+              session: sessionId, phone: senderNumber, requester_chat: sender
+            });
+            if (res.data?.already_pending) {
+              await socket.sendMessage(sender, { text: `⏳ A request is already pending with the admin. Please wait.` }, { quoted: msg });
+              return;
+            }
+            activation.pendingRequest = true;
+            activation.requesterChat = sender;
+            await socket.sendMessage(sender, { text: `📨 Request sent to the admin. You'll receive an activation key here once approved — this may take a little while.` }, { quoted: msg });
+            if (OWNER_NUMBER) {
+              await socket.sendMessage(`${OWNER_NUMBER}@s.whatsapp.net`, {
+                text: `🔔 *New Pairing Activation Request*\n\n📱 Number: ${senderNumber}\n🆔 Session: ${sessionId}\n\nSend *yes* to approve (default ${res.data?.default_days || 30} days) or *yes <days>* for a custom length, or *no* to decline.`
+              });
+            }
+          } catch (e) {
+            await socket.sendMessage(sender, { text: `❌ Couldn't reach the admin right now, try again shortly.` }, { quoted: msg });
+          }
+          return;
+        }
+
+        // ".key XXXXXX" — customer redeeming an issued key (or the admin's
+        // master bypass key). Always allowed, even while locked.
+        if (bodyLower.startsWith(".key ") || bodyLower.startsWith("key ")) {
+          const submitted = body.trim().split(/\s+/).slice(1).join("").toUpperCase();
+          try {
+            const res = await apiClient.post("/admin/activation-redeem", {
+              session: sessionId, phone: senderNumber, key: submitted
+            });
+            if (res.data?.success) {
+              activation.activated = true;
+              activation.expiryTs = res.data.expiry_ts || null;
+              activation.pendingRequest = false;
+              const expiryText = activation.expiryTs
+                ? `until *${new Date(activation.expiryTs * 1000).toLocaleDateString()}*`
+                : `*permanently*`;
+              await socket.sendMessage(sender, {
+                text: `✅ *Activated!* Your access is valid ${expiryText}.\n\n📌 *Tip:* save this bot's number to your contacts — it helps avoid the number getting flagged/banned.\n\nSend *.menu* to see what I can do.`
+              }, { quoted: msg });
+            } else {
+              await socket.sendMessage(sender, { text: `❌ ${res.data?.reason || 'Invalid key.'}` }, { quoted: msg });
+            }
+          } catch (e) {
+            await socket.sendMessage(sender, { text: `❌ Couldn't verify that key right now, try again shortly.` }, { quoted: msg });
+          }
+          return;
+        }
+
+        // Locked: block everything else with a short notice (owner exempt).
+        if (!isSessionLive(sessionId) && !isPrimaryOwner) {
+          await socket.sendMessage(sender, {
+            text: `🔒 This bot isn't activated yet.\n\nSend *.pair key* to request access from the admin, then *.key <code>* once you receive it.`
+          }, { quoted: msg });
+          return;
+        }
+      }
+
       // ── Subscription expiry gate ───────────────────────────────────────────
       // If the admin panel has marked this session's subscription as expired,
       // reply once with the expiry notice and stop here. Owner is always exempt
@@ -1265,12 +1408,31 @@ async function startSession(sessionId, opts = {}) {
         console.log('⏰ Message scheduler started');
       } catch(e) { console.warn('⚠️ Scheduler not loaded:', e.message); }
       // Register session with admin panel
+      const selfNumber = socket.user?.id?.split(":")[0]?.split("@")[0] || "";
       apiClient.post("/admin/register-session", {
         name: sessionId,
-        number: socket.user?.id?.split(":")[0]?.split("@")[0] || "",
+        number: selfNumber,
         online: true,
         msg_count: 0
       }).catch(() => {});
+
+      // ✅ NEW: paid pairing — check/create this session's activation state.
+      // A brand-new customer session comes back locked (activated: false)
+      // until they redeem a key; the admin's own OWNER_NUMBER session
+      // auto-activates server-side with no expiry.
+      apiClient.post("/admin/activation-status", { session: sessionId, phone: selfNumber })
+        .then(res => {
+          const a = getActivation(sessionId);
+          a.activated = Boolean(res.data?.activated);
+          a.expiryTs = res.data?.expiry_ts || null;
+          a.pendingRequest = Boolean(res.data?.pending_request);
+          a.requesterChat = res.data?.requester_chat || null;
+        })
+        .catch(() => {
+          // If the check fails, fail OPEN rather than permanently locking a
+          // session out because of a transient backend hiccup.
+          getActivation(sessionId).activated = true;
+        });
 
       // 🔔 Send startup notification with full system stats
       try {
@@ -1355,6 +1517,15 @@ _Henry Ochibots v19™ — @henrytech254_ 🔥`;
 
       const loggedOut = statusCode === DisconnectReason.loggedOut;
 
+      // ✅ FIX: neither branch below ever told the admin panel the session
+      // went offline. SESSION_REGISTRY["online"] was only ever set to true
+      // (on connect / on incoming message) and only ever set to false by an
+      // admin manually hitting "terminate" — so a crashed, logged-out, or
+      // mid-reconnect session sat there showing as "online"/"active" in the
+      // admin panel's Sessions list indefinitely. Report offline immediately
+      // on any close, then the "open" handler flips it back on reconnect.
+      apiClient.post("/admin/update-session", { name: sessionId, online: false }).catch(() => {});
+
       if (loggedOut) {
         console.log(`🚪 [${sessionId}] Logged out — clearing session and restarting pairing...`);
         botOnline = false;
@@ -1379,6 +1550,7 @@ _Henry Ochibots v19™ — @henrytech254_ 🔥`;
         const wasQR = sessionId.startsWith('qr_session_');
         setTimeout(() => startSession(sessionId, { forceQR: wasQR }), 3000);
       }
+
     }
   });
 }

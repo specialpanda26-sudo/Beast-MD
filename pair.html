@@ -4,13 +4,25 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Henry Ochibots v19™ — Pair WhatsApp</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
+    /* ✅ FIX: this page previously loaded no shared fonts (fell back to Segoe
+       UI / Courier New) and had no --accent/--bg/--card variables, so it
+       looked like a different site from index/admin/panel/register the
+       moment a visitor clicked through to /pair. Brought in line with the
+       same brand tokens used everywhere else. */
+    :root{
+      --accent:#00e5ff;
+      --accent2:#7c3aed;
+      --bg:#020408;
+      --card:#060e18;
+    }
     *{margin:0;padding:0;box-sizing:border-box}
     html{scroll-behavior:smooth}
     body{
-      background:#08090f;
+      background:var(--bg);
       color:#e2eaf4;
-      font-family:'Segoe UI',system-ui,sans-serif;
+      font-family:'Space Grotesk','Segoe UI',system-ui,sans-serif;
       min-height:100vh;
       display:flex;
       flex-direction:column;
@@ -18,7 +30,7 @@
     }
     /* ── CUSTOM BG IMAGE (set via ?bg= URL param or JS) ── */
     body.has-bg-img{
-      background-color:#08090f;
+      background-color:var(--bg);
     }
     .bg-image-layer{
       position:fixed;inset:0;z-index:0;pointer-events:none;
@@ -61,18 +73,18 @@
     .topbar-brand{display:flex;align-items:center;gap:10px}
     .topbar-logo{
       width:36px;height:36px;border-radius:50%;
-      background:conic-gradient(from 0deg,#ff6b9d,#c44dff,#4d79ff,#00e5ff,#ff6b9d);
+      background:conic-gradient(from 0deg,var(--accent2),var(--accent),var(--accent2));
       display:flex;align-items:center;justify-content:center;
       font-size:11px;font-weight:900;color:#fff;
       animation:hueshift 8s linear infinite;
       flex-shrink:0;
     }
     @keyframes hueshift{to{filter:hue-rotate(360deg)}}
-    .topbar-name{font-weight:700;font-size:15px;color:#a78bfa;letter-spacing:.5px}
+    .topbar-name{font-weight:700;font-size:15px;color:var(--accent2);letter-spacing:.5px}
     .topbar-status{
       display:flex;align-items:center;gap:6px;
       font-size:11px;color:#22c55e;
-      font-family:monospace;letter-spacing:.08em;
+      font-family:'JetBrains Mono',monospace;letter-spacing:.08em;
     }
     .pulse-dot{
       width:7px;height:7px;border-radius:50%;
@@ -103,25 +115,25 @@
     .logo-wrap{position:relative;margin-bottom:24px}
     .logo-ring{
       width:108px;height:108px;border-radius:50%;
-      background:conic-gradient(from 0deg,#ff6b9d,#c44dff,#4d79ff,#00cfff,#7effb2,#ff6b9d);
+      background:conic-gradient(from 0deg,var(--accent2),var(--accent),var(--accent2));
       display:flex;align-items:center;justify-content:center;
       animation:hueshift 8s linear infinite;
       box-shadow:0 0 40px rgba(124,58,237,0.35);
     }
     .logo-inner{
       width:90px;height:90px;border-radius:50%;
-      background:#08090f;
+      background:var(--bg);
       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     }
     .logo-inner .big{
       font-size:13px;font-weight:900;letter-spacing:3px;
-      background:linear-gradient(135deg,#c44dff,#00cfff);
+      background:linear-gradient(135deg,var(--accent2),var(--accent));
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     }
     .logo-inner .small{font-size:8px;color:#444;letter-spacing:4px}
     .logo-badge{
       position:absolute;bottom:4px;right:4px;
-      background:#08090f;border-radius:50%;
+      background:var(--bg);border-radius:50%;
       width:26px;height:26px;
       display:flex;align-items:center;justify-content:center;
       font-size:15px;
@@ -131,7 +143,7 @@
     /* ── HEADING ── */
     .heading{
       font-size:28px;font-weight:800;text-align:center;
-      background:linear-gradient(135deg,#c44dff,#818cf8);
+      background:linear-gradient(135deg,var(--accent2),var(--accent2));
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
       margin-bottom:6px;
       letter-spacing:-.3px;
@@ -169,7 +181,7 @@
     }
     .tab-btn.active{
       background:rgba(168,85,247,.2);
-      color:#c084fc;
+      color:var(--accent2);
       box-shadow:0 0 12px rgba(168,85,247,.15);
     }
     .tab-btn:hover:not(.active){color:#999}
@@ -186,7 +198,7 @@
     }
     .phone-input::placeholder{color:#3a3a4a}
     .phone-input:focus{
-      border-color:#a78bfa;
+      border-color:var(--accent2);
       box-shadow:0 0 0 3px rgba(167,139,250,.12);
     }
     .phone-input.error{border-color:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.12)!important}
@@ -209,7 +221,7 @@
     /* ── BTN ── */
     .btn-generate{
       width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
-      background:linear-gradient(135deg,#7c3aed,#a855f7);
+      background:linear-gradient(135deg,#7c3aed,var(--accent2));
       color:#fff;font-size:15px;font-weight:700;letter-spacing:.5px;
       transition:opacity .2s,transform .1s,box-shadow .2s;
       box-shadow:0 4px 24px rgba(124,58,237,.35);
@@ -223,7 +235,7 @@
     .spinner{
       width:42px;height:42px;border-radius:50%;
       border:3px solid rgba(255,255,255,.08);
-      border-top-color:#a855f7;
+      border-top-color:var(--accent2);
       animation:spin .8s linear infinite;
     }
     @keyframes spin{to{transform:rotate(360deg)}}
@@ -231,7 +243,7 @@
     .progress-wrap{width:100%;height:4px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
     .progress-bar{
       height:100%;
-      background:linear-gradient(90deg,#7c3aed,#00cfff);
+      background:linear-gradient(90deg,#7c3aed,var(--accent));
       border-radius:4px;
       width:5%;
       transition:width .3s ease;
@@ -257,7 +269,7 @@
     .code-box:hover{background:rgba(0,207,255,.1);border-color:rgba(0,207,255,.35)}
     .code-text{
       font-size:34px;font-weight:900;letter-spacing:8px;
-      color:#00cfff;font-family:'Courier New',monospace;
+      color:var(--accent);font-family:'JetBrains Mono',monospace;
       user-select:all;word-break:break-all;
     }
     .code-hint{color:#444;font-size:11px;margin-top:6px}
@@ -270,7 +282,7 @@
     .code-actions{display:flex;gap:10px;width:100%}
     .btn-copy{
       flex:1;padding:13px;border-radius:12px;border:none;cursor:pointer;
-      background:linear-gradient(135deg,#7c3aed,#a855f7);
+      background:linear-gradient(135deg,#7c3aed,var(--accent2));
       color:#fff;font-size:14px;font-weight:700;
       display:flex;align-items:center;justify-content:center;gap:7px;
       transition:opacity .2s,transform .1s;
@@ -285,7 +297,7 @@
       display:flex;align-items:center;justify-content:center;gap:7px;
       transition:all .2s;
     }
-    .btn-new:hover{border-color:#a855f7;color:#a855f7}
+    .btn-new:hover{border-color:var(--accent2);color:var(--accent2)}
 
     /* ── ERROR STATE ── */
     .error-state{display:none;flex-direction:column;align-items:center;gap:14px;width:100%}
@@ -317,7 +329,7 @@
       min-width:20px;height:20px;border-radius:50%;
       background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);
       display:flex;align-items:center;justify-content:center;
-      font-size:10px;font-weight:700;color:#a855f7;
+      font-size:10px;font-weight:700;color:var(--accent2);
       flex-shrink:0;margin-top:2px;
     }
 
@@ -372,7 +384,7 @@
     <!-- Hidden file input for bg image -->
     <input type="file" id="bgFileInput" accept="image/*" style="display:none"/>
     <button onclick="document.getElementById('bgFileInput').click()" title="Set background image"
-      style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#a78bfa;
+      style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--accent2);
              width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;
              display:flex;align-items:center;justify-content:center;">🖼️</button>
     <button onclick="removeBgImage()" title="Remove background"
@@ -447,6 +459,11 @@
           <button class="btn-copy" id="copyBtn" onclick="copyCode()">📋 Copy Code</button>
           <button class="btn-new" onclick="resetAll()">🔄 New Code</button>
         </div>
+        <div style="margin-top:16px;padding:12px;border-radius:10px;background:rgba(255,255,255,.05);font-size:13px;line-height:1.5;color:#aaa">
+          🔒 After entering this code, your bot will be <strong>locked</strong> until activated.
+          In your WhatsApp chat with the bot, send <code>.pair key</code> to request access,
+          then <code>.key XXXXXX</code> once the admin sends you a key.
+        </div>
       </div>
 
       <!-- ERROR STATE -->
@@ -465,7 +482,7 @@
           <div id="qrMsg" style="color:#666;font-size:13px">Click "Load QR Code" to generate</div>
         </div>
         <div class="qr-note">
-          Scan the QR code with WhatsApp → <strong style="color:#a78bfa">Linked Devices</strong> → Link a Device
+          Scan the QR code with WhatsApp → <strong style="color:var(--accent2)">Linked Devices</strong> → Link a Device
         </div>
         <button class="btn-generate" id="qrBtn" onclick="loadQR()" style="margin-top:4px">
           📷 Load QR Code
@@ -763,7 +780,7 @@
     panel.style.cssText = 'position:fixed;top:0;right:0;z-index:51;width:220px;height:100vh;background:#0d0e1a;border-left:1px solid rgba(255,255,255,0.08);padding:20px 16px;display:flex;flex-direction:column;gap:8px;';
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <span style="color:#a78bfa;font-weight:700;font-size:15px">Menu</span>
+        <span style="color:var(--accent2);font-weight:700;font-size:15px">Menu</span>
         <button onclick="closeMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
       </div>
       <a href="/pair" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,0.05)">🔗 Pair Device</a>

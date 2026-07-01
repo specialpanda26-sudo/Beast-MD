@@ -484,6 +484,26 @@ async def init_db():
                 "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
                 (default_feature,)
             )
+        # ✅ NEW: paid pairing / activation-key system — every newly paired
+        # customer session starts LOCKED (can't run commands) until it's
+        # unlocked with a random key issued by the admin after payment.
+        # Survives restarts, unlike in-memory SESSION_REGISTRY.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS session_subscriptions (
+                session TEXT PRIMARY KEY,
+                phone TEXT,
+                activated INTEGER NOT NULL DEFAULT 0,
+                activated_at REAL,
+                expiry_ts REAL,
+                subscription_days INTEGER,
+                request_status TEXT NOT NULL DEFAULT 'none',
+                requester_chat TEXT,
+                pending_key TEXT,
+                pending_key_expires_at REAL,
+                created_at REAL,
+                updated_at REAL
+            )
+        """)
         # ✅ NEW: admin_settings — lets the admin password be changed at
         # runtime (via "forgot password" reset) instead of being permanently
         # fixed to whatever ADMIN_PASSWORD was set to at deploy time.
@@ -1385,6 +1405,334 @@ async def check_terminate():
         "expired": expired,
         "expiry_message": info.get("expiry_message", DEFAULT_EXPIRY_MESSAGE),
     })
+
+
+# ── Paid Pairing / Activation Keys ───────────────────────────────────────────
+# Every newly-paired customer session (via /pair or .pair in chat) starts
+# LOCKED. It stays locked until the customer requests a key (".pair key"),
+# the admin approves it (from WhatsApp with a plain yes/no, or from
+# /admin → 🔑 Activation), and the customer redeems the key (".key XXXXXX")
+# within its 10-minute window. Activating sets an expiry based on however
+# many days the admin granted; re-approving/extending just pushes that
+# expiry further out without breaking the already-connected session.
+#
+# All routes below are called internally by client_bridge.js (Bearer token,
+# same pattern as every other /admin/* internal call) OR by the /admin web
+# panel (?pass= / Bearer, same _check_admin_auth_async as everything else)
+# — there's no distinction, both are equally "admin" by design so the admin
+# can approve from WhatsApp or the panel interchangeably.
+
+ACTIVATION_KEY_TTL_SECONDS = 600  # 10 minutes to redeem an issued key
+DEFAULT_ACTIVATION_SETTINGS = {
+    "activation_default_days": "30",
+    "activation_bypass_key": "",  # empty until admin sets one (or auto-generated below)
+}
+
+
+def _gen_activation_key() -> str:
+    # Short, easy to type over WhatsApp — 8 uppercase alnum chars.
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I ambiguity
+    return "".join(secrets.choice(alphabet) for _ in range(8))
+
+
+async def _get_activation_settings() -> dict:
+    out = dict(DEFAULT_ACTIVATION_SETTINGS)
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT key, value FROM admin_settings WHERE key IN ('activation_default_days','activation_bypass_key')"
+        ) as c:
+            rows = await c.fetchall()
+        got = {k: v for k, v in rows}
+        if not got.get("activation_bypass_key"):
+            # Auto-generate one on first use so there's always a working
+            # master bypass, without forcing the admin to configure it
+            # before the feature works at all.
+            bypass = _gen_activation_key() + _gen_activation_key()
+            await db.execute(
+                "INSERT OR REPLACE INTO admin_settings (key, value) VALUES ('activation_bypass_key', ?)",
+                (bypass,)
+            )
+            await db.commit()
+            got["activation_bypass_key"] = bypass
+        out.update({k: v for k, v in got.items() if v is not None})
+    return out
+
+
+async def _get_subscription(session: str):
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT session, phone, activated, activated_at, expiry_ts, subscription_days, "
+            "request_status, requester_chat, pending_key, pending_key_expires_at FROM session_subscriptions WHERE session = ?",
+            (session,)
+        ) as c:
+            row = await c.fetchone()
+    if not row:
+        return None
+    return {
+        "session": row[0], "phone": row[1], "activated": bool(row[2]), "activated_at": row[3],
+        "expiry_ts": row[4], "subscription_days": row[5], "request_status": row[6],
+        "requester_chat": row[7], "pending_key": row[8], "pending_key_expires_at": row[9],
+    }
+
+
+@app.route("/admin/activation-status", methods=["POST"])
+async def activation_status():
+    """Called right after a session connects. Auto-creates its subscription
+    row on first sight. A session whose phone number matches OWNER_NUMBER
+    (the reseller's own main bot) is auto-activated with no expiry — this
+    lock is for paying customers, not the admin's own number."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    session = (data.get("session") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    if not session:
+        return jsonify({"error": "session required"}), 400
+
+    owner_number = os.environ.get("OWNER_NUMBER", "").replace("+", "").replace(" ", "")
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT activated, expiry_ts FROM session_subscriptions WHERE session = ?", (session,)) as c:
+            row = await c.fetchone()
+        if not row:
+            auto_activate = bool(owner_number and phone and phone == owner_number)
+            await db.execute(
+                "INSERT INTO session_subscriptions (session, phone, activated, activated_at, expiry_ts, request_status, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, NULL, 'none', ?, ?)",
+                (session, phone, 1 if auto_activate else 0, now if auto_activate else None, now, now)
+            )
+            await db.commit()
+            activated, expiry_ts = (1 if auto_activate else 0), None
+        else:
+            activated, expiry_ts = row
+            # keep phone/number fresh in case it changed on a re-pair
+            await db.execute("UPDATE session_subscriptions SET phone = ?, updated_at = ? WHERE session = ?", (phone, now, session))
+            await db.commit()
+
+    live_active = bool(activated) and (not expiry_ts or now < expiry_ts)
+    return jsonify({"activated": live_active, "expiry_ts": expiry_ts})
+
+
+@app.route("/admin/activation-request", methods=["POST"])
+async def activation_request():
+    """Customer sent '.pair key' — mark a request pending so the admin
+    panel/WhatsApp approval flow has something to act on."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    session = (data.get("session") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    requester_chat = (data.get("requester_chat") or "").strip()
+    if not session:
+        return jsonify({"error": "session required"}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT request_status FROM session_subscriptions WHERE session = ?", (session,)) as c:
+            row = await c.fetchone()
+        if row and row[0] == "pending":
+            return jsonify({"success": True, "already_pending": True})
+        now = time.time()
+        if row:
+            await db.execute(
+                "UPDATE session_subscriptions SET request_status = 'pending', requester_chat = ?, phone = ?, pending_key = NULL, updated_at = ? WHERE session = ?",
+                (requester_chat, phone, now, session)
+            )
+        else:
+            await db.execute(
+                "INSERT INTO session_subscriptions (session, phone, activated, request_status, requester_chat, created_at, updated_at) "
+                "VALUES (?, ?, 0, 'pending', ?, ?, ?)",
+                (session, phone, requester_chat, now, now)
+            )
+        await db.commit()
+    settings = await _get_activation_settings()
+    return jsonify({"success": True, "already_pending": False, "default_days": settings["activation_default_days"]})
+
+
+@app.route("/admin/activation-approve", methods=["POST"])
+async def activation_approve():
+    """Admin said yes (via WhatsApp reply or /admin panel button). Issues a
+    random key valid for 10 minutes; the customer's session stays locked
+    until they redeem it with '.key XXXXXX'."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    session = (data.get("session") or "").strip()
+    if not session:
+        return jsonify({"error": "session required"}), 400
+    settings = await _get_activation_settings()
+    try:
+        days = int(data.get("days") or settings["activation_default_days"])
+    except (TypeError, ValueError):
+        days = int(settings["activation_default_days"])
+    days = max(1, days)
+
+    key = _gen_activation_key()
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT requester_chat, phone FROM session_subscriptions WHERE session = ?", (session,)) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"error": "No pending request for this session."}), 404
+        requester_chat, phone = row
+        await db.execute(
+            "UPDATE session_subscriptions SET request_status = 'approved', pending_key = ?, pending_key_expires_at = ?, "
+            "subscription_days = ?, updated_at = ? WHERE session = ?",
+            (key, now + ACTIVATION_KEY_TTL_SECONDS, days, now, session)
+        )
+        await db.commit()
+    return jsonify({
+        "success": True, "key": key, "days": days,
+        "expires_in": ACTIVATION_KEY_TTL_SECONDS,
+        "requester_chat": requester_chat, "phone": phone,
+    })
+
+
+@app.route("/admin/activation-deny", methods=["POST"])
+async def activation_deny():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    session = (data.get("session") or "").strip()
+    if not session:
+        return jsonify({"error": "session required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT requester_chat FROM session_subscriptions WHERE session = ?", (session,)) as c:
+            row = await c.fetchone()
+        await db.execute(
+            "UPDATE session_subscriptions SET request_status = 'denied', pending_key = NULL, updated_at = ? WHERE session = ?",
+            (time.time(), session)
+        )
+        await db.commit()
+    return jsonify({"success": True, "requester_chat": row[0] if row else None})
+
+
+@app.route("/admin/activation-redeem", methods=["POST"])
+async def activation_redeem():
+    """Customer sent '.key XXXXXX'. Also accepts the master bypass key
+    (set/viewed from /admin → 🔑 Activation), which activates instantly
+    with no expiry, no pending request needed — this is the admin's own
+    override for pairing sessions without going through approval at all."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    session = (data.get("session") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    submitted_key = (data.get("key") or "").strip().upper()
+    if not session or not submitted_key:
+        return jsonify({"success": False, "reason": "session and key required"}), 400
+
+    settings = await _get_activation_settings()
+    now = time.time()
+
+    if settings["activation_bypass_key"] and secrets.compare_digest(submitted_key, settings["activation_bypass_key"].upper()):
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute(
+                "INSERT INTO session_subscriptions (session, phone, activated, activated_at, expiry_ts, request_status, pending_key, created_at, updated_at) "
+                "VALUES (?, ?, 1, ?, NULL, 'none', NULL, ?, ?) "
+                "ON CONFLICT(session) DO UPDATE SET activated=1, activated_at=excluded.activated_at, expiry_ts=NULL, request_status='none', pending_key=NULL, updated_at=excluded.updated_at",
+                (session, phone, now, now, now)
+            )
+            await db.commit()
+        return jsonify({"success": True, "bypass": True, "expiry_ts": None})
+
+    sub = await _get_subscription(session)
+    if not sub or not sub["pending_key"]:
+        return jsonify({"success": False, "reason": "No key was issued for this session. Send *.pair key* to request one."})
+    if not secrets.compare_digest(submitted_key, sub["pending_key"].upper()):
+        return jsonify({"success": False, "reason": "That key doesn't match. Double-check and try again."})
+    if not sub["pending_key_expires_at"] or now > sub["pending_key_expires_at"]:
+        return jsonify({"success": False, "reason": "That key has expired (10-minute window). Send *.pair key* to request a new one."})
+
+    days = sub["subscription_days"] or int(settings["activation_default_days"])
+    base = sub["expiry_ts"] if (sub["expiry_ts"] and sub["expiry_ts"] > now) else now
+    new_expiry = base + days * 86400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "UPDATE session_subscriptions SET activated = 1, activated_at = ?, expiry_ts = ?, request_status = 'none', pending_key = NULL, updated_at = ? WHERE session = ?",
+            (now, new_expiry, now, session)
+        )
+        await db.commit()
+    return jsonify({"success": True, "bypass": False, "expiry_ts": new_expiry, "days": days})
+
+
+@app.route("/admin/activation-extend", methods=["POST"])
+async def activation_extend():
+    """/admin panel action: re-subscribe / add more days to a session
+    without the WhatsApp request-and-key dance — for renewals the admin
+    wants to push through directly. Doesn't touch the connected session at
+    all, just extends (or sets, if none yet) its expiry."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    session = (data.get("session") or "").strip()
+    try:
+        days = max(1, int(data.get("days") or 30))
+    except (TypeError, ValueError):
+        return jsonify({"error": "days must be a number"}), 400
+    now = time.time()
+    sub = await _get_subscription(session)
+    base = sub["expiry_ts"] if (sub and sub["expiry_ts"] and sub["expiry_ts"] > now) else now
+    new_expiry = base + days * 86400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO session_subscriptions (session, activated, activated_at, expiry_ts, subscription_days, request_status, created_at, updated_at) "
+            "VALUES (?, 1, ?, ?, ?, 'none', ?, ?) "
+            "ON CONFLICT(session) DO UPDATE SET activated=1, activated_at=excluded.activated_at, expiry_ts=excluded.expiry_ts, subscription_days=excluded.subscription_days, updated_at=excluded.updated_at",
+            (session, now, new_expiry, days, now, now)
+        )
+        await db.commit()
+    return jsonify({"success": True, "expiry_ts": new_expiry})
+
+
+@app.route("/admin/activation-list", methods=["GET"])
+async def activation_list():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT session, phone, activated, expiry_ts, subscription_days, request_status, updated_at "
+            "FROM session_subscriptions ORDER BY updated_at DESC LIMIT 300"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"sessions": [
+        {
+            "session": r[0], "phone": r[1], "activated": bool(r[2]),
+            "expiry_ts": r[3],
+            "expiry_display": time.strftime("%d %b %Y, %H:%M", time.localtime(r[3])) if r[3] else None,
+            "expired": bool(r[3] and now >= r[3]),
+            "subscription_days": r[4], "request_status": r[5],
+            "updated_at": r[6],
+        } for r in rows
+    ]})
+
+
+@app.route("/admin/activation-settings", methods=["GET", "POST"])
+async def activation_settings():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    if request.method == "GET":
+        settings = await _get_activation_settings()
+        return jsonify(settings)
+    data = await request.get_json(silent=True) or {}
+    updates = {}
+    if "activation_default_days" in data:
+        try:
+            updates["activation_default_days"] = str(max(1, int(data["activation_default_days"])))
+        except (TypeError, ValueError):
+            return jsonify({"error": "activation_default_days must be a number"}), 400
+    if "activation_bypass_key" in data:
+        new_key = (data["activation_bypass_key"] or "").strip().upper()
+        if new_key:
+            updates["activation_bypass_key"] = new_key
+    if not updates:
+        return jsonify({"error": "nothing to update"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        for k, v in updates.items():
+            await db.execute("INSERT OR REPLACE INTO admin_settings (key, value) VALUES (?, ?)", (k, v))
+        await db.commit()
+    return jsonify({"success": True, **updates})
+
 
 
 @app.route("/admin/session-detail", methods=["GET"])
