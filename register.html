@@ -13,12 +13,70 @@
   }
   body{
     background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:6rem 20px 20px;
     background-image:
       linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
     background-size:50px 50px;
   }
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 2.5rem;
+    background: rgba(2,4,8,0.7); backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,229,255,0.08);
+  }
+  .nav-logo {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.08em; text-decoration: none;
+    text-shadow: 0 0 20px rgba(0,229,255,0.5);
+  }
+  .nav-logo span { color: var(--text); }
+  .nav-logo .v { color: var(--muted); }
+  .nav-links {
+    display: flex; align-items: center; gap: 1.8rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+  .nav-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links .nav-pair-btn {
+    color: #000; background: var(--green); padding: 0.4rem 0.9rem;
+    border-radius: 6px; font-weight: 700; box-shadow: 0 0 14px rgba(0,255,136,0.25);
+  }
+  .nav-links .nav-pair-btn:hover { color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+  .nav-status {
+    display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem;
+    color: var(--green); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
+    text-shadow: 0 0 10px rgba(0,255,136,0.4);
+  }
+  .pulse { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.8); } }
+  @media (max-width: 760px) { .nav-links { display: none; } .nav-hamburger { display: flex !important; } }
+  .nav-hamburger {
+    display: none; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+    color: #ccc; font-size: 16px; margin-left: 10px;
+  }
+  .nav-hamburger:hover { background: rgba(255,255,255,.12); }
+  #mobileMenuOverlay {
+    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.6);
+    backdrop-filter: blur(4px); display: none;
+  }
+  #mobileMenuOverlay.open { display: block; }
+  #mobileMenuPanel {
+    position: fixed; top: 0; right: 0; z-index: 201; width: 240px; height: 100vh;
+    background: #0d0e1a; border-left: 1px solid rgba(255,255,255,.08);
+    padding: 20px 16px; display: flex; flex-direction: column; gap: 8px;
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #mobileMenuOverlay.open #mobileMenuPanel { transform: translateX(0); }
+  #mobileMenuPanel a {
+    display: block; padding: 12px; border-radius: 10px; color: #ccc;
+    text-decoration: none; font-size: 14px; background: rgba(255,255,255,.05);
+  }
+  #mobileMenuPanel a.nav-pair-btn { color: #00ff88; }
   .card{
     width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);
     border-radius:18px;padding:34px 28px;box-shadow:0 0 60px rgba(0,229,255,0.08);
@@ -72,8 +130,40 @@
 </style>
 </head>
 <body>
+  <nav>
+    <a href="/" class="nav-logo">HENRY <span>OCHIBOTS</span> <span class="v">V19™</span></a>
+    <div class="nav-links">
+      <a href="/#commands">Commands</a>
+      <a href="/#how-it-works">How It Works</a>
+      <a href="/#deploy">Deploy</a>
+      <a href="/panel">Bot Panel Login</a>
+      <a href="/pair" class="nav-pair-btn">📱 Pair Now</a>
+    </div>
+    <div class="nav-status"><div class="pulse"></div> BOT ONLINE</div>
+    <button class="nav-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
+  </nav>
+
+  <div id="mobileMenuOverlay" onclick="if(event.target===this) closeMobileMenu()">
+    <div id="mobileMenuPanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="color:#a78bfa;font-weight:700;font-size:15px">Menu</span>
+        <button onclick="closeMobileMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <a href="/#commands" onclick="closeMobileMenu()">📋 Commands</a>
+      <a href="/#how-it-works" onclick="closeMobileMenu()">⚙️ How It Works</a>
+      <a href="/#deploy" onclick="closeMobileMenu()">🚀 Deploy</a>
+      <a href="/panel" onclick="closeMobileMenu()">🔓 Bot Panel Login</a>
+      <a href="/admin" onclick="closeMobileMenu()">🛡️ Admin Panel</a>
+      <a href="/pair" class="nav-pair-btn">📱 Pair Now</a>
+    </div>
+  </div>
+  <script>
+    function toggleMobileMenu() { document.getElementById('mobileMenuOverlay').classList.add('open'); }
+    function closeMobileMenu() { document.getElementById('mobileMenuOverlay').classList.remove('open'); }
+  </script>
+
   <div class="card">
-    <h1>🦈 BOT PANEL ACCESS</h1>
+    <h1>🪪 BOT PANEL ACCESS</h1>
     <p class="sub">Register your WhatsApp number — verify to unlock your Trust Badge</p>
 
     <!-- STEP 1: REGISTER -->

@@ -61,28 +61,74 @@
       mask-image:radial-gradient(ellipse 80% 80% at 50% 40%,black 30%,transparent 100%);
     }
 
-    /* ── TOPBAR ── */
-    .topbar{
+    /* ── NAV (shared across all pages) ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.1rem 2.5rem;
+      background: rgba(2,4,8,0.7); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,229,255,0.08);
+    }
+    .nav-logo {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700;
+      color: var(--accent); letter-spacing: 0.08em; text-decoration: none;
+      text-shadow: 0 0 20px rgba(0,229,255,0.5);
+    }
+    .nav-logo span { color: #e2eaf4; }
+    .nav-logo .v { color: #4a6070; }
+    .nav-links {
+      display: flex; align-items: center; gap: 1.8rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    .nav-links a { color: #4a6070; text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--accent); }
+    .nav-links .nav-pair-btn {
+      color: #000; background: #00ff88; padding: 0.4rem 0.9rem;
+      border-radius: 6px; font-weight: 700; box-shadow: 0 0 14px rgba(0,255,136,0.25);
+    }
+    .nav-links .nav-pair-btn:hover { color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+    .nav-status {
+      display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem;
+      color: #00ff88; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
+      text-shadow: 0 0 10px rgba(0,255,136,0.4);
+    }
+    .pulse { width: 8px; height: 8px; background: #00ff88; border-radius: 50%; box-shadow: 0 0 8px #00ff88; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.8); } }
+    @media (max-width: 760px) { .nav-links { display: none; } .nav-hamburger { display: flex !important; } }
+    .nav-hamburger {
+      display: none; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+      color: #ccc; font-size: 16px; margin-left: 10px;
+    }
+    .nav-hamburger:hover { background: rgba(255,255,255,.12); }
+    #mobileMenuOverlay {
+      position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px); display: none;
+    }
+    #mobileMenuOverlay.open { display: block; }
+    #mobileMenuPanel {
+      position: fixed; top: 0; right: 0; z-index: 201; width: 240px; height: 100vh;
+      background: #0d0e1a; border-left: 1px solid rgba(255,255,255,.08);
+      padding: 20px 16px; display: flex; flex-direction: column; gap: 8px;
+      transform: translateX(100%); transition: transform .25s ease;
+    }
+    #mobileMenuOverlay.open #mobileMenuPanel { transform: translateX(0); }
+    #mobileMenuPanel a {
+      display: block; padding: 12px; border-radius: 10px; color: #ccc;
+      text-decoration: none; font-size: 14px; background: rgba(255,255,255,.05);
+    }
+    #mobileMenuPanel a.nav-pair-btn { color: #00ff88; }
+
+    /* ── PAGE TOOLBAR (page-specific controls: live status + bg image) ── */
+    .page-toolbar{
       position:relative;z-index:10;
-      display:flex;align-items:center;justify-content:space-between;
-      padding:14px 20px;
-      background:rgba(8,9,15,0.85);
-      backdrop-filter:blur(12px);
-      border-bottom:1px solid rgba(255,255,255,0.06);
+      display:flex;align-items:center;justify-content:flex-end;gap:8px;
+      padding:76px 20px 8px;
     }
-    .topbar-brand{display:flex;align-items:center;gap:10px}
-    .topbar-logo{
-      width:36px;height:36px;border-radius:50%;
-      background:conic-gradient(from 0deg,var(--accent2),var(--accent),var(--accent2));
-      display:flex;align-items:center;justify-content:center;
-      font-size:11px;font-weight:900;color:#fff;
-      animation:hueshift 8s linear infinite;
-      flex-shrink:0;
-    }
-    @keyframes hueshift{to{filter:hue-rotate(360deg)}}
-    .topbar-name{font-weight:700;font-size:15px;color:var(--accent2);letter-spacing:.5px}
     .topbar-status{
-      display:flex;align-items:center;gap:6px;
+      display:flex;align-items:center;gap:6px;margin-right:auto;
       font-size:11px;color:#22c55e;
       font-family:'JetBrains Mono',monospace;letter-spacing:.08em;
     }
@@ -96,19 +142,13 @@
       0%,100%{opacity:1;transform:scale(1)}
       50%{opacity:.5;transform:scale(.8)}
     }
-    .hamburger{
-      background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
-      color:#ccc;width:36px;height:36px;border-radius:8px;
-      cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
-      transition:background .2s;
-    }
-    .hamburger:hover{background:rgba(255,255,255,.13)}
+    @keyframes hueshift{to{filter:hue-rotate(360deg)}}
 
     /* ── MAIN CONTENT ── */
     .main{
       flex:1;position:relative;z-index:1;
       display:flex;flex-direction:column;align-items:center;
-      justify-content:center;padding:28px 16px 40px;
+      justify-content:center;padding:8px 16px 40px;
     }
 
     /* ── LOGO RING ── */
@@ -374,29 +414,54 @@
 <div class="bg-glow"></div>
 <div class="grid-bg"></div>
 
-<!-- TOPBAR -->
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="topbar-logo">BB</div>
-    <span class="topbar-name">BEAST-BOT</span>
+<!-- NAV (shared across all pages) -->
+<nav>
+  <a href="/" class="nav-logo">HENRY <span>OCHIBOTS</span> <span class="v">V19™</span></a>
+  <div class="nav-links">
+    <a href="/#commands">Commands</a>
+    <a href="/#how-it-works">How It Works</a>
+    <a href="/#deploy">Deploy</a>
+    <a href="/register" class="nav-pair-btn" style="background:linear-gradient(90deg,#22d3ee,#a78bfa)">🪪 Register</a>
+    <a href="/admin">Admin</a>
   </div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <!-- Hidden file input for bg image -->
-    <input type="file" id="bgFileInput" accept="image/*" style="display:none"/>
-    <button onclick="document.getElementById('bgFileInput').click()" title="Set background image"
-      style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--accent2);
-             width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;
-             display:flex;align-items:center;justify-content:center;">🖼️</button>
-    <button onclick="removeBgImage()" title="Remove background"
-      style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#666;
-             width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:12px;
-             display:flex;align-items:center;justify-content:center;">✕</button>
-    <div class="topbar-status" id="botStatus">
+  <button class="nav-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
+</nav>
+
+<div id="mobileMenuOverlay" onclick="if(event.target===this) closeMobileMenu()">
+  <div id="mobileMenuPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="color:#a78bfa;font-weight:700;font-size:15px">Menu</span>
+      <button onclick="closeMobileMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <a href="/#commands" onclick="closeMobileMenu()">📋 Commands</a>
+    <a href="/#how-it-works" onclick="closeMobileMenu()">⚙️ How It Works</a>
+    <a href="/#deploy" onclick="closeMobileMenu()">🚀 Deploy</a>
+    <a href="/register" onclick="closeMobileMenu()">🪪 Register</a>
+    <a href="/panel" onclick="closeMobileMenu()">🔓 Bot Panel Login</a>
+    <a href="/admin" onclick="closeMobileMenu()">🛡️ Admin Panel</a>
+    <a href="/status" target="_blank" onclick="closeMobileMenu()">📊 Bot Status</a>
+  </div>
+</div>
+<script>
+  function toggleMobileMenu() { document.getElementById('mobileMenuOverlay').classList.add('open'); }
+  function closeMobileMenu() { document.getElementById('mobileMenuOverlay').classList.remove('open'); }
+</script>
+
+<!-- PAGE TOOLBAR (page-specific: live pairing status + background image controls) -->
+<div class="page-toolbar">
+  <div class="topbar-status" id="botStatus">
     <div class="pulse-dot"></div>
     <span>ONLINE</span>
   </div>
-  </div>  <!-- close flex wrapper -->
-  <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">☰</button>
+  <input type="file" id="bgFileInput" accept="image/*" style="display:none"/>
+  <button onclick="document.getElementById('bgFileInput').click()" title="Set background image"
+    style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--accent2);
+           width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;
+           display:flex;align-items:center;justify-content:center;">🖼️</button>
+  <button onclick="removeBgImage()" title="Remove background"
+    style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#666;
+           width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:12px;
+           display:flex;align-items:center;justify-content:center;">✕</button>
 </div>
 
 <!-- MAIN -->
@@ -764,37 +829,6 @@
     document.getElementById('genBtn').disabled = false;
     document.getElementById('errorMsg').textContent = msg;
     showOnly('errorState');
-  }
-
-  /* ─────────────────────────────────── MENU ── */
-  let menuOpen = false;
-  function toggleMenu() {
-    if (menuOpen) { closeMenu(); return; }
-    menuOpen = true;
-    const overlay = document.createElement('div');
-    overlay.id = 'menuOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px)';
-    overlay.onclick = closeMenu;
-    const panel = document.createElement('div');
-    panel.id = 'menuPanel';
-    panel.style.cssText = 'position:fixed;top:0;right:0;z-index:51;width:220px;height:100vh;background:#0d0e1a;border-left:1px solid rgba(255,255,255,0.08);padding:20px 16px;display:flex;flex-direction:column;gap:8px;';
-    panel.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <span style="color:var(--accent2);font-weight:700;font-size:15px">Menu</span>
-        <button onclick="closeMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
-      </div>
-      <a href="/pair" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,0.05)">🔗 Pair Device</a>
-      <a href="/admin" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,0.05)">🛡️ Admin Panel</a>
-      <a href="/status" target="_blank" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,0.05)">📊 Bot Status</a>
-      <div style="margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);color:#444;font-size:11px;text-align:center">Henry Ochibots v19™</div>
-    `;
-    document.body.appendChild(overlay);
-    document.body.appendChild(panel);
-  }
-  function closeMenu() {
-    menuOpen = false;
-    document.getElementById('menuOverlay')?.remove();
-    document.getElementById('menuPanel')?.remove();
   }
 
   /* ─────────────────────────────────── STATUS CHECK ── */

@@ -67,7 +67,31 @@
   }
   .pulse { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.8); } }
-  @media (max-width: 760px) { .nav-links { display: none; } }
+  @media (max-width: 760px) { .nav-links { display: none; } .nav-hamburger { display: flex !important; } }
+  .nav-hamburger {
+    display: none; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+    color: #ccc; font-size: 16px; margin-left: 10px;
+  }
+  .nav-hamburger:hover { background: rgba(255,255,255,.12); }
+  #mobileMenuOverlay {
+    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.6);
+    backdrop-filter: blur(4px); display: none;
+  }
+  #mobileMenuOverlay.open { display: block; }
+  #mobileMenuPanel {
+    position: fixed; top: 0; right: 0; z-index: 201; width: 240px; height: 100vh;
+    background: #0d0e1a; border-left: 1px solid rgba(255,255,255,.08);
+    padding: 20px 16px; display: flex; flex-direction: column; gap: 8px;
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #mobileMenuOverlay.open #mobileMenuPanel { transform: translateX(0); }
+  #mobileMenuPanel a {
+    display: block; padding: 12px; border-radius: 10px; color: #ccc;
+    text-decoration: none; font-size: 14px; background: rgba(255,255,255,.05);
+  }
+  #mobileMenuPanel a.nav-pair-btn { color: #00ff88; }
 
   .page-body {
     position: relative; z-index: 1;
@@ -188,12 +212,34 @@
   <a href="/" class="nav-logo">HENRY <span>OCHIBOTS</span> <span class="v">V19™</span></a>
   <div class="nav-links">
     <a href="/#commands">Commands</a>
+    <a href="/#how-it-works">How It Works</a>
+    <a href="/#deploy">Deploy</a>
     <a href="/register">Register</a>
     <a href="/admin">Admin</a>
     <a href="/pair" class="nav-cta">📱 Pair Now</a>
   </div>
   <div class="nav-status"><div class="pulse"></div> BOT ONLINE</div>
+  <button class="nav-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
 </nav>
+
+<div id="mobileMenuOverlay" onclick="if(event.target===this) closeMobileMenu()">
+  <div id="mobileMenuPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="color:#a78bfa;font-weight:700;font-size:15px">Menu</span>
+      <button onclick="closeMobileMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <a href="/#commands" onclick="closeMobileMenu()">📋 Commands</a>
+    <a href="/#how-it-works" onclick="closeMobileMenu()">⚙️ How It Works</a>
+    <a href="/#deploy" onclick="closeMobileMenu()">🚀 Deploy</a>
+    <a href="/register" onclick="closeMobileMenu()">🪪 Register</a>
+    <a href="/admin" onclick="closeMobileMenu()">🛡️ Admin Panel</a>
+    <a href="/pair" class="nav-pair-btn">📱 Pair Now</a>
+  </div>
+</div>
+<script>
+  function toggleMobileMenu() { document.getElementById('mobileMenuOverlay').classList.add('open'); }
+  function closeMobileMenu() { document.getElementById('mobileMenuOverlay').classList.remove('open'); }
+</script>
 
 <div class="page-body">
   <div class="card">
@@ -201,7 +247,7 @@
     <!-- STEP 1: LOGIN -->
     <div class="step active" id="step-login">
       <div class="card-header">
-        <div class="card-icon">🦈</div>
+        <div class="card-icon">🔥</div>
         <h1>BOT PANEL LOGIN</h1>
         <p class="sub">Sign in with your registered name, number &amp; password</p>
       </div>
