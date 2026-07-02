@@ -514,6 +514,25 @@ async def init_db():
                 value TEXT
             )
         """)
+        # ✅ NEW: activity_log — central event feed for the admin panel.
+        # category is one of: 'command' (every command anyone runs),
+        # 'error' (a command/download/etc. failed), 'sensitive' (an
+        # owner/admin-tier action was taken — kick, promote, payment review,
+        # login, broadcast, etc.). client_bridge.js writes here on every
+        # dispatch; 'error' and 'sensitive' rows also trigger a live WhatsApp
+        # ping to the owner, 'command' rows are panel-only (too high-volume
+        # to WhatsApp-notify on every single one).
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category TEXT NOT NULL,
+                type TEXT NOT NULL,
+                actor TEXT,
+                detail TEXT,
+                timestamp REAL
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_activity_log_cat_ts ON activity_log(category, timestamp)")
         await db.commit()
         logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
 
@@ -1321,6 +1340,12 @@ async def admin_stats():
             "expiry_display": time.strftime("%d %b %Y, %H:%M", time.localtime(expiry_ts)) if expiry_ts else None,
             "expired": bool(expiry_ts and now_ts >= expiry_ts),
             "expiry_message": info.get("expiry_message", DEFAULT_EXPIRY_MESSAGE),
+            # Anti-ban health, pushed from the Node bridge on every
+            # /admin/update-session call. Absent until that session has
+            # sent at least one message post-connect.
+            "antiban_risk": info.get("antiban_risk"),
+            "antiban_warmup_day": info.get("antiban_warmup_day"),
+            "antiban_warmup_total": info.get("antiban_warmup_total"),
         })
 
     # Today's message count (for activity chart)
@@ -1393,6 +1418,12 @@ async def update_session():
             "msg_count": data.get("msg_count", SESSION_REGISTRY[name].get("msg_count", 0)),
             "number": data.get("number", SESSION_REGISTRY[name].get("number", "")),
             "last_active_ts": time.time(),
+            # Anti-ban health snapshot (optional — omitted entirely on
+            # plain online/offline pings so it's never clobbered back to
+            # null between the periodic stats pushes below).
+            **({"antiban_risk": data["antiban_risk"]} if "antiban_risk" in data else {}),
+            **({"antiban_warmup_day": data["antiban_warmup_day"]} if "antiban_warmup_day" in data else {}),
+            **({"antiban_warmup_total": data["antiban_warmup_total"]} if "antiban_warmup_total" in data else {}),
         })
     return jsonify({"status": "updated"})
 
@@ -2349,6 +2380,83 @@ async def admin_scheduler_delete(msg_id):
         return jsonify({"error": "Unauthorized"}), 401
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute("DELETE FROM scheduled_messages WHERE id = ?", (msg_id,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/activity/log", methods=["POST"])
+async def activity_log_write():
+    """Internal-only — client_bridge.js calls this on every command dispatch
+    (category='command'), every failure (category='error'), and every
+    owner/admin-tier action (category='sensitive'). No ADMIN_PASSWORD check
+    here on purpose: this is called from the Node bridge on 127.0.0.1, same
+    trust boundary as /scheduler/save and /auto-save. Row count is capped on
+    write so a busy bot can't grow this table unbounded."""
+    data = await request.get_json() or {}
+    category = (data.get("category") or "").strip().lower()
+    if category not in ("command", "error", "sensitive"):
+        return jsonify({"success": False, "error": "category must be command|error|sensitive"}), 400
+    event_type = (data.get("type") or "").strip()[:80]
+    actor = (data.get("actor") or "").strip()[:64]
+    detail = (data.get("detail") or "").strip()[:2000]
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO activity_log (category, type, actor, detail, timestamp) VALUES (?, ?, ?, ?, ?)",
+            (category, event_type, actor, detail, time.time()),
+        )
+        # Keep each category capped at the most recent 2000 rows so this
+        # can't grow forever on a busy/high-traffic bot.
+        await db.execute("""
+            DELETE FROM activity_log WHERE category = ? AND id NOT IN (
+                SELECT id FROM activity_log WHERE category = ? ORDER BY timestamp DESC LIMIT 2000
+            )
+        """, (category, category))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/activity-log", methods=["GET"])
+async def admin_activity_log():
+    """Admin panel feed — ?category=command|error|sensitive (required),
+    optional ?limit= (default 100, max 500)."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    category = (request.args.get("category") or "").strip().lower()
+    if category not in ("command", "error", "sensitive"):
+        return jsonify({"error": "category must be command|error|sensitive"}), 400
+    try:
+        limit = min(max(int(request.args.get("limit", 100)), 1), 500)
+    except ValueError:
+        limit = 100
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, type, actor, detail, timestamp FROM activity_log WHERE category = ? ORDER BY timestamp DESC LIMIT ?",
+            (category, limit),
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({
+        "events": [
+            {
+                "id": r[0], "type": r[1], "actor": r[2], "detail": r[3],
+                "timestamp": time.strftime("%d %b %Y, %H:%M:%S", time.localtime(r[4])) if r[4] else None,
+            }
+            for r in rows
+        ]
+    })
+
+
+@app.route("/admin/activity-log", methods=["DELETE"])
+async def admin_activity_log_clear():
+    """Clear a single category's log from the panel. Doesn't touch the other
+    two categories — clearing 'error' history, for instance, leaves the
+    command/sensitive feeds untouched."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    category = (request.args.get("category") or "").strip().lower()
+    if category not in ("command", "error", "sensitive"):
+        return jsonify({"error": "category must be command|error|sensitive"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM activity_log WHERE category = ?", (category,))
         await db.commit()
     return jsonify({"success": True})
 

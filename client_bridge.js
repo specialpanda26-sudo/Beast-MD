@@ -15,6 +15,26 @@ const path = require("path");
 const pino = require("pino");
 const qrcode = require("qrcode-terminal");
 const http = require("http");
+// ── Anti-ban middleware (baileys-antiban, bundled locally in /libs) ────────
+// Wraps every session's socket with rate limiting, warm-up ramping, health
+// monitoring, legitimacy-signal injection, and group-op guarding — all the
+// features from the baileys-antiban package — without touching Baileys itself.
+const {
+  wrapSocket,
+  FileStateAdapter,
+  resolveConfig,
+  // ── Previously-bundled-but-unwired modules, now wired in below ──────────
+  generateFingerprint,   // stable per-session randomized device identity
+  applyFingerprint,
+  credsSnapshot,         // auto-backup of creds.json + corruption detection
+  readReceiptVariance,   // human-like jitter on read receipts
+  parseRetryReason,      // used to detect Bad-MAC/session-decrypt errors
+  isMacError,
+  proxyRotator,          // optional residential/4G proxy rotation
+  WebhookAlerts,         // optional Telegram/Discord/generic risk alerts
+  Scheduler,             // "safe sending hours" — used only for .announce broadcasts
+  ContentVariator        // de-duplicates identical bulk-broadcast text
+} = require("./libs/baileys-antiban");
 
 // ── Owner & Bot Config ──────────────────────────────────────────────────────
 // 🔒 SECURITY FIX: no more hardcoded fallback number baked into the source.
@@ -463,6 +483,82 @@ const logger = pino({ level: "silent" });
 const BACKEND_PORT = process.env.PORT || 5000;
 const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
 
+// ── Optional anti-ban extras (all inert unless you configure them) ─────────
+// These need external resources (real proxy IPs, a webhook URL) or change
+// timing behavior, so — unlike the always-on modules above — they stay
+// completely off until you opt in via env vars. Wiring them here means
+// turning them on later is just an env var, no code changes.
+
+// Proxy rotation — set ANTIBAN_PROXY_LIST="socks5://user:pass@host:port,http://host2:port2"
+// Requires the matching optional peer dep to actually be installed
+// (socks-proxy-agent for socks5/socks5h, https-proxy-agent for http/https).
+let antibanProxyRotator = null;
+if (process.env.ANTIBAN_PROXY_LIST) {
+  try {
+    const pool = process.env.ANTIBAN_PROXY_LIST.split(",").map((raw, i) => {
+      const url = new URL(raw.trim());
+      return {
+        type: url.protocol.replace(":", ""), // http | https | socks5 | socks5h
+        host: url.hostname,
+        port: Number(url.port),
+        username: url.username || undefined,
+        password: url.password || undefined,
+        label: `proxy-${i + 1}`
+      };
+    });
+    antibanProxyRotator = proxyRotator({
+      pool,
+      strategy: process.env.ANTIBAN_PROXY_STRATEGY || "round-robin",
+      rotateOn: ["disconnect", "ban-warning"],
+      logger: { info: (m) => console.log(`🌐 [proxy] ${m}`), warn: (m) => console.warn(`⚠️ [proxy] ${m}`), error: (m) => console.error(`❌ [proxy] ${m}`) }
+    });
+    console.log(`🌐 Proxy rotation enabled — ${pool.length} endpoint(s), strategy: ${process.env.ANTIBAN_PROXY_STRATEGY || "round-robin"}`);
+  } catch (e) {
+    console.warn(`⚠️ ANTIBAN_PROXY_LIST set but couldn't be parsed, proxy rotation disabled: ${e.message}`);
+  }
+}
+
+// Webhook/Telegram/Discord risk alerts — set any of:
+//   ANTIBAN_WEBHOOK_URL, ANTIBAN_TELEGRAM_BOT_TOKEN + ANTIBAN_TELEGRAM_CHAT_ID,
+//   ANTIBAN_DISCORD_WEBHOOK_URL
+let antibanWebhooks = null;
+if (process.env.ANTIBAN_WEBHOOK_URL || process.env.ANTIBAN_TELEGRAM_BOT_TOKEN || process.env.ANTIBAN_DISCORD_WEBHOOK_URL) {
+  antibanWebhooks = new WebhookAlerts({
+    urls: process.env.ANTIBAN_WEBHOOK_URL ? [process.env.ANTIBAN_WEBHOOK_URL] : [],
+    telegram: (process.env.ANTIBAN_TELEGRAM_BOT_TOKEN && process.env.ANTIBAN_TELEGRAM_CHAT_ID)
+      ? { botToken: process.env.ANTIBAN_TELEGRAM_BOT_TOKEN, chatId: process.env.ANTIBAN_TELEGRAM_CHAT_ID }
+      : undefined,
+    discord: process.env.ANTIBAN_DISCORD_WEBHOOK_URL ? { webhookUrl: process.env.ANTIBAN_DISCORD_WEBHOOK_URL } : undefined,
+    minRiskLevel: process.env.ANTIBAN_WEBHOOK_MIN_RISK || "medium",
+    cooldownMs: 5 * 60 * 1000
+  });
+  console.log("📡 Anti-ban webhook alerts enabled");
+}
+
+// Smart broadcast scheduler — set ANTIBAN_SCHEDULER_ENABLED=true.
+// IMPORTANT: this only ever gates the .announce/admin-panel BULK BROADCAST
+// loop further down this file, never normal command replies — a command
+// bot that goes silent to real users at night would be a regression, not
+// an anti-ban feature. Broadcasts queued outside active hours just wait
+// for the next poll inside the window instead of firing immediately.
+let antibanScheduler = null;
+if (process.env.ANTIBAN_SCHEDULER_ENABLED === "true") {
+  antibanScheduler = new Scheduler({
+    timezone: process.env.ANTIBAN_SCHEDULER_TZ || "Africa/Nairobi",
+    activeHours: [
+      Number(process.env.ANTIBAN_SCHEDULER_START_HOUR || 7),
+      Number(process.env.ANTIBAN_SCHEDULER_END_HOUR || 22)
+    ]
+  });
+  console.log(`⏰ Broadcast scheduler enabled — active hours ${process.env.ANTIBAN_SCHEDULER_START_HOUR || 7}:00-${process.env.ANTIBAN_SCHEDULER_END_HOUR || 22}:00`);
+}
+
+// Content variator — invisible per-recipient variation on bulk-broadcast
+// text so 500 identical messages don't read as a spam blast. No config
+// needed, always on for .announce broadcasts (never touches normal command
+// replies, which should stay exactly as typed).
+const antibanContentVariator = new ContentVariator({ zeroWidthChars: true, punctuationVariation: true });
+
 // Env vars let the bot start unattended on Railway/Render, where there is no
 // interactive terminal to answer the session-name / linking-method prompts.
 const SESSION_ID_ENV = (process.env.SESSION_ID || "").trim();
@@ -518,6 +614,49 @@ setInterval(refreshOwnerNumber, 30000);
 function getOwnerNumber() {
   return (global.ownerOverride || ownerNumberCache || OWNER_NUMBER_ENV || '').replace(/[^0-9]/g, '');
 }
+
+// ── Activity Log / Owner Notifications ──────────────────────────────────────
+// Three categories, each with its own admin-panel view (GET /admin/activity-log
+// ?category=...) and its own notification behaviour:
+//   'command'   — every command anyone runs. Panel-only (too high-volume to
+//                 WhatsApp-ping the owner on every .ping).
+//   'error'     — a command threw, or a download/etc. failed. Panel + a live
+//                 WhatsApp DM to the owner so failures don't go unnoticed.
+//   'sensitive' — an owner/admin-tier action was taken (kick, promote,
+//                 payment review, login, broadcast, addadmin, etc.). Panel +
+//                 WhatsApp DM, regardless of whether it succeeded or failed,
+//                 since these are the actions worth knowing about even when
+//                 they work exactly as intended.
+// Fire-and-forget by design — logging must never slow down or break the
+// actual command reply, so every failure here is swallowed silently.
+const SENSITIVE_COMMANDS = new Set([
+  'kick', 'add', 'promote', 'demote', 'mute', 'unmute', 'revoke', 'antispam',
+  'setperm', 'resetperm', 'creategroup', 'addtogroup', 'tagall', 'bcgc',
+  'addadmin', 'removeadmin', 'addcoowner', 'removecoowner', 'settier',
+  'announce', 'checkblocked', 'welcome', 'status', 'pp', 'bio', 'public',
+  'private', 'setmode', 'ownerrecovery', 'login', 'logout', 'maintenance',
+  'reload', 'addfunds',
+]);
+
+async function logActivity(category, type, detail, actor) {
+  try {
+    await apiClient.post('/activity/log', { category, type, detail, actor: actor || '' });
+  } catch (e) { /* never let logging break the bot */ }
+
+  if (category === 'command') return; // panel-only, no WhatsApp ping
+
+  try {
+    const socket = activeSockets.values().next().value;
+    const ownerNum = getOwnerNumber();
+    if (!socket || !ownerNum) return;
+    const icon = category === 'error' ? '⚠️' : '🛡️';
+    const label = category === 'error' ? 'Error' : 'Sensitive action';
+    await socket.sendMessage(`${ownerNum}@s.whatsapp.net`, {
+      text: `${icon} *${label}: ${type}*\n\n${detail}${actor ? `\n\n👤 ${actor}` : ''}`,
+    });
+  } catch (e) { /* never let notification break the bot */ }
+}
+global.logActivity = logActivity;
 
 // ── Persistent data directory ───────────────────────────────────────────────
 // ✅ FIX: everything that needs to survive a restart/redeploy (WhatsApp auth
@@ -625,7 +764,18 @@ async function startSession(sessionId, opts = {}) {
   }
 
   let msgCount = 0;
-  const socket = makeWASocket({
+
+  // ── Device fingerprint (was bundled in the anti-ban lib but never wired
+  // in) ────────────────────────────────────────────────────────────────
+  // Every real WhatsApp device reports a consistent (browser, OS, app
+  // version) triple. Previously every session used the exact same fixed
+  // string here, which is itself a pattern WhatsApp's fleet-detection can
+  // key on across many numbers. This derives a fingerprint that's random
+  // PER SESSION but stable ACROSS RESTARTS (seeded off sessionId), so each
+  // number looks like a distinct real device instead of a Henry-Bots clone.
+  // Set ANTIBAN_DEVICE_FINGERPRINT=false to fall back to the old fixed
+  // browser string if you ever need to A/B this.
+  let socketConfig = {
     version,
     auth: state,
     printQRInTerminal: false, // handled manually below
@@ -634,6 +784,196 @@ async function startSession(sessionId, opts = {}) {
     generateHighQualityLinkPreview: true,
     // Helps avoid bans — don't look like web browser
     browser: Browsers.ubuntu("Chrome")
+  };
+
+  if (process.env.ANTIBAN_DEVICE_FINGERPRINT !== "false") {
+    try {
+      const fingerprint = generateFingerprint({ seed: sessionId });
+      socketConfig = applyFingerprint(socketConfig, fingerprint);
+    } catch (e) {
+      console.warn(`⚠️  [${sessionId}] Device fingerprint generation failed, using default browser string: ${e.message}`);
+    }
+  }
+
+  if (antibanProxyRotator) {
+    try {
+      const agent = antibanProxyRotator.currentAgent();
+      if (agent) socketConfig.agent = agent;
+    } catch (e) {
+      console.warn(`⚠️  [${sessionId}] Proxy agent unavailable, connecting directly: ${e.message}`);
+    }
+  }
+
+  let socket = makeWASocket(socketConfig);
+
+  // ── Anti-ban wrap ──────────────────────────────────────────────────────
+  // Every session gets its own AntiBan instance + persisted warm-up/rate
+  // state (survives restarts) so a fresh redeploy doesn't reset a number
+  // back to "day 1" sending limits. State lives next to that session's
+  // auth files: sessions/<sessionId>/antiban/
+  const antibanStateAdapter = new FileStateAdapter(path.join(sessionPath, "antiban"));
+  let antibanWarmupState = null;
+  try {
+    const savedState = await antibanStateAdapter.load("warmup");
+    if (savedState) antibanWarmupState = savedState;
+  } catch (e) {
+    console.warn(`⚠️  [${sessionId}] Could not load saved anti-ban warm-up state: ${e.message}`);
+  }
+
+  const resolvedPreset = resolveConfig(process.env.ANTIBAN_PRESET || "moderate");
+
+  // NOTE on the shape below: AntiBan's constructor only turns on
+  // jidCanonicalizer / lidResolver / sessionStability / topologyThrottler
+  // when it sees their *legacy nested* keys (jidCanonicalizer: {...} etc.)
+  // at the top level of this config object — that's the only thing that
+  // flips it into "legacy passthrough" mode. But that mode also re-derives
+  // the flat rate-limit fields from nested `rateLimiter` / `warmUp` blocks
+  // instead of a `preset` name, and silently falls back to the
+  // "conservative" preset for anything it can't find. So we mirror every
+  // field of the resolved preset back into the nested shape here — this
+  // keeps the exact same rate limits as ANTIBAN_PRESET while also
+  // unlocking the modules below. (Confirmed against presets.js — this is
+  // every field PRESETS.* defines, nothing is silently dropped.)
+  const antibanConfig = {
+    rateLimiter: {
+      maxPerMinute: resolvedPreset.maxPerMinute,
+      maxPerHour: resolvedPreset.maxPerHour,
+      maxPerDay: resolvedPreset.maxPerDay,
+      minDelayMs: resolvedPreset.minDelayMs,
+      maxDelayMs: resolvedPreset.maxDelayMs,
+      newChatDelayMs: resolvedPreset.newChatDelayMs
+    },
+    warmUp: {
+      warmUpDays: resolvedPreset.warmupDays,
+      day1Limit: resolvedPreset.day1Limit,
+      growthFactor: resolvedPreset.growthFactor
+    },
+    maxIdenticalMessages: resolvedPreset.maxIdenticalMessages,
+    identicalMessageWindowMs: resolvedPreset.identicalMessageWindowMs,
+    burstAllowance: resolvedPreset.burstAllowance,
+    inactivityThresholdHours: resolvedPreset.inactivityThresholdHours,
+    autoPauseAt: resolvedPreset.autoPauseAt,
+    groupMultiplier: resolvedPreset.groupMultiplier,
+    groupProfiles: resolvedPreset.groupProfiles,
+    stateAdapter: antibanStateAdapter,
+    logging: false, // we do our own console logging below
+
+    // ── Newly unlocked (previously bundled but never enabled) ───────────
+    // Canonicalizes @lid / @s.whatsapp.net JID variants so rate-limit and
+    // warm-up counters aren't fooled into treating one contact as two.
+    jidCanonicalizer: { enabled: true },
+    lidResolver: {},
+    // Tracks Bad-MAC / session-decrypt error rates and flags a session as
+    // degraded before it spirals into a full logout. Fed from the
+    // messages.update listener below.
+    sessionStability: { enabled: true },
+    // Extra throttle specifically on *new* contacts (separate from the
+    // general rate limiter) since spam reports mostly come from strangers.
+    topologyThrottler: { maxNewContactsPerHour: 8, maxNewContactsPerDay: 30 }
+  };
+
+  socket = wrapSocket(socket, antibanConfig, antibanWarmupState, {
+    // Adds human-like typos/typing pauses/read gaps to outgoing sends
+    legitimacySignals: true,
+    // Rate-limits group add/remove/create operations
+    groupOpGuard: true,
+    // Detects a socket that looks "connected" but has stopped delivering
+    // messages (Baileys issue #2491) and force-reconnects it
+    deafSession: { deafThresholdMs: 5 * 60 * 1000 }
+  });
+
+  // ── Read-receipt variance (was bundled, never wired in) ────────────────
+  // Wraps sock.readMessages with a small human-like random delay instead
+  // of marking messages read instantly, every time, forever.
+  try {
+    socket = readReceiptVariance().wrap(socket);
+  } catch (e) {
+    console.warn(`⚠️  [${sessionId}] Read-receipt variance wrap failed (non-fatal): ${e.message}`);
+  }
+
+  // ── Session decrypt-health feed ─────────────────────────────────────────
+  // sessionStability (enabled above) needs to be told about decrypt
+  // successes/failures — it doesn't listen for these itself. A failed
+  // decrypt on the other end shows up here as a message-status error with
+  // a Signal/MAC retry-reason code, exactly like retryTracker already
+  // detects internally; a normal inbound message is treated as a success
+  // signal.
+  socket.ev.on("messages.update", (updates) => {
+    const monitor = socket.antiban?.sessionStability;
+    if (!monitor) return;
+    for (const update of updates) {
+      if (update.status !== 0 && !update.error) continue;
+      const reason = parseRetryReason(update.error || update.update || update);
+      monitor.recordDecryptFail(isMacError(reason));
+    }
+  });
+  socket.ev.on("messages.upsert", () => {
+    socket.antiban?.sessionStability?.recordDecryptSuccess?.();
+  });
+
+  // ── creds.json snapshotting (was bundled, never wired in) ──────────────
+  // Keeps rolling backups of creds.json next to the session's antiban
+  // state, so a corrupted/truncated write (crash mid-save on Render,
+  // Termux storage hiccup, etc.) can be recovered from with
+  // .credsrestore instead of forcing a full re-pair.
+  const credsSnapshotter = credsSnapshot({
+    credsPath: path.join(sessionPath, "creds.json"),
+    snapshotDir: path.join(sessionPath, "antiban", "creds-backups"),
+    keep: 5,
+    logger: {
+      warn: (m) => console.warn(`⚠️  [${sessionId}] ${m}`),
+      error: (m) => console.error(`❌ [${sessionId}] ${m}`)
+    }
+  });
+  socket.antiban && (socket.antiban.credsSnapshotter = credsSnapshotter);
+  // Debounced snapshot on every creds.update — creds.json itself is already
+  // saved by saveCreds (registered separately below); this just keeps a
+  // rolling history of known-good copies to fall back to.
+  let credsSnapshotTimer = null;
+  socket.ev.on("creds.update", () => {
+    clearTimeout(credsSnapshotTimer);
+    credsSnapshotTimer = setTimeout(() => {
+      credsSnapshotter.take().catch(() => {});
+    }, 5000);
+  });
+
+  // Persist warm-up/rate-limiter state every 2 minutes and on disconnect,
+  // so restarts (Render/Railway redeploys, crashes) don't lose progress.
+  // Also pushes current health/warm-up to the admin panel, so a session
+  // that's connected but quiet (no inbound messages) doesn't show stale
+  // anti-ban info there.
+  const antibanSaveInterval = setInterval(() => {
+    socket.antiban?.saveState?.().catch(() => {});
+    const abStats = socket.antiban?.getStats?.();
+    if (abStats) {
+      apiClient.post("/admin/update-session", {
+        name: sessionId,
+        antiban_risk: abStats.health?.risk,
+        antiban_warmup_day: abStats.warmup?.currentDay,
+        antiban_warmup_total: abStats.warmup?.totalDays
+      }).catch(() => {});
+    }
+  }, 2 * 60 * 1000);
+  antibanSaveInterval.unref?.();
+
+  // Surface health-monitor risk escalation to console + owner DM so Henry
+  // gets an early warning before a real ban, not after.
+  socket.antiban.on?.("healthChange", (health) => {
+    console.log(`🩺 [${sessionId}] Anti-ban health: ${health.risk?.toUpperCase?.() || health.risk}`);
+    if (health.risk === "high" || health.risk === "critical") {
+      const ownerJid = `${getOwnerNumber()}@s.whatsapp.net`;
+      socket.sendMessage(ownerJid, {
+        text: `⚠️ *Anti-ban warning* [${sessionId}]\nRisk level: *${String(health.risk).toUpperCase()}*\nSending has been auto-throttled to protect this number. Check .antibanstats for details.`
+      }).catch(() => {});
+    }
+    if (antibanWebhooks) {
+      antibanWebhooks.alert({
+        risk: health.risk,
+        score: health.score ?? 0,
+        recommendation: health.recommendation || `Session [${sessionId}] risk level: ${health.risk}`,
+        reasons: health.reasons || []
+      }).catch(() => {});
+    }
   });
 
   // ✅ FIX (OTP reliability/speed): socket used to be registered here, before
@@ -1016,11 +1356,17 @@ async function startSession(sessionId, opts = {}) {
       } catch (e) {}
 
       // Update session message count for admin panel
-      apiClient.post("/admin/update-session", {
-        name: sessionId,
-        online: true,
-        msg_count: (msgCount = (msgCount || 0) + 1)
-      }).catch(() => {});
+      {
+        const abStats = socket.antiban?.getStats?.();
+        apiClient.post("/admin/update-session", {
+          name: sessionId,
+          online: true,
+          msg_count: (msgCount = (msgCount || 0) + 1),
+          antiban_risk: abStats?.health?.risk,
+          antiban_warmup_day: abStats?.warmup?.currentDay,
+          antiban_warmup_total: abStats?.warmup?.totalDays
+        }).catch(() => {});
+      }
 
       // Log message to DB for /recover
       if (body) {
@@ -1153,6 +1499,7 @@ async function startSession(sessionId, opts = {}) {
               return;
             }
           }
+          const actorTag = `+${senderJid.split('@')[0]}`;
           try {
             await allCommands[cmd]({
               sock    : socket,
@@ -1169,9 +1516,18 @@ async function startSession(sessionId, opts = {}) {
               args,
               config,
               apiClient, // used by plugins/scheduler.js to persist across restarts
+              logActivity, // lets plugins (e.g. media.js downloads) log their own errors
             });
+            // Every successful dispatch — panel-only, no WhatsApp ping.
+            logActivity('command', cmd, args.join(' ').slice(0, 300), actorTag);
+            // Owner/admin-tier actions additionally get flagged as sensitive,
+            // success or failure, since these are worth knowing about either way.
+            if (SENSITIVE_COMMANDS.has(cmd)) {
+              logActivity('sensitive', cmd, `Ran *.${cmd} ${args.join(' ')}*`.trim(), actorTag);
+            }
           } catch (e) {
             console.error(`❌ [${sessionId}] .${cmd} error:`, e.message);
+            logActivity('error', cmd, `*.${cmd}* failed: ${e.message}`, actorTag);
             try {
               await socket.sendMessage(sender,
                 { text: `❌ Error in .${cmd}: ${e.message}` },
@@ -1371,6 +1727,13 @@ async function startSession(sessionId, opts = {}) {
   // ✅ NEW: Poll for admin panel broadcasts (every 20s)
   const broadcastCheck = setInterval(async () => {
     try {
+      // If the smart scheduler is enabled and we're outside safe sending
+      // hours, leave broadcasts queued for the next poll instead of
+      // sending — this only affects .announce/admin bulk broadcasts,
+      // never normal command replies.
+      if (antibanScheduler && !antibanScheduler.isActiveTime()) {
+        return;
+      }
       const res = await apiClient.get("/admin/broadcast/pending");
       const broadcasts = res.data?.broadcasts || [];
       for (const b of broadcasts) {
@@ -1379,7 +1742,7 @@ async function startSession(sessionId, opts = {}) {
             const groups = await socket.groupFetchAllParticipating();
             for (const gid of Object.keys(groups)) {
               try {
-                await socket.sendMessage(gid, { text: b.message });
+                await socket.sendMessage(gid, { text: antibanContentVariator.vary(b.message) });
                 await delay(1200);
               } catch (_) {}
             }
@@ -1392,7 +1755,7 @@ async function startSession(sessionId, opts = {}) {
             const contacts = contactsRes.data?.contacts || [];
             for (const c of contacts) {
               try {
-                await socket.sendMessage(c.sender, { text: b.message });
+                await socket.sendMessage(c.sender, { text: antibanContentVariator.vary(b.message) });
                 await delay(1200);
               } catch (_) {}
             }
@@ -1550,6 +1913,17 @@ _Henry Ochibots v19™ — @henrytech254_ 🔥`;
 
       const loggedOut = statusCode === DisconnectReason.loggedOut;
 
+      // If proxy rotation is on, treat every non-clean disconnect as a
+      // signal to try a different endpoint on the next reconnect — a
+      // proxy that's getting the socket dropped is exactly what rotation
+      // is for. A clean logout isn't the proxy's fault, so leave it alone.
+      if (antibanProxyRotator && !loggedOut) {
+        try {
+          antibanProxyRotator.markFailure();
+          antibanProxyRotator.rotate("disconnect");
+        } catch (_) {}
+      }
+
       // ✅ FIX: neither branch below ever told the admin panel the session
       // went offline. SESSION_REGISTRY["online"] was only ever set to true
       // (on connect / on incoming message) and only ever set to false by an
@@ -1558,6 +1932,12 @@ _Henry Ochibots v19™ — @henrytech254_ 🔥`;
       // admin panel's Sessions list indefinitely. Report offline immediately
       // on any close, then the "open" handler flips it back on reconnect.
       apiClient.post("/admin/update-session", { name: sessionId, online: false }).catch(() => {});
+
+      // Persist anti-ban warm-up/rate-limiter state before this socket dies,
+      // and stop the periodic save loop — a new one starts in the next
+      // startSession() call for the reconnect.
+      clearInterval(antibanSaveInterval);
+      socket.antiban?.saveState?.().catch(() => {});
 
       if (loggedOut) {
         console.log(`🚪 [${sessionId}] Logged out — clearing session and restarting pairing...`);

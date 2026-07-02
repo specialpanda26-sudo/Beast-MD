@@ -7,6 +7,7 @@
 
 ## 🩹 Recent fixes
 
+- **🛡️ Anti-ban module gaps closed + surfaced everywhere** — device fingerprinting, JID/LID canonicalizer, session-decrypt health monitor, topology throttler (new-contact throttling), read-receipt jitter, and `creds.json` auto-backups (`.credssnapshot`/`.credsrestore`) were bundled in `libs/baileys-antiban` but never actually wired into `client_bridge.js` — now active by default. Proxy rotation, risk webhooks (Telegram/Discord/generic), and a "safe hours" broadcast scheduler were also dormant — now wired in but off until you set the matching env var (see `.env.example` and [Anti-Ban Protection](#-anti-ban-protection)). `.menu` and this README previously didn't mention any anti-ban commands at all — added. The admin panel's Sessions list now shows a live risk badge + warm-up day per session.
 - **🔒 Paid pairing/activation flow added** — see [Paid Pairing](#-paid-pairing--activation-keys) below.
 - **🐛 Follow-up audit pass — see [`REMEDY.md`](./REMEDY.md#pass-2--paid-pairing-merge--login-permission-audit) for details.** Highlights: the admin panel's session list never detected a session going offline (crashed/logged-out/reconnecting sessions showed as "online" forever) — fixed. `.login`-granted co-owner access didn't unlock `.kick`/`.add`/`.promote`/`.demote`/`.mute`/`.unmute`/`.revoke`/`.setperm`/`.resetperm`/`.listperms` unless you were also already a real WhatsApp group admin — fixed, these now respect bot-owner/sub-admin status like every other admin command does. `pair.html` didn't share the site's fonts or color theme — fixed.
 
@@ -105,8 +106,39 @@
 | ⏰ Scheduler Admin View | `/admin → Scheduler` — view & cancel any pending `.schedule`d message without WhatsApp access |
 | 👁️ View-Once Admin Browser | `/admin → View-Once` — browse recently intercepted view-once media from the panel |
 | 💾 Persistent Storage | DB, WhatsApp sessions, and saved media all live under a configurable `DATA_DIR`, survivable across redeploys with a mounted disk |
+| 🛡️ Anti-Ban Protection | Per-session rate limiting, warm-up ramping, health monitoring, JID/LID canonicalization, session-decrypt health tracking, device fingerprinting, read-receipt jitter, and `creds.json` auto-backups — all on by default. See [Anti-Ban Protection](#-anti-ban-protection) below |
 
 ---
+
+## 🛡️ Anti-Ban Protection
+
+Every session's socket is wrapped with [`baileys-antiban`](libs/baileys-antiban), bundled locally in `libs/`. Most of it is **on automatically** — nothing to configure:
+
+| Module | What it does |
+|---|---|
+| Rate limiter + warm-up | Caps sends/minute/hour/day and ramps a fresh number up gradually over the first few days instead of blasting from day 1 |
+| Health monitor | Scores ongoing risk and auto-throttles + DMs the owner on high/critical risk (`.antibanstats` to check anytime) |
+| JID/LID canonicalizer | Stops `@lid` vs `@s.whatsapp.net` variants of the same contact from double-counting against your limits |
+| Session stability monitor | Tracks Bad-MAC/decrypt error rates and flags a degrading session before it fully drops |
+| Topology throttler | Separate, tighter cap specifically on messaging *new* contacts |
+| Legitimacy signals | Human-like typing pauses/read gaps on outgoing sends |
+| Group-op guard | Rate-limits group add/remove/create actions |
+| Deaf-session detector | Catches a socket that looks connected but has silently stopped delivering, and force-reconnects it |
+| Device fingerprint | Randomized-but-stable (per session) browser/OS/app-version identity, instead of every session reporting the same fixed string |
+| Read-receipt variance | Jittered delay before marking messages read, instead of instant every time |
+| `creds.json` backups | Rolling snapshots, auto-taken ~5s after every save — `.credssnapshot` / `.credsrestore` to manage manually |
+
+A few extras need real external resources, so they stay **off until you set an env var** for them (see `.env.example`):
+
+| Module | Enable with |
+|---|---|
+| Proxy rotation | `ANTIBAN_PROXY_LIST` — comma-separated proxy URLs; rotates on disconnect |
+| Risk-change webhooks | `ANTIBAN_WEBHOOK_URL` / `ANTIBAN_TELEGRAM_BOT_TOKEN`+`ANTIBAN_TELEGRAM_CHAT_ID` / `ANTIBAN_DISCORD_WEBHOOK_URL` |
+| Broadcast scheduler | `ANTIBAN_SCHEDULER_ENABLED=true` — restricts `.announce`/admin bulk broadcasts to safe hours only (never affects normal command replies) |
+
+Set the overall aggressiveness with `ANTIBAN_PRESET` — `conservative` / `moderate` (default) / `aggressive` / `high-volume`.
+
+The admin panel's Sessions list shows a live risk badge (🛡️ LOW/MEDIUM/HIGH/CRITICAL) and warm-up day per session.
 
 ## 📋 Commands
 
@@ -230,6 +262,9 @@
 | 🌝 *(react, not a command)* | React 🌝 on any message or view-once to forward it to the bot's own number (bot admins only) |
 | `/download_video [url]` | Download & send video |
 | `/download_song [url]` | Download & send MP3 |
+| `.antibanstats` | Health/rate-limit/warm-up/session status for this number |
+| `.credssnapshot` | Manually back up `creds.json` right now |
+| `.credsrestore` | Restore `creds.json` from the latest backup (needs a bot restart to take effect) |
 
 ---
 

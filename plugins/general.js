@@ -80,7 +80,12 @@ ${p}model [name]     - 🤖 Per-chat AI model (llama/llama8/mixtral/gemma)
 /download_song   - Download MP3
 
 🔑 *RECOVERY*
-${p}ownerrecovery [passphrase] [new_num] - Emergency owner change` : '';
+${p}ownerrecovery [passphrase] [new_num] - Emergency owner change
+
+🛡️ *ANTI-BAN*
+${p}antibanstats     - Health/rate-limit/session status for this number
+${p}credssnapshot    - Manually back up creds.json right now
+${p}credsrestore     - Restore creds.json from latest backup (needs restart after)` : '';
 
     const roleTag = effectiveIsOwner
       ? '👑 *OWNER*'
@@ -184,7 +189,7 @@ ${ownerSection}
 ✅ Auto-read  ✅ Anti-call  ✅ Auto-status
 ✅ View-once save  ✅ AI DM chat  ✅ Scheduler
 ✅ Fake typing  ✅ Always online  ✅ Group AI replies
-✅ Status AI comments  ✅ Permissions
+✅ Status AI comments  ✅ Permissions  ✅ Anti-ban
 
 > 🔥 *Henry Ochibots v19™* | @henrytech254`;
 
@@ -651,6 +656,89 @@ module.exports.status = async ({ sock, from, msg, isOwner }) => {
   } catch (e) {
     await sock.sendMessage(from, { text: `❌ Failed: ${e.message}` }, { quoted: msg });
   }
+};
+
+// ── .antibanstats ────────────────────────────────────────────────────────
+// Shows the current anti-ban health/warm-up/rate-limit status for this
+// session's socket (owner only). Relies on socket.antiban, set by
+// wrapSocket() in client_bridge.js.
+module.exports.antibanstats = async ({ sock, from, msg, isOwner }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  if (!sock.antiban) {
+    return sock.sendMessage(from, { text: '⚠️ Anti-ban middleware is not active on this session.' }, { quoted: msg });
+  }
+  try {
+    const stats = sock.antiban.getStats();
+    const w = stats.warmup || {};
+    const h = stats.health || {};
+    const r = stats.rateLimiter || stats.rate || {};
+    let text = `🛡️ *Anti-Ban Status*\n\n` +
+      `Health risk: *${String(h.risk || 'unknown').toUpperCase()}*\n` +
+      `Warm-up day: ${w.currentDay ?? '?'} / ${w.totalDays ?? '?'}\n` +
+      `Sent (last minute / hour / day): ${r.sentLastMinute ?? '-'} / ${r.sentLastHour ?? '-'} / ${r.sentLastDay ?? '-'}\n` +
+      `Daily limit: ${r.dailyLimit ?? '-'}\n` +
+      `Paused: ${stats.paused ? 'yes ⏸️' : 'no ✅'}`;
+
+    // Newer modules (jidCanonicalizer, sessionStability, topologyThrottler) —
+    // only present once enabled, shown as extra lines when available.
+    if (stats.sessionStability) {
+      const s = stats.sessionStability;
+      text += `\n\n🔗 Session stability: ${s.isDegraded ? '⚠️ degraded' : '✅ healthy'}` +
+        ` (bad-MAC: ${s.badMacCount ?? 0}, decrypt fails: ${s.decryptFail ?? 0})`;
+    }
+    if (stats.topologyThrottler) {
+      const t = stats.topologyThrottler;
+      text += `\nNew contacts (hour/today): ${t.newContactsThisHour ?? '-'} / ${t.newContactsToday ?? '-'}`;
+    }
+    if (stats.jidCanonicalizer) {
+      const j = stats.jidCanonicalizer;
+      text += `\nJID/LID mappings learned: ${j.inboundLearned ?? '-'} (canonicalized: ${j.outboundCanonicalized ?? '-'})`;
+    }
+    if (sock.antiban.credsSnapshotter) {
+      try {
+        const snaps = await sock.antiban.credsSnapshotter.list();
+        text += `\n💾 Creds backups: ${snaps.length} (latest: ${snaps[0] ? new Date(snaps[0].takenAt).toLocaleString() : 'none yet'})`;
+      } catch {}
+    }
+
+    await sock.sendMessage(from, { text }, { quoted: msg });
+  } catch (e) {
+    await sock.sendMessage(from, { text: `❌ Could not read anti-ban stats: ${e.message}` }, { quoted: msg });
+  }
+};
+
+// ── .credssnapshot ───────────────────────────────────────────────────────
+// Manually take a creds.json backup right now (owner only). Also runs
+// automatically ~5s after every creds.update, this is just an on-demand
+// trigger — e.g. right before you're about to do something risky.
+module.exports.credssnapshot = async ({ sock, from, msg, isOwner }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  if (!sock.antiban?.credsSnapshotter) {
+    return sock.sendMessage(from, { text: '⚠️ Creds snapshotting is not active on this session.' }, { quoted: msg });
+  }
+  const snapPath = await sock.antiban.credsSnapshotter.take();
+  await sock.sendMessage(from, {
+    text: snapPath ? `✅ Snapshot taken: ${snapPath.split('/').pop()}` : '❌ Snapshot failed — check logs.'
+  }, { quoted: msg });
+};
+
+// ── .credsrestore ────────────────────────────────────────────────────────
+// Restores creds.json from the most recent backup (owner only). This
+// overwrites the live creds.json on disk — it does NOT hot-reload the
+// running session, so the bot needs a restart afterward to actually use
+// the restored credentials. Meant for "my session just got corrupted and
+// keeps looping through code 500 on reconnect" situations.
+module.exports.credsrestore = async ({ sock, from, msg, isOwner }) => {
+  if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+  if (!sock.antiban?.credsSnapshotter) {
+    return sock.sendMessage(from, { text: '⚠️ Creds snapshotting is not active on this session.' }, { quoted: msg });
+  }
+  const ok = await sock.antiban.credsSnapshotter.restoreLatest();
+  await sock.sendMessage(from, {
+    text: ok
+      ? '✅ Restored creds.json from the latest backup.\n⚠️ Restart the bot now for this to take effect.'
+      : '❌ No backup available to restore from yet.'
+  }, { quoted: msg });
 };
 
 // ── .pp ────────────────────────────────────────────────────────────────────

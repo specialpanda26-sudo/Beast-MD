@@ -14,6 +14,7 @@
     "qrcode": "^1.5.3",
     "qrcode-terminal": "^0.12.0"
   },
+  "_comment_libs": "baileys-antiban is vendored locally at ./libs/baileys-antiban (prebuilt CJS, no install needed). Its optional proxy-rotation feature needs http-proxy-agent/https-proxy-agent/socks-proxy-agent if you ever enable proxyRotator — not required for the default setup.",
   "keywords": ["whatsapp", "bot", "automation", "henrytech", "beastbot"],
   "author": "Henry Tech (@henrytech254)",
   "license": "MIT"

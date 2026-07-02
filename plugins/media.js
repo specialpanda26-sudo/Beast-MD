@@ -3,6 +3,39 @@ const { execFile } = require('child_process');  // ✅ FIX: use execFile (no she
 const fs = require('fs');
 const path = require('path');
 
+// ── yt-dlp failure diagnosis ─────────────────────────────────────────────
+// ✅ FIX: .song/.download/.dl used to throw away the real yt-dlp stderr and
+// always show a hardcoded guess ("may be unsupported or private") — so
+// EVERY failure looked like the same thing to the user, even when the real
+// cause was totally different (YouTube bot-detection challenges, an
+// outdated yt-dlp binary, rate-limiting, a genuinely dead link, etc). This
+// pattern-matches the actual stderr so the reply — and the admin-panel
+// error log — reflects what really happened.
+function diagnoseYtdlpError(stderr, fallbackMsg) {
+  const s = (stderr || fallbackMsg || '').toString();
+  if (/sign in to confirm|not a bot|confirm you.?re not a bot/i.test(s)) {
+    return { userMsg: '❌ YouTube is showing a bot-detection challenge on this server right now — this is a known yt-dlp/YouTube issue, not a problem with your link. Needs authenticated cookies or a yt-dlp update on the server side.', raw: s };
+  }
+  if (/private video|this video is private|login required to view/i.test(s)) {
+    return { userMsg: '❌ That content really is private/login-restricted — the bot can\'t access it without an account that has permission.', raw: s };
+  }
+  if (/video unavailable|has been removed|account.*terminated/i.test(s)) {
+    return { userMsg: '❌ That video is unavailable or has been removed/taken down.', raw: s };
+  }
+  if (/http error 403|forbidden/i.test(s)) {
+    return { userMsg: '❌ Access blocked (HTTP 403) — likely a geo-restriction, rate-limit, or the server\'s yt-dlp needs updating.', raw: s };
+  }
+  if (/unsupported url|no extractor/i.test(s)) {
+    return { userMsg: '❌ That URL/platform isn\'t supported by the downloader.', raw: s };
+  }
+  if (/timed out|timeout/i.test(s)) {
+    return { userMsg: '❌ The download timed out — the source may be slow or blocking automated requests.', raw: s };
+  }
+  // Unknown cause — show a trimmed slice of the real error instead of guessing.
+  const trimmed = s.split('\n').filter(Boolean).slice(-3).join(' ').slice(0, 300);
+  return { userMsg: `❌ Download failed: ${trimmed || 'unknown error — check the URL and try again.'}`, raw: s };
+}
+
 module.exports = {
 
   // ── .getpp (upgraded) ────────────────────────────────────────────────────
@@ -12,7 +45,7 @@ module.exports = {
   // negative). We no longer hard-block on "not on WhatsApp" — we just try.
   // ✅ On failure, folds in the .checkblocked heuristic so the error message
   // tells you *why* it likely failed instead of a generic "private or no pfp".
-  getpp: async ({ sock, from, msg, args, senderJid, isGroup }) => {
+  getpp: async ({ sock, from, msg, args, senderJid, isGroup, logActivity }) => {
     const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
     const rawArgNumber = args[0]?.replace(/[^0-9]/g, '');
@@ -34,13 +67,26 @@ module.exports = {
     // or negative onWhatsApp() lookup doesn't mean the number is invalid; it
     // can just mean their privacy settings hide them from contact lookups.
     // We always fall through and attempt the profile picture fetch directly.
+    // ✅ FIX: this used to give up after one onWhatsApp() attempt and fall
+    // back to a plain `<number>@s.whatsapp.net` JID. WhatsApp has been
+    // rolling out "LID" (linked ID) addressing region-by-region since 2024 —
+    // for accounts on that system, the *real* JID Baileys needs is an
+    // `@lid`, not `@s.whatsapp.net`, so a failed/negative lookup on those
+    // numbers meant the picture fetch was always doomed regardless of
+    // privacy settings. This retries the lookup once (covers transient
+    // network blips) and always uses whatever JID WhatsApp itself returns.
     if (rawArgNumber && !mentioned && !quotedParticipant) {
-      try {
-        const [result] = await sock.onWhatsApp(target);
-        if (result?.exists) target = result.jid;
-      } catch {
-        // Lookup itself errored (network blip etc.) — keep the constructed JID and try anyway.
+      let resolved = null;
+      for (let attempt = 0; attempt < 2 && !resolved; attempt++) {
+        try {
+          const [result] = await sock.onWhatsApp(target);
+          if (result?.exists) resolved = result.jid;
+        } catch {
+          // network blip — retry once, then fall through to the raw JID
+        }
+        if (!resolved && attempt === 0) await new Promise(r => setTimeout(r, 400));
       }
+      if (resolved) target = resolved;
     }
 
     try {
@@ -66,6 +112,8 @@ module.exports = {
       const blockedHint = code === 401
         ? `🚫 This usually means *they've blocked the bot's number* — not a 100% guarantee, but a strong signal.`
         : `🤷 They likely just have *no profile photo set* or *privacy settings* hiding it — not necessarily a block.`;
+
+      if (logActivity) logActivity('error', 'getpp', `.getpp ${target} → ${err.message} (code ${code || 'n/a'})`, `+${(senderJid||from).split('@')[0]}`);
 
       await sock.sendMessage(from, {
         text: `❌ Could not get profile picture of @${target.split('@')[0]}.\n\n${blockedHint}\n\n_Heuristic only — WhatsApp doesn't expose a real "blocked" status._`,
@@ -273,7 +321,7 @@ module.exports = {
   },
 
   // ── .song — ✅ FIX: use execFile to prevent shell injection ────────────────
-  song: async ({ sock, from, msg, args }) => {
+  song: async ({ sock, from, msg, args, logActivity, senderJid }) => {
     const url = args[0];
     if (!url) return sock.sendMessage(from, { text: '🎵 Usage: .song [YouTube URL]' }, { quoted: msg });
     // Basic URL validation
@@ -282,8 +330,15 @@ module.exports = {
     await sock.sendMessage(from, { text: '⏳ Downloading audio...' }, { quoted: msg });
     const tmpFile = `/tmp/song_${Date.now()}.mp3`;
 
-    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpFile, url], async (err) => {
-      if (err) return sock.sendMessage(from, { text: '❌ Download failed. Check the URL.' }, { quoted: msg });
+    // ✅ FIX: was swallowing the real yt-dlp error and always showing a
+    // hardcoded "may be private" guess for every possible failure. Now
+    // captures stderr and diagnoses the actual cause.
+    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpFile, url], async (err, stdout, stderr) => {
+      if (err) {
+        const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
+        if (logActivity) logActivity('error', 'song', `.song ${url} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
+        return sock.sendMessage(from, { text: userMsg }, { quoted: msg });
+      }
       try {
         await sock.sendMessage(from, {
           audio: fs.readFileSync(tmpFile),
@@ -297,7 +352,7 @@ module.exports = {
   },
 
   // ── .download — ✅ FIX: use execFile to prevent shell injection ────────────
-  download: async ({ sock, from, msg, args }) => {
+  download: async ({ sock, from, msg, args, logActivity, senderJid }) => {
     const url = args[0];
     if (!url) return sock.sendMessage(from, { text: '📥 Usage: .download [URL]' }, { quoted: msg });
     if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
@@ -305,8 +360,12 @@ module.exports = {
     await sock.sendMessage(from, { text: '⏳ Downloading video...' }, { quoted: msg });
     const tmpFile = `/tmp/dl_${Date.now()}.mp4`;
 
-    execFile('yt-dlp', ['-f', 'mp4', '-o', tmpFile, url], async (err) => {
-      if (err) return sock.sendMessage(from, { text: '❌ Download failed. Check the URL.' }, { quoted: msg });
+    execFile('yt-dlp', ['-f', 'mp4', '-o', tmpFile, url], async (err, stdout, stderr) => {
+      if (err) {
+        const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
+        if (logActivity) logActivity('error', 'download', `.download ${url} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
+        return sock.sendMessage(from, { text: userMsg }, { quoted: msg });
+      }
       try {
         await sock.sendMessage(from, {
           video: fs.readFileSync(tmpFile),
@@ -324,7 +383,7 @@ module.exports = {
   // Powered by yt-dlp — works across YouTube, TikTok, Instagram, Facebook,
   // Twitter/X, SoundCloud, and most other sites yt-dlp supports.
   // ✅ Uses execFile only (no shell interpolation of user input).
-  dl: async ({ sock, from, msg, args }) => {
+  dl: async ({ sock, from, msg, args, logActivity, senderJid }) => {
     const url = args[0];
     const wantAudio = /^(audio|mp3|song)$/i.test(args[1] || '');
     if (!url) {
@@ -342,9 +401,13 @@ module.exports = {
       ? ['-x', '--audio-format', 'mp3', '--no-playlist', '-o', tmpTemplate, url]
       : ['-f', 'mp4/best', '--no-playlist', '-o', tmpTemplate, url];
 
-    execFile('yt-dlp', ytArgs, { maxBuffer: 1024 * 1024 * 20 }, async (err) => {
+    // ✅ FIX: was showing "may be unsupported or private" for literally every
+    // failure regardless of cause. Now captures stderr and diagnoses it.
+    execFile('yt-dlp', ytArgs, { maxBuffer: 1024 * 1024 * 20 }, async (err, stdout, stderr) => {
       if (err) {
-        return sock.sendMessage(from, { text: '❌ Download failed. The link may be unsupported or private.' }, { quoted: msg });
+        const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
+        if (logActivity) logActivity('error', 'dl', `.dl ${url} ${wantAudio ? 'audio' : ''} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
+        return sock.sendMessage(from, { text: userMsg }, { quoted: msg });
       }
       try {
         // yt-dlp resolves the real extension itself, so find the produced file
