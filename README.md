@@ -426,7 +426,7 @@ Every **new customer session** that pairs (via `/pair` in the browser or scannin
 | Variable | Value |
 |---|---|
 | `GROQ_API_KEY` | Your Groq API key |
-| `OWNER_NUMBER` | Your WhatsApp number e.g. `254141915668` |
+| `OWNER_NUMBER` | Your WhatsApp number e.g. `254712345678` |
 | `OWNER_NAME` | `Henry Ochibots` |
 | `BOT_NAME` | `Henry Ochibots v19™` |
 | `BOT_LOGIN_USER` | Login username (default: `Henry`) |

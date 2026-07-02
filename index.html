@@ -795,8 +795,8 @@
     <div class="section-title">Want a bot like this for your number?</div>
     <p class="section-sub" style="margin:0 auto 2rem;">Henry builds and deploys custom WhatsApp bots, HTTP configs, and web tools for clients across Kenya. Reach out to get set up.</p>
     <div class="hero-cta" style="justify-content:center;">
-      <!-- 📞 To change the contact number later, just edit the number in this href -->
-      <a href="https://wa.me/254141915668" target="_blank" class="btn-pair-hero">💬 Chat on WhatsApp</a>
+      <!-- 📞 Contact number comes from PUBLIC_CONTACT_NUMBER env var, injected server-side -->
+      <a href="https://wa.me/{{PUBLIC_CONTACT_NUMBER}}" target="_blank" class="btn-pair-hero" id="contact-whatsapp-btn">💬 Chat on WhatsApp</a>
       <a href="/pair" class="btn-outline">Try This Bot</a>
     </div>
   </div>

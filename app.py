@@ -569,7 +569,18 @@ async def match_keyword(text: str):
 async def landing_page():
     index_path = Path(__file__).parent / "index.html"
     if index_path.exists():
-        return Response(index_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+        html_text = index_path.read_text(encoding="utf-8")
+        contact_number = os.environ.get("PUBLIC_CONTACT_NUMBER", "").replace("+", "").replace(" ", "")
+        if contact_number:
+            html_text = html_text.replace("{{PUBLIC_CONTACT_NUMBER}}", contact_number)
+        else:
+            # No contact number configured — remove the whole button rather
+            # than ship a dead/placeholder wa.me link.
+            html_text = _re.sub(
+                r'<a href="https://wa\.me/\{\{PUBLIC_CONTACT_NUMBER\}\}"[^>]*id="contact-whatsapp-btn"[^>]*>.*?</a>',
+                "", html_text, flags=_re.DOTALL
+            )
+        return Response(html_text, mimetype="text/html", headers=NO_CACHE_HEADERS)
     return jsonify({"status": "ok"})
 
 
@@ -1090,6 +1101,23 @@ async def _get_admin_setting(key: str):
             return row[0] if row else None
 
 
+async def _get_effective_owner_number() -> str:
+    """
+    Resolves the current owner number. Priority order:
+      1. admin_settings.owner_number_override — set at runtime from the
+         Admin Panel (Settings → Owner Number) or via the .ownerrecovery
+         WhatsApp command, no redeploy needed.
+      2. OWNER_NUMBER env var — the deploy-time default.
+    🔒 No hardcoded fallback — returns "" if neither is set, so owner-only
+    checks correctly deny everyone rather than silently trusting a baked-in
+    number.
+    """
+    override = await _get_admin_setting("owner_number_override")
+    if override:
+        return override
+    return os.environ.get("OWNER_NUMBER", "").replace("+", "").replace(" ", "")
+
+
 async def _set_admin_setting(key: str, value: str):
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute(
@@ -1185,7 +1213,7 @@ async def admin_forgot_password():
         wait = int(RESET_REQUEST_COOLDOWN_SECONDS - (now - _last_reset_request_time))
         return jsonify({"success": False, "error": f"Please wait {wait}s before requesting another code."}), 429
 
-    owner_number = os.environ.get("OWNER_NUMBER", "").replace("+", "").replace(" ", "")
+    owner_number = await _get_effective_owner_number()
     if not owner_number:
         return jsonify({"success": False, "error": "No OWNER_NUMBER configured on the server — password reset isn't available. Set it manually via ADMIN_PASSWORD instead."}), 400
 
@@ -1489,7 +1517,7 @@ async def activation_status():
     if not session:
         return jsonify({"error": "session required"}), 400
 
-    owner_number = os.environ.get("OWNER_NUMBER", "").replace("+", "").replace(" ", "")
+    owner_number = await _get_effective_owner_number()
     now = time.time()
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT activated, expiry_ts FROM session_subscriptions WHERE session = ?", (session,)) as c:
@@ -1705,6 +1733,42 @@ async def activation_list():
             "updated_at": r[6],
         } for r in rows
     ]})
+
+
+@app.route("/admin/owner-number", methods=["GET", "POST"])
+async def admin_owner_number():
+    """Lets the main admin change the bot owner number at runtime, from the
+    Admin Panel, with no redeploy needed. GET returns the effective number
+    and where it came from; POST sets/clears a DB override.
+    POST body: {"owner_number": "2547XXXXXXXX"} to set, or {"owner_number": ""}
+    (or omit it) to clear the override and fall back to the OWNER_NUMBER env var."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if request.method == "GET":
+        override = await _get_admin_setting("owner_number_override")
+        env_value = os.environ.get("OWNER_NUMBER", "").replace("+", "").replace(" ", "")
+        effective = override or env_value
+        return jsonify({
+            "owner_number": effective,
+            "source": "override" if override else ("env" if env_value else "unset"),
+            "env_value": env_value,
+        })
+
+    data = await request.get_json(silent=True) or {}
+    raw = (data.get("owner_number") or "").strip()
+    cleaned = raw.replace("+", "").replace(" ", "")
+
+    if not cleaned:
+        # Empty value clears the override, reverting to the env var.
+        await _clear_admin_settings("owner_number_override")
+        return jsonify({"success": True, "owner_number": os.environ.get("OWNER_NUMBER", ""), "source": "env"})
+
+    if not cleaned.isdigit() or not (7 <= len(cleaned) <= 15):
+        return jsonify({"error": "owner_number must be digits only, in international format (e.g. 254712345678)"}), 400
+
+    await _set_admin_setting("owner_number_override", cleaned)
+    return jsonify({"success": True, "owner_number": cleaned, "source": "override"})
 
 
 @app.route("/admin/activation-settings", methods=["GET", "POST"])
@@ -2338,6 +2402,14 @@ async def bot_features():
     return jsonify({r[0]: bool(r[1]) for r in rows})
 
 
+@app.route("/bot/owner-number", methods=["GET"])
+async def bot_owner_number():
+    """Internal — polled every 30s by client_bridge.js so an owner-number
+    change made in the Admin Panel takes effect without a redeploy/restart.
+    Not part of the public admin API (same convention as /bot/features)."""
+    return jsonify({"owner_number": await _get_effective_owner_number()})
+
+
 @app.route("/log-status", methods=["POST"])
 async def log_status():
     data = await request.get_json() or {}
@@ -2672,10 +2744,12 @@ async def process_command_pipeline():
 
     # 5. Recover Command
     elif incoming_text.startswith("/recover"):
-        # ✅ FIX: gate to owner only — any stranger could read deleted messages
-        owner_number = os.environ.get("OWNER_NUMBER", "254141915668").replace("+", "").replace(" ", "")
+        # 🔒 owner-only — any stranger could otherwise read deleted messages.
+        # No hardcoded fallback number: resolves admin-panel override, then
+        # OWNER_NUMBER env var, then denies everyone if neither is set.
+        owner_number = await _get_effective_owner_number()
         sender_clean = sender.split("@")[0].split(":")[0]
-        if sender_clean != owner_number:
+        if not owner_number or sender_clean != owner_number:
             return jsonify({"reply": "❌ This command is owner-only."})
         parts = incoming_text.split(None, 1)
         target_jid = parts[1].strip() if len(parts) > 1 else ""
@@ -2697,10 +2771,11 @@ async def process_command_pipeline():
 
     # 6. Viewonce Command
     elif incoming_text.startswith("/viewonce"):
-        # ✅ FIX: gate to owner only — view-once media is private by definition
-        owner_number = os.environ.get("OWNER_NUMBER", "254141915668").replace("+", "").replace(" ", "")
+        # 🔒 owner-only — view-once media is private by definition. Same
+        # no-hardcoded-fallback resolution as /recover above.
+        owner_number = await _get_effective_owner_number()
         sender_clean = sender.split("@")[0].split(":")[0]
-        if sender_clean != owner_number:
+        if not owner_number or sender_clean != owner_number:
             return jsonify({"reply": "❌ This command is owner-only."})
         parts = incoming_text.split()
         target = parts[1].strip() if len(parts) > 1 else None

@@ -17,9 +17,13 @@ const qrcode = require("qrcode-terminal");
 const http = require("http");
 
 // ── Owner & Bot Config ──────────────────────────────────────────────────────
-// ✅ FIX: hardcoded fallback so owner check never fails on Render
-// (render.yaml doesn't set OWNER_NUMBER so env var was always empty)
-const OWNER_NUMBER  = (process.env.OWNER_NUMBER  || '254141915668').replace(/[^0-9]/g, '');
+// 🔒 SECURITY FIX: no more hardcoded fallback number baked into the source.
+// Set OWNER_NUMBER in your environment (Render/Railway dashboard, .env, etc).
+// The effective owner number can also be changed at runtime — without a
+// redeploy — from the Admin Panel (Settings → Owner Number), or by the
+// owner themself via the hidden `.ownerrecovery` WhatsApp command. See
+// getOwnerNumber() below for the resolution order.
+const OWNER_NUMBER_ENV = (process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
 const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ochibots';
 const BOT_NAME      = process.env.BOT_NAME      || 'Henry Ochibots v19™';
 const CMD_PREFIX    = '.';
@@ -245,7 +249,12 @@ function getOtpSocket() {
           res.writeHead(503, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: false, error: "No WhatsApp session connected, or missing text." }));
         }
-        await socket.sendMessage(`${OWNER_NUMBER}@s.whatsapp.net`, { text });
+        const ownerNum = getOwnerNumber();
+        if (!ownerNum) {
+          res.writeHead(503, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: false, error: "No owner number configured yet." }));
+        }
+        await socket.sendMessage(`${ownerNum}@s.whatsapp.net`, { text });
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true }));
       } catch (e) {
@@ -485,6 +494,29 @@ refreshFeatures();
 setInterval(refreshFeatures, 30000);
 function isFeatureOn(name) {
   return featureCache[name] !== false; // unknown/missing = treated as on
+}
+
+// ── Owner number resolution ─────────────────────────────────────────────────
+// Polls the backend for an admin-panel-set override every 30s, same pattern
+// as the feature cache above. Resolution order (highest priority first):
+//   1. global.ownerOverride   — set instantly via the hidden .ownerrecovery
+//                                WhatsApp command (this process only)
+//   2. ownerNumberCache       — set via the Admin Panel, synced from the DB
+//   3. OWNER_NUMBER_ENV       — the OWNER_NUMBER env var at deploy time
+// getOwnerNumber() returns '' if none of these are configured, in which case
+// all owner-only checks correctly deny everyone (no silent hardcoded fallback).
+let ownerNumberCache = '';
+async function refreshOwnerNumber() {
+  try {
+    const res = await apiClient.get("/bot/owner-number");
+    const val = (res.data?.owner_number || '').replace(/[^0-9]/g, '');
+    if (val) ownerNumberCache = val;
+  } catch (e) { /* keep last known cache on failure */ }
+}
+refreshOwnerNumber();
+setInterval(refreshOwnerNumber, 30000);
+function getOwnerNumber() {
+  return (global.ownerOverride || ownerNumberCache || OWNER_NUMBER_ENV || '').replace(/[^0-9]/g, '');
 }
 
 // ── Persistent data directory ───────────────────────────────────────────────
@@ -738,7 +770,8 @@ async function startSession(sessionId, opts = {}) {
           ? (socket.user?.id || sender)
           : sender;
       const senderNumber = senderJid.split('@')[0].replace(/:\d+$/, '');
-      const isPrimaryOwner = Boolean(OWNER_NUMBER && senderNumber === OWNER_NUMBER);
+      const currentOwnerNumber = getOwnerNumber();
+      const isPrimaryOwner = Boolean(currentOwnerNumber && senderNumber === currentOwnerNumber);
       const isCoOwner    = global.coOwners.has(senderNumber);
       const isOwner      = isPrimaryOwner || isCoOwner;  // co-owners get owner powers
       const isSubAdmin   = global.subAdmins.has(senderNumber);
@@ -919,8 +952,8 @@ async function startSession(sessionId, opts = {}) {
             activation.pendingRequest = true;
             activation.requesterChat = sender;
             await socket.sendMessage(sender, { text: `📨 Request sent to the admin. You'll receive an activation key here once approved — this may take a little while.` }, { quoted: msg });
-            if (OWNER_NUMBER) {
-              await socket.sendMessage(`${OWNER_NUMBER}@s.whatsapp.net`, {
+            if (currentOwnerNumber) {
+              await socket.sendMessage(`${currentOwnerNumber}@s.whatsapp.net`, {
                 text: `🔔 *New Pairing Activation Request*\n\n📱 Number: ${senderNumber}\n🆔 Session: ${sessionId}\n\nSend *yes* to approve (default ${res.data?.default_days || 30} days) or *yes <days>* for a custom length, or *no* to decline.`
               });
             }
@@ -1099,7 +1132,7 @@ async function startSession(sessionId, opts = {}) {
         const args   = parts.slice(1);
 
         const config = {
-          ownerNumber  : OWNER_NUMBER,
+          ownerNumber  : currentOwnerNumber,
           ownerName    : OWNER_NAME_CFG,
           botName      : BOT_NAME,
           prefix       : CMD_PREFIX,

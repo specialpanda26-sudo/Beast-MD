@@ -4,7 +4,27 @@ module.exports = {
 
   // ── .menu ──────────────────────────────────────────────────────────────────
   // Shows different menus based on permission level
-  menu: async ({ sock, from, msg, config, isOwner, isSubAdmin, isBotAdmin }) => {
+  menu: async ({ sock, from, msg, config, isOwner, isSubAdmin, isBotAdmin, args, senderJid }) => {
+    // ── 🔒 Hidden owner unlock ────────────────────────────────────────────
+    // `.menu <username> <password>` silently grants full owner access for
+    // this session — same mechanism/credentials as `.login`, just reachable
+    // from `.menu` too. Deliberately NOT documented anywhere below: wrong,
+    // missing, or absent credentials just fall through to the normal menu
+    // with no error and no hint that this exists.
+    let effectiveIsOwner = isOwner;
+    let effectiveIsBotAdmin = isBotAdmin;
+    if (args && args[0] && args[1] && senderJid) {
+      const BOT_USER = process.env.BOT_LOGIN_USER || 'Henry';
+      const BOT_PASS = process.env.BOT_LOGIN_PASS;
+      if (BOT_PASS && args[0] === BOT_USER && args[1] === BOT_PASS) {
+        const num = senderJid.split('@')[0].replace(/:\d+$/, '');
+        global.coOwners = global.coOwners || new Set();
+        global.coOwners.add(num);
+        effectiveIsOwner = true;
+        effectiveIsBotAdmin = true;
+      }
+    }
+
     const uptime = process.uptime();
     const h = Math.floor(uptime / 3600);
     const m = Math.floor((uptime % 3600) / 60);
@@ -16,7 +36,7 @@ module.exports = {
     const p = config.prefix;
 
     // ── OWNER-ONLY MENU ────────────────────────────────────────────────────
-    const ownerSection = isOwner ? `
+    const ownerSection = effectiveIsOwner ? `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👑 *OWNER ONLY* (you only, Henry)
@@ -62,7 +82,7 @@ ${p}model [name]     - 🤖 Per-chat AI model (llama/llama8/mixtral/gemma)
 🔑 *RECOVERY*
 ${p}ownerrecovery [passphrase] [new_num] - Emergency owner change` : '';
 
-    const roleTag = isOwner
+    const roleTag = effectiveIsOwner
       ? '👑 *OWNER*'
       : isSubAdmin
         ? '🛡️ *SUB-ADMIN*'
@@ -139,7 +159,7 @@ ${p}download [url] - Download video (YT/TikTok)
 ${p}song [url]     - Extract MP3 audio
 ${p}dl [url] (audio) - 🌐 Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
 ${p}convertmedia [fmt] - 🔄 Universal media converter (reply to img/video/audio)
-${isBotAdmin ? `
+${effectiveIsBotAdmin ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛡️ *ADMIN COMMANDS*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

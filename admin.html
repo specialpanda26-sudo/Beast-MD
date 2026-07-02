@@ -234,6 +234,13 @@
         <div class="section-title">⏱️ Server Uptime</div>
         <div id="uptime-display" style="color:var(--muted);font-size:14px">Loading...</div>
       </div>
+      <div class="form-card">
+        <div class="section-title">👑 Owner Number</div>
+        <div class="hint">Change who the bot treats as owner — takes effect within ~30s, no redeploy needed. Leave blank and save to revert to the OWNER_NUMBER env var.</div>
+        <input type="text" id="owner-number-input" placeholder="e.g. 254712345678" />
+        <button class="btn" style="margin-top:10px" onclick="saveOwnerNumber()">💾 Save</button>
+        <div id="owner-number-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+      </div>
     </div>
 
     <!-- SESSIONS TAB -->
@@ -445,6 +452,7 @@
     document.getElementById("admin-page").style.display = "block";
     loadDashboard();
     loadUptime();
+    loadOwnerNumber();
     setInterval(loadDashboard, 15000);
   }
 
@@ -931,6 +939,33 @@
       document.getElementById("uptime-display").innerHTML =
         `🟢 Up for <strong style="color:var(--green)">${data.uptime_human}</strong><br/>📅 Started: ${data.started_at}`;
     } catch(e) {}
+  }
+
+  async function loadOwnerNumber() {
+    try {
+      const res = await authedFetch("/admin/owner-number");
+      const data = await res.json();
+      const input = document.getElementById("owner-number-input");
+      input.value = data.owner_number || "";
+      input.placeholder = data.owner_number ? `Current: +${data.owner_number} (${data.source})` : "Not set — owner-only commands are disabled";
+    } catch(e) {}
+  }
+
+  async function saveOwnerNumber() {
+    const status = document.getElementById("owner-number-status");
+    const owner_number = document.getElementById("owner-number-input").value.trim();
+    status.textContent = "Saving...";
+    try {
+      const res = await authedFetch("/admin/owner-number", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ owner_number })
+      });
+      const data = await res.json();
+      if (!res.ok) { status.textContent = `❌ ${data.error || 'Save failed'}`; return; }
+      status.textContent = owner_number ? `✅ Owner number set to +${data.owner_number}` : "✅ Reverted to OWNER_NUMBER env var";
+      loadOwnerNumber();
+    } catch(e) { status.textContent = "❌ Save failed"; }
   }
 
   async function setExpiry(name) {

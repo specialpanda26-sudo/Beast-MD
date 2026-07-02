@@ -6,7 +6,7 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: OWNER_NUMBER
-        value: "254141915668"        # ✅ FIX: was missing — owner check always failed
+        sync: false                  # set your WhatsApp number in the Render dashboard, e.g. 254712345678
       - key: OWNER_NAME
         value: "Henry Ogolla"
       - key: BOT_NAME
@@ -39,6 +39,10 @@ services:
         sync: false
       # ── Optional: the admin's M-Pesa number shown to users for top-ups ──
       - key: ADMIN_PAYTO_NUMBER
+        sync: false
+      # ── Optional: WhatsApp number shown on the public landing page's
+      # "Chat on WhatsApp" button. Leave unset to hide that button.
+      - key: PUBLIC_CONTACT_NUMBER
         sync: false
       # ✅ FIX: without a mounted disk, the SQLite DB, WhatsApp auth sessions,
       # and saved view-once media all lived on Render's ephemeral filesystem
