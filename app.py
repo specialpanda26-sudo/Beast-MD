@@ -1112,6 +1112,46 @@ ADMIN_LOCKOUT_DURATION_SECONDS = 5 * 60
 # rather than per-IP fits this threat better).
 _panel_login_failures: dict[str, dict] = {}
 
+# ✅ NEW: brute-force lockout for the OWNER_RECOVERY_SECRET path on
+# /admin/owner-number (used internally by the .ownerrecovery WhatsApp
+# command — see that route for why it needs its own auth path separate
+# from ADMIN_PASSWORD). Kept in its own table, not shared with
+# _admin_login_failures, so guessing one secret can't lock out — or be
+# confused with — attempts on the other.
+_owner_recovery_failures: dict[str, dict] = {}
+
+
+async def _check_owner_recovery_secret(req, provided: str) -> bool:
+    """Constant-time check of a submitted OWNER_RECOVERY_SECRET, with the
+    same per-IP lockout behavior as _check_admin_auth_async: 5 wrong
+    attempts within 5 minutes locks that IP out for 5 minutes. Returns
+    False (no distinction from "wrong secret") if OWNER_RECOVERY_SECRET
+    isn't configured — there is no dev-mode open-access fallback here,
+    unlike admin auth, since this exists specifically to change who the
+    owner is."""
+    secret_env = os.environ.get("OWNER_RECOVERY_SECRET", "")
+    if not secret_env:
+        return False
+
+    ip = _client_ip(req)
+    now = time.time()
+    entry = _owner_recovery_failures.get(ip)
+    if entry and entry.get("locked_until", 0) > now:
+        return False
+
+    ok = secrets.compare_digest(provided or "", secret_env)
+    if ok:
+        _owner_recovery_failures.pop(ip, None)
+        return True
+
+    if not entry or now - entry.get("window_start", now) > ADMIN_LOCKOUT_WINDOW_SECONDS:
+        entry = {"fails": 0, "window_start": now}
+    entry["fails"] = entry.get("fails", 0) + 1
+    if entry["fails"] >= ADMIN_LOCKOUT_THRESHOLD:
+        entry["locked_until"] = now + ADMIN_LOCKOUT_DURATION_SECONDS
+    _owner_recovery_failures[ip] = entry
+    return False
+
 
 async def _get_admin_setting(key: str):
     async with aiosqlite.connect(DB_FILE) as db:
@@ -1772,8 +1812,25 @@ async def admin_owner_number():
     Admin Panel, with no redeploy needed. GET returns the effective number
     and where it came from; POST sets/clears a DB override.
     POST body: {"owner_number": "2547XXXXXXXX"} to set, or {"owner_number": ""}
-    (or omit it) to clear the override and fall back to the OWNER_NUMBER env var."""
-    if not await _check_admin_auth_async(request):
+    (or omit it) to clear the override and fall back to the OWNER_NUMBER env var.
+
+    POST accepts two independent forms of auth:
+      1. Normal admin auth (Admin Panel — ADMIN_PASSWORD / reset DB hash)
+      2. A matching OWNER_RECOVERY_SECRET in the body ("owner_recovery_secret")
+    (2) exists so the .ownerrecovery WhatsApp command can persist its change
+    here directly — it's gated by its own separate secret, deliberately not
+    the admin password, so an emergency owner change doesn't depend on
+    whoever currently controls /admin. Before this, .ownerrecovery only set
+    an in-memory flag inside the Node process, invisible to this backend and
+    wiped on every restart — this endpoint is now the single source of truth
+    either path writes to."""
+    data = await request.get_json(silent=True) or {}
+
+    is_admin = await _check_admin_auth_async(request)
+    if not is_admin and request.method == "POST":
+        is_admin = await _check_owner_recovery_secret(request, str(data.get("owner_recovery_secret", "")))
+
+    if not is_admin:
         return jsonify({"error": "Unauthorized"}), 401
 
     if request.method == "GET":
@@ -1786,7 +1843,6 @@ async def admin_owner_number():
             "env_value": env_value,
         })
 
-    data = await request.get_json(silent=True) or {}
     raw = (data.get("owner_number") or "").strip()
     cleaned = raw.replace("+", "").replace(" ", "")
 

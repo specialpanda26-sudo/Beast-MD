@@ -111,6 +111,7 @@ ${p}ping           - Bot response speed
 ${p}runtime        - Uptime & system info
 ${p}weather [city] - Live weather info
 ${p}dict [word]    - Dictionary definition
+${p}convert [amt] [from] [to] - Currency converter (e.g. .convert 100 USD KES)
 ${p}roll [sides]   - Roll a dice 🎲
 ${p}myperm         - Check your permissions
 ${p}register       - Get web panel link (free credits + trust badge)
@@ -519,7 +520,7 @@ Ninaongea Kiswahili, Sheng na English!
 
   // ── .ownerrecovery — change owner number via secret passphrase ─────────────
   // Usage: .ownerrecovery [OWNER_RECOVERY_SECRET] 254NEWPHONE
-  ownerrecovery: async ({ sock, from, msg, isPrimaryOwner, args }) => {
+  ownerrecovery: async ({ sock, from, msg, isPrimaryOwner, args, apiClient }) => {
     const SECRET = process.env.OWNER_RECOVERY_SECRET;
     // 🔒 SECURITY FIX: this used to fall back to the same hardcoded default
     // ('7lq4mv00') as .login, sitting in plain text in a public repo —
@@ -531,10 +532,30 @@ Ninaongea Kiswahili, Sheng na English!
     const newNumber = args[1]?.replace(/[^0-9]/g, '');
     if (passphrase !== SECRET) return; // silent fail — don't hint that this command exists
     if (!newNumber) return sock.sendMessage(from, { text: '❌ Usage: .ownerrecovery [passphrase] [new_number]' }, { quoted: msg });
-    // Update the global so new messages are checked against new number
-    // (full effect requires restart for OWNER_NUMBER const, but this covers runtime)
+    // Update the in-memory override immediately so this process reacts
+    // right away, without waiting on the next 30s /bot/owner-number poll.
     global.ownerOverride = newNumber;
-    await sock.sendMessage(from, { text: `✅ Owner override set to *+${newNumber}*.\nRestart bot and set OWNER_NUMBER=${newNumber} in your env for permanent effect.` }, { quoted: msg });
+    // ✅ FIX: this used to ONLY set the line above — invisible to the Python
+    // backend (which handles admin-password-reset OTP delivery, activation
+    // auto-exemption, etc.) and wiped by the next restart. Now it also
+    // persists to the DB via /admin/owner-number, authenticated with this
+    // same OWNER_RECOVERY_SECRET (not the admin password — this command
+    // intentionally works even if /admin's password is separately
+    // compromised or forgotten). That endpoint becomes the shared source of
+    // truth for both sides and survives restarts, same as changing it from
+    // the Admin Panel does.
+    let persisted = false;
+    try {
+      const res = await apiClient.post('/admin/owner-number', {
+        owner_number: newNumber,
+        owner_recovery_secret: SECRET
+      });
+      persisted = Boolean(res.data?.success);
+    } catch (e) { /* handled below — in-memory override still applies to this process */ }
+    const persistNote = persisted
+      ? 'Saved — this takes effect everywhere immediately and survives restarts.'
+      : "⚠️ Couldn't reach the backend to save this permanently — it's active on this process only until the next restart. Try again shortly, or set OWNER_NUMBER in your env as a backup.";
+    await sock.sendMessage(from, { text: `✅ Owner override set to *+${newNumber}*.\n${persistNote}` }, { quoted: msg });
   },
 
   // (summarize is implemented in cypher.js with full AI support)
