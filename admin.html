@@ -55,6 +55,12 @@
       padding: 6px 14px; font-size: 13px; border-radius: 8px;
       border: none; cursor: pointer; font-weight: bold; width: auto;
     }
+    .activity-filter-btn {
+      background: rgba(255,255,255,.06); color: #ccc; border: 1px solid rgba(255,255,255,.1);
+    }
+    .activity-filter-btn.active {
+      background: var(--accent); color: #000; border-color: var(--accent);
+    }
     .error { color: var(--red); font-size: 13px; margin-top: 10px; text-align: center; display: none; }
 
     /* ── ADMIN DASHBOARD ── */
@@ -201,6 +207,7 @@
       <a href="#" onclick="switchTab('activation');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🔑 Activation</a>
       <a href="#" onclick="switchTab('scheduler');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">⏰ Scheduler</a>
       <a href="#" onclick="switchTab('viewonce');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">👁️ View-Once</a>
+      <a href="#" onclick="switchTab('activity');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">📜 Activity Log</a>
     </div>
   </div>
 
@@ -219,6 +226,7 @@
       <div class="tab" data-tab="activation" onclick="switchTab('activation')">🔑 Activation</div>
       <div class="tab" data-tab="scheduler" onclick="switchTab('scheduler')">⏰ Scheduler</div>
       <div class="tab" data-tab="viewonce" onclick="switchTab('viewonce')">👁️ View-Once</div>
+      <div class="tab" data-tab="activity" onclick="switchTab('activity')">📜 Activity Log</div>
     </div>
 
     <!-- OVERVIEW TAB -->
@@ -411,6 +419,26 @@
       </div>
       <div id="viewonce-list"><div class="empty">Loading...</div></div>
     </div>
+
+    <!-- ACTIVITY LOG TAB -->
+    <div class="tab-content" id="tab-activity">
+      <div class="form-card">
+        <div class="hint">Live feed of what the bot has been doing. <strong>Errors</strong> and <strong>Sensitive actions</strong> also ping you directly on WhatsApp the moment they happen — this panel is the full history.</div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">📜 Activity Log</div>
+        <div style="display:flex;gap:8px">
+          <button class="refresh-btn" onclick="loadActivityLog()">↻ Refresh</button>
+          <button class="btn-sm btn-red" onclick="clearActivityLog()">🗑️ Clear</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn-sm activity-filter-btn active" data-cat="command" onclick="setActivityCategory('command')">💬 Commands</button>
+        <button class="btn-sm activity-filter-btn" data-cat="error" onclick="setActivityCategory('error')">⚠️ Errors</button>
+        <button class="btn-sm activity-filter-btn" data-cat="sensitive" onclick="setActivityCategory('sensitive')">🛡️ Sensitive Actions</button>
+      </div>
+      <div id="activity-list"><div class="empty">Loading...</div></div>
+    </div>
   </div>
 </div>
 
@@ -468,6 +496,7 @@
     if (name === "activation") loadActivation();
     if (name === "scheduler") loadScheduler();
     if (name === "viewonce") loadViewOnce();
+    if (name === "activity") loadActivityLog();
   }
 
   function toggleAdminMenu() { document.getElementById('adminMenuOverlay').style.display = 'block'; }
@@ -726,6 +755,64 @@
       const data = await res.json();
       if (!data.success) { alert(data.error || 'Failed.'); return; }
       loadScheduler();
+    } catch (e) {
+      alert('Network error.');
+    }
+  }
+
+  /* ── ACTIVITY LOG ── */
+  let activityCategory = 'command';
+  const ACTIVITY_ICON = { command: '💬', error: '⚠️', sensitive: '🛡️' };
+  const ACTIVITY_EMPTY = {
+    command: 'No commands run yet.',
+    error: 'No errors logged. 🎉',
+    sensitive: 'No sensitive actions logged yet.',
+  };
+
+  function setActivityCategory(cat) {
+    activityCategory = cat;
+    document.querySelectorAll('.activity-filter-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.cat === cat)
+    );
+    loadActivityLog();
+  }
+
+  async function loadActivityLog() {
+    const list = document.getElementById('activity-list');
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await authedFetch(`/admin/activity-log?category=${encodeURIComponent(activityCategory)}&limit=150`);
+      const data = await res.json();
+      const items = data.events || [];
+      if (items.length === 0) {
+        list.innerHTML = `<div class="empty">${ACTIVITY_EMPTY[activityCategory] || 'Nothing here yet.'}</div>`;
+        return;
+      }
+      const icon = ACTIVITY_ICON[activityCategory] || '📜';
+      const borderColor = activityCategory === 'error' ? 'var(--red)' : (activityCategory === 'sensitive' ? 'var(--accent)' : 'rgba(255,255,255,.1)');
+      list.innerHTML = items.map(e => `
+        <div class="contact-row" style="border-left:3px solid ${borderColor}">
+          <div>
+            <strong>${icon} .${escapeHtml(e.type || '')}</strong>
+            ${e.actor ? ` <span style="color:var(--muted);font-size:12px">by ${escapeHtml(e.actor)}</span>` : ''}<br/>
+            <span style="color:var(--muted);font-size:13px">${escapeHtml((e.detail || '').slice(0, 300))}</span><br/>
+            <span style="color:var(--accent);font-size:12px">🕐 ${escapeHtml(e.timestamp || '')}</span>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  async function clearActivityLog() {
+    const label = { command: 'Commands', error: 'Errors', sensitive: 'Sensitive Actions' }[activityCategory] || activityCategory;
+    if (!confirm(`Clear the entire "${label}" log? This can't be undone.`)) return;
+    try {
+      const res = await authedFetch(`/admin/activity-log?category=${encodeURIComponent(activityCategory)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.success) { alert(data.error || 'Failed.'); return; }
+      loadActivityLog();
     } catch (e) {
       alert('Network error.');
     }

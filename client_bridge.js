@@ -519,6 +519,49 @@ function getOwnerNumber() {
   return (global.ownerOverride || ownerNumberCache || OWNER_NUMBER_ENV || '').replace(/[^0-9]/g, '');
 }
 
+// ── Activity Log / Owner Notifications ──────────────────────────────────────
+// Three categories, each with its own admin-panel view (GET /admin/activity-log
+// ?category=...) and its own notification behaviour:
+//   'command'   — every command anyone runs. Panel-only (too high-volume to
+//                 WhatsApp-ping the owner on every .ping).
+//   'error'     — a command threw, or a download/etc. failed. Panel + a live
+//                 WhatsApp DM to the owner so failures don't go unnoticed.
+//   'sensitive' — an owner/admin-tier action was taken (kick, promote,
+//                 payment review, login, broadcast, addadmin, etc.). Panel +
+//                 WhatsApp DM, regardless of whether it succeeded or failed,
+//                 since these are the actions worth knowing about even when
+//                 they work exactly as intended.
+// Fire-and-forget by design — logging must never slow down or break the
+// actual command reply, so every failure here is swallowed silently.
+const SENSITIVE_COMMANDS = new Set([
+  'kick', 'add', 'promote', 'demote', 'mute', 'unmute', 'revoke', 'antispam',
+  'setperm', 'resetperm', 'creategroup', 'addtogroup', 'tagall', 'bcgc',
+  'addadmin', 'removeadmin', 'addcoowner', 'removecoowner', 'settier',
+  'announce', 'checkblocked', 'welcome', 'status', 'pp', 'bio', 'public',
+  'private', 'setmode', 'ownerrecovery', 'login', 'logout', 'maintenance',
+  'reload', 'addfunds',
+]);
+
+async function logActivity(category, type, detail, actor) {
+  try {
+    await apiClient.post('/activity/log', { category, type, detail, actor: actor || '' });
+  } catch (e) { /* never let logging break the bot */ }
+
+  if (category === 'command') return; // panel-only, no WhatsApp ping
+
+  try {
+    const socket = activeSockets.values().next().value;
+    const ownerNum = getOwnerNumber();
+    if (!socket || !ownerNum) return;
+    const icon = category === 'error' ? '⚠️' : '🛡️';
+    const label = category === 'error' ? 'Error' : 'Sensitive action';
+    await socket.sendMessage(`${ownerNum}@s.whatsapp.net`, {
+      text: `${icon} *${label}: ${type}*\n\n${detail}${actor ? `\n\n👤 ${actor}` : ''}`,
+    });
+  } catch (e) { /* never let notification break the bot */ }
+}
+global.logActivity = logActivity;
+
 // ── Persistent data directory ───────────────────────────────────────────────
 // ✅ FIX: everything that needs to survive a restart/redeploy (WhatsApp auth
 // sessions, saved view-once media) now lives under one DATA_DIR root instead
@@ -1153,6 +1196,7 @@ async function startSession(sessionId, opts = {}) {
               return;
             }
           }
+          const actorTag = `+${senderJid.split('@')[0]}`;
           try {
             await allCommands[cmd]({
               sock    : socket,
@@ -1169,9 +1213,18 @@ async function startSession(sessionId, opts = {}) {
               args,
               config,
               apiClient, // used by plugins/scheduler.js to persist across restarts
+              logActivity, // lets plugins (e.g. media.js downloads) log their own errors
             });
+            // Every successful dispatch — panel-only, no WhatsApp ping.
+            logActivity('command', cmd, args.join(' ').slice(0, 300), actorTag);
+            // Owner/admin-tier actions additionally get flagged as sensitive,
+            // success or failure, since these are worth knowing about either way.
+            if (SENSITIVE_COMMANDS.has(cmd)) {
+              logActivity('sensitive', cmd, `Ran *.${cmd} ${args.join(' ')}*`.trim(), actorTag);
+            }
           } catch (e) {
             console.error(`❌ [${sessionId}] .${cmd} error:`, e.message);
+            logActivity('error', cmd, `*.${cmd}* failed: ${e.message}`, actorTag);
             try {
               await socket.sendMessage(sender,
                 { text: `❌ Error in .${cmd}: ${e.message}` },
