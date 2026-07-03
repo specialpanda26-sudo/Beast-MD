@@ -22,6 +22,14 @@ services:
       - key: WEB_PORT
         value: 3000
       # ── Email OTP (optional fallback delivery method on /register) ──────
+      # ⚠️ Render blocks outbound SMTP ports — set RESEND_API_KEY (free at
+      # resend.com) to actually get email OTPs working here. SMTP_* below
+      # is kept only as a no-op fallback for non-Render hosts; it will NOT
+      # work on this Render service no matter what you set it to.
+      - key: RESEND_API_KEY
+        sync: false                  # https://resend.com/signup → API Keys
+      - key: RESEND_FROM_EMAIL
+        value: "onboarding@resend.dev"
       - key: SMTP_HOST
         value: "smtp.gmail.com"
       - key: SMTP_PORT
