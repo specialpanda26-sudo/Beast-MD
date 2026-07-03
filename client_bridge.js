@@ -1427,6 +1427,25 @@ async function startSession(sessionId, opts = {}) {
           await socket.sendMessage(sender, {
             text: `🔗 *Link a WhatsApp number as a new bot session*\n\nHow would you like to link?\n\n*1* — QR Code\n*2* — Pairing Code\n\nReply with 1 or 2.`
           }, { quoted: msg });
+
+          // ✅ Send the user guide PDF to everyone EXCEPT the bot owner —
+          // owners already know the bot inside out; this is for customers
+          // and group members who are new to it.
+          if (!isPrimaryOwner) {
+            try {
+              const fs = require("fs");
+              const guidePath = path.join(__dirname, "assets", "BeastBot-User-Guide.pdf");
+              const guideBuffer = fs.readFileSync(guidePath);
+              await socket.sendMessage(sender, {
+                document: guideBuffer,
+                fileName: "BeastBot-User-Guide.pdf",
+                mimetype: "application/pdf",
+                caption: "📄 *Beast Bot User Guide* — everything you need to know to use the bot, in one PDF."
+              });
+            } catch (e) {
+              console.log(`⚠️ Couldn't send user guide PDF to ${sender}: ${e.message}`);
+            }
+          }
           return;
         }
 
