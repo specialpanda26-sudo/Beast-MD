@@ -912,6 +912,43 @@ async function startSession(sessionId, opts = {}) {
     stateAdapter: antibanStateAdapter,
     logging: false, // we do our own console logging below
 
+    // ── Owner exemption + notify-only mode ───────────────────────────────
+    // Fixes: owner's own .menu/.command replies were getting hard-blocked
+    // by the topology/reply-ratio heuristics on a fresh session (0% reply
+    // ratio on self-chat — nothing to divide by yet). Owner's JID is now
+    // ALWAYS exempt from every per-contact risk block below. For every
+    // other contact, instead of failing the send outright, the bot lets
+    // it through and pings the owner on WhatsApp with a disclaimer (via
+    // logActivity's existing 'error' category, which already DMs the
+    // owner — see wrapper.js's notifyOwner handling). Set
+    // ANTIBAN_NOTIFY_ONLY=false to restore the old hard-block behavior.
+    ownerJid: `${getOwnerNumber()}@s.whatsapp.net`,
+    notifyOnlyMode: (process.env.ANTIBAN_NOTIFY_ONLY || "true") !== "false",
+    // BUG FIX: the `socket.antiban.on?.("healthChange", ...)` listener further
+    // below has never actually fired — AntiBan is a plain class, it doesn't
+    // implement `.on()`, so that call was a silent no-op (optional chaining
+    // swallowed it). The real hook the library supports is this `onRiskChange`
+    // config callback, wired below to do the same console-log + owner-DM +
+    // webhook-alert work the dead listener was meant to do. Left the old
+    // listener in place (harmless no-op) rather than deleting it.
+    onRiskChange: (status) => {
+      console.log(`🩺 [${sessionId}] Anti-ban health: ${status.risk?.toUpperCase?.() || status.risk}`);
+      if (status.risk === "high" || status.risk === "critical") {
+        const ownerJid = `${getOwnerNumber()}@s.whatsapp.net`;
+        socket?.sendMessage(ownerJid, {
+          text: `⚠️ *Anti-ban warning* [${sessionId}]\nRisk level: *${String(status.risk).toUpperCase()}*\n${status.recommendation || "Check .antibanstats for details."}`
+        }).catch(() => {});
+      }
+      if (antibanWebhooks) {
+        antibanWebhooks.alert({
+          risk: status.risk,
+          score: status.score ?? 0,
+          recommendation: status.recommendation || `Session [${sessionId}] risk level: ${status.risk}`,
+          reasons: status.reasons || []
+        }).catch(() => {});
+      }
+    },
+
     // ── Newly unlocked (previously bundled but never enabled) ───────────
     // Canonicalizes @lid / @s.whatsapp.net JID variants so rate-limit and
     // warm-up counters aren't fooled into treating one contact as two.
@@ -1018,6 +1055,9 @@ async function startSession(sessionId, opts = {}) {
 
   // Surface health-monitor risk escalation to console + owner DM so Henry
   // gets an early warning before a real ban, not after.
+  // NOTE: this never actually ran (AntiBan has no .on() — optional chaining
+  // silently no-op'd it). Real wiring is the `onRiskChange` callback passed
+  // into antibanConfig above. Left this here rather than deleting it.
   socket.antiban.on?.("healthChange", (health) => {
     console.log(`🩺 [${sessionId}] Anti-ban health: ${health.risk?.toUpperCase?.() || health.risk}`);
     if (health.risk === "high" || health.risk === "critical") {

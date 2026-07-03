@@ -356,6 +356,17 @@ function wrapSocket(sock, config, warmUpState, wrapOptions) {
                     global.logActivity('error', 'antiban-recovery', `Sent despite ban recovery pause: ${decision.reason}`, canonicalJid).catch(() => {});
                 }
             }
+            // notify-only mode: a per-contact risk heuristic (topology, reply
+            // ratio, warm-up, timelock, etc.) would have blocked this send,
+            // but owner asked for disclaimer-not-block behavior. The send
+            // proceeds; we log it and surface it to the admin panel so the
+            // owner sees which contact is at risk without the bot going dead.
+            if (decision.notifyOwner) {
+                console.warn(`[baileys-antiban] ⚠️ Notify-only: would have blocked send to ${canonicalJid} — ${decision.riskReason}`);
+                if (typeof global.logActivity === 'function') {
+                    global.logActivity('error', 'antiban-risk', `Sent despite risk flag (${decision.riskReason})`, canonicalJid).catch(() => {});
+                }
+            }
             // Apply delay from rate limiter
             if (decision.delayMs > 0) {
                 await new Promise(resolve => setTimeout(resolve, decision.delayMs));

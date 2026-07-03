@@ -125,6 +125,19 @@ class AntiBan {
     hasDisconnected = false; // BUG FIX 3: Track if we've ever disconnected
     /** Optional reputation voucher (standalone — caller manages separate voucher sockets) */
     reputationVoucher;
+    /**
+     * Owner JID + notify-only mode — added so per-contact ban-risk heuristics
+     * (topology, reply-ratio, warm-up, contact-graph, timelock, health-pause,
+     * reconnect-throttle) stop HARD-BLOCKING sends and instead let the send
+     * through while pinging the owner with a disclaimer. Requested by owner:
+     * "the bot should never block ME, and for everyone else just warn me
+     * instead of failing the send." The owner's own JID is ALWAYS exempt
+     * from blocking, regardless of notifyOnlyMode, since a false-positive
+     * blocking the owner's own commands (e.g. .menu) makes the bot unusable.
+     */
+    ownerJid = null;
+    notifyOnlyMode = true;
+    onOwnerNotify = null;
     stats = {
         messagesAllowed: 0,
         messagesBlocked: 0,
@@ -146,6 +159,11 @@ class AntiBan {
             ? (0, presets_js_1.resolveConfig)(flatConfig)
             : (0, presets_js_1.resolveConfig)(input);
         this.resolvedConfig = cfg;
+        // Owner exemption + notify-only mode (see field doc above).
+        const ownerRaw = cfg.ownerJid || legacyPassthrough?.ownerJid || null;
+        this.ownerJid = ownerRaw ? String(ownerRaw) : null;
+        this.notifyOnlyMode = (cfg.notifyOnlyMode ?? legacyPassthrough?.notifyOnlyMode) !== false;
+        this.onOwnerNotify = cfg.onOwnerNotify || legacyPassthrough?.onOwnerNotify || null;
         // Initialize persistence — load state before constructing modules
         let savedState = null;
         if (cfg.persist) {
@@ -339,6 +357,42 @@ class AntiBan {
         }
     }
     /**
+     * Central decision point for every per-contact ban-risk heuristic
+     * (health-pause, timelock, warm-up, contact-graph, topology, reply-ratio,
+     * reconnect-throttle). Previously each of these returned `allowed:false`
+     * unconditionally, which is what hard-blocked the owner's own `.menu`
+     * command on a fresh session (0% reply ratio on self-chat).
+     *
+     * New behavior:
+     *  - Owner's own JID: ALWAYS allowed, no exceptions, no notification spam.
+     *  - Anyone else, when notifyOnlyMode is on (default): allowed through,
+     *    but flags `notifyOwner` + `riskReason` so the caller can send the
+     *    owner a disclaimer instead of failing the send.
+     *  - notifyOnlyMode off: falls back to the original hard-block behavior.
+     */
+    _gate(recipient, reason, healthStatus, extra = {}) {
+        const isOwner = this.ownerJid && recipient === this.ownerJid;
+        if (isOwner || this.notifyOnlyMode) {
+            this.stats.messagesAllowed++;
+            if (!isOwner) {
+                this.onOwnerNotify?.({ recipient, reason, health: healthStatus, ...extra });
+            }
+            return {
+                allowed: true,
+                delayMs: 0,
+                health: healthStatus,
+                notifyOwner: !isOwner,
+                riskReason: reason,
+                ...extra,
+            };
+        }
+        this.stats.messagesBlocked++;
+        if (this.logging) {
+            console.log(`[baileys-antiban] BLOCKED — ${reason}`);
+        }
+        return { allowed: false, delayMs: 0, reason, health: healthStatus, ...extra };
+    }
+    /**
      * Check if a message can be sent and get required delay.
      * Call this BEFORE every sendMessage().
      */
@@ -346,16 +400,7 @@ class AntiBan {
         const healthStatus = this.health.getStatus();
         // Health monitor says stop
         if (this.health.isPaused()) {
-            this.stats.messagesBlocked++;
-            if (this.logging) {
-                console.log(`[baileys-antiban] ⛔ BLOCKED — health risk too high (${healthStatus.risk})`);
-            }
-            return {
-                allowed: false,
-                delayMs: 0,
-                reason: `Health risk ${healthStatus.risk}: ${healthStatus.recommendation}`,
-                health: healthStatus,
-            };
+            return this._gate(recipient, `Health risk ${healthStatus.risk}: ${healthStatus.recommendation}`, healthStatus);
         }
         // Recovery orchestrator rate multiplier
         const recoveryStatus = this.banRecovery.getStatus();
@@ -377,45 +422,17 @@ class AntiBan {
         // Timelock guard (allows existing chats, blocks new contacts)
         const timelockDecision = this.timelockGuard.canSend(recipient);
         if (!timelockDecision.allowed) {
-            this.stats.messagesBlocked++;
-            if (this.logging) {
-                console.log(`[baileys-antiban] TIMELOCKED — ${timelockDecision.reason}`);
-            }
-            return {
-                allowed: false,
-                delayMs: 0,
-                reason: timelockDecision.reason,
-                health: healthStatus,
-            };
+            return this._gate(recipient, timelockDecision.reason, healthStatus);
         }
         // Warm-up limit check
         if (!this.warmUp.canSend()) {
-            this.stats.messagesBlocked++;
             const warmUpStatus = this.warmUp.getStatus();
-            if (this.logging) {
-                console.log(`[baileys-antiban] ⏳ BLOCKED — warm-up day ${warmUpStatus.day}/${warmUpStatus.totalDays}, limit reached (${warmUpStatus.todaySent}/${warmUpStatus.todayLimit})`);
-            }
-            return {
-                allowed: false,
-                delayMs: 0,
-                reason: `Warm-up limit: ${warmUpStatus.todaySent}/${warmUpStatus.todayLimit} messages today (day ${warmUpStatus.day})`,
-                health: healthStatus,
-                warmUpDay: warmUpStatus.day,
-            };
+            return this._gate(recipient, `Warm-up limit: ${warmUpStatus.todaySent}/${warmUpStatus.todayLimit} messages today (day ${warmUpStatus.day})`, healthStatus, { warmUpDay: warmUpStatus.day });
         }
         // Contact graph check
         const contactGraphDecision = this.contactGraphWarmer.canMessage(recipient);
         if (!contactGraphDecision.allowed) {
-            this.stats.messagesBlocked++;
-            if (this.logging) {
-                console.log(`[baileys-antiban] 📊 BLOCKED — contact graph: ${contactGraphDecision.reason}`);
-            }
-            return {
-                allowed: false,
-                delayMs: 0,
-                reason: `Contact graph: ${contactGraphDecision.reason}`,
-                health: healthStatus,
-            };
+            return this._gate(recipient, `Contact graph: ${contactGraphDecision.reason}`, healthStatus);
         }
         // Topology throttler check — only applies to DMs to new/unknown contacts
         if (this.topologyThrottlerModule && !this.isGroupJid(recipient)) {
@@ -425,16 +442,7 @@ class AntiBan {
                 // Check if we can send to new contact based on topology limits
                 const topologyDecision = this.topologyThrottlerModule.canSendToNewContact();
                 if (!topologyDecision.allowed) {
-                    this.stats.messagesBlocked++;
-                    if (this.logging) {
-                        console.log(`[baileys-antiban] 🌐 BLOCKED — topology: ${topologyDecision.reason}`);
-                    }
-                    return {
-                        allowed: false,
-                        delayMs: topologyDecision.retryAfterMs || 0,
-                        reason: `Topology: ${topologyDecision.reason}`,
-                        health: healthStatus,
-                    };
+                    return this._gate(recipient, `Topology: ${topologyDecision.reason}`, healthStatus);
                 }
                 // Assess contact risk
                 const riskAssessment = this.topologyThrottlerModule.assessContact(recipient, {
@@ -443,16 +451,7 @@ class AntiBan {
                     knownGroups: [],
                 });
                 if (riskAssessment.recommendation === 'abort') {
-                    this.stats.messagesBlocked++;
-                    if (this.logging) {
-                        console.log(`[baileys-antiban] ⛔ BLOCKED — contact risk ${riskAssessment.risk} (score ${riskAssessment.score}): ${riskAssessment.reasons.join(', ')}`);
-                    }
-                    return {
-                        allowed: false,
-                        delayMs: 0,
-                        reason: `Contact risk too high: ${riskAssessment.reasons.join(', ')}`,
-                        health: healthStatus,
-                    };
+                    return this._gate(recipient, `Contact risk too high: ${riskAssessment.reasons.join(', ')}`, healthStatus);
                 }
                 // If delay recommended, we'll add it to the total delay later
             }
@@ -460,30 +459,12 @@ class AntiBan {
         // Reply ratio check
         const replyRatioDecision = this.replyRatioGuard.beforeSend(recipient);
         if (!replyRatioDecision.allowed) {
-            this.stats.messagesBlocked++;
-            if (this.logging) {
-                console.log(`[baileys-antiban] 💬 BLOCKED — reply ratio: ${replyRatioDecision.reason}`);
-            }
-            return {
-                allowed: false,
-                delayMs: 0,
-                reason: `Reply ratio: ${replyRatioDecision.reason}`,
-                health: healthStatus,
-            };
+            return this._gate(recipient, `Reply ratio: ${replyRatioDecision.reason}`, healthStatus);
         }
         // Reconnect throttle check
         const reconnectThrottleDecision = this.reconnectThrottleModule.beforeSend();
         if (!reconnectThrottleDecision.allowed) {
-            this.stats.messagesBlocked++;
-            if (this.logging) {
-                console.log(`[baileys-antiban] 🔄 BLOCKED — reconnect throttle: ${reconnectThrottleDecision.reason}`);
-            }
-            return {
-                allowed: false,
-                delayMs: reconnectThrottleDecision.retryAfterMs || 0,
-                reason: reconnectThrottleDecision.reason || 'Post-reconnect throttle',
-                health: healthStatus,
-            };
+            return this._gate(recipient, reconnectThrottleDecision.reason || 'Post-reconnect throttle', healthStatus);
         }
         // Cross-instance coordination — check shared IP-level pool
         if (this.instanceCoordinator) {
