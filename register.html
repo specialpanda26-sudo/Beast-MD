@@ -234,6 +234,12 @@
     document.getElementById("method-hint").textContent = method === "email"
       ? "Your 6-digit code will be sent to your email address."
       : "Your 6-digit code will be sent as a WhatsApp message from the bot.";
+    // ✅ FIX: switching delivery method left the previous attempt's error
+    // (e.g. an SMTP failure from Email) showing even after switching to
+    // WhatsApp, making it look like WhatsApp delivery failed too.
+    const msgEl = document.getElementById("register-msg");
+    msgEl.textContent = "";
+    msgEl.className = "msg";
   }
 
   async function doRegister() {

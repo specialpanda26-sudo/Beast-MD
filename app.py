@@ -106,6 +106,17 @@ SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Henry Tech Bot Panel")
+
+# ✅ FIX: Render blocks outbound traffic on raw SMTP ports (25/465/587) —
+# this is why /register's email path always failed with "couldn't reach
+# the email server" no matter what SMTP_HOST/PORT was set. Resend's HTTP
+# API sends the same email over normal HTTPS (443, same as any web
+# request), which Render does allow. Free tier: 100 emails/day, no card
+# required — https://resend.com/signup. Leave RESEND_API_KEY unset and
+# the code below falls back to the old SMTP path (useful only if hosting
+# somewhere that doesn't block SMTP, e.g. Railway/a VPS).
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
 REG_STARTER_CREDITS = int(os.environ.get("REG_STARTER_CREDITS", "80"))  # 80 kesh starter credit on verify
 
 # ── Referral program ─────────────────────────────────────────────────────
@@ -182,14 +193,51 @@ async def send_otp_whatsapp(phone: str, otp: str, name: str) -> dict:
         return {"success": False, "error": "Bot isn't connected to WhatsApp right now. Try again shortly."}
 
 
+async def _send_otp_email_resend(to_email: str, otp: str, name: str) -> dict:
+    """HTTPS-based email send via Resend's API — works on Render since it's
+    just a normal outbound web request, unlike raw SMTP which Render blocks."""
+    subject = "Your Henry Tech Bot Panel verification code"
+    html_body = (
+        f"<p>Hi {html.escape(name or 'there')},</p>"
+        f"<p>Your verification code is: <b style='font-size:20px'>{otp}</b></p>"
+        f"<p>This code expires in 10 minutes. Enter it on the registration page to verify "
+        f"your number and unlock your trust badge + {REG_STARTER_CREDITS} kesh free credit.</p>"
+        f"<p>— Henry Tech Bot Panel</p>"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            resp = await client.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+                json={
+                    "from": f"{SMTP_FROM_NAME} <{RESEND_FROM_EMAIL}>",
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html_body,
+                },
+            )
+        if resp.status_code in (200, 201):
+            return {"success": True}
+        logger.error("Resend OTP email failed: %s %s", resp.status_code, resp.text)
+        return {"success": False, "error": "Couldn't send the email right now. Please try again or use WhatsApp delivery instead."}
+    except Exception as e:
+        logger.error("Resend OTP email send failed: %s", e)
+        return {"success": False, "error": "Couldn't send the email right now. Please try again or use WhatsApp delivery instead."}
+
+
 async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
     """
     Optional fallback — sends the OTP via email instead of WhatsApp. Only
-    used if SMTP_EMAIL/SMTP_PASSWORD are configured; WhatsApp delivery above
-    is the primary path now.
+    used if RESEND_API_KEY or SMTP_EMAIL/SMTP_PASSWORD are configured;
+    WhatsApp delivery above is the primary path now.
     """
+    # ✅ Prefer Resend (HTTPS) — this is the path that actually works on
+    # Render. Only fall through to raw SMTP if Resend isn't configured.
+    if RESEND_API_KEY:
+        return await _send_otp_email_resend(to_email, otp, name)
+
     if not SMTP_EMAIL or not SMTP_PASSWORD:
-        logger.warning("⚠️  SMTP_EMAIL/SMTP_PASSWORD not set — cannot send OTP emails.")
+        logger.warning("⚠️  Neither RESEND_API_KEY nor SMTP_EMAIL/SMTP_PASSWORD are set — cannot send OTP emails.")
         return {"success": False, "error": "OTP email service not configured on server."}
 
     import smtplib
@@ -235,9 +283,10 @@ async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
         return {
             "success": False,
             "error": (
-                "Couldn't reach the email server (host/port unreachable or blocked by your "
-                "hosting provider's firewall). Double-check SMTP_HOST/SMTP_PORT, and note "
-                "some free hosts block outbound port 587."
+                "Couldn't reach the email server. Render blocks outbound SMTP ports "
+                "(25/465/587) entirely, so this will keep failing on Render regardless of "
+                "SMTP_HOST/SMTP_PORT — set RESEND_API_KEY instead (free at resend.com) to "
+                "send email over HTTPS, or use WhatsApp delivery."
             ),
         }
     except Exception as e:

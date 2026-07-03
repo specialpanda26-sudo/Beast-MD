@@ -693,6 +693,33 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
 if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
 
+// ✅ NEW: manual override to clear a stuck ban-recovery pause without needing
+// shell access to the server. Set RESET_ANTIBAN_STATE=true in Render's
+// Environment tab, save (triggers a redeploy), then REMOVE the env var
+// again afterwards — otherwise every future restart wipes it too, which
+// defeats the point of persisting it across restarts in the first place.
+// ⚠️ This does NOT undo whatever WhatsApp did server-side — it only makes
+// the bot stop remembering/respecting its own pause. If WhatsApp is still
+// enforcing the timelock on their end, resuming sends can escalate a
+// temporary restriction into a permanent ban. Use only if you're confident
+// enough time has genuinely passed, or you're accepting that risk.
+if (process.env.RESET_ANTIBAN_STATE === "true") {
+  try {
+    const entries = fs.existsSync(SESSIONS_DIR) ? fs.readdirSync(SESSIONS_DIR) : [];
+    let cleared = 0;
+    for (const sessionId of entries) {
+      const antibanDir = path.join(SESSIONS_DIR, sessionId, "antiban");
+      if (fs.existsSync(antibanDir)) {
+        fs.rmSync(antibanDir, { recursive: true, force: true });
+        cleared++;
+      }
+    }
+    console.log(`⚠️  RESET_ANTIBAN_STATE=true — cleared antiban state for ${cleared} session(s). REMOVE this env var now so it doesn't wipe state on every future restart.`);
+  } catch (e) {
+    console.warn(`⚠️  RESET_ANTIBAN_STATE cleanup failed: ${e.message}`);
+  }
+}
+
 function prompt(question) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
