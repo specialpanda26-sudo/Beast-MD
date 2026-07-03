@@ -318,7 +318,7 @@ function wrapSocket(sock, config, warmUpState, wrapOptions) {
     // under concurrent sends. Without this, all concurrent callers read the same
     // committed state before any afterSend records, bypassing per-minute limits.
     let sendLock = Promise.resolve();
-    const wrappedSendMessage = async (jid, content, options) => {
+    const wrappedSendMessage = async (jid, content, options = {}) => {
         /**
          * LID/PN Canonicalization — Normalize JID to canonical form
          *

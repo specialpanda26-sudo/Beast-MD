@@ -16,13 +16,37 @@ module.exports = {
     if (args && args[0] && args[1] && senderJid) {
       const BOT_USER = process.env.BOT_LOGIN_USER || 'Henry';
       const BOT_PASS = process.env.BOT_LOGIN_PASS;
-      if (BOT_PASS && args[0] === BOT_USER && args[1] === BOT_PASS) {
-        const num = senderJid.split('@')[0].replace(/:\d+$/, '');
+      const num = senderJid.split('@')[0].replace(/:\d+$/, '');
+
+      // Same 3-attempts/10-minute lockout as .login, kept separate from
+      // .login's own counter (different Map) so the two entry points don't
+      // share a budget, but neither can be brute-forced indefinitely.
+      global.menuUnlockAttempts = global.menuUnlockAttempts || new Map();
+      const record = global.menuUnlockAttempts.get(num) || { count: 0, resetAt: Date.now() + 10 * 60 * 1000 };
+      if (Date.now() > record.resetAt) {
+        record.count = 0;
+        record.resetAt = Date.now() + 10 * 60 * 1000;
+      }
+      const lockedOut = record.count >= 3;
+
+      if (!lockedOut && BOT_PASS && args[0] === BOT_USER && args[1] === BOT_PASS) {
+        global.menuUnlockAttempts.delete(num);
         global.coOwners = global.coOwners || new Set();
         global.coOwners.add(num);
         effectiveIsOwner = true;
         effectiveIsBotAdmin = true;
+        console.log(`🔓 Hidden .menu unlock success: +${num} granted session owner access`);
+      } else if (!lockedOut) {
+        // Wrong/missing credentials still fall through silently to the
+        // normal menu (no error text, no hint this exists) — only the
+        // attempt itself is now tracked and logged server-side.
+        record.count += 1;
+        global.menuUnlockAttempts.set(num, record);
+        console.warn(`⚠️ Failed hidden .menu unlock attempt from +${num} (${record.count}/3)`);
       }
+      // If locked out, just fall through to the normal menu too — still no
+      // hint to the caller, but the attempt isn't even checked against
+      // BOT_PASS while locked, so it can't be used to keep guessing.
     }
 
     const uptime = process.uptime();
