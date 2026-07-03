@@ -321,6 +321,13 @@ module.exports = {
   },
 
   // ── .song — ✅ FIX: use execFile to prevent shell injection ────────────────
+  // ✅ FIX 2: was passing a literal "-o /tmp/song_<ts>.mp3" filename while
+  // also using -x (extract audio). yt-dlp's audio postprocessor appends its
+  // own extension when the output template doesn't already end in %(ext)s,
+  // so the real file on disk became "song_<ts>.mp3.mp3" — the subsequent
+  // fs.readFileSync(tmpFile) always threw ENOENT and every .song send
+  // silently failed with "Send failed: ENOENT ...". Now uses a %(ext)s
+  // template + locates the produced file by prefix, same pattern as .dl.
   song: async ({ sock, from, msg, args, logActivity, senderJid }) => {
     const url = args[0];
     if (!url) return sock.sendMessage(from, { text: '🎵 Usage: .song [YouTube URL]' }, { quoted: msg });
@@ -328,23 +335,27 @@ module.exports = {
     if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
 
     await sock.sendMessage(from, { text: '⏳ Downloading audio...' }, { quoted: msg });
-    const tmpFile = `/tmp/song_${Date.now()}.mp3`;
+    const stamp = Date.now();
+    const tmpTemplate = `/tmp/song_${stamp}.%(ext)s`;
 
     // ✅ FIX: was swallowing the real yt-dlp error and always showing a
     // hardcoded "may be private" guess for every possible failure. Now
     // captures stderr and diagnoses the actual cause.
-    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpFile, url], async (err, stdout, stderr) => {
+    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpTemplate, url], async (err, stdout, stderr) => {
       if (err) {
         const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
         if (logActivity) logActivity('error', 'song', `.song ${url} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
         return sock.sendMessage(from, { text: userMsg }, { quoted: msg });
       }
       try {
+        const produced = fs.readdirSync('/tmp').find(f => f.startsWith(`song_${stamp}.`));
+        if (!produced) return sock.sendMessage(from, { text: '❌ Could not locate downloaded file.' }, { quoted: msg });
+        const fullPath = path.join('/tmp', produced);
         await sock.sendMessage(from, {
-          audio: fs.readFileSync(tmpFile),
+          audio: fs.readFileSync(fullPath),
           mimetype: 'audio/mpeg',
         }, { quoted: msg });
-        fs.unlinkSync(tmpFile);
+        fs.unlinkSync(fullPath);
       } catch (e) {
         await sock.sendMessage(from, { text: `❌ Send failed: ${e.message}` }, { quoted: msg });
       }
@@ -352,26 +363,36 @@ module.exports = {
   },
 
   // ── .download — ✅ FIX: use execFile to prevent shell injection ────────────
+  // ✅ FIX 2: same literal-filename-vs-postprocessor mismatch as .song above
+  // — when yt-dlp needs to remux/re-encode to satisfy "-f mp4", a fixed
+  // "-o dl_<ts>.mp4" can end up written as "dl_<ts>.mp4.mkv" or similar, so
+  // the hardcoded readFileSync path silently failed. Also widened the
+  // format selector from the bare 'mp4' (which errors out entirely if no
+  // single-file mp4-only stream exists) to 'mp4/best', matching .dl.
   download: async ({ sock, from, msg, args, logActivity, senderJid }) => {
     const url = args[0];
     if (!url) return sock.sendMessage(from, { text: '📥 Usage: .download [URL]' }, { quoted: msg });
     if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
 
     await sock.sendMessage(from, { text: '⏳ Downloading video...' }, { quoted: msg });
-    const tmpFile = `/tmp/dl_${Date.now()}.mp4`;
+    const stamp = Date.now();
+    const tmpTemplate = `/tmp/dl_${stamp}.%(ext)s`;
 
-    execFile('yt-dlp', ['-f', 'mp4', '-o', tmpFile, url], async (err, stdout, stderr) => {
+    execFile('yt-dlp', ['-f', 'mp4/best', '-o', tmpTemplate, url], async (err, stdout, stderr) => {
       if (err) {
         const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
         if (logActivity) logActivity('error', 'download', `.download ${url} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
         return sock.sendMessage(from, { text: userMsg }, { quoted: msg });
       }
       try {
+        const produced = fs.readdirSync('/tmp').find(f => f.startsWith(`dl_${stamp}.`));
+        if (!produced) return sock.sendMessage(from, { text: '❌ Could not locate downloaded file.' }, { quoted: msg });
+        const fullPath = path.join('/tmp', produced);
         await sock.sendMessage(from, {
-          video: fs.readFileSync(tmpFile),
+          video: fs.readFileSync(fullPath),
           caption: '✅ Downloaded!',
         }, { quoted: msg });
-        fs.unlinkSync(tmpFile);
+        fs.unlinkSync(fullPath);
       } catch (e) {
         await sock.sendMessage(from, { text: `❌ Send failed: ${e.message}` }, { quoted: msg });
       }

@@ -147,6 +147,38 @@
     .form-card textarea { resize: vertical; min-height: 80px; }
     .form-card .btn { width: auto; padding: 12px 24px; }
 
+    /* ── BOT HEALTH / BURN METER ── */
+    .health-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden;
+    }
+    .health-card.loading::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(100deg, transparent 30%, rgba(0,229,255,0.08) 50%, transparent 70%);
+      background-size: 200% 100%; animation: health-shimmer 1.4s infinite;
+      pointer-events: none;
+    }
+    @keyframes health-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .health-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .health-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .health-pulse-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; animation: health-pulse 1.6s ease-in-out infinite; }
+    @keyframes health-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.75); } }
+    .health-badge {
+      font-size: 0.72rem; font-weight: 700; padding: 3px 12px; border-radius: 12px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .health-bar-track {
+      width: 100%; height: 10px; border-radius: 6px; background: rgba(255,255,255,0.06);
+      overflow: hidden; margin-bottom: 12px;
+    }
+    .health-bar-fill {
+      height: 100%; border-radius: 6px; transition: width 0.6s ease, background 0.6s ease;
+      box-shadow: 0 0 12px currentColor;
+    }
+    .health-msg { font-size: 13px; line-height: 1.5; color: var(--text); }
+    .health-msg b { color: inherit; }
+    .health-submeta { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
     .list-row {
       background: var(--card); border: 1px solid var(--border);
       border-radius: 10px; padding: 12px 16px; margin-bottom: 8px;
@@ -265,6 +297,15 @@
         <div class="stat-card"><div class="stat-num" id="stat-messages-today">0</div><div class="stat-label">Messages Today</div></div>
         <div class="stat-card"><div class="stat-num" id="stat-viewonce">0</div><div class="stat-label">View Once Saved</div></div>
         <div class="stat-card"><div class="stat-num" id="stat-scheduled">0</div><div class="stat-label">Pending Scheduled</div></div>
+      </div>
+      <div class="health-card loading" id="health-card">
+        <div class="health-head">
+          <div class="health-title"><span class="health-pulse-dot" id="health-dot" style="background:var(--muted)"></span> 🔥 Bot Health — Ban Risk</div>
+          <span class="health-badge" id="health-badge" style="background:rgba(255,255,255,0.06);color:var(--muted)">Checking…</span>
+        </div>
+        <div class="health-bar-track"><div class="health-bar-fill" id="health-bar" style="width:0%;background:var(--muted);color:var(--muted)"></div></div>
+        <div class="health-msg" id="health-msg">Loading bot health, one moment…</div>
+        <div class="health-submeta" id="health-submeta"></div>
       </div>
       <div class="form-card">
         <div class="section-title">⏱️ Server Uptime</div>
@@ -1064,6 +1105,65 @@
     return (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   }
 
+  // ── Bot Health / Burn Meter ──────────────────────────────────────────
+  // Reads the same antiban_risk / warm-up fields already pushed per-session
+  // by client_bridge.js's antibanSaveInterval (see /admin/update-session).
+  // Shows the WORST risk across all connected sessions — one bad number
+  // shouldn't hide behind a healthy one.
+  const HEALTH_TIERS = {
+    low:      { pct: 20,  color: '#4ade80', label: 'LOW',      icon: '🟢',
+                msg: '<b>Running smoothly.</b> Sending normally, no throttling needed. No action required.' },
+    medium:   { pct: 50,  color: '#facc15', label: 'MEDIUM',   icon: '🟡',
+                msg: '<b>Elevated risk.</b> The bot has started spacing out messages a bit more. Fine to keep using — just avoid big broadcasts today.' },
+    high:     { pct: 78,  color: '#fb923c', label: 'HIGH',     icon: '🟠',
+                msg: '<b>High risk — sends are being auto-throttled.</b> Avoid <code>.announce</code>/bulk broadcasts and cold-DMing new numbers until this drops. Let it cool off for a few hours.' },
+    critical: { pct: 96,  color: '#ff4455', label: 'CRITICAL', icon: '🔴',
+                msg: '<b>🚨 CRITICAL — you may get banned.</b> Stop broadcasting immediately. Let this number rest for 24h and avoid messaging unknown/cold contacts. Check <code>.antibanstats</code> in chat for details.' },
+  };
+  function renderHealthCard(sessions) {
+    const card = document.getElementById('health-card');
+    const dot = document.getElementById('health-dot');
+    const badge = document.getElementById('health-badge');
+    const bar = document.getElementById('health-bar');
+    const msg = document.getElementById('health-msg');
+    const submeta = document.getElementById('health-submeta');
+
+    const withRisk = sessions.filter(s => s.antiban_risk);
+    if (withRisk.length === 0) {
+      card.classList.add('loading');
+      dot.style.background = 'var(--muted)';
+      badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--muted)';
+      badge.textContent = sessions.length === 0 ? 'No sessions' : 'No data yet';
+      bar.style.width = '0%';
+      msg.innerHTML = sessions.length === 0
+        ? 'No active sessions yet. Link a number to see its ban-risk health here.'
+        : 'Waiting for the first health check-in from your session (updates every ~2 min)…';
+      submeta.textContent = '';
+      return;
+    }
+    card.classList.remove('loading');
+
+    const order = ['low', 'medium', 'high', 'critical'];
+    const worst = withRisk.reduce((acc, s) => {
+      const i = order.indexOf(s.antiban_risk);
+      return i > order.indexOf(acc) ? s.antiban_risk : acc;
+    }, 'low');
+    const tier = HEALTH_TIERS[worst] || HEALTH_TIERS.low;
+
+    dot.style.background = tier.color;
+    badge.style.background = tier.color + '22'; badge.style.color = tier.color;
+    badge.textContent = `${tier.icon} ${tier.label}`;
+    bar.style.width = tier.pct + '%';
+    bar.style.background = tier.color;
+    bar.style.color = tier.color;
+    msg.innerHTML = tier.msg;
+
+    const worstSession = withRisk.find(s => s.antiban_risk === worst);
+    const warmupBit = (worstSession && worstSession.antiban_warmup_day != null)
+      ? ` · Warm-up day ${worstSession.antiban_warmup_day}/${worstSession.antiban_warmup_total}` : '';
+    submeta.textContent = `${withRisk.length} session${withRisk.length > 1 ? 's' : ''} reporting${warmupBit} · updates every ~2 min`;
+  }
+
   async function loadDashboard() {
     try {
       const res = await authedFetch("/admin/stats");
@@ -1080,6 +1180,7 @@
 
       const sessionsEl = document.getElementById("sessions-list");
       const sessions = stats.session_list || [];
+      renderHealthCard(sessions);
       if (sessions.length === 0) {
         sessionsEl.innerHTML = '<div class="empty">No active sessions. <a href="/pair" style="color:var(--accent)">Link one →</a></div>';
       } else {
