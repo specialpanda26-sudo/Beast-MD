@@ -101,7 +101,7 @@ module.exports = {
         return sock.sendMessage(from, { text: `❌ ${data.error}` }, { quoted: msg });
       }
       await sock.sendMessage(from, {
-        text: `✅ Request #${data.id} submitted!\n💰 ${amount} kesh · Code: ${code}\n\n${data.message}`
+        text: `✅ Request REF-${String(data.id).padStart(4, '0')} submitted!\n💰 ${amount} kesh · Code: ${code}\n\n${data.message}\n\nKeep this reference number handy if you need to follow up.`
       }, { quoted: msg });
     } catch (e) {
       const apiErr = e.response?.data?.error;
@@ -189,6 +189,38 @@ module.exports = {
       await sock.sendMessage(from, { text: lines.join('\n') }, { quoted: msg });
     } catch (e) {
       await sock.sendMessage(from, { text: `❌ Couldn't load your referrals right now (${e.message}). Try again shortly.` }, { quoted: msg });
+    }
+  },
+
+  // ── .pricing — show current config prices (anyone can check) ────────────
+  pricing: async ({ sock, from, msg }) => {
+    try {
+      const { data } = await api.get('/api/pricing');
+      await sock.sendMessage(from, { text: `💵 *Pricing*\n\n${data.pricing}` }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Couldn't load pricing right now (${e.message}). Try again shortly.` }, { quoted: msg });
+    }
+  },
+
+  // ── .setprice <text> — owner-only, updates what .pricing shows ──────────
+  // Plain text, not structured — you're quoting prices manually anyway,
+  // this just saves you from retyping them in every chat.
+  setprice: async ({ sock, from, msg, isOwner, args }) => {
+    if (!isOwner) return sock.sendMessage(from, { text: '❌ Only the main owner can update pricing.' }, { quoted: msg });
+    const text = args.join(' ').trim();
+    if (!text) {
+      return sock.sendMessage(from, {
+        text: '📋 Usage: .setprice <text>\ne.g. *.setprice Airtel Premium - 50 kesh/30 days\\nAirtel 24H - 15 kesh/24h*\n\n(Use \\n for line breaks)'
+      }, { quoted: msg });
+    }
+    try {
+      await api.post('/admin/pricing', { pricing: text.replace(/\\n/g, '\n') }, {
+        headers: { Authorization: `Bearer ${process.env.ADMIN_PASSWORD || ''}` }
+      });
+      await sock.sendMessage(from, { text: '✅ Pricing updated. Customers will see this via *.pricing*.' }, { quoted: msg });
+    } catch (e) {
+      const apiErr = e.response?.data?.error;
+      await sock.sendMessage(from, { text: `❌ ${apiErr || 'Could not update pricing right now.'}` }, { quoted: msg });
     }
   },
 

@@ -1873,6 +1873,20 @@ async function startSession(sessionId, opts = {}) {
       const res = await apiClient.post("/admin/check-terminate", { name: sessionId });
       global.subscriptionExpired = Boolean(res.data?.expired);
       global.expiryMessage = res.data?.expiry_message || global.expiryMessage;
+      // ✅ NEW: 3-days-before-expiry reminder, sent once (server tracks
+      // reminder_sent so this doesn't nag on every 30s poll). Only fires
+      // for sessions that actually have an expiry set — most bot users
+      // (owner, sub-admins) never do, so this stays silent for them.
+      if (res.data?.remind_expiry) {
+        try {
+          const selfJid = socket.user?.id;
+          if (selfJid) {
+            await socket.sendMessage(selfJid, {
+              text: res.data.remind_message || `⏳ Heads up — your subscription expires soon. Renew to avoid interruption.`
+            });
+          }
+        } catch (_) {}
+      }
       if (res.data?.terminate) {
         console.log(`🛑 [${sessionId}] Terminated by admin panel`);
         clearInterval(terminateCheck);

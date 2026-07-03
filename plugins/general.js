@@ -72,6 +72,7 @@ ${p}addcoowner [num]  - Add a co-owner (full access)
 ${p}removecoowner [n] - Remove co-owner
 ${p}listcoowners      - List co-owners
 ${p}settier [num] [subadmin|coowner] - Assign any number to any tier (auto-notifies them)
+${p}setprice <text> - Update what .pricing shows customers
 ${p}announce [message] - Broadcast a message to every bot contact
 ${p}checkblocked [num] - Heuristic check if a number has blocked the bot
 ${p}welcome [num]     - Send welcome card
@@ -142,6 +143,7 @@ ${p}register       - Get web panel link (free credits + trust badge)
 ${p}profile        - View your wallet balance & badge
 ${p}addfunds [amt] [code] - Top up wallet via M-Pesa (admin reviews it)
 ${p}referral       - Get your referral link & track earnings
+${p}pricing        - See current config prices
 ${p}imagine [desc] - 🎨 AI image generation (free, no API key)
 ${p}tts [text]     - 🔊 Text-to-speech voice note
 ${p}model [name]   - 🤖 Switch AI model (llama/llama8/mixtral/gemma)

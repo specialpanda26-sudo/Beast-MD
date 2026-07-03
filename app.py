@@ -1,4 +1,6 @@
 import os
+import io
+import csv
 import time
 import asyncio
 import logging
@@ -1051,6 +1053,40 @@ async def api_payment_info():
     })
 
 
+@app.route("/api/pricing", methods=["GET"])
+async def api_pricing_get():
+    """✅ NEW: public read of whatever pricing text the admin has set via
+    .setprice or the panel. No auth needed — this is meant to be shown to
+    prospective customers. Returns a friendly default if never set, so a
+    fresh deploy doesn't show a blank/broken response."""
+    text = await _get_admin_setting("pricing_text")
+    return jsonify({
+        "success": True,
+        "pricing": text or (
+            "Airtel/Telkom Premium — 50 kesh / 30 days\n"
+            "Airtel/Telkom 24H — 15 kesh / 24 hours\n\n"
+            "(Admin hasn't customized this yet — send *.setprice* to update it.)"
+        ),
+    })
+
+
+@app.route("/admin/pricing", methods=["POST"])
+async def api_pricing_set():
+    """Owner-only: update the pricing text shown by .pricing / the public
+    site. Stored as plain text, not structured — deliberately simple since
+    prices here are quoted manually, not enforced programmatically."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    text = (data.get("pricing") or "").strip()
+    if not text:
+        return jsonify({"success": False, "error": "Pricing text can't be empty."}), 400
+    if len(text) > 2000:
+        return jsonify({"success": False, "error": "Keep it under 2000 characters."}), 400
+    await _set_admin_setting("pricing_text", text)
+    return jsonify({"success": True})
+
+
 @app.route("/api/payment/submit", methods=["POST"])
 async def api_payment_submit():
     """User claims they sent kesh to the admin's M-Pesa number and submits
@@ -1118,7 +1154,7 @@ async def api_payment_submit():
         async with httpx.AsyncClient(timeout=4) as client:
             await client.post(f"{NODE_PAIR_URL}/notify-owner", json={
                 "text": (
-                    f"💰 *New top-up request* #{new_id}\n"
+                    f"💰 *New top-up request* REF-{str(new_id).zfill(4)}\n"
                     f"From: {phone}\nAmount: {amount} kesh\nCode: {mpesa_code}\n"
                     f"{'📸 Screenshot attached' if screenshot_path else '⚠️ No screenshot'}\n\n"
                     f"Review in /admin → Payments tab."
@@ -1547,11 +1583,32 @@ async def check_terminate():
     info = SESSION_REGISTRY.get(name, {})
     should_terminate = info.get("terminate", False)
     expiry_ts = info.get("expiry_ts")
-    expired = bool(expiry_ts and time.time() >= expiry_ts)
+    now = time.time()
+    expired = bool(expiry_ts and now >= expiry_ts)
+
+    # ✅ NEW: fire a one-time reminder when expiry is within 3 days, so
+    # customers get a heads-up before they're cut off instead of finding
+    # out only once already-expired. reminder_sent guards against re-firing
+    # on every 30s poll; reset automatically whenever expiry_ts changes
+    # (i.e. a fresh .setexpiry/renewal), via the "for this expiry_ts" check.
+    remind_expiry = False
+    remind_message = None
+    if expiry_ts and not expired:
+        days_left = (expiry_ts - now) / 86400
+        already_sent_for = info.get("reminder_sent_for_expiry")
+        if days_left <= 3 and already_sent_for != expiry_ts:
+            remind_expiry = True
+            days_display = max(0, round(days_left, 1))
+            remind_message = f"⏳ Your subscription expires in ~{days_display} day(s). Renew soon to avoid interruption."
+            info["reminder_sent_for_expiry"] = expiry_ts
+            SESSION_REGISTRY[name] = info
+
     return jsonify({
         "terminate": should_terminate,
         "expired": expired,
         "expiry_message": info.get("expiry_message", DEFAULT_EXPIRY_MESSAGE),
+        "remind_expiry": remind_expiry,
+        "remind_message": remind_message,
     })
 
 
@@ -2548,6 +2605,51 @@ async def admin_activity_log():
             for r in rows
         ]
     })
+
+
+@app.route("/admin/activity-log/export", methods=["GET"])
+async def admin_activity_log_export():
+    """✅ NEW: download the activity log as CSV — same filters as the JSON
+    route (?category=command|error|sensitive, optional ?limit=), but ALL
+    THREE categories combined by default if no category is given, since
+    an export is usually meant as a full record, not a single tab's view."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    category = (request.args.get("category") or "").strip().lower()
+    try:
+        limit = min(max(int(request.args.get("limit", 1000)), 1), 5000)
+    except ValueError:
+        limit = 1000
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        if category in ("command", "error", "sensitive"):
+            async with db.execute(
+                "SELECT category, type, actor, detail, timestamp FROM activity_log "
+                "WHERE category = ? ORDER BY timestamp DESC LIMIT ?",
+                (category, limit),
+            ) as c:
+                rows = await c.fetchall()
+        else:
+            async with db.execute(
+                "SELECT category, type, actor, detail, timestamp FROM activity_log "
+                "ORDER BY timestamp DESC LIMIT ?",
+                (limit,),
+            ) as c:
+                rows = await c.fetchall()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Category", "Type", "Actor", "Detail", "Timestamp"])
+    for r in rows:
+        ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(r[4])) if r[4] else ""
+        writer.writerow([r[0], r[1], r[2], r[3], ts])
+
+    filename = f"activity_log_{time.strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.route("/admin/activity-log", methods=["DELETE"])
