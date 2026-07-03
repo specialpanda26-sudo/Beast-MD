@@ -725,7 +725,8 @@ module.exports.antibanstats = async ({ sock, from, msg, isOwner }) => {
       `Warm-up day: ${w.currentDay ?? '?'} / ${w.totalDays ?? '?'}\n` +
       `Sent (last minute / hour / day): ${r.sentLastMinute ?? '-'} / ${r.sentLastHour ?? '-'} / ${r.sentLastDay ?? '-'}\n` +
       `Daily limit: ${r.dailyLimit ?? '-'}\n` +
-      `Paused: ${stats.paused ? 'yes ⏸️' : 'no ✅'}`;
+      `Paused: ${stats.paused ? 'yes ⏸️' : 'no ✅'}\n` +
+      `Notify-only mode: ${sock.antiban.notifyOnlyMode ? 'ON — risky sends go through + DM you ⚠️' : 'OFF — risky sends hard-block ⛔'} (owner number is always exempt)`;
 
     // Newer modules (jidCanonicalizer, sessionStability, topologyThrottler) —
     // only present once enabled, shown as extra lines when available.

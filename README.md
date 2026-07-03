@@ -139,6 +139,16 @@ A few extras need real external resources, so they stay **off until you set an e
 
 Set the overall aggressiveness with `ANTIBAN_PRESET` — `conservative` / `moderate` (default) / `aggressive` / `high-volume`.
 
+### Owner exemption + notify-only mode
+
+Every per-contact risk check above (health-pause, timelock, warm-up, contact-graph, topology, reply-ratio, reconnect-throttle) used to **hard-block** the send outright — including the owner's own commands. On a brand-new session with zero conversation history, that meant `.menu` could fail against the owner's own number (0% reply ratio on self-chat, nothing to divide yet).
+
+Fixed:
+- **The owner's own number is now always exempt** from every one of these checks, no config needed.
+- **Everyone else defaults to notify-only** (`ANTIBAN_NOTIFY_ONLY=true`, the default): the send still goes through, but the owner gets a WhatsApp disclaimer (`⚠️ Sent despite risk flag ...`) instead of the command just failing. Set `ANTIBAN_NOTIFY_ONLY=false` to restore the old hard-block behavior.
+
+This trades some real ban protection for the bot never appearing "dead" — a deliberate choice made at the owner's request. Genuine spam-loop guards (identical-message detection, group rate limits, cross-instance pool limits) are unaffected and still hard-block.
+
 The admin panel's Sessions list shows a live risk badge (🛡️ LOW/MEDIUM/HIGH/CRITICAL) and warm-up day per session.
 
 ## 📋 Commands
