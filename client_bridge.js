@@ -1430,8 +1430,11 @@ async function startSession(sessionId, opts = {}) {
 
               if (result.type === "code") {
                 await socket.sendMessage(sender, {
-                  text: `🔑 *Your Pairing Code:* ${result.value}\n\n📱 *Steps:*\n1. Open WhatsApp\n2. Go to Linked Devices\n3. Tap *Link a Device*\n4. Tap *Link with phone number instead*\n5. Enter the code above\n\n⏱️ This code expires quickly — enter it right away.`
+                  text: result.value
                 }, { quoted: msg });
+                await socket.sendMessage(sender, {
+                  text: `🔑 That's your pairing code — copy it now.\n\n📱 *Steps:*\n1. Open WhatsApp\n2. Go to Linked Devices\n3. Tap *Link a Device*\n4. Tap *Link with phone number instead*\n5. Paste/enter the code from the message above\n\n⏱️ This code expires quickly — enter it right away.`
+                });
               } else {
                 const base64Data = result.value.split(",")[1];
                 await socket.sendMessage(sender, {
