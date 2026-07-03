@@ -360,10 +360,16 @@ class AntiBan {
         // Recovery orchestrator rate multiplier
         const recoveryStatus = this.banRecovery.getStatus();
         if (recoveryStatus.phase === 'paused') {
-            this.stats.messagesBlocked++;
+            // Was: allowed:false, which hard-blocked every send for the full
+            // pause window (up to 24h) whenever WA signaled a reachout
+            // timelock. Owner requested notify-only instead: sends still go
+            // through, but we flag it so wrapper.js can ping/log the risk.
+            // This intentionally trades away real ban protection — WA's
+            // timelock signal is genuine, not a false positive.
             return {
-                allowed: false,
-                delayMs: recoveryStatus.pauseRemainingMs || 0,
+                allowed: true,
+                delayMs: 0,
+                recoveryWarning: true,
                 reason: `Ban recovery: ${recoveryStatus.recommendation}`,
                 health: healthStatus,
             };

@@ -350,6 +350,12 @@ function wrapSocket(sock, config, warmUpState, wrapOptions) {
             if (!decision.allowed) {
                 throw new Error(`[baileys-antiban] Message blocked: ${decision.reason}`);
             }
+            if (decision.recoveryWarning) {
+                console.warn(`[baileys-antiban] ⚠️ Sending despite ban-recovery pause (owner override): ${decision.reason}`);
+                if (typeof global.logActivity === 'function') {
+                    global.logActivity('error', 'antiban-recovery', `Sent despite ban recovery pause: ${decision.reason}`, canonicalJid).catch(() => {});
+                }
+            }
             // Apply delay from rate limiter
             if (decision.delayMs > 0) {
                 await new Promise(resolve => setTimeout(resolve, decision.delayMs));
