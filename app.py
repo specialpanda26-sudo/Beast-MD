@@ -959,10 +959,99 @@ async def panel_page():
     return jsonify({"status": "ok"})
 
 
+async def _verify_panel_login(phone: str, name: str, password: str):
+    """Shared auth for anything gated behind 'name + phone + panel password'
+    (currently /api/profile and /api/subscription/buy). Returns
+    (True, user_row_dict) on success, or (False, (json_body, status_code))
+    on failure — caller just does `return err` on failure.
+
+    ✅ Factored out of api_profile so the brute-force lockout, password
+    check, and name-match logic live in exactly one place instead of being
+    copy-pasted (and possibly drifting) across every endpoint that needs
+    the same login.
+    """
+    if not phone or not phone.isdigit():
+        return False, (jsonify({"success": False, "error": "Valid phone number required."}), 400)
+    if not name or not password:
+        return False, (jsonify({"success": False, "error": "Enter your name, WhatsApp number, and password."}), 400)
+
+    now = time.time()
+    lock_entry = _panel_login_failures.get(phone)
+    if lock_entry and lock_entry.get("locked_until", 0) > now:
+        return False, (jsonify({"success": False, "error": "Too many failed attempts. Try again in a few minutes."}), 429)
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT name, email, verified, credits, badge, verified_at, created_at, password_hash FROM registrations WHERE phone = ?",
+            (phone,)
+        ) as c:
+            row = await c.fetchone()
+        if not row:
+            return False, (jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404)
+
+        stored_name, email, verified, credits, badge, verified_at, created_at, password_hash = row
+
+        if not verified:
+            return False, (jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403)
+        if not password_hash or not _verify_password(password, password_hash):
+            if not lock_entry or now - lock_entry.get("window_start", now) > ADMIN_LOCKOUT_WINDOW_SECONDS:
+                lock_entry = {"fails": 0, "window_start": now}
+            lock_entry["fails"] = lock_entry.get("fails", 0) + 1
+            if lock_entry["fails"] >= ADMIN_LOCKOUT_THRESHOLD:
+                lock_entry["locked_until"] = now + ADMIN_LOCKOUT_DURATION_SECONDS
+            _panel_login_failures[phone] = lock_entry
+            return False, (jsonify({"success": False, "error": "Incorrect password."}), 401)
+        if stored_name.strip().lower() != name.strip().lower():
+            return False, (jsonify({"success": False, "error": "Name doesn't match our records for this number."}), 403)
+
+        _panel_login_failures.pop(phone, None)
+
+    return True, {
+        "phone": phone, "name": stored_name, "email": email, "verified": bool(verified),
+        "credits": credits, "badge": badge, "verified_at": verified_at, "created_at": created_at,
+    }
+
+
+async def _find_bot_session_for_phone(phone: str):
+    """Look up the WhatsApp bot session linked to this customer's own
+    number (the number they paired their bot with — same number they log
+    into the panel with). Session identity/expiry is persisted in
+    session_subscriptions (survives restarts); live antiban/online data
+    only exists in the in-memory SESSION_REGISTRY while that session is
+    actually connected. Returns None if this phone has no linked session
+    yet (e.g. hasn't paired a bot)."""
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT session, activated, expiry_ts, subscription_days FROM session_subscriptions "
+            "WHERE phone = ? ORDER BY updated_at DESC LIMIT 1",
+            (phone,)
+        ) as c:
+            row = await c.fetchone()
+    if not row:
+        return None
+    session, activated, expiry_ts, subscription_days = row
+    live = SESSION_REGISTRY.get(session, {})
+    return {
+        "session": session,
+        "activated": bool(activated),
+        "expiry_ts": expiry_ts,
+        "expiry_display": time.strftime("%d %b %Y, %H:%M", time.localtime(expiry_ts)) if expiry_ts else None,
+        "expired": bool(expiry_ts and time.time() >= expiry_ts),
+        "subscription_days": subscription_days,
+        "online": live.get("online", False),
+        "antiban_risk": live.get("antiban_risk"),
+        "antiban_warmup_day": live.get("antiban_warmup_day"),
+        "antiban_warmup_total": live.get("antiban_warmup_total"),
+    }
+
+
 @app.route("/api/profile", methods=["POST"])
 async def api_profile():
-    """Profile panel data for a verified user — wallet balance, badge, and
-    recent top-up requests with their review status.
+    """Profile panel data for a verified user — wallet balance, badge,
+    recent top-up requests with their review status, and (✅ NEW) their own
+    linked bot session's antiban health + subscription status. Each user
+    only ever sees their own session's numbers here — this is deliberately
+    NOT the aggregated "worst session" view /admin shows.
 
     ✅ FIX: this function existed in the codebase with no @app.route above
     it, so it was dead code — nothing could ever call it, and the profile
@@ -979,66 +1068,41 @@ async def api_profile():
     name = (data.get("name") or "").strip()
     password = data.get("password") or ""
 
-    if not phone or not phone.isdigit():
-        return jsonify({"success": False, "error": "Valid phone number required."}), 400
-    if not name or not password:
-        return jsonify({"success": False, "error": "Enter your name, WhatsApp number, and password."}), 400
-
-    # ✅ SECURITY: brute-force lockout, tracked per phone number (the account
-    # being targeted) rather than per IP — this stops someone brute-forcing
-    # one specific victim's password even if they rotate IPs, which is the
-    # more realistic threat here than someone trying many accounts from one IP.
-    now = time.time()
-    lock_entry = _panel_login_failures.get(phone)
-    if lock_entry and lock_entry.get("locked_until", 0) > now:
-        return jsonify({"success": False, "error": "Too many failed attempts. Try again in a few minutes."}), 429
+    ok, result = await _verify_panel_login(phone, name, password)
+    if not ok:
+        body, status = result
+        return body, status
+    user = result
 
     async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute(
-            "SELECT name, email, verified, credits, badge, verified_at, created_at, password_hash FROM registrations WHERE phone = ?",
-            (phone,)
-        ) as c:
-            row = await c.fetchone()
-        if not row:
-            return jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404
-
-        stored_name, email, verified, credits, badge, verified_at, created_at, password_hash = row
-
-        if not verified:
-            return jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403
-        if not password_hash or not _verify_password(password, password_hash):
-            if not lock_entry or now - lock_entry.get("window_start", now) > ADMIN_LOCKOUT_WINDOW_SECONDS:
-                lock_entry = {"fails": 0, "window_start": now}
-            lock_entry["fails"] = lock_entry.get("fails", 0) + 1
-            if lock_entry["fails"] >= ADMIN_LOCKOUT_THRESHOLD:
-                lock_entry["locked_until"] = now + ADMIN_LOCKOUT_DURATION_SECONDS
-            _panel_login_failures[phone] = lock_entry
-            return jsonify({"success": False, "error": "Incorrect password."}), 401
-        if stored_name.strip().lower() != name.strip().lower():
-            return jsonify({"success": False, "error": "Name doesn't match our records for this number."}), 403
-
-        _panel_login_failures.pop(phone, None)
-
         async with db.execute(
             "SELECT id, amount, mpesa_code, status, created_at FROM payments WHERE phone = ? ORDER BY created_at DESC LIMIT 10",
             (phone,)
         ) as c:
             prows = await c.fetchall()
 
+    bot_session = await _find_bot_session_for_phone(phone)
+
     return jsonify({
         "success": True,
         "phone": phone,
-        "name": stored_name,
-        "email": email,
-        "verified": bool(verified),
-        "credits": credits,
-        "badge": badge if verified else "none",
-        "verified_at": verified_at,
-        "member_since": created_at,
+        "name": user["name"],
+        "email": user["email"],
+        "verified": user["verified"],
+        "credits": user["credits"],
+        "badge": user["badge"] if user["verified"] else "none",
+        "verified_at": user["verified_at"],
+        "member_since": user["created_at"],
         "recent_payments": [
             {"id": p[0], "amount": p[1], "mpesa_code": p[2], "status": p[3], "created_at": p[4]}
             for p in prows
         ],
+        # ✅ NEW: this customer's own bot session — antiban health and
+        # subscription/expiry status. None if they haven't paired a bot yet
+        # (registering a wallet account and pairing a bot are separate
+        # steps). Deliberately just THIS session, not every session like
+        # /admin/stats shows — each customer's numbers are their own.
+        "bot_session": bot_session,
     })
 
 
@@ -1050,6 +1114,99 @@ async def api_payment_info():
         "success": True,
         "payto_number": ADMIN_PAYTO_NUMBER,
         "configured": bool(ADMIN_PAYTO_NUMBER)
+    })
+
+
+@app.route("/api/subscription-pricing", methods=["GET"])
+async def api_subscription_pricing_get():
+    """✅ NEW: public read of the kesh-per-day price for buying extra bot
+    subscription time from the wallet. Separate from /api/pricing (which is
+    the config-reselling text) — this is a numeric price used to compute
+    the cost of a specific number of days in the panel's Buy Subscription
+    Time section."""
+    settings = await _get_activation_settings()
+    return jsonify({
+        "success": True,
+        "kesh_per_day": int(settings.get("subscription_kesh_per_day", 10)),
+    })
+
+
+@app.route("/api/subscription/buy", methods=["POST"])
+async def api_subscription_buy():
+    """✅ NEW: let a logged-in customer extend their OWN bot's subscription
+    using their wallet (kesh) balance — no admin approval needed, unlike
+    .addfunds top-ups. This is deliberately separate from the .pricing /
+    .setprice config-reselling flow: that sells access to internet-bundle
+    configs, this sells extra days of the customer's own bot staying
+    activated. Requires the same name+phone+password login as /api/profile.
+    """
+    data = await request.get_json(silent=True) or {}
+    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
+    name = (data.get("name") or "").strip()
+    password = data.get("password") or ""
+
+    ok, result = await _verify_panel_login(phone, name, password)
+    if not ok:
+        body, status = result
+        return body, status
+    user = result
+
+    try:
+        days = int(data.get("days"))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Enter a whole number of days."}), 400
+    if days < 1 or days > 365:
+        return jsonify({"success": False, "error": "Choose between 1 and 365 days."}), 400
+
+    bot_session = await _find_bot_session_for_phone(phone)
+    if not bot_session:
+        return jsonify({
+            "success": False,
+            "error": "No bot session is linked to this number yet. Pair your bot first at /pair, then come back to buy subscription time."
+        }), 404
+
+    settings = await _get_activation_settings()
+    kesh_per_day = int(settings.get("subscription_kesh_per_day", 10))
+    cost = days * kesh_per_day
+
+    if user["credits"] < cost:
+        return jsonify({
+            "success": False,
+            "error": f"Not enough kesh. This costs {cost} kesh ({kesh_per_day}/day × {days} days) but your balance is {user['credits']} kesh. Top up with *.addfunds* first."
+        }), 402
+
+    now = time.time()
+    base = bot_session["expiry_ts"] if (bot_session["expiry_ts"] and bot_session["expiry_ts"] > now) else now
+    new_expiry = base + (days * 86400)
+    session = bot_session["session"]
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE registrations SET credits = credits - ? WHERE phone = ?", (cost, phone))
+        await db.execute(
+            "UPDATE session_subscriptions SET activated = 1, activated_at = COALESCE(activated_at, ?), "
+            "expiry_ts = ?, subscription_days = COALESCE(subscription_days, 0) + ?, updated_at = ? WHERE session = ?",
+            (now, new_expiry, days, now, session)
+        )
+        await db.execute(
+            "INSERT INTO activity_log (category, type, actor, detail, timestamp) VALUES (?, ?, ?, ?, ?)",
+            ("sensitive", "subscription_purchase", phone,
+             f"Bought {days} day(s) for session '{session}' — {cost} kesh spent, new expiry {time.strftime('%d %b %Y, %H:%M', time.localtime(new_expiry))}",
+             now)
+        )
+        await db.commit()
+
+    # Reflect immediately in the live admin view too, not just after the
+    # next ~2min /admin/update-session ping from the Node bridge.
+    if session in SESSION_REGISTRY:
+        SESSION_REGISTRY[session]["expiry_ts"] = new_expiry
+
+    return jsonify({
+        "success": True,
+        "days_added": days,
+        "cost": cost,
+        "remaining_credits": user["credits"] - cost,
+        "expiry_ts": new_expiry,
+        "expiry_display": time.strftime("%d %b %Y, %H:%M", time.localtime(new_expiry)),
     })
 
 
@@ -1631,6 +1788,11 @@ ACTIVATION_KEY_TTL_SECONDS = 600  # 10 minutes to redeem an issued key
 DEFAULT_ACTIVATION_SETTINGS = {
     "activation_default_days": "30",
     "activation_bypass_key": "",  # empty until admin sets one (or auto-generated below)
+    # ✅ NEW: kesh price per extra day of bot-subscription time, purchasable
+    # straight from the customer's own wallet balance via the panel — NOT
+    # related to the .pricing / .setprice config-reselling text above, this
+    # is specifically "buy more days of my own bot staying activated".
+    "subscription_kesh_per_day": "10",
 }
 
 
@@ -1644,7 +1806,8 @@ async def _get_activation_settings() -> dict:
     out = dict(DEFAULT_ACTIVATION_SETTINGS)
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
-            "SELECT key, value FROM admin_settings WHERE key IN ('activation_default_days','activation_bypass_key')"
+            "SELECT key, value FROM admin_settings WHERE key IN "
+            "('activation_default_days','activation_bypass_key','subscription_kesh_per_day')"
         ) as c:
             rows = await c.fetchall()
         got = {k: v for k, v in rows}
@@ -1982,6 +2145,13 @@ async def activation_settings():
         new_key = (data["activation_bypass_key"] or "").strip().upper()
         if new_key:
             updates["activation_bypass_key"] = new_key
+    if "subscription_kesh_per_day" in data:
+        raw = data["subscription_kesh_per_day"]
+        if raw not in (None, ""):
+            try:
+                updates["subscription_kesh_per_day"] = str(max(0, int(raw)))
+            except (TypeError, ValueError):
+                return jsonify({"error": "subscription_kesh_per_day must be a number"}), 400
     if not updates:
         return jsonify({"error": "nothing to update"}), 400
     async with aiosqlite.connect(DB_FILE) as db:

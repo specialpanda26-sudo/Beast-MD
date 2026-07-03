@@ -452,6 +452,8 @@
         <div class="hint">Every newly-paired customer session starts locked. They send *.pair key* in chat, you get pinged on WhatsApp (or approve here), and they redeem the key with *.key XXXXXX* within 10 minutes. You can also extend/renew a session's days directly below without going through that flow.</div>
         <label>Default subscription length (days)</label>
         <input type="number" id="activation-default-days" min="1" placeholder="30" />
+        <label style="margin-top:10px">Subscription price <span style="color:var(--muted);font-weight:400">(kesh/day — what customers pay from their own wallet in the panel's Buy Subscription Time section)</span></label>
+        <input type="number" id="subscription-kesh-per-day" min="0" placeholder="10" />
         <label style="margin-top:10px">Master bypass key <span style="color:var(--muted);font-weight:400">(entering this as a *.key* value activates any session instantly, permanently, no approval needed)</span></label>
         <input type="text" id="activation-bypass-key" placeholder="Loading..." style="text-transform:uppercase" />
         <button class="btn" style="margin-top:10px" onclick="saveActivationSettings()">💾 Save Settings</button>
@@ -768,6 +770,7 @@
       const s = await sres.json();
       document.getElementById('activation-default-days').value = s.activation_default_days || 30;
       document.getElementById('activation-bypass-key').value = s.activation_bypass_key || '';
+      document.getElementById('subscription-kesh-per-day').value = s.subscription_kesh_per_day || 10;
     } catch (e) {}
 
     const list = document.getElementById('activation-list');
@@ -851,11 +854,12 @@
     const status = document.getElementById('activation-settings-status');
     const activation_default_days = document.getElementById('activation-default-days').value.trim();
     const activation_bypass_key = document.getElementById('activation-bypass-key').value.trim();
+    const subscription_kesh_per_day = document.getElementById('subscription-kesh-per-day').value.trim();
     status.textContent = 'Saving...';
     try {
       const res = await authedFetch('/admin/activation-settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activation_default_days, activation_bypass_key })
+        body: JSON.stringify({ activation_default_days, activation_bypass_key, subscription_kesh_per_day })
       });
       const data = await res.json();
       status.textContent = data.success ? '✅ Saved.' : (data.error || 'Failed.');

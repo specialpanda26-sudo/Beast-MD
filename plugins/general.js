@@ -150,6 +150,8 @@ ${p}model [name]   - 🤖 Switch AI model (llama/llama8/mixtral/gemma)
 ${p}checklink [url] - 🔗 Check if a link is safe or suspicious
 ${p}pair           - 🔗 Link your OWN WhatsApp number as a new bot session (get a pairing code, right here in chat)
 
+🛡️ Open the Bot Panel (${p}register for the link) to see your session's live ban-risk health and buy extra subscription days straight from your kesh wallet — no admin approval needed for that part.
+
 🔑 Forgot your panel password? Open the panel and tap "Forgot password?" — a reset code is sent right here on WhatsApp.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

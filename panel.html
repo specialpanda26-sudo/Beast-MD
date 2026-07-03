@@ -187,6 +187,25 @@
   .status-approved { background: rgba(0,255,136,0.12); color: var(--green); }
   .status-rejected { background: rgba(255,59,92,0.12); color: var(--red); }
   .referral-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 8px; }
+  .risk-pill {
+    font-size: 0.68rem; padding: 3px 9px; border-radius: 20px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.03em; display: inline-block;
+  }
+  .health-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 8px; }
+  .health-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .health-row:last-child { margin-bottom: 0; }
+  .buy-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 8px; }
+  .buy-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .buy-row input {
+    flex: 1; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 0.9rem;
+  }
+  .buy-row button {
+    padding: 10px 16px; border: none; border-radius: 8px; background: var(--accent);
+    color: #000; font-weight: 700; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
+  }
+  .buy-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .buy-cost { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
   .referral-link {
     font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; color: var(--accent);
     word-break: break-all; background: var(--bg); padding: 8px 10px;
@@ -329,6 +348,16 @@
         <li><span class="cmd">.checklink [url]</span><span class="desc">Link safety check</span></li>
       </ul>
 
+      <div class="section-title">🛡️ Your Bot Health</div>
+      <div class="health-box" id="health-box">
+        <div style="color:var(--muted);font-size:0.82rem">Loading...</div>
+      </div>
+
+      <div class="section-title">💳 Buy Subscription Time</div>
+      <div class="buy-box" id="buy-box">
+        <div style="color:var(--muted);font-size:0.82rem">Loading...</div>
+      </div>
+
       <div class="section-title">🤝 Your Referral Link</div>
       <div class="referral-box">
         <div style="color:var(--muted);font-size:0.8rem">Share this link to earn kesh for every verified signup:</div>
@@ -465,7 +494,10 @@
     const publicUrl = window.location.origin;
     document.getElementById('profile-name').textContent = data.name || '—';
     document.getElementById('profile-phone').textContent = '+' + (data.phone || '');
-    document.getElementById('profile-balance').textContent = data.balance ?? '—';
+    // ✅ FIX: backend returns "credits", this was reading "balance" (always
+    // undefined) and "payments" (actual key is "recent_payments") — the
+    // wallet balance and top-up list never rendered correctly before.
+    document.getElementById('profile-balance').textContent = data.credits ?? '—';
     document.getElementById('profile-badge-label').textContent = data.badge || '—';
     document.getElementById('profile-badge-icon').textContent = data.badge === 'trusted' ? '🛡️' : data.badge === 'premium' ? '💎' : '👤';
     const refLink = `${publicUrl}/register?ref=${data.phone}`;
@@ -474,14 +506,129 @@
       document.getElementById('referral-stats').textContent = `${data.referral_stats.count || 0} signups · ${data.referral_stats.earned || 0} kesh earned`;
     }
     const topupList = document.getElementById('topup-list');
-    if (data.payments && data.payments.length) {
-      topupList.innerHTML = data.payments.map(p => `
+    if (data.recent_payments && data.recent_payments.length) {
+      topupList.innerHTML = data.recent_payments.map(p => `
         <li>
           <span>KES ${p.amount} · <span style="color:var(--muted);font-size:0.78rem">${p.mpesa_code}</span></span>
           <span class="status-pill status-${p.status}">${p.status}</span>
         </li>`).join('');
     } else {
       topupList.innerHTML = '<li style="color:var(--muted);font-size:0.82rem">No top-up requests yet. Use .addfunds to submit one.</li>';
+    }
+
+    renderHealthBox(data.bot_session);
+    renderBuyBox(data.bot_session);
+  }
+
+  // ── Bot Health (per-session antiban stats — just THIS user's session) ──
+  const RISK_META = {
+    low:      { color: '#4ade80', label: 'LOW',      icon: '🟢' },
+    medium:   { color: '#facc15', label: 'MEDIUM',   icon: '🟡' },
+    high:     { color: '#fb923c', label: 'HIGH',     icon: '🟠' },
+    critical: { color: '#ff4455', label: 'CRITICAL', icon: '🔴' },
+  };
+
+  function renderHealthBox(botSession) {
+    const box = document.getElementById('health-box');
+    if (!botSession) {
+      box.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">No bot linked to this account yet. <a href="/pair" style="color:var(--accent)">Pair your bot →</a></div>';
+      return;
+    }
+    const rm = RISK_META[botSession.antiban_risk];
+    const riskHtml = rm
+      ? `<span class="risk-pill" style="background:${rm.color}22;color:${rm.color};border:1px solid ${rm.color}55">${rm.icon} ${rm.label}</span>`
+      : `<span class="risk-pill" style="background:rgba(255,255,255,0.06);color:var(--muted)">No data yet</span>`;
+    const warmup = (botSession.antiban_warmup_day != null && botSession.antiban_warmup_total != null)
+      ? `Day ${botSession.antiban_warmup_day}/${botSession.antiban_warmup_total}` : '—';
+    const expiryHtml = botSession.expiry_display
+      ? (botSession.expired
+          ? `<span style="color:var(--red)">⛔ Expired ${botSession.expiry_display}</span>`
+          : `<span style="color:var(--green)">⏳ Until ${botSession.expiry_display}</span>`)
+      : '<span style="color:var(--muted)">♾️ No expiry set</span>';
+
+    box.innerHTML = `
+      <div class="health-row"><span style="color:var(--muted);font-size:0.82rem">Status</span><span style="font-size:0.82rem">${botSession.online ? '🟢 Online' : '⚪ Offline'}</span></div>
+      <div class="health-row"><span style="color:var(--muted);font-size:0.82rem">Ban risk</span>${riskHtml}</div>
+      <div class="health-row"><span style="color:var(--muted);font-size:0.82rem">Warm-up</span><span style="font-size:0.82rem">${warmup}</span></div>
+      <div class="health-row"><span style="color:var(--muted);font-size:0.82rem">Subscription</span><span style="font-size:0.82rem">${expiryHtml}</span></div>
+    `;
+  }
+
+  // ── Buy Subscription Time (not config reselling — this is bot-activation days, paid from wallet kesh) ──
+  let subscriptionPricePerDay = null;
+
+  async function loadSubscriptionPricing() {
+    if (subscriptionPricePerDay !== null) return subscriptionPricePerDay;
+    try {
+      const res = await fetch('/api/subscription-pricing');
+      const data = await res.json();
+      subscriptionPricePerDay = data.success ? data.kesh_per_day : 10;
+    } catch (e) { subscriptionPricePerDay = 10; }
+    return subscriptionPricePerDay;
+  }
+
+  async function renderBuyBox(botSession) {
+    const box = document.getElementById('buy-box');
+    const perDay = await loadSubscriptionPricing();
+    if (!botSession) {
+      box.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">Pair a bot first, then come back here to buy it more subscription time.</div>';
+      return;
+    }
+    box.innerHTML = `
+      <div style="color:var(--muted);font-size:0.8rem">${perDay} kesh per day, paid straight from your wallet balance above.</div>
+      <div class="buy-row">
+        <input type="number" id="buy-days" min="1" max="365" value="7" oninput="updateBuyCost()"/>
+        <button id="btn-buy-sub" onclick="buySubscription()">Buy →</button>
+      </div>
+      <div class="buy-cost" id="buy-cost"></div>
+      <div class="msg" id="buy-msg"></div>
+    `;
+    updateBuyCost();
+  }
+
+  function updateBuyCost() {
+    const daysEl = document.getElementById('buy-days');
+    if (!daysEl) return;
+    const days = parseInt(daysEl.value, 10) || 0;
+    const cost = days * (subscriptionPricePerDay || 0);
+    document.getElementById('buy-cost').textContent = days > 0 ? `= ${cost} kesh` : '';
+  }
+
+  async function buySubscription() {
+    const days = parseInt(document.getElementById('buy-days').value, 10);
+    const btn = document.getElementById('btn-buy-sub');
+    if (!days || days < 1) return showMsg('buy-msg', 'Enter a valid number of days.', 'error');
+    if (!sessionData) return;
+    btn.disabled = true; btn.textContent = 'Processing...';
+    try {
+      const res = await fetch('/api/subscription/buy', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: sessionData.name,
+          phone: sessionData.phone,
+          password: document.getElementById('login-password').value,
+          days
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMsg('buy-msg', `✅ Added ${data.days_added} day(s). New expiry: ${data.expiry_display}`, 'success');
+        document.getElementById('profile-balance').textContent = data.remaining_credits;
+        sessionData.credits = data.remaining_credits;
+        if (sessionData.bot_session) {
+          sessionData.bot_session.expiry_ts = data.expiry_ts;
+          sessionData.bot_session.expiry_display = data.expiry_display;
+          sessionData.bot_session.expired = false;
+          sessionData.bot_session.activated = true;
+        }
+        renderHealthBox(sessionData.bot_session);
+      } else {
+        showMsg('buy-msg', data.error || 'Purchase failed.', 'error');
+      }
+    } catch (e) {
+      showMsg('buy-msg', 'Network error. Try again.', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Buy →';
     }
   }
 
