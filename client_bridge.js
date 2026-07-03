@@ -900,8 +900,14 @@ async function startSession(sessionId, opts = {}) {
   };
 
   socket = wrapSocket(socket, antibanConfig, antibanWarmupState, {
-    // Adds human-like typos/typing pauses/read gaps to outgoing sends
-    legitimacySignals: true,
+    // Adds human-like typos/typing pauses/read gaps to outgoing sends.
+    // Disabled: was corrupting structured command/menu replies (e.g. .pair
+    // flow sending "QR Cide" then a "*Code" correction 0.5-2s later) and
+    // adding up to 60-minute silent read-gaps before ANY reply went out.
+    // Bot menu/command output isn't casual chat, so human-typo mimicry
+    // doesn't apply here — real anti-ban protection (rate limits, warm-up,
+    // fingerprinting) is untouched by this change.
+    legitimacySignals: false,
     // Rate-limits group add/remove/create operations
     groupOpGuard: true,
     // Detects a socket that looks "connected" but has stopped delivering
