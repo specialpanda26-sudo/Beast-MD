@@ -588,12 +588,10 @@ const IS_INTERACTIVE = Boolean(process.stdin.isTTY);
 
 const apiClient = axios.create({
   baseURL: BACKEND_URL,
-  // ✅ FIX: was 45000ms. Any backend call accidentally left on the hot path
-  // (or any future one) could stall a reply for up to 45 seconds. 8s is
-  // generous for a localhost call and fails fast instead.
   timeout: 8000,
   maxContentLength: Infinity,
-  maxBodyLength: Infinity
+  maxBodyLength: Infinity,
+  headers: { Authorization: `Bearer ${process.env.ADMIN_PASSWORD || ''}` }
 });
 
 // ── Feature flag cache ──────────────────────────────────────────────────────
