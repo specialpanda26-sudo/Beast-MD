@@ -127,9 +127,18 @@
     background:rgba(0,229,255,0.08);box-shadow:0 0 12px rgba(0,229,255,0.15);
   }
   .field-hidden{display:none}
+  .brand-bg-image {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url('/assets/menu-bg.jpg');
+    background-size: cover; background-position: top center; background-repeat: no-repeat;
+    opacity: 0.14;
+    mask-image: linear-gradient(180deg, black 0%, black 40%, transparent 90%);
+    -webkit-mask-image: linear-gradient(180deg, black 0%, black 40%, transparent 90%);
+  }
 </style>
 </head>
 <body>
+  <div class="brand-bg-image"></div>
   <nav>
     <a href="/" class="nav-logo">HENRY <span>OCHIBOTS</span> <span class="v">V19™</span></a>
     <div class="nav-links">
