@@ -169,8 +169,11 @@ function wrapSocket(sock, config, warmUpState, wrapOptions) {
                     const jid = msg.key?.remoteJid;
                     if (!jid)
                         continue;
-                    // Register known chat
-                    antiban.timelock.registerKnownChat(jid);
+                    // Register known chat — rateLimiter + timelock + contact
+                    // graph, so a customer's first message never gets caught
+                    // by the new-contact cold-outreach cap (see antiban.js's
+                    // registerInboundContact for the full story).
+                    antiban.registerInboundContact(jid);
                     // Skip self messages
                     const isSelf = msg.key?.fromMe || false;
                     if (isSelf)
@@ -189,7 +192,7 @@ function wrapSocket(sock, config, warmUpState, wrapOptions) {
                         const replyDelay = Math.floor(Math.random() * 12000) + 3000;
                         setTimeout(async () => {
                             try {
-                                await sock.sendMessage(jid, { text: replySuggestion.suggestedText });
+                                await wrappedSendMessage(jid, { text: replySuggestion.suggestedText });
                             }
                             catch (error) {
                                 // Silently fail — auto-reply is best-effort
@@ -282,8 +285,10 @@ function wrapSocket(sock, config, warmUpState, wrapOptions) {
                 const jid = msg.key?.remoteJid;
                 if (!jid)
                     continue;
-                // Register known chat
-                antiban.timelock.registerKnownChat(jid);
+                // Register known chat — rateLimiter + timelock + contact
+                // graph, so a customer's first message never gets caught by
+                // the new-contact cold-outreach cap.
+                antiban.registerInboundContact(jid);
                 // Skip self messages
                 const isSelf = msg.key?.fromMe || false;
                 if (isSelf)
@@ -302,7 +307,7 @@ function wrapSocket(sock, config, warmUpState, wrapOptions) {
                     const replyDelay = Math.floor(Math.random() * 12000) + 3000;
                     setTimeout(async () => {
                         try {
-                            await sock.sendMessage(jid, { text: replySuggestion.suggestedText });
+                            await wrappedSendMessage(jid, { text: replySuggestion.suggestedText });
                         }
                         catch (error) {
                             // Silently fail — auto-reply is best-effort
@@ -439,6 +444,13 @@ function wrapSocket(sock, config, warmUpState, wrapOptions) {
     // Return enhanced socket
     const wrapped = Object.create(sock);
     wrapped.sendMessage = wrappedSendMessage;
+    // Raw, un-intercepted send — for internal system notifications (e.g.
+    // owner alerts from logActivity) that must NEVER re-enter beforeSend().
+    // Routing those through wrappedSendMessage caused a self-feeding loop:
+    // a recovery-pause warning would notify the owner via sendMessage, that
+    // send would itself be flagged as "sent despite pause", which would log
+    // + notify again, forever. See activity_log incident 2026-07-03.
+    wrapped.sendMessageRaw = originalSendMessage;
     wrapped.antiban = antiban;
     // Expose destroy method directly so consumers can call it manually if needed
     wrapped.antiban.destroy = antiban.destroy.bind(antiban);

@@ -535,6 +535,17 @@ async def init_db():
                 "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
                 (default_feature,)
             )
+        # ✅ NEW: owner-controllable switch for ban-recovery behavior (was a
+        # hardcoded env var, ANTIBAN_NOTIFY_ONLY, that silently let sends
+        # through during a WA ban-recovery pause). Defaults OFF — i.e. the
+        # SAFE/STRICT behavior (block sends during recovery) — since the
+        # notify-only override is what led to the 2026-07-03 unlink incident.
+        # Owner can flip it on from the Admin Panel → Features if they'd
+        # rather be pinged than blocked, and back off again any time.
+        await db.execute(
+            "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 0)",
+            ("antiban_notify_only",)
+        )
         # ✅ NEW: paid pairing / activation-key system — every newly paired
         # customer session starts LOCKED (can't run commands) until it's
         # unlocked with a random key issued by the admin after payment.

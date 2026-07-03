@@ -76,13 +76,27 @@ class RateLimiter {
             const delay = oldestInMinute ? (oldestInMinute.timestamp + TIME_CONSTANTS.MS_PER_MINUTE) - now : TIME_CONSTANTS.MS_PER_MINUTE;
             return Math.max(delay, TIME_CONSTANTS.MS_PER_SECOND);
         }
-        // Check identical message limit (within time window)
-        const tracker = this.identicalCount.get(contentHash);
-        if (tracker) {
-            // Check if tracker is still within the time window
-            if (now - tracker.firstSeen < this.config.identicalMessageWindowMs) {
-                if (tracker.count >= this.config.maxIdenticalMessages) {
-                    return -1; // Block identical spam within time window
+        // Check identical message limit (within time window) — this exists
+        // to catch spray-and-pray spam (same text blasted to many strangers
+        // fast), which is what actually gets accounts flagged. It was firing
+        // on completely normal use too: any templated reply (.menu, pricing,
+        // a welcome message) sent to more than maxIdenticalMessages (as low
+        // as 3-5) DIFFERENT customers within an hour got silently dropped —
+        // return -1 with no error surfaced to the caller, so a real customer
+        // just never got a reply. Existing/known contacts (anyone who's
+        // messaged in or been messaged before) are now exempt: replying to
+        // your own customers with the same canned text isn't the spam
+        // pattern this check is for. Still enforced in full for brand-new/
+        // cold recipients, which is where the actual ban risk lives.
+        const isKnownRecipient = this.knownChats.has(recipient);
+        if (!isKnownRecipient) {
+            const tracker = this.identicalCount.get(contentHash);
+            if (tracker) {
+                // Check if tracker is still within the time window
+                if (now - tracker.firstSeen < this.config.identicalMessageWindowMs) {
+                    if (tracker.count >= this.config.maxIdenticalMessages) {
+                        return -1; // Block identical spam within time window
+                    }
                 }
             }
         }

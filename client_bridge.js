@@ -659,12 +659,22 @@ const SENSITIVE_COMMANDS = new Set([
   'reload', 'addfunds',
 ]);
 
+// Types that must never trigger a WhatsApp owner-ping. These fire *from
+// inside* the send pipeline itself (antiban warning about its own send), so
+// alerting on them via a normal sendMessage would recurse: notify → send →
+// beforeSend flags it → notify again → forever. This is what caused the
+// 2026-07-03 incident (1000+ identical pings in ~6s, forced account unlink).
+// Panel logging (apiClient.post above) still happens for these — only the
+// WhatsApp ping is suppressed.
+const NO_PING_TYPES = new Set(['antiban-recovery', 'antiban-risk']);
+
 async function logActivity(category, type, detail, actor) {
   try {
     await apiClient.post('/activity/log', { category, type, detail, actor: actor || '' });
   } catch (e) { /* never let logging break the bot */ }
 
   if (category === 'command') return; // panel-only, no WhatsApp ping
+  if (NO_PING_TYPES.has(type)) return; // panel-only, see comment above
 
   try {
     const socket = activeSockets.values().next().value;
@@ -672,7 +682,12 @@ async function logActivity(category, type, detail, actor) {
     if (!socket || !ownerNum) return;
     const icon = category === 'error' ? '⚠️' : '🛡️';
     const label = category === 'error' ? 'Error' : 'Sensitive action';
-    await socket.sendMessage(`${ownerNum}@s.whatsapp.net`, {
+    // Use the raw (un-wrapped) send here on purpose: this is a system
+    // notification about the bot's own send pipeline, not outbound bot
+    // traffic, so it must not re-enter antiban's beforeSend() — see
+    // sendMessageRaw in wrapper.js for why.
+    const send = socket.sendMessageRaw || socket.sendMessage;
+    await send(`${ownerNum}@s.whatsapp.net`, {
       text: `${icon} *${label}: ${type}*\n\n${detail}${actor ? `\n\n👤 ${actor}` : ''}`,
     });
   } catch (e) { /* never let notification break the bot */ }
@@ -923,7 +938,19 @@ async function startSession(sessionId, opts = {}) {
     // owner — see wrapper.js's notifyOwner handling). Set
     // ANTIBAN_NOTIFY_ONLY=false to restore the old hard-block behavior.
     ownerJid: `${getOwnerNumber()}@s.whatsapp.net`,
-    notifyOnlyMode: (process.env.ANTIBAN_NOTIFY_ONLY || "true") !== "false",
+    // Live switch, re-checked on every send — not frozen at socket-creation
+    // time. Admin Panel → Features → "Send Anyway During Ban-Recovery
+    // Pause" writes to the `antiban_notify_only` feature row; featureCache
+    // refreshes from it every 30s (see refreshFeatures above). If the panel
+    // has never set it, fall back to the ANTIBAN_NOTIFY_ONLY env var,
+    // defaulting to strict/safe (blocks sends during a pause) rather than
+    // silently trading away real ban protection.
+    notifyOnlyMode: () => {
+      if (Object.prototype.hasOwnProperty.call(featureCache, 'antiban_notify_only')) {
+        return featureCache['antiban_notify_only'] === true;
+      }
+      return (process.env.ANTIBAN_NOTIFY_ONLY || "false") === "true";
+    },
     // BUG FIX: the `socket.antiban.on?.("healthChange", ...)` listener further
     // below has never actually fired — AntiBan is a plain class, it doesn't
     // implement `.on()`, so that call was a silent no-op (optional chaining
@@ -935,7 +962,13 @@ async function startSession(sessionId, opts = {}) {
       console.log(`🩺 [${sessionId}] Anti-ban health: ${status.risk?.toUpperCase?.() || status.risk}`);
       if (status.risk === "high" || status.risk === "critical") {
         const ownerJid = `${getOwnerNumber()}@s.whatsapp.net`;
-        socket?.sendMessage(ownerJid, {
+        // Raw send on purpose — this is a system alert about the send
+        // pipeline's own health, not outbound bot traffic. Routing it
+        // through the antiban-wrapped sendMessage risked the same kind of
+        // self-feeding loop fixed in logActivity (an alert that itself
+        // gets flagged, alerting again, forever).
+        const send = socket?.sendMessageRaw || socket?.sendMessage;
+        send?.(ownerJid, {
           text: `⚠️ *Anti-ban warning* [${sessionId}]\nRisk level: *${String(status.risk).toUpperCase()}*\n${status.recommendation || "Check .antibanstats for details."}`
         }).catch(() => {});
       }

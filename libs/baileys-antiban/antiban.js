@@ -162,7 +162,7 @@ class AntiBan {
         // Owner exemption + notify-only mode (see field doc above).
         const ownerRaw = cfg.ownerJid || legacyPassthrough?.ownerJid || null;
         this.ownerJid = ownerRaw ? String(ownerRaw) : null;
-        this.notifyOnlyMode = (cfg.notifyOnlyMode ?? legacyPassthrough?.notifyOnlyMode) !== false;
+        this.notifyOnlyMode = cfg.notifyOnlyMode ?? legacyPassthrough?.notifyOnlyMode ?? true;
         this.onOwnerNotify = cfg.onOwnerNotify || legacyPassthrough?.onOwnerNotify || null;
         // Initialize persistence — load state before constructing modules
         let savedState = null;
@@ -370,9 +370,42 @@ class AntiBan {
      *    owner a disclaimer instead of failing the send.
      *  - notifyOnlyMode off: falls back to the original hard-block behavior.
      */
+    /**
+     * Register a contact as known the MOMENT they message us — before our
+     * first reply goes out. Fixes a real customer-facing bug: the topology
+     * throttler's new-contact cap (maxNewContactsPerHour/Day, meant to stop
+     * the bot cold-messaging strangers) was also catching the bot's very
+     * first REPLY to any inbound customer. That's because rateLimiter's
+     * knownChats set — the thing topology throttler checks to decide
+     * "new contact" — was only ever populated *after* a successful outbound
+     * send (see rateLimiter.record()). So every brand-new customer's first
+     * message counted against the same daily cold-outreach cap as actual
+     * cold outreach, and once that cap was hit (as low as 8/hour, 30/day),
+     * new customers who messaged first simply got no reply at all — not a
+     * warning, just silence. This registers them as known immediately on
+     * the inbound message, so replying to someone who messaged you is never
+     * throttled as if it were cold outreach.
+     */
+    registerInboundContact(jid) {
+        this.rateLimiter.restoreKnownChats([jid]);
+        this.timelock.registerKnownChat(jid);
+        this.contactGraphWarmer.onIncomingMessage(jid);
+    }
+    /**
+     * Resolves notifyOnlyMode at call time. Accepts either a static boolean
+     * (old behavior, frozen for the life of the socket) or a function that's
+     * re-evaluated on every check — used by client_bridge.js to back this
+     * with the Admin Panel's live feature-toggle cache, so the owner can
+     * flip strict/notify-only from the panel without a redeploy or restart.
+     */
+    _isNotifyOnly() {
+        return typeof this.notifyOnlyMode === 'function'
+            ? this.notifyOnlyMode() !== false
+            : this.notifyOnlyMode !== false;
+    }
     _gate(recipient, reason, healthStatus, extra = {}) {
         const isOwner = this.ownerJid && recipient === this.ownerJid;
-        if (isOwner || this.notifyOnlyMode) {
+        if (isOwner || this._isNotifyOnly()) {
             this.stats.messagesAllowed++;
             if (!isOwner) {
                 this.onOwnerNotify?.({ recipient, reason, health: healthStatus, ...extra });
@@ -405,19 +438,31 @@ class AntiBan {
         // Recovery orchestrator rate multiplier
         const recoveryStatus = this.banRecovery.getStatus();
         if (recoveryStatus.phase === 'paused') {
-            // Was: allowed:false, which hard-blocked every send for the full
-            // pause window (up to 24h) whenever WA signaled a reachout
-            // timelock. Owner requested notify-only instead: sends still go
-            // through, but we flag it so wrapper.js can ping/log the risk.
-            // This intentionally trades away real ban protection — WA's
-            // timelock signal is genuine, not a false positive.
-            return {
-                allowed: true,
-                delayMs: 0,
-                recoveryWarning: true,
-                reason: `Ban recovery: ${recoveryStatus.recommendation}`,
-                health: healthStatus,
-            };
+            // Was: allowed:false, hard-blocking every send for the full pause
+            // window (up to 24h) whenever WA signaled a reachout timelock.
+            // Then: allowed:true unconditionally ("notify-only"), which
+            // ignored notifyOnlyMode entirely — the switch existed but this
+            // path never checked it. Now it respects the same live switch as
+            // every other heuristic: OFF (default) = strict, blocks sends
+            // and waits out the pause; ON = notify-only, sends go through
+            // with a warning. Owner's own JID is always exempt either way.
+            const isOwner = this.ownerJid && recipient === this.ownerJid;
+            const reason = `Ban recovery: ${recoveryStatus.recommendation}`;
+            if (isOwner || this._isNotifyOnly()) {
+                this.stats.messagesAllowed++;
+                return {
+                    allowed: true,
+                    delayMs: 0,
+                    recoveryWarning: !isOwner,
+                    reason,
+                    health: healthStatus,
+                };
+            }
+            this.stats.messagesBlocked++;
+            if (this.logging) {
+                console.log(`[baileys-antiban] BLOCKED — ${reason}`);
+            }
+            return { allowed: false, delayMs: 0, reason, health: healthStatus };
         }
         // Timelock guard (allows existing chats, blocks new contacts)
         const timelockDecision = this.timelockGuard.canSend(recipient);
@@ -501,7 +546,23 @@ class AntiBan {
             }
         }
         // Rate limiter delay
+        //
+        // ✅ FIX: this was the actual cause of the "I run a command, it shows
+        // typing, then just... nothing" bug reported by the owner. Every
+        // OTHER heuristic in this file exempts the owner's own JID from
+        // ever being hard-blocked (see _gate()) — but this rate-limiter
+        // check (daily cap + identical-message cap) never checked isOwner
+        // at all, so a busy testing session (lots of repeat `.ping`/`.menu`
+        // in a short window) could silently swallow the owner's own command
+        // replies with no error surfaced anywhere in-chat. Owner now gets a
+        // bounded delay instead of a silent drop, matching every other
+        // check here. Everyone else still gets the real hard block — this
+        // is genuine account-throughput protection, not a false positive.
+        const isOwnerRecipient = this.ownerJid && recipient === this.ownerJid;
         let delay = await this.rateLimiter.getDelay(recipient, content);
+        if (delay === -1 && isOwnerRecipient) {
+            delay = this.resolvedConfig.maxDelayMs || 5000;
+        }
         if (delay === -1) {
             this.stats.messagesBlocked++;
             if (this.logging) {
