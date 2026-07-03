@@ -114,6 +114,13 @@ let lastQRDataUrl = null;  // base64 data URL of the latest QR code for web disp
 // blip) without falling back into the old infinite-retry-forever behavior.
 const fatalRetryCounts = {};
 const MAX_FATAL_RETRIES = 3;
+// ✅ RESTORED FEATURE: chat-based ".pair" self-service linking (was present
+// in an earlier menu version, missing from this codebase). Tracks in-progress
+// "which method? which number?" conversations per sender, and resolver
+// callbacks so a freshly-started session can hand its code/QR back to the
+// chat that requested it instead of only the web /pair UI.
+const chatPairSessions = {};
+const chatPairResolvers = {};
 // Track all active session IDs so /pair-status can report correctly
 const activeSessions = new Set();
 // ✅ NEW: live socket registry, keyed by sessionId — lets HTTP routes (like
@@ -173,6 +180,14 @@ function pruneRecentMsgCache() {
   }
 }
 setInterval(pruneRecentMsgCache, 15 * 60 * 1000);
+// ✅ RESTORED FEATURE: sweep abandoned chat-based .pair conversations (e.g.
+// someone sends ".pair" then never replies) so they don't linger forever.
+setInterval(() => {
+  const cutoff = Date.now() - 5 * 60 * 1000;
+  for (const [sender, convo] of Object.entries(chatPairSessions)) {
+    if (convo.lastActivity < cutoff) delete chatPairSessions[sender];
+  }
+}, 60 * 1000);
 
 const pairServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -739,7 +754,13 @@ async function startSession(sessionId, opts = {}) {
   let phoneNumber = "";
 
   if (!state.creds.registered) {
-    if (forceQR) {
+    if (opts.phoneNumberOverride) {
+      // ✅ RESTORED FEATURE: number supplied directly by the chat-based
+      // .pair flow — skip QR/terminal/web-UI resolution entirely.
+      usePairingCode = true;
+      phoneNumber = opts.phoneNumberOverride;
+      console.log(`📱 [${sessionId}] Using phone number from chat-based .pair request: ${phoneNumber}`);
+    } else if (forceQR) {
       // QR mode — don't request pairing code, let Baileys generate QR naturally
       usePairingCode = false;
       console.log(`📷 [${sessionId}] QR mode — waiting for QR from Baileys...`);
@@ -1000,6 +1021,9 @@ async function startSession(sessionId, opts = {}) {
       console.log(`   🔑 PAIRING CODE: ${code.match(/.{1,4}/g).join("-")}  `);
         lastPairingCode = code.match(/.{1,4}/g).join("-");
       pairingPending = false;  // code is ready
+      // ✅ RESTORED FEATURE: hand the code back to a chat-based .pair
+      // request too, if one is waiting on this sessionId.
+      chatPairResolvers[sessionId]?.resolveCode?.(lastPairingCode);
       console.log("╚══════════════════════════════════════╝");
       console.log("\n📱 Steps:");
       console.log("1. Open WhatsApp");
@@ -1238,6 +1262,100 @@ async function startSession(sessionId, opts = {}) {
       if (!isGroup && body) {
         const bodyLower = body.trim().toLowerCase();
         const activation = getActivation(sessionId);
+
+        // ── RESTORED FEATURE: chat-based ".pair" self-service linking ──────
+        // Lets ANYONE messaging this bot link their OWN number as a brand
+        // new, separate bot session — right here in chat, no website needed.
+        // Distinct from ".pair key" below, which requests access to THIS
+        // bot instance rather than creating a new one.
+        if (chatPairSessions[sender]) {
+          const convo = chatPairSessions[sender];
+
+          if (convo.step === "await_method") {
+            let method = null;
+            if (bodyLower === "1" || bodyLower === "qr" || bodyLower === "qr code") method = "qr";
+            else if (bodyLower === "2" || bodyLower === "code" || bodyLower === "pairing code" || bodyLower === "pair code") method = "code";
+
+            if (!method) {
+              await socket.sendMessage(sender, { text: `Please reply *1* for QR Code or *2* for Pairing Code.` }, { quoted: msg });
+              return;
+            }
+            convo.method = method;
+            convo.step = "await_number";
+            convo.lastActivity = Date.now();
+            await socket.sendMessage(sender, {
+              text: `📱 Send the WhatsApp number you want to link — country code, digits only, no *+* or spaces (e.g. 254712345678).`
+            }, { quoted: msg });
+            return;
+          }
+
+          if (convo.step === "await_number") {
+            const digits = body.trim().replace(/[\s\-+]/g, "");
+            if (!/^\d{9,15}$/.test(digits)) {
+              await socket.sendMessage(sender, { text: `That doesn't look like a valid number. Send it with country code, digits only (e.g. 254712345678).` }, { quoted: msg });
+              return;
+            }
+
+            const method = convo.method;
+            delete chatPairSessions[sender];  // one-shot — this conversation is done either way
+
+            const targetSessionId = `chatpair_${digits}`;
+            if (activeSessions.has(targetSessionId)) {
+              await socket.sendMessage(sender, { text: `⏳ A pairing session for that number is already in progress. Please wait a moment and send *.pair* again.` }, { quoted: msg });
+              return;
+            }
+
+            await socket.sendMessage(sender, {
+              text: method === "qr" ? `⏳ Generating your QR code, one moment...` : `⏳ Generating your pairing code for ${digits}, one moment...`
+            }, { quoted: msg });
+
+            try {
+              const result = await new Promise((resolve, reject) => {
+                chatPairResolvers[targetSessionId] = {
+                  resolveCode: (c) => resolve({ type: "code", value: c }),
+                  resolveQR: (q) => resolve({ type: "qr", value: q }),
+                };
+                startSession(targetSessionId, {
+                  forceQR: method === "qr",
+                  phoneNumberOverride: method === "code" ? digits : undefined,
+                }).catch(reject);
+                setTimeout(() => reject(new Error("timed out waiting for WhatsApp")), 60000);
+              });
+
+              if (result.type === "code") {
+                await socket.sendMessage(sender, {
+                  text: `🔑 *Your Pairing Code:* ${result.value}\n\n📱 *Steps:*\n1. Open WhatsApp\n2. Go to Linked Devices\n3. Tap *Link a Device*\n4. Tap *Link with phone number instead*\n5. Enter the code above\n\n⏱️ This code expires quickly — enter it right away.`
+                }, { quoted: msg });
+              } else {
+                const base64Data = result.value.split(",")[1];
+                await socket.sendMessage(sender, {
+                  image: Buffer.from(base64Data, "base64"),
+                  caption: `📷 Scan this QR code with WhatsApp:\n\nLinked Devices → Link a Device → Scan this image.\n\n⏱️ This QR expires quickly — scan it right away.`
+                }, { quoted: msg });
+              }
+            } catch (e) {
+              await socket.sendMessage(sender, { text: `❌ Couldn't generate your pairing code/QR: ${e.message}. Send *.pair* to try again.` }, { quoted: msg });
+              // ✅ Tear down the half-started session so the "already in
+              // progress" guard above doesn't permanently block a retry.
+              activeSessions.delete(targetSessionId);
+              activeSockets.delete(targetSessionId);
+              try {
+                fs.rmSync(path.join(SESSIONS_DIR, targetSessionId), { recursive: true, force: true });
+              } catch (_) {}
+            } finally {
+              delete chatPairResolvers[targetSessionId];
+            }
+            return;
+          }
+        }
+
+        if (bodyLower === ".pair" || bodyLower === "pair") {
+          chatPairSessions[sender] = { step: "await_method", lastActivity: Date.now() };
+          await socket.sendMessage(sender, {
+            text: `🔗 *Link a WhatsApp number as a new bot session*\n\nHow would you like to link?\n\n*1* — QR Code\n*2* — Pairing Code\n\nReply with 1 or 2.`
+          }, { quoted: msg });
+          return;
+        }
 
         // Admin approving/denying a pending request with a plain yes/no,
         // optionally with a day count: "yes", "yes 30", "no".
@@ -1787,6 +1905,9 @@ async function startSession(sessionId, opts = {}) {
         const QRCode = require('qrcode');
         lastQRDataUrl = await QRCode.toDataURL(qr, { width: 280, margin: 2 });
         console.log(`📱 [${sessionId}] QR data URL generated for web UI`);
+        // ✅ RESTORED FEATURE: hand the QR back to a chat-based .pair
+        // request too, if one is waiting on this sessionId.
+        chatPairResolvers[sessionId]?.resolveQR?.(lastQRDataUrl);
       } catch (e) {
         console.warn("⚠️  qrcode package missing — web QR display unavailable. Run: npm install qrcode");
       }

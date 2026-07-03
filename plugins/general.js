@@ -122,6 +122,7 @@ ${p}imagine [desc] - 🎨 AI image generation (free, no API key)
 ${p}tts [text]     - 🔊 Text-to-speech voice note
 ${p}model [name]   - 🤖 Switch AI model (llama/llama8/mixtral/gemma)
 ${p}checklink [url] - 🔗 Check if a link is safe or suspicious
+${p}pair           - 🔗 Link your OWN WhatsApp number as a new bot session (get a pairing code, right here in chat)
 
 🔑 Forgot your panel password? Open the panel and tap "Forgot password?" — a reset code is sent right here on WhatsApp.
 
