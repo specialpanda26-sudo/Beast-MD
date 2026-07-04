@@ -544,4 +544,14 @@ Merged additively on top of everything above — nothing existing was removed or
 
 ---
 
+## 🆕 Update 5 — Community Chat, Owner Auto-Reply, Media Search, Antiban Toggle
+
+- **`/chat`** — new community chat panel. Public room + DMs, anonymous by default, optional nickname, admin moderation.
+- **Henry's own number now has a personal auto-reply**, scoped ONLY to the Owner Session (every customer session behaves exactly as before): replies in Sheng, only in chats explicitly allowed from the Admin Panel, stays quiet for 5 min after Henry personally replies, and sends a one-time "save my number" caution to brand-new chats.
+- Henry's own number can no longer register through the public customer flow — Admin Panel only.
+- **`.song`** now takes a search term, not just a link. New **`.audiomack [query]`** and **`.videosearch [query]`** commands.
+- **Antiban toggle is now actually enforced** — previously the on/off columns existed but `wrapSocket()` ignored them entirely. Fixed, defaults unchanged (still ON).
+
+---
+
 **Made with ❤️ by Henry Ochibots | @henrytech254**

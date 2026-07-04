@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Community Chat — Henry Ochibots v19™</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #020408; --surface: #080f1a; --border: #112030;
+    --accent: #00e5ff; --accent2: #7c3aed; --green: #00ff88;
+    --text: #e2eaf4; --muted: #4a6070; --card: #060e18;
+    --red: #ff3b5c; --yellow: #ffb020;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    height: 100vh; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  nav {
+    position: relative; z-index: 5; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 1.5rem;
+    background: rgba(2,4,8,0.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,229,255,0.08);
+  }
+  .nav-logo {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.06em; text-decoration: none;
+  }
+  .nav-logo span { color: var(--text); }
+  .identity {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted);
+  }
+  .identity input {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace; width: 130px;
+  }
+  .identity button {
+    background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.3); color: var(--accent);
+    border-radius: 6px; padding: 0.35rem 0.7rem; font-size: 0.72rem; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .identity button:hover { background: rgba(0,229,255,0.2); }
+
+  .app { flex: 1; display: flex; min-height: 0; position: relative; z-index: 5; }
+
+  .sidebar {
+    width: 230px; flex-shrink: 0; background: var(--card);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .sidebar-section-title {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em;
+    color: var(--muted); text-transform: uppercase; padding: 1rem 1rem 0.5rem;
+  }
+  .room-item {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 1rem;
+    cursor: pointer; border-left: 3px solid transparent; transition: background .15s;
+    font-size: 0.85rem;
+  }
+  .room-item:hover { background: rgba(255,255,255,0.03); }
+  .room-item.active { background: rgba(0,229,255,0.06); border-left-color: var(--accent); }
+  .room-item .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .room-item .dot.purple { background: var(--accent2); }
+  .room-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .empty-dms { padding: 0.5rem 1rem 1rem; color: var(--muted); font-size: 0.75rem; }
+
+  .chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .chat-header {
+    padding: 0.9rem 1.3rem; border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--accent);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .chat-header .sub { color: var(--muted); font-size: 0.68rem; font-weight: 400; }
+
+  .messages { flex: 1; overflow-y: auto; padding: 1.2rem; display: flex; flex-direction: column; gap: 0.55rem; }
+  .msg-row { display: flex; flex-direction: column; max-width: 72%; }
+  .msg-row.me { align-self: flex-end; align-items: flex-end; }
+  .msg-name {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--accent2);
+    margin-bottom: 2px; cursor: pointer;
+  }
+  .msg-row.me .msg-name { color: var(--green); cursor: default; }
+  .msg-bubble {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.55rem 0.8rem; font-size: 0.88rem; line-height: 1.4; word-wrap: break-word;
+  }
+  .msg-row.me .msg-bubble { background: rgba(0,229,255,0.08); border-color: rgba(0,229,255,0.25); }
+  .msg-time { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+
+  .composer { display: flex; gap: 0.6rem; padding: 0.9rem 1.2rem; border-top: 1px solid var(--border); }
+  .composer input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 0.7rem 0.9rem; font-size: 0.9rem; font-family: 'Space Grotesk', sans-serif;
+  }
+  .composer input:focus { outline: none; border-color: var(--accent); }
+  .composer button {
+    background: linear-gradient(90deg, var(--accent), var(--accent2)); border: none; color: #000;
+    font-weight: 700; padding: 0 1.3rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+  }
+  .composer button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .disclaimer {
+    font-size: 0.65rem; color: var(--muted); text-align: center; padding: 0.4rem;
+    border-top: 1px solid var(--border); background: var(--card);
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<nav>
+  <a href="/panel" class="nav-logo">HENRY<span>OCHIBOTS</span> · CHAT</a>
+  <div class="identity">
+    <span id="me-name">connecting…</span>
+    <input id="nickname-input" placeholder="set a nickname" maxlength="24"/>
+    <button id="nickname-save">Save</button>
+  </div>
+</nav>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-section-title">Rooms</div>
+    <div class="room-item active" data-room="public" id="room-public">
+      <span class="dot"></span><span class="room-name">🌐 Public Room</span>
+    </div>
+    <div class="sidebar-section-title">Direct Messages</div>
+    <div id="dm-list"><div class="empty-dms">No DMs yet — tap a name in Public Room to start one.</div></div>
+  </div>
+
+  <div class="chat-area">
+    <div class="chat-header">
+      <span id="chat-title">🌐 Public Room</span>
+      <span class="sub">anonymous — be kind</span>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="composer">
+      <input id="msg-input" placeholder="Type a message…" maxlength="1000"/>
+      <button id="send-btn">Send</button>
+    </div>
+    <div class="disclaimer">Messages may be reviewed by admins for safety/moderation. Don't share phone numbers or payment details here.</div>
+  </div>
+</div>
+
+<script>
+const API = ""; // same-origin
+let anonId = localStorage.getItem("chat_anon_id") || null;
+let myName = "";
+let currentRoom = "public";     // "public" or a partner anon_id for DM
+let sinceId = {};                // per-room last-seen message id
+let pollTimer = null;
+let dmThreads = {};              // other_id -> other_name
+
+async function api(path, opts) {
+  const res = await fetch(API + path, opts);
+  return res.json();
+}
+
+async function identify() {
+  const data = await api("/chat/identify", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ anon_id: anonId })
+  });
+  if (!data.success) {
+    document.getElementById("me-name").textContent = data.error || "banned";
+    return;
+  }
+  anonId = data.anon_id;
+  myName = data.nickname;
+  localStorage.setItem("chat_anon_id", anonId);
+  document.getElementById("me-name").textContent = myName;
+  document.getElementById("nickname-input").value = "";
+  loadDmThreads();
+  switchRoom("public");
+}
+
+document.getElementById("nickname-save").onclick = async () => {
+  const nickname = document.getElementById("nickname-input").value.trim();
+  if (!nickname) return;
+  const data = await api("/chat/nickname", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ anon_id: anonId, nickname })
+  });
+  if (data.success) {
+    myName = data.nickname;
+    document.getElementById("me-name").textContent = myName;
+    document.getElementById("nickname-input").value = "";
+  }
+};
+
+function renderMessage(m) {
+  const wrap = document.createElement("div");
+  wrap.className = "msg-row" + (m.is_me ? " me" : "");
+  const nameEl = document.createElement("div");
+  nameEl.className = "msg-name";
+  nameEl.textContent = m.is_me ? "You" : m.sender_name;
+  if (!m.is_me && currentRoom === "public") {
+    nameEl.onclick = () => startDm(m.sender_id, m.sender_name);
+    nameEl.title = "Click to DM " + m.sender_name;
+  }
+  const bubble = document.createElement("div");
+  bubble.className = "msg-bubble";
+  bubble.textContent = m.body;
+  const time = document.createElement("div");
+  time.className = "msg-time";
+  time.textContent = new Date(m.created_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  wrap.appendChild(nameEl); wrap.appendChild(bubble); wrap.appendChild(time);
+  document.getElementById("messages").appendChild(wrap);
+}
+
+async function pollMessages() {
+  if (!anonId) return;
+  const isDm = currentRoom !== "public";
+  const params = new URLSearchParams({ anon_id: anonId, since_id: sinceId[currentRoom] || 0 });
+  if (isDm) params.set("to", currentRoom);
+  else params.set("room", "public");
+  const data = await api("/chat/messages?" + params.toString());
+  if (data.messages && data.messages.length) {
+    const box = document.getElementById("messages");
+    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    data.messages.forEach(m => { renderMessage(m); sinceId[currentRoom] = m.id; });
+    if (wasAtBottom) box.scrollTop = box.scrollHeight;
+    if (isDm) loadDmThreads();
+  }
+}
+
+function switchRoom(room, title) {
+  currentRoom = room;
+  document.getElementById("messages").innerHTML = "";
+  document.getElementById("chat-title").textContent = title || "🌐 Public Room";
+  document.querySelectorAll(".room-item").forEach(el => el.classList.remove("active"));
+  const activeEl = document.querySelector(`[data-room="${room}"]`);
+  if (activeEl) activeEl.classList.add("active");
+  if (!sinceId[room]) sinceId[room] = 0;
+  pollMessages();
+}
+
+function startDm(otherId, otherName) {
+  dmThreads[otherId] = otherName;
+  renderDmList();
+  switchRoom(otherId, "💬 " + otherName);
+}
+
+async function loadDmThreads() {
+  const data = await api("/chat/dm/threads?anon_id=" + anonId);
+  (data.threads || []).forEach(t => { dmThreads[t.other_id] = t.other_name; });
+  renderDmList();
+}
+
+function renderDmList() {
+  const list = document.getElementById("dm-list");
+  const ids = Object.keys(dmThreads);
+  if (!ids.length) {
+    list.innerHTML = '<div class="empty-dms">No DMs yet — tap a name in Public Room to start one.</div>';
+    return;
+  }
+  list.innerHTML = "";
+  ids.forEach(id => {
+    const item = document.createElement("div");
+    item.className = "room-item" + (currentRoom === id ? " active" : "");
+    item.dataset.room = id;
+    item.innerHTML = `<span class="dot purple"></span><span class="room-name">${dmThreads[id]}</span>`;
+    item.onclick = () => switchRoom(id, "💬 " + dmThreads[id]);
+    list.appendChild(item);
+  });
+}
+
+document.getElementById("room-public").onclick = () => switchRoom("public", "🌐 Public Room");
+
+async function sendMessage() {
+  const input = document.getElementById("msg-input");
+  const body = input.value.trim();
+  if (!body || !anonId) return;
+  const btn = document.getElementById("send-btn");
+  btn.disabled = true;
+  const payload = { anon_id: anonId, body };
+  if (currentRoom !== "public") payload.to = currentRoom;
+  const data = await api("/chat/send", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  btn.disabled = false;
+  if (data.success) {
+    input.value = "";
+    pollMessages();
+  } else if (data.error) {
+    alert(data.error);
+  }
+}
+document.getElementById("send-btn").onclick = sendMessage;
+document.getElementById("msg-input").addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+
+identify().then(() => {
+  pollTimer = setInterval(pollMessages, 2500);
+});
+</script>
+</body>
+</html>

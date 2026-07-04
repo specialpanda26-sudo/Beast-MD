@@ -717,6 +717,44 @@ async def init_db():
             )
         """)
 
+        # ✅ NEW: customer chat panel — public room + DMs, anonymous by
+        # default. chat_users tracks an anon identity (generated client-side
+        # ID, persisted in the browser) with an optional nickname. Messages
+        # are snapshotted with sender_name at send time so a later nickname
+        # change doesn't rewrite history.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS chat_users (
+                anon_id TEXT PRIMARY KEY,
+                nickname TEXT,
+                created_at REAL,
+                last_seen REAL,
+                banned INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room TEXT NOT NULL,
+                sender_id TEXT NOT NULL,
+                sender_name TEXT,
+                body TEXT NOT NULL,
+                created_at REAL,
+                deleted INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_room_id ON chat_messages(room, id)")
+        # Helper index so a user's DM inbox can be listed without scanning
+        # every message — one row per DM thread, keyed by a canonical room
+        # id (sorted pair of anon_ids), updated on every DM send.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS chat_dm_index (
+                room TEXT PRIMARY KEY,
+                user_a TEXT NOT NULL,
+                user_b TEXT NOT NULL,
+                last_message_at REAL
+            )
+        """)
+
         await db.commit()
         logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
 
@@ -819,6 +857,12 @@ async def api_register():
 
     if not phone or not phone.isdigit() or len(phone) < 9:
         return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+
+    # ✅ NEW: Henry's own number is managed exclusively from the Admin
+    # Panel — it never goes through the public customer registration flow.
+    owner_number = await _get_effective_owner_number()
+    if owner_number and phone == owner_number:
+        return jsonify({"success": False, "error": "This number is managed from the Admin Panel, not customer registration."}), 403
 
     if not name:
         return jsonify({"success": False, "error": "Enter your name."}), 400
@@ -1089,6 +1133,17 @@ async def panel_page():
     panel_path = Path(__file__).parent / "panel.html"
     if panel_path.exists():
         return Response(panel_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/chat")
+async def chat_page():
+    """✅ NEW: community chat panel — public room + DMs, anonymous by
+    default. No login required, just an anon identity generated on first
+    load (see /chat/identify)."""
+    chat_path = Path(__file__).parent / "chat.html"
+    if chat_path.exists():
+        return Response(chat_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
     return jsonify({"status": "ok"})
 
 
@@ -1993,26 +2048,34 @@ async def activation_status():
 
     owner_number = await _get_effective_owner_number()
     now = time.time()
+    # ✅ NEW: flag this session as the owner's own personal number whenever
+    # it matches OWNER_NUMBER — kept in sync on every reconnect in case
+    # OWNER_NUMBER changes (e.g. via .ownerrecovery) or a session gets
+    # re-paired to a different number.
+    is_owner_session = 1 if bool(owner_number and phone and phone == owner_number) else 0
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT activated, expiry_ts FROM session_subscriptions WHERE session = ?", (session,)) as c:
             row = await c.fetchone()
         if not row:
-            auto_activate = bool(owner_number and phone and phone == owner_number)
+            auto_activate = bool(is_owner_session)
             await db.execute(
-                "INSERT INTO session_subscriptions (session, phone, activated, activated_at, expiry_ts, request_status, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, NULL, 'none', ?, ?)",
-                (session, phone, 1 if auto_activate else 0, now if auto_activate else None, now, now)
+                "INSERT INTO session_subscriptions (session, phone, activated, activated_at, expiry_ts, request_status, is_owner_session, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, NULL, 'none', ?, ?, ?)",
+                (session, phone, 1 if auto_activate else 0, now if auto_activate else None, is_owner_session, now, now)
             )
             await db.commit()
             activated, expiry_ts = (1 if auto_activate else 0), None
         else:
             activated, expiry_ts = row
             # keep phone/number fresh in case it changed on a re-pair
-            await db.execute("UPDATE session_subscriptions SET phone = ?, updated_at = ? WHERE session = ?", (phone, now, session))
+            await db.execute(
+                "UPDATE session_subscriptions SET phone = ?, is_owner_session = ?, updated_at = ? WHERE session = ?",
+                (phone, is_owner_session, now, session)
+            )
             await db.commit()
 
     live_active = bool(activated) and (not expiry_ts or now < expiry_ts)
-    return jsonify({"activated": live_active, "expiry_ts": expiry_ts})
+    return jsonify({"activated": live_active, "expiry_ts": expiry_ts, "is_owner_session": bool(is_owner_session)})
 
 
 @app.route("/admin/activation-request", methods=["POST"])
@@ -3050,6 +3113,40 @@ async def bot_owner_number():
     return jsonify({"owner_number": await _get_effective_owner_number()})
 
 
+@app.route("/admin/session-antiban", methods=["GET"])
+async def bot_session_antiban():
+    """Internal — called once per session connect (same trust level as
+    /bot/features). Returns whether THIS session's own antiban_enabled
+    column is on — combined client-side with the global feature flag."""
+    session = (request.args.get("session") or "").strip()
+    if not session:
+        return jsonify({"antiban_enabled": True})
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT antiban_enabled FROM session_subscriptions WHERE session = ?", (session,)
+        ) as c:
+            row = await c.fetchone()
+    # No row yet (brand-new session, not registered) — default ON.
+    return jsonify({"antiban_enabled": bool(row[0]) if row is not None else True})
+
+
+@app.route("/admin/session-antiban/toggle", methods=["POST"])
+async def admin_session_antiban_toggle():
+    """Admin Panel: flip antiban on/off for one specific session, without
+    touching the global switch (that's /admin/features/toggle)."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    session = (data.get("session") or "").strip()
+    enabled = 1 if data.get("enabled", True) else 0
+    if not session:
+        return jsonify({"error": "session required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE session_subscriptions SET antiban_enabled = ? WHERE session = ?", (enabled, session))
+        await db.commit()
+    return jsonify({"success": True, "antiban_enabled": bool(enabled)})
+
+
 @app.route("/log-status", methods=["POST"])
 async def log_status():
     data = await request.get_json() or {}
@@ -3144,6 +3241,25 @@ async def natural_chat():
             "3. Be friendly and a bit playful — you're part of the group.\n"
             "4. Do NOT be formal. Be like a real member of the group.\n"
             "5. Use emoji occasionally."
+        )
+    elif context == "owner_sheng":
+        # ✅ NEW: Henry's own number, personal auto-reply while he's away.
+        # Reads like a friend covering for him, always in heavy Sheng — not
+        # a generic "I'm a bot" assistant voice.
+        system_prompt = (
+            f"You are standing in for Henry (a real person) on his own WhatsApp, replying to {name} "
+            "while he's away for a bit. You are NOT a generic assistant — you talk like a close Kenyan "
+            "friend covering for him informally. ALWAYS reply in heavy, natural Sheng (Kenyan street "
+            "slang), regardless of what language the incoming message is in.\n"
+            "Style examples (match this energy exactly, don't copy the words):\n"
+            "  - \"yoo rada inakaa nikaa Henry hayuko na akikam nitamshow ni @bot\"\n"
+            "  - \"eeh boss amepotea kidogo, nikimuona nampigia story\"\n"
+            "RULES:\n"
+            "1. 1-2 sentences max, casual, zero formality, no 'Hello'/'Hi'/'Dear'.\n"
+            "2. Make clear Henry isn't right here but will see the message and get back to them.\n"
+            "3. Never claim to be an AI/bot outright — you're 'holding it down' for him.\n"
+            "4. 1 emoji max, not required.\n"
+            "5. Never share Henry's exact location, schedule, or any personal/financial details."
         )
     else:
         system_prompt = (
@@ -3915,6 +4031,253 @@ async def polls_end():
     result = await _poll_results(poll_id)
     return jsonify(result or {"success": True})
 
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ✅ NEW — customer chat panel. Anonymous-by-default public room + DMs for
+# bot customers to talk to each other from the web panel. Identity is a
+# client-generated/persisted anon_id (no login required); a nickname is
+# optional. All additive — no existing routes/tables touched.
+# ══════════════════════════════════════════════════════════════════════════
+
+CHAT_MAX_MESSAGE_LEN = 1000
+CHAT_MIN_SEND_INTERVAL_SECONDS = 1.2  # basic per-anon_id spam throttle
+_chat_last_send = {}  # anon_id -> last send timestamp (in-memory, resets on restart)
+
+
+def _chat_default_name(anon_id: str) -> str:
+    return f"Anon-{anon_id[-4:].upper()}"
+
+
+def _chat_dm_room(a: str, b: str) -> str:
+    pair = sorted([a, b])
+    return f"dm:{pair[0]}:{pair[1]}"
+
+
+@app.route("/chat/identify", methods=["POST"])
+async def chat_identify():
+    """Called once per browser on first chat-panel load. If the client
+    already has an anon_id saved (localStorage), pass it in to reattach to
+    the same identity/nickname; otherwise a new one is minted."""
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        if anon_id:
+            async with db.execute("SELECT nickname, banned FROM chat_users WHERE anon_id = ?", (anon_id,)) as c:
+                row = await c.fetchone()
+            if row:
+                if row[1]:
+                    return jsonify({"success": False, "error": "This chat identity has been banned."}), 403
+                await db.execute("UPDATE chat_users SET last_seen = ? WHERE anon_id = ?", (now, anon_id))
+                await db.commit()
+                return jsonify({"success": True, "anon_id": anon_id, "nickname": row[0] or _chat_default_name(anon_id)})
+        # Mint a new identity
+        anon_id = "anon_" + secrets.token_hex(5)
+        await db.execute(
+            "INSERT INTO chat_users (anon_id, nickname, created_at, last_seen, banned) VALUES (?, NULL, ?, ?, 0)",
+            (anon_id, now, now)
+        )
+        await db.commit()
+    return jsonify({"success": True, "anon_id": anon_id, "nickname": _chat_default_name(anon_id)})
+
+
+@app.route("/chat/nickname", methods=["POST"])
+async def chat_set_nickname():
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    nickname = (data.get("nickname") or "").strip()[:24]
+    if not anon_id:
+        return jsonify({"success": False, "error": "anon_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT banned FROM chat_users WHERE anon_id = ?", (anon_id,)) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Unknown chat identity — call /chat/identify first."}), 404
+        if row[0]:
+            return jsonify({"success": False, "error": "This chat identity has been banned."}), 403
+        await db.execute(
+            "UPDATE chat_users SET nickname = ? WHERE anon_id = ?",
+            (nickname or None, anon_id)
+        )
+        await db.commit()
+    return jsonify({"success": True, "nickname": nickname or _chat_default_name(anon_id)})
+
+
+@app.route("/chat/send", methods=["POST"])
+async def chat_send():
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    body = (data.get("body") or "").strip()
+    to = (data.get("to") or "").strip() or None  # None = public room
+    if not anon_id or not body:
+        return jsonify({"success": False, "error": "anon_id and body required"}), 400
+    if len(body) > CHAT_MAX_MESSAGE_LEN:
+        return jsonify({"success": False, "error": f"Message too long (max {CHAT_MAX_MESSAGE_LEN} chars)."}), 400
+
+    now = time.time()
+    last = _chat_last_send.get(anon_id, 0)
+    if now - last < CHAT_MIN_SEND_INTERVAL_SECONDS:
+        return jsonify({"success": False, "error": "Sending too fast — slow down a little."}), 429
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT nickname, banned FROM chat_users WHERE anon_id = ?", (anon_id,)) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Unknown chat identity — call /chat/identify first."}), 404
+        if row[0] is not None and row[1]:
+            return jsonify({"success": False, "error": "This chat identity has been banned."}), 403
+        sender_name = row[0] or _chat_default_name(anon_id)
+
+        room = _chat_dm_room(anon_id, to) if to else "public"
+        await db.execute(
+            "INSERT INTO chat_messages (room, sender_id, sender_name, body, created_at, deleted) VALUES (?, ?, ?, ?, ?, 0)",
+            (room, anon_id, sender_name, body, now)
+        )
+        if to:
+            await db.execute(
+                "INSERT INTO chat_dm_index (room, user_a, user_b, last_message_at) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(room) DO UPDATE SET last_message_at=excluded.last_message_at",
+                (room, *sorted([anon_id, to]), now)
+            )
+        await db.commit()
+    _chat_last_send[anon_id] = now
+    return jsonify({"success": True, "room": room})
+
+
+@app.route("/chat/messages", methods=["GET"])
+async def chat_messages():
+    """Polling endpoint. Public room: pass room=public. DM: pass anon_id +
+    to, the canonical DM room is derived server-side so a client can only
+    ever read a DM thread it's actually part of."""
+    anon_id = (request.args.get("anon_id") or "").strip()
+    to = (request.args.get("to") or "").strip() or None
+    since_id = int(request.args.get("since_id") or 0)
+    limit = min(int(request.args.get("limit") or 50), 200)
+    if not anon_id:
+        return jsonify({"error": "anon_id required"}), 400
+
+    room = _chat_dm_room(anon_id, to) if to else "public"
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, sender_id, sender_name, body, created_at FROM chat_messages "
+            "WHERE room = ? AND id > ? AND deleted = 0 ORDER BY id ASC LIMIT ?",
+            (room, since_id, limit)
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"room": room, "messages": [
+        {"id": r[0], "sender_id": r[1], "sender_name": r[2], "body": r[3], "created_at": r[4], "is_me": r[1] == anon_id}
+        for r in rows
+    ]})
+
+
+@app.route("/chat/dm/threads", methods=["GET"])
+async def chat_dm_threads():
+    """Sidebar list of a user's DM conversations, most recent first."""
+    anon_id = (request.args.get("anon_id") or "").strip()
+    if not anon_id:
+        return jsonify({"error": "anon_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT room, user_a, user_b, last_message_at FROM chat_dm_index "
+            "WHERE user_a = ? OR user_b = ? ORDER BY last_message_at DESC LIMIT 100",
+            (anon_id, anon_id)
+        ) as c:
+            rows = await c.fetchall()
+        threads = []
+        for room, ua, ub, last_ts in rows:
+            other_id = ub if ua == anon_id else ua
+            async with db.execute("SELECT nickname FROM chat_users WHERE anon_id = ?", (other_id,)) as c2:
+                nrow = await c2.fetchone()
+            other_name = (nrow[0] if nrow and nrow[0] else _chat_default_name(other_id))
+            threads.append({"room": room, "other_id": other_id, "other_name": other_name, "last_message_at": last_ts})
+    return jsonify({"threads": threads})
+
+
+# ── Admin moderation (panel-authenticated) ──────────────────────────────────
+@app.route("/admin/chat/recent", methods=["GET"])
+async def admin_chat_recent():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, room, sender_id, sender_name, body, created_at, deleted FROM chat_messages "
+            "ORDER BY id DESC LIMIT 300"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"messages": [
+        {"id": r[0], "room": r[1], "sender_id": r[2], "sender_name": r[3], "body": r[4], "created_at": r[5], "deleted": bool(r[6])}
+        for r in rows
+    ]})
+
+
+@app.route("/admin/chat/delete", methods=["POST"])
+async def admin_chat_delete():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    msg_id = data.get("id")
+    if not msg_id:
+        return jsonify({"error": "id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE chat_messages SET deleted = 1 WHERE id = ?", (msg_id,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/chat/ban", methods=["POST"])
+async def admin_chat_ban():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    banned = 1 if data.get("banned", True) else 0
+    if not anon_id:
+        return jsonify({"error": "anon_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE chat_users SET banned = ? WHERE anon_id = ?", (banned, anon_id))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/owner-chats", methods=["GET"])
+async def admin_owner_chats():
+    """Admin Panel: list every chat Henry's own number has seen (from
+    owner_first_seen markers), with the current owner_ai_allowed toggle."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT chat_id FROM chat_settings WHERE key = 'owner_first_seen'"
+        ) as c:
+            chat_ids = [r[0] for r in await c.fetchall()]
+        chats = []
+        for cid in chat_ids:
+            async with db.execute(
+                "SELECT value FROM chat_settings WHERE chat_id = ? AND key = 'owner_ai_allowed'", (cid,)
+            ) as c2:
+                row = await c2.fetchone()
+            chats.append({"chat_id": cid, "ai_allowed": bool(row and row[0] == "on")})
+    return jsonify({"chats": chats})
+
+
+@app.route("/admin/owner-chats/toggle", methods=["POST"])
+async def admin_owner_chats_toggle():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    chat_id = (data.get("chat_id") or "").strip()
+    allowed = bool(data.get("allowed"))
+    if not chat_id:
+        return jsonify({"error": "chat_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO chat_settings (chat_id, key, value) VALUES (?, 'owner_ai_allowed', ?) "
+            "ON CONFLICT(chat_id, key) DO UPDATE SET value = excluded.value",
+            (chat_id, "on" if allowed else "off")
+        )
+        await db.commit()
+    return jsonify({"success": True})
 
 
 if __name__ == "__main__":

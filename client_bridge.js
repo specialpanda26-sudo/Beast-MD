@@ -983,6 +983,15 @@ async function startSession(sessionId, opts = {}) {
     // owner — see wrapper.js's notifyOwner handling). Set
     // ANTIBAN_NOTIFY_ONLY=false to restore the old hard-block behavior.
     ownerJid: `${getOwnerNumber()}@s.whatsapp.net`,
+    // ✅ NEW: this session's OWN number, re-checked live (socket.user isn't
+    // populated yet at this point — only once "connection open" fires) —
+    // exempts view-once/antidelete self-forwards from every ban-risk check
+    // in the antiban library, the same way ownerJid already exempts the
+    // global admin number. See antiban.js's _isSelf() for why this needed
+    // to be separate from ownerJid: on any session other than the one
+    // paired to the global OWNER_NUMBER, self-forwards were being treated
+    // as a risky send to a stranger instead of a message to yourself.
+    selfJid: () => socket.user?.id?.replace(/:.*@/, "@") || null,
     // Live switch, re-checked on every send — not frozen at socket-creation
     // time. Admin Panel → Features → "Send Anyway During Ban-Recovery
     // Pause" writes to the `antiban_notify_only` feature row; featureCache
@@ -1041,7 +1050,24 @@ async function startSession(sessionId, opts = {}) {
     topologyThrottler: { maxNewContactsPerHour: 8, maxNewContactsPerDay: 30 }
   };
 
-  socket = wrapSocket(socket, antibanConfig, antibanWarmupState, {
+  // ✅ NEW: antiban on/off toggle, actually enforced (was previously just DB
+  // columns nobody read). Protection only applies when BOTH the global
+  // 'antiban_enabled' feature flag AND this session's own antiban_enabled
+  // column are on (both default ON, so this changes nothing unless an
+  // admin deliberately flips one off from the Admin Panel).
+  let antibanOn = true;
+  try {
+    const [globalRes, sessionRes] = await Promise.all([
+      apiClient.get("/bot/features").catch(() => null),
+      apiClient.get("/admin/session-antiban", { params: { session: sessionId } }).catch(() => null),
+    ]);
+    const globalOn = globalRes?.data?.antiban_enabled !== false;
+    const sessionOn = sessionRes?.data?.antiban_enabled !== false;
+    antibanOn = globalOn && sessionOn;
+  } catch (_) { /* fail open — never let a check failure strip protection */ }
+
+  if (antibanOn) {
+    socket = wrapSocket(socket, antibanConfig, antibanWarmupState, {
     // Adds human-like typos/typing pauses/read gaps to outgoing sends.
     // Disabled: was corrupting structured command/menu replies (e.g. .pair
     // flow sending "QR Cide" then a "*Code" correction 0.5-2s later) and
@@ -1055,7 +1081,10 @@ async function startSession(sessionId, opts = {}) {
     // Detects a socket that looks "connected" but has stopped delivering
     // messages (Baileys issue #2491) and force-reconnects it
     deafSession: { deafThresholdMs: 5 * 60 * 1000 }
-  });
+    });
+  } else {
+    console.log(`🔕 [${sessionId}] Anti-ban protection is OFF (global or per-session toggle) — running unwrapped.`);
+  }
 
   // ── Read-receipt variance (was bundled, never wired in) ────────────────
   // Wraps sock.readMessages with a small human-like random delay instead
@@ -1108,20 +1137,42 @@ async function startSession(sessionId, opts = {}) {
       const cached = global.recentMsgCache.get(deletedId);
       if (!cached) return;
 
+      // ✅ FIX: some groups are announcement-only (admins-post-only) — the
+      // whole point of that setting is that regular members don't post
+      // there. Reposting a recovered deleted message INTO that group would
+      // either silently fail (bot isn't an admin) or go against the
+      // group's own "no chatter" culture even when it does work. In a
+      // restricted group, send the recovery privately to this session's
+      // own number instead, tagged with which group it came from — same
+      // "private to the number running it, not back into the chat" rule
+      // the view-once recovery above already follows.
+      let destination = chatId;
+      let restrictedNote = "";
+      const isGroupChat = chatId.endsWith("@g.us");
+      if (isGroupChat) {
+        try {
+          const groupMeta = await socket.groupMetadata(chatId);
+          if (groupMeta?.announce) {
+            destination = socket.user?.id?.replace(/:.*@/, "@") || chatId;
+            restrictedNote = `\n📍 (from *${groupMeta.subject || "a restricted group"}* — admins-only chat, sent here privately instead)`;
+          }
+        } catch (_) { /* if metadata lookup fails, fall back to posting in-chat as before */ }
+      }
+
       const who = cached.senderJid ? `+${cached.senderJid.split("@")[0]}` : "someone";
       const text = cached.msg?.message?.conversation
         || cached.msg?.message?.extendedTextMessage?.text
         || null;
 
       if (cached.viewOnceBuffer) {
-        const caption = `🗑️ *Antidelete* — ${who} deleted a view-once`;
+        const caption = `🗑️ *Antidelete* — ${who} deleted a view-once${restrictedNote}`;
         if (cached.viewOnceMediaType === "imageMessage") {
-          await socket.sendMessage(chatId, { image: cached.viewOnceBuffer, caption });
+          await socket.sendMessage(destination, { image: cached.viewOnceBuffer, caption });
         } else if (cached.viewOnceMediaType === "videoMessage") {
-          await socket.sendMessage(chatId, { video: cached.viewOnceBuffer, caption });
+          await socket.sendMessage(destination, { video: cached.viewOnceBuffer, caption });
         }
       } else if (text) {
-        await socket.sendMessage(chatId, { text: `🗑️ *Antidelete* — ${who} deleted:\n"${text}"` });
+        await socket.sendMessage(destination, { text: `🗑️ *Antidelete* — ${who} deleted:\n"${text}"${restrictedNote}` });
       }
       // No cached media/text (cache expired or message predates the cache
       // window) — nothing we can recover, so stay silent rather than send
@@ -1340,6 +1391,12 @@ async function startSession(sessionId, opts = {}) {
       const isOwner      = isPrimaryOwner || isCoOwner;  // co-owners get owner powers
       const isSubAdmin   = global.subAdmins.has(senderNumber);
       const isBotAdmin   = isOwner || isSubAdmin;
+      // ✅ NEW: is THIS SESSION the owner's own personal WhatsApp number
+      // (not "is the sender the owner" — isPrimaryOwner already covers
+      // that). Used to scope the personal auto-reply features below to
+      // Henry's own number only, never a customer's session.
+      const botNumber = (socket.user?.id || "").split(':')[0].split('@')[0];
+      const isThisOwnerSession = Boolean(botNumber && currentOwnerNumber && botNumber === currentOwnerNumber);
 
       // ── 🌝 Cache this message in case it's reacted to later (view-once
       // recovery, or recovering a message after it gets deleted) ───────────
@@ -1454,7 +1511,16 @@ async function startSession(sessionId, opts = {}) {
       }
 
       // ── fromMe guard — allow owner commands even from the bot number ──────
-      if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) return;
+      if (msg.key.fromMe && !body.startsWith(CMD_PREFIX)) {
+        // ✅ NEW: on Henry's own number only, remember that he personally
+        // replied in this chat just now — the personal auto-reply below
+        // (further down) checks this before ever stepping in, so it never
+        // talks over him while he's actively chatting.
+        if (isThisOwnerSession && !isGroup) {
+          apiClient.post("/chat-settings/set", { chat_id: sender, key: "owner_last_reply_ts", value: String(Date.now() / 1000) }).catch(() => {});
+        }
+        return;
+      }
 
       // ── Paid Pairing / Activation Key gate ─────────────────────────────────
       // Freshly-paired customer sessions come up locked. The customer has to
@@ -1812,14 +1878,24 @@ async function startSession(sessionId, opts = {}) {
           // back into the chat it came from, but only if that chat has
           // explicitly turned .autoview on. Best-effort; any failure here
           // never affects the private self-forward above.
+          // ✅ FIX: skip the repost in announcement-only/restricted groups —
+          // the bot either can't post there (not an admin) or shouldn't
+          // (breaks the group's own "no chatter" norm). Self already has a
+          // private copy from the unconditional forward above either way.
           try {
             const avSetting = await apiClient.get("/chat-settings/get", { params: { chat_id: sender, key: "autoview" } });
             if (avSetting?.data?.value === "on") {
-              const avCaption = `👁️ *Autoview* — view-once from ${name}`;
-              if (mediaType === "imageMessage") {
-                await socket.sendMessage(sender, { image: buffer, caption: avCaption });
-              } else if (mediaType === "videoMessage") {
-                await socket.sendMessage(sender, { video: buffer, caption: avCaption });
+              let groupIsRestricted = false;
+              if (sender.endsWith("@g.us")) {
+                try { groupIsRestricted = Boolean((await socket.groupMetadata(sender))?.announce); } catch (_) {}
+              }
+              if (!groupIsRestricted) {
+                const avCaption = `👁️ *Autoview* — view-once from ${name}`;
+                if (mediaType === "imageMessage") {
+                  await socket.sendMessage(sender, { image: buffer, caption: avCaption });
+                } else if (mediaType === "videoMessage") {
+                  await socket.sendMessage(sender, { video: buffer, caption: avCaption });
+                }
               }
             }
           } catch (_) { /* autoview is best-effort, never block the core flow */ }
@@ -2013,17 +2089,60 @@ async function startSession(sessionId, opts = {}) {
 
       // ── Natural AI Chat (DM only, non-command messages) ───────────────────
       if (!isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/')) {
-        try {
-          const aiReply = await apiClient.post('/natural-chat', { body, name, model: global.chatModel?.get(sender) });
-          if (aiReply?.data?.reply) {
-            // ✅ FIX: was two stacked delays (0.8-2.3s + 0.6-1.8s = up to 4s)
-            // on top of the AI call itself. One short delay is enough.
-            try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
-            await delay(400);
-            try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
-            await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
-          }
-        } catch (e) {}
+        if (isThisOwnerSession) {
+          // ✅ NEW: on Henry's own number, the AI never just answers every
+          // DM like a customer session does. Three gates, all must pass:
+          try {
+            // 1) Per-chat opt-in — toggled from the Admin Panel. Chats not
+            //    explicitly turned on are left alone (Henry replies himself).
+            const allowSetting = await apiClient.get("/chat-settings/get", { params: { chat_id: sender, key: "owner_ai_allowed" } });
+            const allowed = allowSetting?.data?.value === "on";
+
+            // First-time-chat caution — fires once per chat regardless of
+            // the toggle above, so new people always get warned even in
+            // chats Henry hasn't opted into auto-reply for.
+            const seenSetting = await apiClient.get("/chat-settings/get", { params: { chat_id: sender, key: "owner_first_seen" } });
+            if (!seenSetting?.data?.value) {
+              await apiClient.post("/chat-settings/set", { chat_id: sender, key: "owner_first_seen", value: "1" }).catch(() => {});
+              await socket.sendMessage(sender, {
+                text: `👋 Hey! This is Henry's bot-assisted number — save this contact so future messages don't land as "unknown number" (and to keep it from getting flagged/banned). Henry will get back to you personally, or the bot may step in if he's away for a bit.`
+              }, { quoted: msg });
+            }
+
+            if (!allowed) return;
+
+            // 2) 5-minute inactivity window — if Henry personally replied in
+            //    this chat within the last 5 minutes, stay quiet so the bot
+            //    never talks over him mid-conversation.
+            const lastReplySetting = await apiClient.get("/chat-settings/get", { params: { chat_id: sender, key: "owner_last_reply_ts" } });
+            const lastReplyTs = parseFloat(lastReplySetting?.data?.value || "0");
+            const OWNER_AI_IDLE_SECONDS = 5 * 60;
+            if (lastReplyTs && (Date.now() / 1000 - lastReplyTs) < OWNER_AI_IDLE_SECONDS) return;
+
+            // 3) All clear — reply in Sheng, and make it read like Henry's
+            //    stand-in, not a generic assistant.
+            const aiReply = await apiClient.post('/natural-chat', { body, name, model: global.chatModel?.get(sender), context: 'owner_sheng' });
+            if (aiReply?.data?.reply) {
+              try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
+              await delay(400);
+              try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
+              await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
+            }
+          } catch (e) {}
+        } else {
+          // Unchanged customer-session behavior — always replies.
+          try {
+            const aiReply = await apiClient.post('/natural-chat', { body, name, model: global.chatModel?.get(sender) });
+            if (aiReply?.data?.reply) {
+              // ✅ FIX: was two stacked delays (0.8-2.3s + 0.6-1.8s = up to 4s)
+              // on top of the AI call itself. One short delay is enough.
+              try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
+              await delay(400);
+              try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
+              await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
+            }
+          } catch (e) {}
+        }
       }
 
       // ── Group AI replies — reply when bot is mentioned or name is called ──
@@ -2045,7 +2164,6 @@ async function startSession(sessionId, opts = {}) {
           // "bot"/"henry"/"ochibots" substring check fired on completely
           // unrelated messages ("I saw a robot", "chatbot", anyone named
           // Henry in the group, etc.), spamming AI replies into groups.
-          const botNumber = socket.user?.id?.split(':')[0]?.split('@')[0] || '';
           const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
           const botMentioned = mentions.some(j => j.includes(botNumber));
 

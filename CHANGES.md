@@ -41,3 +41,92 @@ This intentionally does NOT reuse the old bare "bot"/"henry" substring match tha
 earlier for firing on unrelated messages ("I saw a robot", "chatbot", any group member named
 Henry). Word-boundary matching on full aliases avoids that — "robot"/"chatbot" still won't
 trigger it.
+
+## Update 5 — Community chat panel, owner-number personal auto-reply, media search, antiban toggle actually wired
+
+**Community chat panel (`/chat`, new page):**
+- Public room + DMs, anonymous by default (client-generated `anon_id`, no login), optional
+  nickname. Click a name in the public room to start a DM.
+- Backend: `chat_users`, `chat_messages`, `chat_dm_index` tables; `/chat/identify`,
+  `/chat/nickname`, `/chat/send`, `/chat/messages`, `/chat/dm/threads`; admin moderation via
+  `/admin/chat/recent`, `/admin/chat/delete`, `/admin/chat/ban`.
+- Visible disclaimer in the UI: messages may be reviewed by admins for safety/moderation.
+
+**Henry's own number — personal auto-reply (scoped to the Owner Session only, customer sessions
+unchanged):**
+- Replies in heavy Sheng, standing in for Henry rather than sounding like a generic bot.
+- Only replies in a chat once that chat has been explicitly turned on from the Admin Panel
+  (`/admin/owner-chats`, `/admin/owner-chats/toggle`) — no blanket auto-reply.
+- Even in an allowed chat, stays quiet for 5 minutes after Henry personally replies there, so it
+  never talks over an active conversation.
+- First-ever message from a new chat gets a one-time caution to save the number, regardless of
+  the toggle above.
+- Admin password-reset OTP and this whole feature rely on `is_owner_session`, which is now
+  actually kept in sync on every connect (previously just an unused column).
+- Henry's own number is now blocked from the public `/api/register` customer flow — it's managed
+  from the Admin Panel only.
+
+**Media search additions:**
+- `.song` now accepts a plain search term (not just a URL) via yt-dlp's `ytsearch1:`.
+- New `.audiomack [query]` — best-effort Audiomack search+download (yt-dlp's Audiomack search
+  support varies by version; falls back to suggesting `.song` on failure).
+- New `.videosearch [query]` — YouTube search+download for video, same pattern as `.song`.
+- `.dl`/`.download` already covered pasted links across YouTube/TikTok/Instagram/Facebook/
+  X/SoundCloud/etc. via yt-dlp — unchanged, still works.
+
+**Antiban toggle — now actually enforced:**
+- The global `antiban_enabled` feature flag and per-session `antiban_enabled` column (added in
+  Update 1) were sitting unused — `wrapSocket()` ran unconditionally regardless of either.
+  Fixed: both are now checked before wrapping, defaulting ON so nothing changes unless an admin
+  deliberately flips one off.
+- New `/admin/session-antiban` (read) + `/admin/session-antiban/toggle` (admin panel) for the
+  per-session switch. The global switch already had `/admin/features/toggle`.
+
+## Update 6 — Recovery features audited, one real bug fixed in restricted groups
+
+Checked all three recovery paths (image view-once, video view-once, antidelete) and the 🌝
+reaction recovery:
+
+- **View-once (image + video), default path**: already correct — always privately forwarded to
+  the session's own number, never posted back into the chat. No bug.
+- **🌝 Reaction-triggered recovery**: already correct — always privately forwarded to the
+  session's own number, bot-admin only. Reactions aren't blocked by a group's admins-only
+  setting on WhatsApp's side, so this already worked fine in restricted groups too. No bug.
+- **`.antidelete` — bug found and fixed**: it was reposting recovered deleted messages/media
+  straight back into the *same* chat, with no check for announcement-only (admins-post-only)
+  groups. In a restricted group that either silently failed (bot isn't an admin) or broke the
+  group's own "no chatter" norm even when it did work. Fixed: in a restricted group, the
+  recovery is now sent privately to that session's own number instead, tagged with which group
+  it came from — same "private to the number running it" rule the view-once recovery already
+  followed.
+- **`.autoview` — same class of issue, same fix**: its optional repost-into-the-chat now skips
+  entirely in restricted groups (the private self-forward that always happens first already
+  covers it, so nothing is lost).
+
+## Update 7 — Real antiban bug: self-forwards were being treated as risky sends
+
+**What you saw:** the Admin Panel activity log spamming `.antiban-recovery` entries — "Sent
+despite ban recovery pause" — every time a view-once/antidelete recovery self-forwarded on a
+session other than your primary OWNER_NUMBER one.
+
+**Root cause:** `libs/baileys-antiban` has always exempted the ONE global admin number
+(`ownerJid`) from every ban-risk check — correct for "the owner sent a `.command`," but every
+antiban check compared the recipient against that single global number. A session self-
+forwarding view-once/antidelete recovery to **its own** number — safe by definition, you cannot
+be banned by WhatsApp for messaging yourself — only matched that exemption if the session
+happened to be the one paired to your primary OWNER_NUMBER. On any other session (like your
+secondary number, 254775351698), self-forwards fell through to the non-owner path: hard-blocked
+during a ban-recovery pause in strict mode, or spamming that "sent despite pause" warning on
+every single one in notify-only mode — which is what the screenshot showed.
+
+**Fix:** `libs/baileys-antiban/antiban.js` now has a separate `selfJid` concept alongside
+`ownerJid` — resolved live per-session (client_bridge.js passes `() => socket.user?.id...`,
+same lazy pattern already used for `notifyOnlyMode`) — and all three ban-risk checks
+(`_gate`, the ban-recovery-pause gate, and the rate-limiter/daily-cap check) now exempt a
+self-send exactly like they already exempted the owner. Nothing about real ban protection for
+messages to OTHER people changed — this only fixes the bot sending to itself.
+
+**Net effect:** view-once/antidelete recovery no longer counts against your own account's risk
+budget or a ban-recovery pause, on any session, not just your primary number. The antiban system
+is meant to shield you from real risk to *other* contacts — it was never supposed to flag a
+message you send to yourself.

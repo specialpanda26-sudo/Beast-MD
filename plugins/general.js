@@ -263,6 +263,9 @@ ${p}report [@user] [reason] - Flag a member/issue to the admins
 📸 *MEDIA EXTRAS*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${p}fullpp [@user]  - Full-resolution profile picture (vs .getpp's preview)
+${p}audiomack [song/artist] - Search + download from Audiomack (best-effort)
+${p}videosearch [name] - Search YouTube by name and send the video (or paste any link)
+${p}song now also takes a search term, not just a link — e.g. ${p}song shape of you
 ${p}autoreact on/off - Bot reacts to every message in this chat
 ${ownerSection}
 

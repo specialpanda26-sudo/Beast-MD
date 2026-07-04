@@ -329,10 +329,12 @@ module.exports = {
   // silently failed with "Send failed: ENOENT ...". Now uses a %(ext)s
   // template + locates the produced file by prefix, same pattern as .dl.
   song: async ({ sock, from, msg, args, logActivity, senderJid }) => {
-    const url = args[0];
-    if (!url) return sock.sendMessage(from, { text: '🎵 Usage: .song [YouTube URL]' }, { quoted: msg });
-    // Basic URL validation
-    if (!/^https?:\/\//i.test(url)) return sock.sendMessage(from, { text: '❌ Invalid URL.' }, { quoted: msg });
+    const raw = args.join(' ').trim();
+    if (!raw) return sock.sendMessage(from, { text: '🎵 Usage: .song [YouTube URL or song name]' }, { quoted: msg });
+    // ✅ NEW: not a URL? Treat it as a search term — yt-dlp's built-in
+    // ytsearch1: prefix finds and downloads the top YouTube result, so
+    // ".song shape of you" works exactly like pasting the YouTube link.
+    const url = /^https?:\/\//i.test(raw) ? raw : `ytsearch1:${raw}`;
 
     await sock.sendMessage(from, { text: '⏳ Downloading audio...' }, { quoted: msg });
     const stamp = Date.now();
@@ -521,5 +523,66 @@ module.exports = {
     } catch (e) {
       await sock.sendMessage(from, { text: `❌ Conversion failed: ${e.message}` }, { quoted: msg });
     }
+  },
+
+  // ── .audiomack — search + download from Audiomack by name ───────────────
+  // ✅ NEW (extended-commands update). Best-effort: yt-dlp's Audiomack
+  // extractor covers direct song/album links reliably; search support
+  // varies by yt-dlp version, so this can fail cleanly on older installs —
+  // if it does, .song/.dl with a direct Audiomack link still works.
+  audiomack: async ({ sock, from, msg, args, logActivity, senderJid }) => {
+    const query = args.join(' ').trim();
+    if (!query) return sock.sendMessage(from, { text: '🎧 Usage: .audiomack [song name or artist]' }, { quoted: msg });
+    await sock.sendMessage(from, { text: '⏳ Searching Audiomack...' }, { quoted: msg });
+    const stamp = Date.now();
+    const tmpTemplate = `/tmp/audiomack_${stamp}.%(ext)s`;
+    const searchTerm = /^https?:\/\//i.test(query) ? query : `audiomacksearch1:${query}`;
+
+    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpTemplate, searchTerm], async (err, stdout, stderr) => {
+      if (err) {
+        const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
+        if (logActivity) logActivity('error', 'audiomack', `.audiomack ${query} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
+        return sock.sendMessage(from, { text: `${userMsg}\n\n💡 Tip: try *.song ${query}* instead — it searches YouTube for the same track.` }, { quoted: msg });
+      }
+      try {
+        const produced = fs.readdirSync('/tmp').find(f => f.startsWith(`audiomack_${stamp}.`));
+        if (!produced) return sock.sendMessage(from, { text: '❌ Could not locate downloaded file.' }, { quoted: msg });
+        const fullPath = path.join('/tmp', produced);
+        await sock.sendMessage(from, { audio: fs.readFileSync(fullPath), mimetype: 'audio/mpeg' }, { quoted: msg });
+        fs.unlinkSync(fullPath);
+      } catch (e) {
+        await sock.sendMessage(from, { text: `❌ Send failed: ${e.message}` }, { quoted: msg });
+      }
+    });
+  },
+
+  // ── .videosearch — search YouTube (or paste any link) and send the video
+  // ✅ NEW (extended-commands update). Same ytsearch1: trick as .song, just
+  // for video instead of extracted audio — covers "search + download" for
+  // YouTube directly, same as .dl already does for a pasted link.
+  videosearch: async ({ sock, from, msg, args, logActivity, senderJid }) => {
+    const query = args.join(' ').trim();
+    if (!query) return sock.sendMessage(from, { text: '🔎 Usage: .videosearch [video name]' }, { quoted: msg });
+    await sock.sendMessage(from, { text: '⏳ Searching YouTube...' }, { quoted: msg });
+    const stamp = Date.now();
+    const tmpTemplate = `/tmp/vsearch_${stamp}.%(ext)s`;
+    const searchTerm = /^https?:\/\//i.test(query) ? query : `ytsearch1:${query}`;
+
+    execFile('yt-dlp', ['-f', 'mp4/best', '-o', tmpTemplate, searchTerm], async (err, stdout, stderr) => {
+      if (err) {
+        const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
+        if (logActivity) logActivity('error', 'videosearch', `.videosearch ${query} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
+        return sock.sendMessage(from, { text: userMsg }, { quoted: msg });
+      }
+      try {
+        const produced = fs.readdirSync('/tmp').find(f => f.startsWith(`vsearch_${stamp}.`));
+        if (!produced) return sock.sendMessage(from, { text: '❌ Could not locate downloaded file.' }, { quoted: msg });
+        const fullPath = path.join('/tmp', produced);
+        await sock.sendMessage(from, { video: fs.readFileSync(fullPath), caption: `✅ ${query}` }, { quoted: msg });
+        fs.unlinkSync(fullPath);
+      } catch (e) {
+        await sock.sendMessage(from, { text: `❌ Send failed: ${e.message}` }, { quoted: msg });
+      }
+    });
   },
 };
