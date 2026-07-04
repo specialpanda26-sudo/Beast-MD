@@ -29,3 +29,15 @@ new passive hooks in `client_bridge.js` (group-activity logging, `.autoview` rep
 ### Honest gap
 `/admin/reports` and `/admin/group-bans` backend routes exist and work, but `admin.html` has no
 matching UI tab for them yet. Say the word if you want those added.
+
+## Update 4 — Bot name recognition in groups
+
+Added a third, narrow trigger to the existing group AI-reply logic (`@mention` / reply-to-bot):
+the bot now also replies when addressed by name — e.g. "ochibots can you help" — matched on full
+word boundaries against a configurable alias list (`BOT_NAME_ALIASES` env var, comma-separated;
+defaults to `ochibots,henry ochibots,beast bot,beastbot`).
+
+This intentionally does NOT reuse the old bare "bot"/"henry" substring match that was removed
+earlier for firing on unrelated messages ("I saw a robot", "chatbot", any group member named
+Henry). Word-boundary matching on full aliases avoids that — "robot"/"chatbot" still won't
+trigger it.

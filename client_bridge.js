@@ -49,6 +49,24 @@ const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ochibots';
 const BOT_NAME      = process.env.BOT_NAME      || 'Henry Ochibots v19™';
 const CMD_PREFIX    = '.';
 
+// ✅ NEW: bot name recognition for group chats — deliberately NOT reusing the
+// old broad "bot"/"henry" substring match (see the FIX comment further down
+// explaining why that was removed: it fired on "I saw a robot", "chatbot",
+// anyone named Henry in the group, etc.). This only matches full name
+// phrases, on word boundaries, so "robot"/"chatbot" still won't trigger it —
+// customize via BOT_NAME_ALIASES (comma-separated) if "Henry Ochibots" ever
+// changes for a reseller/white-label deployment.
+const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'ochibots,henry ochibots,beast bot,beastbot')
+  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+function isBotAddressedByName(text) {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return BOT_NAME_ALIASES.some(alias => {
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`).test(lower);
+  });
+}
+
 // ── Co-Owner System ─────────────────────────────────────────────────────────
 // Co-owners have the same power as owner but cannot add/remove other co-owners
 global.coOwners = new Set(
@@ -2036,7 +2054,12 @@ async function startSession(sessionId, opts = {}) {
             quotedParticipant && botNumber && quotedParticipant.includes(botNumber)
           );
 
-          if (botMentioned || isReplyToBot) {
+          // ✅ NEW: also trigger on the bot's actual name being used (word-
+          // boundary match against BOT_NAME_ALIASES) — narrower than the old
+          // removed check, so "robot"/"chatbot" still won't false-trigger.
+          const isNameAddressed = isBotAddressedByName(body);
+
+          if (botMentioned || isReplyToBot || isNameAddressed) {
             const aiReply = await apiClient.post('/natural-chat', {
               body,
               name,
