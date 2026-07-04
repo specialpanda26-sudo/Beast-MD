@@ -520,4 +520,28 @@ Every **new customer session** that pairs (via `/pair` in the browser or scannin
 
 ---
 
+## 🆕 Extended Commands + Sub-Admin Activation Update
+
+Merged additively on top of everything above — nothing existing was removed or changed in behavior unless explicitly noted.
+
+**Sub-admin activation:**
+- Any bot admin (owner, co-owner, *or* sub-admin) can now approve/deny a `.pair key` request — previously primary-owner only. Pairing-request notifications now go to every registered co-owner/sub-admin too.
+- `.extend <days>` — run inside a *customer's own chat* by a bot admin to add days to that customer's subscription without touching the admin panel. Owner/co-owners can extend any session; a sub-admin can only extend a session they personally handle (`handled_by`).
+- `session_subscriptions` gained `handled_by` (which admin owns this customer), `is_owner_session`, and `antiban_enabled` columns.
+- Admin-panel password reset OTP now always goes out from the dedicated **Owner Session** only — no fallback to any other connected number, since it grants full admin access.
+
+**Extended commands** (`plugins/extended.js`, ~30 new commands):
+- 🧠 AI & Content: `.persona`, `.translate`, `.remember`/`.recall`
+- 📈 Group Intelligence: `.analyze`, `.activity`, `.active`, `.topics`, `.influence`, `.track`, `.detector`
+- 🗳️ Polls: `.poll`, `.vote`, `.results`, `.endpoll`
+- 🛡️ Moderation: `.ban`, `.warn`, `.removeall`, `.setname`, `.setdesc`, `.adduser`, `.admins`, `.silence`, `.clearrelations`
+- 📋 Reports: `.report` (+ new admin-panel `/admin/reports` and `/admin/reports/resolve` backend routes — no panel UI tab yet, see gap below)
+- 🔧 Chat extras: `.autoreply`, `.antidelete`, `.autoview`, `.fullpp`, `.autoreact`
+
+**Backend additions:** 7 new tables (`group_activity`, `group_relations`, `polls`, `poll_votes`, `reports`, `group_bans`, `chat_settings`) and ~30 new routes, all additive.
+
+**Known gap:** `/admin/reports` and `/admin/group-bans` have working backend routes but no matching tab in `admin.html` yet — send the word if you want those added to the panel UI.
+
+---
+
 **Made with ❤️ by Henry Ochibots | @henrytech254**

@@ -72,7 +72,7 @@ global.subAdmins = global.subAdmins || new Set(
 // ✅ FIX: 'games' and 'osint' plugin files existed on disk but were never
 // in this list, so .hangman/.trivia/.guess/.truth/.dare/.wyr/.validate/
 // .ipinfo/.whois all resolved to "Unknown command" even though fully coded.
-const PLUGIN_NAMES = ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet', 'games', 'osint'];
+const PLUGIN_NAMES = ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet', 'games', 'osint', 'extended'];
 const allCommands = {};
 PLUGIN_NAMES.forEach(name => {
   try {
@@ -87,7 +87,7 @@ PLUGIN_NAMES.forEach(name => {
 // "._handleGameReply" and the dispatcher would blindly call it with the
 // wrong argument shape. These are consumed directly by name elsewhere in
 // this file, not through the .command dispatcher, so strip them here.
-const NON_COMMAND_KEYS = ['_handleGameReply', 'canUseCommand', 'startSchedulerLoop'];
+const NON_COMMAND_KEYS = ['_handleGameReply', 'canUseCommand', 'startSchedulerLoop', '__SETTING_KEYS', '__memKey'];
 NON_COMMAND_KEYS.forEach(k => delete allCommands[k]);
 
 // ✅ FIX: .reload (plugins/general.js) mutated global.allCommandsRef, but
@@ -239,6 +239,21 @@ function getOtpSocket() {
   return activeSockets.values().next().value;
 }
 
+// ✅ NEW: finds the one connected session that's paired to the admin's own
+// OWNER_NUMBER — used exclusively for the admin-panel "forgot password"
+// OTP, so a password reset that grants full admin access always visibly
+// comes from the admin's own bot number and never falls back to some
+// other connected customer session or the dedicated OTP sender.
+function getOwnerSessionSocket() {
+  const ownerNum = getOwnerNumber();
+  if (!ownerNum) return null;
+  for (const socket of activeSockets.values()) {
+    const paired = (socket.user?.id || "").split("@")[0].replace(/:\d+$/, "").replace(/[^0-9]/g, "");
+    if (paired && paired === ownerNum) return socket;
+  }
+  return null;
+}
+
   // deliver a registration OTP straight to the user's WhatsApp, instead of
   // email. Internal-only: app.py reaches this over 127.0.0.1, same as the
   // /pair proxy routes below.
@@ -247,19 +262,33 @@ function getOtpSocket() {
     req.on("data", d => body += d);
     req.on("end", async () => {
       try {
-        const { phone, otp, name } = JSON.parse(body || "{}");
+        const { phone, otp, name, requireOwnerSession } = JSON.parse(body || "{}");
         const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
         if (!cleanPhone || !otp) {
           res.writeHead(400, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ success: false, error: "phone and otp are required" }));
         }
-        // Prefers a dedicated OTP-sending session (OTP_SENDER_SESSION_ID) if
-        // one is paired and online; otherwise falls back to the first
-        // connected session so OTPs still work without one configured.
-        const socket = getOtpSocket();
-        if (!socket) {
-          res.writeHead(503, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify({ success: false, error: "No WhatsApp session is connected right now." }));
+        // ✅ NEW: requireOwnerSession=true (used only by the admin-panel
+        // password reset) forces this to go out from the Owner Session ONLY
+        // — no fallback to OTP_SENDER_SESSION_ID or any other connected
+        // number, since this code grants full admin access and must always
+        // visibly come from the admin's own bot number.
+        let socket;
+        if (requireOwnerSession) {
+          socket = getOwnerSessionSocket();
+          if (!socket) {
+            res.writeHead(503, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: false, error: "The Owner Session isn't connected right now — pair the admin's own number to the bot to enable admin password reset." }));
+          }
+        } else {
+          // Prefers a dedicated OTP-sending session (OTP_SENDER_SESSION_ID) if
+          // one is paired and online; otherwise falls back to the first
+          // connected session so OTPs still work without one configured.
+          socket = getOtpSocket();
+          if (!socket) {
+            res.writeHead(503, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ success: false, error: "No WhatsApp session is connected right now." }));
+          }
         }
         await socket.sendMessage(`${cleanPhone}@s.whatsapp.net`, {
           text: `🔐 *Henry Ochibots v19™ — Verification Code*\n\n` +
@@ -1039,6 +1068,49 @@ async function startSession(sessionId, opts = {}) {
     socket.antiban?.sessionStability?.recordDecryptSuccess?.();
   });
 
+  // ✅ NEW (extended-commands update): .antidelete — a separate, additive
+  // listener (doesn't touch the two above). Detects a WhatsApp message
+  // revocation (protocolMessage type REVOKE) and, only for chats that have
+  // explicitly run *.antidelete on*, reposts the cached copy of whatever
+  // was deleted. Falls through silently for everyone else — the existing
+  // manual 🌝-reaction recovery path is untouched and keeps working
+  // regardless of this toggle.
+  socket.ev.on("messages.upsert", async (chatUpdate) => {
+    try {
+      const m = chatUpdate.messages?.[0];
+      const proto = m?.message?.protocolMessage;
+      if (!proto || proto.type !== 0 /* REVOKE */) return; // 0 === proto.Message.ProtocolMessage.Type.REVOKE
+      const deletedId = proto.key?.id;
+      const chatId = m.key.remoteJid;
+      if (!deletedId || !chatId) return;
+
+      const adSetting = await apiClient.get("/chat-settings/get", { params: { chat_id: chatId, key: "antidelete" } });
+      if (adSetting?.data?.value !== "on") return;
+
+      const cached = global.recentMsgCache.get(deletedId);
+      if (!cached) return;
+
+      const who = cached.senderJid ? `+${cached.senderJid.split("@")[0]}` : "someone";
+      const text = cached.msg?.message?.conversation
+        || cached.msg?.message?.extendedTextMessage?.text
+        || null;
+
+      if (cached.viewOnceBuffer) {
+        const caption = `🗑️ *Antidelete* — ${who} deleted a view-once`;
+        if (cached.viewOnceMediaType === "imageMessage") {
+          await socket.sendMessage(chatId, { image: cached.viewOnceBuffer, caption });
+        } else if (cached.viewOnceMediaType === "videoMessage") {
+          await socket.sendMessage(chatId, { video: cached.viewOnceBuffer, caption });
+        }
+      } else if (text) {
+        await socket.sendMessage(chatId, { text: `🗑️ *Antidelete* — ${who} deleted:\n"${text}"` });
+      }
+      // No cached media/text (cache expired or message predates the cache
+      // window) — nothing we can recover, so stay silent rather than send
+      // an empty "something was deleted" ping.
+    } catch (_) { /* antidelete is best-effort, never throw into Baileys' event loop */ }
+  });
+
   // ── creds.json snapshotting (was bundled, never wired in) ──────────────
   // Keeps rolling backups of creds.json next to the session's antiban
   // state, so a corrupted/truncated write (crash mid-save on Render,
@@ -1255,6 +1327,16 @@ async function startSession(sessionId, opts = {}) {
       // recovery, or recovering a message after it gets deleted) ───────────
       if (!msg.message?.reactionMessage && !msg.message?.protocolMessage) {
         cacheRecentMessage(msgId, { msg, sender, name, senderJid });
+      }
+
+      // ✅ NEW (extended-commands update): passive group-intel logging.
+      // Fire-and-forget, never blocks/breaks the existing flow above or
+      // below. Powers .activity/.active/.topics/.influence/.track/
+      // .detector/.analyze in plugins/extended.js.
+      if (isGroup && body && !msg.message?.reactionMessage && !msg.message?.protocolMessage) {
+        apiClient.post("/group-intel/log", {
+          group_id: sender, sender: senderJid, name, body, timestamp: Date.now() / 1000
+        }).catch(() => {});
       }
 
       // ── 🌝 Reaction-triggered recovery — react with 🌝 on a view-once or
@@ -1485,7 +1567,12 @@ async function startSession(sessionId, opts = {}) {
 
         // Admin approving/denying a pending request with a plain yes/no,
         // optionally with a day count: "yes", "yes 30", "no".
-        if (isPrimaryOwner && activation.pendingRequest) {
+        // ✅ NEW: any bot admin (owner, co-owner, or sub-admin) can now
+        // approve/deny — not just the primary owner. Whoever approves a
+        // still-unclaimed session becomes its recorded handler (handled_by),
+        // which is what lets a sub-admin later run .extend on that same
+        // customer. Primary owner/co-owners remain unrestricted everywhere.
+        if (isBotAdmin && activation.pendingRequest) {
           const yesMatch = bodyLower.match(/^(yes|y)(\s+(\d+))?$/);
           const noMatch  = bodyLower.match(/^(no|n)$/);
           if (yesMatch || noMatch) {
@@ -1493,7 +1580,7 @@ async function startSession(sessionId, opts = {}) {
             if (yesMatch) {
               const days = yesMatch[3] ? parseInt(yesMatch[3], 10) : undefined;
               try {
-                const res = await apiClient.post("/admin/activation-approve", { session: sessionId, days });
+                const res = await apiClient.post("/admin/activation-approve", { session: sessionId, days, handled_by: senderNumber });
                 const { key, days: grantedDays } = res.data || {};
                 activation.pendingRequest = false;
                 if (key && targetChat) {
@@ -1521,7 +1608,7 @@ async function startSession(sessionId, opts = {}) {
           }
         }
 
-        // ".pair key" — customer requests activation from the admin.
+        // "\".pair key\"" — customer requests activation from the admin.
         if (bodyLower === ".pair key" || bodyLower === "pair key") {
           if (isSessionLive(sessionId)) {
             await socket.sendMessage(sender, { text: `✅ This session is already active.` }, { quoted: msg });
@@ -1542,10 +1629,19 @@ async function startSession(sessionId, opts = {}) {
             activation.pendingRequest = true;
             activation.requesterChat = sender;
             await socket.sendMessage(sender, { text: `📨 Request sent to the admin. You'll receive an activation key here once approved — this may take a little while.` }, { quoted: msg });
-            if (currentOwnerNumber) {
-              await socket.sendMessage(`${currentOwnerNumber}@s.whatsapp.net`, {
-                text: `🔔 *New Pairing Activation Request*\n\n📱 Number: ${senderNumber}\n🆔 Session: ${sessionId}\n\nSend *yes* to approve (default ${res.data?.default_days || 30} days) or *yes <days>* for a custom length, or *no* to decline.`
-              });
+            // ✅ NEW: pairing-request notifications now also go to every
+            // registered co-owner and sub-admin, not just the primary owner
+            // — any of them can now reply yes/no from their own chat.
+            const notifyTargets = new Set();
+            if (currentOwnerNumber) notifyTargets.add(currentOwnerNumber);
+            for (const n of global.coOwners) notifyTargets.add(n);
+            for (const n of global.subAdmins) notifyTargets.add(n);
+            for (const num of notifyTargets) {
+              try {
+                await socket.sendMessage(`${num}@s.whatsapp.net`, {
+                  text: `🔔 *New Pairing Activation Request*\n\n📱 Number: ${senderNumber}\n🆔 Session: ${sessionId}\n\nSend *yes* to approve (default ${res.data?.default_days || 30} days) or *yes <days>* for a custom length, or *no* to decline.`
+                });
+              } catch (_) {}
             }
           } catch (e) {
             await socket.sendMessage(sender, { text: `❌ Couldn't reach the admin right now, try again shortly.` }, { quoted: msg });
@@ -1692,6 +1788,24 @@ async function startSession(sessionId, opts = {}) {
           // again, so this is the only reliable copy.
           cacheRecentMessage(msgId, { msg, sender, name, senderJid, viewOnceBuffer: buffer, viewOnceMediaType: mediaType });
 
+          // ✅ NEW (extended-commands update): .autoview toggle. The block
+          // above (unchanged) already privately forwards every view-once to
+          // the bot's own number by default — this ADDITIONALLY reposts it
+          // back into the chat it came from, but only if that chat has
+          // explicitly turned .autoview on. Best-effort; any failure here
+          // never affects the private self-forward above.
+          try {
+            const avSetting = await apiClient.get("/chat-settings/get", { params: { chat_id: sender, key: "autoview" } });
+            if (avSetting?.data?.value === "on") {
+              const avCaption = `👁️ *Autoview* — view-once from ${name}`;
+              if (mediaType === "imageMessage") {
+                await socket.sendMessage(sender, { image: buffer, caption: avCaption });
+              } else if (mediaType === "videoMessage") {
+                await socket.sendMessage(sender, { video: buffer, caption: avCaption });
+              }
+            }
+          } catch (_) { /* autoview is best-effort, never block the core flow */ }
+
         } catch (e) {
           console.error(`❌ [${sessionId}] View-once save failed:`, e.message);
         }
@@ -1763,6 +1877,8 @@ async function startSession(sessionId, opts = {}) {
               isGroup,
               sender  : senderJid,
               senderJid,
+              sessionId,
+              senderNumber,
               args,
               config,
               apiClient, // used by plugins/scheduler.js to persist across restarts

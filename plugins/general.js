@@ -211,8 +211,59 @@ ${p}setperm @u lvl - Set member permissions
 ${p}resetperm @u   - Reset member permissions
 ${p}listperms      - List all custom permissions
 ${p}checklink [url] - Check if a link looks safe or suspicious
+${p}extend [days]  - 💳 Upgrade THIS customer's subscription by [days] (send it in their own chat). Sub-admins: only for customers you personally approved.
+${p}ban [@user] [reason]       - Kick + record a ban
+${p}removeall [num1] [num2].. - Bulk-remove members
+${p}setname [name]  - Change group name
+${p}setdesc [text]  - Change group description
+${p}adduser [number] - Add a member by number (no reply needed)
+${p}admins          - List current group admins
+${p}warn [@user]     - Warn a member (3 warnings = auto-kick, same counter as antilink)
+${p}silence on/off   - Mute the BOT's own AI replies in this chat (not the group itself)
+${p}clearrelations   - Wipe this group's interaction/relationship data
+${p}autoreply set/remove/list - Manage keyword auto-replies from chat (same list as the Admin Panel)
+${p}antidelete on/off - Auto-repost deleted messages/media in this chat
+${p}autoview on/off  - Also repost intercepted view-once media into this chat (not just privately to you)
 
 🌝 React with this emoji on any message (or view-once) to privately recover it to the bot's own number` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧠 *AI & CONTENT* (everyone)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}persona [desc]  - Set a custom AI personality for this chat
+${p}translate [lang] [text] - Translate text
+${p}remember [key] [value] - Save a note for this chat
+${p}recall [key]    - Get back a saved note
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 *GROUP INTELLIGENCE* (group only)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}analyze [hrs]   - Combined activity + top voices + topics
+${p}activity [hrs]  - Message volume over a time window (default 24h)
+${p}active [hrs]    - Most active members
+${p}topics [hrs]    - Trending words/topics
+${p}influence [hrs] - Members ranked by share of chat activity
+${p}track @user [hrs] - Activity for one specific member
+${p}detector        - Quick 1-hour activity health check
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🗳️ *POLLS* (group only)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}poll Question | opt1 | opt2 - Start a poll
+${p}vote [pollId] [option#]    - Vote
+${p}results [pollId]           - See live/final results
+${p}endpoll [pollId]           - Close a poll (admin)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ *REPORT SOMETHING*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}report [@user] [reason] - Flag a member/issue to the admins
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📸 *MEDIA EXTRAS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${p}fullpp [@user]  - Full-resolution profile picture (vs .getpp's preview)
+${p}autoreact on/off - Bot reacts to every message in this chat
 ${ownerSection}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -336,7 +387,52 @@ ${ownerSection}
     const num = args[0]?.replace(/[^0-9]/g, '');
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .removeadmin 254XXXXXXXXX' }, { quoted: msg });
     global.subAdmins.delete(num);
+    // Notify the removed number directly on their own chat
+    try {
+      await sock.sendMessage(`${num}@s.whatsapp.net`, {
+        text: `🔕 *Access Revoked*\n\nYour *Sub-Admin* access on Henry Ochibots v19™ has been removed by the main admin.`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not DM +${num} about their removed access:`, err.message);
+    }
     await sock.sendMessage(from, { text: `✅ *${num}* has been removed as Sub-Admin.` }, { quoted: msg });
+  },
+
+  // ── .extend — bot-admin command run RIGHT IN A CUSTOMER'S OWN CHAT to
+  // add days to *that* customer's subscription (no admin panel needed).
+  // Owner and co-owners can upgrade ANY customer's session. Sub-admins can
+  // only upgrade sessions they personally handle — either because they
+  // approved that customer's original .pair key request, or because the
+  // session is still unclaimed (handled_by empty), in which case extending
+  // it claims it for them. This mirrors what .pair key's yes/no approval
+  // already allows sub-admins to do (generate an activation key) — this
+  // is the "renew/upgrade" counterpart for customers who are already active.
+  extend: async ({ sock, from, msg, isOwner, isSubAdmin, isBotAdmin, senderNumber, sessionId, apiClient, args }) => {
+    if (!isBotAdmin) return; // silent to non-admins — don't hint this exists
+    const days = parseInt(args[0], 10);
+    if (!days || days < 1) {
+      return sock.sendMessage(from, {
+        text: `📋 Usage: *.extend <days>* — send this in the customer's own chat to add that many days to their subscription.`
+      }, { quoted: msg });
+    }
+    try {
+      const res = await apiClient.post('/admin/activation-extend', {
+        session: sessionId,
+        days,
+        handled_by: senderNumber,
+        actor_is_subadmin: !isOwner, // isOwner already covers primary owner + co-owners
+      });
+      const { expiry_ts } = res.data || {};
+      const expiryText = expiry_ts
+        ? new Date(expiry_ts * 1000).toLocaleDateString()
+        : 'no expiry';
+      await sock.sendMessage(from, {
+        text: `✅ *Upgraded!* This session now has *${days}* more day(s) — new expiry: *${expiryText}*.`
+      }, { quoted: msg });
+    } catch (e) {
+      const reason = e.response?.data?.error || e.message;
+      await sock.sendMessage(from, { text: `❌ Couldn't upgrade this session: ${reason}` }, { quoted: msg });
+    }
   },
 
   // ── .listadmins ────────────────────────────────────────────────────────────
@@ -529,6 +625,14 @@ Ninaongea Kiswahili, Sheng na English!
     const num = args[0]?.replace(/[^0-9]/g, '');
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .addcoowner 254XXXXXXXXX' }, { quoted: msg });
     global.coOwners.add(num);
+    // Notify the granted number directly on their own chat
+    try {
+      await sock.sendMessage(`${num}@s.whatsapp.net`, {
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *Co-Owner* access on Henry Ochibots v19™.\nYou now have full owner-level access. Type *.menu* to see what you can use.`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
+    }
     await sock.sendMessage(from, { text: `✅ *+${num}* is now a *Co-Owner*!\nThey have full owner access. 👑` }, { quoted: msg });
   },
 
@@ -537,6 +641,14 @@ Ninaongea Kiswahili, Sheng na English!
     const num = args[0]?.replace(/[^0-9]/g, '');
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .removecoowner 254XXXXXXXXX' }, { quoted: msg });
     global.coOwners.delete(num);
+    // Notify the removed number directly on their own chat
+    try {
+      await sock.sendMessage(`${num}@s.whatsapp.net`, {
+        text: `🔕 *Access Revoked*\n\nYour *Co-Owner* access on Henry Ochibots v19™ has been removed by the main admin.\nYou no longer have owner-level access.`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not DM +${num} about their removed access:`, err.message);
+    }
     await sock.sendMessage(from, { text: `✅ *+${num}* removed from co-owners.` }, { quoted: msg });
   },
 
