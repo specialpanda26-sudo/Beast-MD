@@ -130,3 +130,67 @@ messages to OTHER people changed — this only fixes the bot sending to itself.
 budget or a ban-recovery pause, on any session, not just your primary number. The antiban system
 is meant to shield you from real risk to *other* contacts — it was never supposed to flag a
 message you send to yourself.
+
+## Update 8 — Connection watchdog (new bug fix) + admin UI audit
+
+**New bug found and fixed — "comes back after a long idle period, shows stale 'last active',
+just doesn't respond, forced to re-pair":** Baileys' own internal keep-alive can leave a socket
+in a "zombie" state — technically still connected, but not actually processing anything — after
+a long idle stretch. This is especially likely on Render's free tier, where the whole process
+(and every timer in it) freezes solid while the service sleeps; when a request wakes it back up,
+Baileys' internal keep-alive bookkeeping can be left inconsistent, and the disconnect event that
+would normally trigger the existing reconnect logic never fires. Fixed with a new watchdog: every
+3 minutes, if there's been no genuine inbound message for 6+ minutes, it actively probes the
+connection with a lightweight presence update; if that doesn't complete within 10s, the socket is
+force-closed so the existing (unchanged) reconnect logic takes over automatically. No more manual
+re-pairing needed for this specific failure mode.
+
+**Admin Panel UI audit — found two real gaps, both closed:**
+- The per-chat "which chats should the bot auto-reply on your own number" toggle (Update 5) had a
+  working backend but genuinely no UI — you'd have had no way to actually use it. Added a new
+  **💬 Owner Chats** tab.
+- The per-session antiban on/off toggle (Update 7 area) had a working backend but no UI either.
+  Added a toggle button directly on each session card in the **📱 Sessions** tab.
+- The global `antiban_enabled` feature flag was togglable but showed with its raw DB name instead
+  of a readable label in the **⚙️ Features** tab — given a proper label.
+
+**Still an open gap, unchanged from before:** `/admin/reports` and `/admin/group-bans` still have
+working backend routes with no matching Admin Panel tab. Flagging again since it's been a few
+rounds now — say the word and it's next.
+
+## Update 9 — Reports & Group Bans tabs (last known gap closed)
+
+Two new Admin Panel tabs, matching the existing look/pattern of every other tab:
+
+- **🛡️ Reports** — every `.report [@user] [reason]` submission, who filed it and where, with a
+  "Mark Resolved" button. Resolving only updates this list — it never takes any action in the
+  group itself.
+- **⛔ Group Bans** — the audit trail `.ban` writes to, with a "Lift Ban" button. Also added the
+  missing `/admin/group-bans/remove` endpoint — this trail could be viewed before but never
+  edited from the panel.
+
+No other known gaps remain from anything discussed so far.
+
+## Update 10 — .dl/YouTube resilience, silent-logout notification, browser label
+
+- **`.dl`/`.download`/`.song`/`.audiomack`/`.videosearch`**: YouTube increasingly blocks
+  cloud/datacenter IPs (Render, Railway, etc.) with a "Sign in to confirm you're not a bot"
+  challenge — this affects any yt-dlp-based bot hosted this way, not a bug specific to this
+  codebase. Now automatically tries alternate YouTube API clients (`--extractor-args
+  youtube:player_client=android,web,tv`, retrying once on `ios` specifically if that error
+  signature is hit) before failing. Optional `YTDLP_COOKIES_FILE` env var for the more reliable
+  (but higher-maintenance) cookies-based fix, if the automatic mitigation isn't enough.
+- **Session logout was silent — fixed:** when WhatsApp force-unlinks a session (this happens
+  automatically after ~14 days of the paired phone itself being offline — standard WhatsApp
+  behavior, not bot-specific), nothing told anyone it happened beyond a server console log. Now
+  logs to the Admin Panel Activity Log and pings the owner on WhatsApp (via any other still-alive
+  session) so a session needing re-pair is never a silent mystery.
+- **Linked-device label changed from "Chrome" to "Safari"** on Ubuntu, per request — purely
+  cosmetic (what WhatsApp's own Settings → Linked Devices shows), no functional effect. Note:
+  this is the fallback default only — `ANTIBAN_DEVICE_FINGERPRINT` (default on) randomizes the
+  browser/OS/version per session for anti-fleet-detection, so most sessions will show a varied
+  label unless that's turned off.
+
+**Confirmed, not a bug:** the bot's connection to WhatsApp runs independently of the paired phone
+— being offline for hours/days doesn't stop it from replying. Only ~14 days of continuous phone
+inactivity triggers a real WhatsApp-side unlink (see the logout notification above).

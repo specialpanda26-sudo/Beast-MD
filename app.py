@@ -1795,6 +1795,11 @@ async def admin_stats():
     # Session info from global registry
     session_list = []
     now_ts = time.time()
+    # One query for every session's antiban_enabled column, instead of a
+    # query-per-session inside the loop below.
+    async with aiosqlite.connect(DB_FILE) as db3:
+        async with db3.execute("SELECT session, antiban_enabled FROM session_subscriptions") as c3:
+            antiban_by_session = {r[0]: bool(r[1]) for r in await c3.fetchall()}
     for name, info in SESSION_REGISTRY.items():
         last_active_ts = info.get("last_active_ts")
         expiry_ts = info.get("expiry_ts")
@@ -1816,6 +1821,9 @@ async def admin_stats():
             "antiban_risk": info.get("antiban_risk"),
             "antiban_warmup_day": info.get("antiban_warmup_day"),
             "antiban_warmup_total": info.get("antiban_warmup_total"),
+            # ✅ NEW: per-session antiban on/off (defaults True if the
+            # session has no subscription row yet, matching /admin/session-antiban).
+            "antiban_enabled": antiban_by_session.get(name, True),
         })
 
     # Today's message count (for activity chart)
@@ -3924,6 +3932,23 @@ async def admin_group_bans():
         ) as c:
             rows = await c.fetchall()
     return jsonify({"bans": [{"group_id": r[0], "number": r[1], "reason": r[2], "banned_at": r[3]} for r in rows]})
+
+
+@app.route("/admin/group-bans/remove", methods=["POST"])
+async def admin_group_bans_remove():
+    """✅ NEW: was missing entirely — /admin/group-bans could list bans but
+    there was no way to lift one short of touching the DB directly."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    group_id = (data.get("group_id") or "").strip()
+    number = (data.get("number") or "").strip()
+    if not group_id or not number:
+        return jsonify({"error": "group_id and number required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM group_bans WHERE group_id = ? AND number = ?", (group_id, number))
+        await db.commit()
+    return jsonify({"success": True})
 
 
 # ── Polls: .poll .vote .results .endpoll ────────────────────────────────────

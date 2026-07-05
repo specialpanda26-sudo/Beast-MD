@@ -277,6 +277,7 @@
       <div class="tab" data-tab="contacts" onclick="switchTab('contacts')">👥 Contacts</div>
       <div class="tab" data-tab="search" onclick="switchTab('search')">🔍 Search</div>
       <div class="tab" data-tab="keywords" onclick="switchTab('keywords')">🔑 Keywords</div>
+      <div class="tab" data-tab="ownerchats" onclick="switchTab('ownerchats')">💬 Owner Chats</div>
       <div class="tab" data-tab="features" onclick="switchTab('features')">⚙️ Features</div>
       <div class="tab" data-tab="blacklist" onclick="switchTab('blacklist')">🚫 Blacklist</div>
       <div class="tab" data-tab="broadcast" onclick="switchTab('broadcast')">📢 Broadcast</div>
@@ -286,6 +287,8 @@
       <div class="tab" data-tab="scheduler" onclick="switchTab('scheduler')">⏰ Scheduler</div>
       <div class="tab" data-tab="viewonce" onclick="switchTab('viewonce')">👁️ View-Once</div>
       <div class="tab" data-tab="activity" onclick="switchTab('activity')">📜 Activity Log</div>
+      <div class="tab" data-tab="reports" onclick="switchTab('reports')">🛡️ Reports</div>
+      <div class="tab" data-tab="groupbans" onclick="switchTab('groupbans')">⛔ Group Bans</div>
     </div>
 
     <!-- OVERVIEW TAB -->
@@ -365,6 +368,20 @@
       </div>
       <div class="section-title">Active Keywords</div>
       <div id="keywords-list"><div class="empty">Loading...</div></div>
+    </div>
+
+    <!-- OWNER CHATS TAB -->
+    <div class="tab-content" id="tab-ownerchats">
+      <div class="form-card">
+        <div class="section-title">💬 Owner Number — Personal Auto-Reply</div>
+        <div class="hint" style="margin-bottom:14px">
+          Only chats turned ON here get an AI auto-reply (in Sheng) on your own number, and only
+          after you've been quiet there for 5+ minutes — everywhere else, it stays silent and lets
+          you reply yourself. New chats always get a one-time "save my number" note regardless of
+          this toggle.
+        </div>
+        <div id="ownerchats-list"><div class="empty">Loading...</div></div>
+      </div>
     </div>
 
     <!-- FEATURES TAB -->
@@ -510,6 +527,30 @@
       </div>
       <div id="activity-list"><div class="empty">Loading...</div></div>
     </div>
+
+    <!-- REPORTS TAB -->
+    <div class="tab-content" id="tab-reports">
+      <div class="form-card">
+        <div class="hint">From <code>.report [@user] [reason]</code> — anyone in a group can flag someone/something to you. Resolving just marks it handled here, it doesn't take any action in the group itself.</div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">🛡️ Reports</div>
+        <button class="refresh-btn" onclick="loadReports()">↻ Refresh</button>
+      </div>
+      <div id="reports-list"><div class="empty">Loading...</div></div>
+    </div>
+
+    <!-- GROUP BANS TAB -->
+    <div class="tab-content" id="tab-groupbans">
+      <div class="form-card">
+        <div class="hint">Audit trail from <code>.ban</code> — the actual WhatsApp removal already happened when the command ran; this list is just a record you can check re-adds against, and lift here if a ban was a mistake.</div>
+      </div>
+      <div class="section-header">
+        <div class="section-title">⛔ Group Bans</div>
+        <button class="refresh-btn" onclick="loadGroupBans()">↻ Refresh</button>
+      </div>
+      <div id="groupbans-list"><div class="empty">Loading...</div></div>
+    </div>
   </div>
 </div>
 
@@ -636,6 +677,9 @@
     if (name === "blacklist") loadBlacklist();
     if (name === "keywords") loadKeywords();
     if (name === "features") loadFeatures();
+    if (name === "ownerchats") loadOwnerChats();
+    if (name === "reports") loadReports();
+    if (name === "groupbans") loadGroupBans();
     if (name === "registrations") loadRegistrations();
     if (name === "payments") loadPayments();
     if (name === "activation") loadActivation();
@@ -1078,7 +1122,8 @@
     status_save: '💾 Auto-Save Statuses',
     antilink: '🚫 Anti-Link (warn → kick)',
     menu_buttons: '🔘 Tappable Menu Buttons',
-    antiban_notify_only: '🔥 Send Anyway During Ban-Recovery Pause (OFF = safe, blocks sends; ON = risk of burns)'
+    antiban_notify_only: '🔥 Send Anyway During Ban-Recovery Pause (OFF = safe, blocks sends; ON = risk of burns)',
+    antiban_enabled: '🛡️ Anti-Ban Protection (global kill-switch, applies to every session)'
   };
 
   async function loadFeatures() {
@@ -1104,6 +1149,118 @@
       body: JSON.stringify({ name, enabled })
     });
     loadFeatures();
+  }
+
+  async function toggleSessionAntiban(session, enabled) {
+    await authedFetch('/admin/session-antiban/toggle', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session, enabled })
+    });
+    loadDashboard();
+  }
+
+  /* ── OWNER CHATS (personal auto-reply toggle) ── */
+  async function loadOwnerChats() {
+    const list = document.getElementById('ownerchats-list');
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await authedFetch('/admin/owner-chats');
+      const data = await res.json();
+      const chats = data.chats || [];
+      if (!chats.length) {
+        list.innerHTML = '<div class="empty">No chats yet — this fills in as people message your own number.</div>';
+        return;
+      }
+      list.innerHTML = chats.map(c => `
+        <div class="contact-row">
+          <span>+${escapeHtml((c.chat_id || '').split('@')[0])}</span>
+          <button class="btn-sm ${c.ai_allowed ? 'btn-green' : 'btn-red'}" onclick="toggleOwnerChat('${c.chat_id}', ${!c.ai_allowed})">${c.ai_allowed ? 'AUTO-REPLY ON' : 'AUTO-REPLY OFF'}</button>
+        </div>`).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty">Failed to load.</div>';
+    }
+  }
+
+  async function toggleOwnerChat(chatId, allowed) {
+    await authedFetch('/admin/owner-chats/toggle', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, allowed })
+    });
+    loadOwnerChats();
+  }
+
+  /* ── REPORTS ── */
+  async function loadReports() {
+    const list = document.getElementById('reports-list');
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await authedFetch('/admin/reports');
+      const data = await res.json();
+      const reports = data.reports || [];
+      if (!reports.length) {
+        list.innerHTML = '<div class="empty">No reports yet.</div>';
+        return;
+      }
+      list.innerHTML = reports.map(r => `
+        <div class="contact-row" style="${r.resolved ? 'opacity:.5' : ''}">
+          <div>
+            <div><strong>${escapeHtml(r.target || 'unspecified')}</strong> — ${escapeHtml(r.reason || '')}</div>
+            <div style="font-size:0.72rem;color:var(--muted)">
+              by ${escapeHtml((r.reporter || '').split('@')[0])} in ${escapeHtml((r.group_id || '').split('@')[0])} ·
+              ${r.timestamp ? new Date(r.timestamp * 1000).toLocaleString() : ''}
+            </div>
+          </div>
+          ${r.resolved
+            ? '<span class="btn-sm" style="background:var(--border);color:var(--muted)">RESOLVED</span>'
+            : `<button class="btn-sm btn-green" onclick="resolveReport(${r.id})">Mark Resolved</button>`}
+        </div>`).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty">Failed to load reports.</div>';
+    }
+  }
+
+  async function resolveReport(id) {
+    await authedFetch('/admin/reports/resolve', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    loadReports();
+  }
+
+  /* ── GROUP BANS ── */
+  async function loadGroupBans() {
+    const list = document.getElementById('groupbans-list');
+    list.innerHTML = '<div class="empty">Loading...</div>';
+    try {
+      const res = await authedFetch('/admin/group-bans');
+      const data = await res.json();
+      const bans = data.bans || [];
+      if (!bans.length) {
+        list.innerHTML = '<div class="empty">No group bans recorded.</div>';
+        return;
+      }
+      list.innerHTML = bans.map(b => `
+        <div class="contact-row">
+          <div>
+            <div><strong>+${escapeHtml(b.number)}</strong> ${b.reason ? '— ' + escapeHtml(b.reason) : ''}</div>
+            <div style="font-size:0.72rem;color:var(--muted)">
+              in ${escapeHtml((b.group_id || '').split('@')[0])} ·
+              ${b.banned_at ? new Date(b.banned_at * 1000).toLocaleString() : ''}
+            </div>
+          </div>
+          <button class="btn-sm btn-red" onclick="removeGroupBan('${b.group_id}', '${b.number}')">Lift Ban</button>
+        </div>`).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty">Failed to load bans.</div>';
+    }
+  }
+
+  async function removeGroupBan(groupId, number) {
+    await authedFetch('/admin/group-bans/remove', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group_id: groupId, number })
+    });
+    loadGroupBans();
   }
 
   function escapeHtml(s) {
@@ -1215,6 +1372,7 @@
             <div class="session-actions" style="flex-direction:column;align-items:flex-end;gap:6px">
               <div style="display:flex;gap:6px">
                 <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="viewSession('${s.name}')">View</button>
+                <button class="btn-sm ${s.antiban_enabled ? 'btn-green' : 'btn-red'}" onclick="toggleSessionAntiban('${s.name}', ${!s.antiban_enabled})">🛡️ Antiban ${s.antiban_enabled ? 'ON' : 'OFF'}</button>
                 <button class="btn-sm btn-red" onclick="terminateSession('${s.name}')">Terminate</button>
               </div>
               <div style="display:flex;gap:6px;align-items:center">

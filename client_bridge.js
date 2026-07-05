@@ -878,6 +878,9 @@ async function startSession(sessionId, opts = {}) {
   }
 
   let msgCount = 0;
+  // ✅ NEW: connection watchdog state — see the setInterval further down
+  // for why this exists (long-idle "zombie" socket recovery).
+  let lastConfirmedAliveAt = Date.now();
 
   // ── Device fingerprint (was bundled in the anti-ban lib but never wired
   // in) ────────────────────────────────────────────────────────────────
@@ -897,7 +900,11 @@ async function startSession(sessionId, opts = {}) {
     markOnlineOnConnect: true,
     generateHighQualityLinkPreview: true,
     // Helps avoid bans — don't look like web browser
-    browser: Browsers.ubuntu("Chrome")
+    // ✅ Changed from "Chrome" to "Safari" per Henry's request. This is
+    // purely the label WhatsApp shows for the linked device (Settings →
+    // Linked Devices) — doesn't require Safari to actually exist on
+    // Ubuntu, Browsers.ubuntu() just takes any string as the display name.
+    browser: Browsers.ubuntu("Safari")
   };
 
   if (process.env.ANTIBAN_DEVICE_FINGERPRINT !== "false") {
@@ -1224,6 +1231,45 @@ async function startSession(sessionId, opts = {}) {
     }
   }, 2 * 60 * 1000);
   antibanSaveInterval.unref?.();
+
+  // ✅ NEW: connection watchdog — fixes the "comes back after a long idle
+  // period showing stale 'last active' and just doesn't respond anymore,
+  // forced to re-pair" bug. Baileys' own internal keep-alive can leave a
+  // socket in a "zombie" state after a long enough idle stretch — this is
+  // especially common on Render's free tier, where the whole Node process
+  // (and every timer in it) is frozen solid while the service is asleep;
+  // when a request wakes it back up, Baileys' internal keep-alive
+  // bookkeeping can be left inconsistent, and the close event that would
+  // normally trigger the existing reconnect logic above never fires. The
+  // socket LOOKS connected (SESSION_REGISTRY still says online) but is
+  // actually dead — nothing gets processed until someone notices and
+  // manually terminates + re-pairs.
+  //
+  // Fix: every 3 minutes, if there's been no genuine inbound traffic for
+  // 6+ minutes, actively probe the connection with a lightweight
+  // presence update (touches nothing customer-facing, sends to no one).
+  // If that probe doesn't complete within 10s, or throws, the socket is
+  // almost certainly dead — force-close it so Baileys' own "connection
+  // close" handler (already wired above) takes over and reconnects
+  // exactly like it would for any other disconnect.
+  const WATCHDOG_IDLE_THRESHOLD_MS = 6 * 60 * 1000;
+  const WATCHDOG_PROBE_TIMEOUT_MS = 10 * 1000;
+  const connectionWatchdog = setInterval(async () => {
+    if (Date.now() - lastConfirmedAliveAt < WATCHDOG_IDLE_THRESHOLD_MS) return;
+    try {
+      await Promise.race([
+        socket.sendPresenceUpdate('available'),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('watchdog probe timeout')), WATCHDOG_PROBE_TIMEOUT_MS)),
+      ]);
+      // Probe succeeded — socket is genuinely alive, just quiet. Reset the
+      // clock so we don't probe again for another full idle window.
+      lastConfirmedAliveAt = Date.now();
+    } catch (e) {
+      console.warn(`⚠️  [${sessionId}] Watchdog: connection looks dead after ${Math.round((Date.now() - lastConfirmedAliveAt) / 60000)}min idle (${e.message}) — forcing reconnect.`);
+      try { socket.end(new Error('watchdog: stale/zombie connection, forcing reconnect')); } catch (_) {}
+    }
+  }, 3 * 60 * 1000);
+  connectionWatchdog.unref?.();
 
   // Surface health-monitor risk escalation to console + owner DM so Henry
   // gets an early warning before a real ban, not after.
@@ -1787,6 +1833,7 @@ async function startSession(sessionId, opts = {}) {
 
       // Update session message count for admin panel
       {
+        lastConfirmedAliveAt = Date.now();
         const abStats = socket.antiban?.getStats?.();
         apiClient.post("/admin/update-session", {
           name: sessionId,
@@ -2462,10 +2509,22 @@ _Henry Ochibots v19™ — @henrytech254_ 🔥`;
       // and stop the periodic save loop — a new one starts in the next
       // startSession() call for the reconnect.
       clearInterval(antibanSaveInterval);
+      clearInterval(connectionWatchdog);
       socket.antiban?.saveState?.().catch(() => {});
 
       if (loggedOut) {
         console.log(`🚪 [${sessionId}] Logged out — clearing session and restarting pairing...`);
+        // ✅ NEW: this used to be silent — nothing told Henry (or a
+        // customer) that a session got logged out and now needs a fresh
+        // /pair. This is very often not a bug at all: WhatsApp force-logs-
+        // out a linked device if the PHONE ITSELF doesn't come online for
+        // roughly 14 days — same thing that happens to WhatsApp Web in a
+        // real browser, nothing bot-specific about it. Logs to the Admin
+        // Panel's Activity Log and pings the owner on WhatsApp (via
+        // whichever OTHER session is still alive, since this one just
+        // died) so it's never a silent mystery why a session stopped
+        // responding.
+        logActivity('sensitive', 'session-logout', `Session "${sessionId}" was logged out by WhatsApp and needs to be re-paired at /pair. This usually means the phone itself was offline for an extended period (WhatsApp auto-unlinks devices after ~14 days of phone inactivity) — not a bug.`, sessionId);
         botOnline = false;
         lastPairingCode = null;
         lastPairingNumber = "";

@@ -3,6 +3,44 @@ const { execFile } = require('child_process');  // ✅ FIX: use execFile (no she
 const fs = require('fs');
 const path = require('path');
 
+// ── YouTube bot-detection mitigation ──────────────────────────────────────
+// ✅ NEW: YouTube increasingly serves a "Sign in to confirm you're not a
+// bot" challenge to requests from cloud/datacenter IPs (which is exactly
+// what Render/Railway/etc are) — this is why .dl/.download/.song could
+// fail consistently even for a perfectly valid public YouTube link, with
+// no code bug involved. Two mitigations, both optional/best-effort:
+//   1. --extractor-args requesting an alternate YouTube API client
+//      (android/ios/tv instead of the web client) — these often aren't
+//      subject to the same web bot-check, and this is harmless to pass
+//      even for non-YouTube URLs (yt-dlp just ignores irrelevant
+//      extractor-args for other sites).
+//   2. An optional cookies file, only used if YTDLP_COOKIES_FILE is set —
+//      exporting cookies from a real logged-in YouTube session is the
+//      most reliable fix, but needs Henry to actually provide one (cookies
+//      expire and need periodic refreshing, so this is opt-in, not
+//      required — everything above already helps without it).
+const YTDLP_EXTRACTOR_ARGS = ['--extractor-args', 'youtube:player_client=android,web,tv'];
+const YTDLP_COOKIES_FILE = (process.env.YTDLP_COOKIES_FILE || '').trim();
+function buildYtdlpArgs(extraArgs) {
+  const args = [...YTDLP_EXTRACTOR_ARGS, ...extraArgs];
+  if (YTDLP_COOKIES_FILE && fs.existsSync(YTDLP_COOKIES_FILE)) {
+    args.push('--cookies', YTDLP_COOKIES_FILE);
+  }
+  return args;
+}
+// One retry, with a narrowed single client, ONLY if the first attempt hit
+// the specific bot-detection signature — for genuinely private/removed/
+// unsupported content, retrying just wastes time, so only this one cause
+// gets a second try.
+function runYtdlpWithRetry(args, execOpts, callback) {
+  execFile('yt-dlp', args, execOpts, (err, stdout, stderr) => {
+    const hitBotCheck = err && /sign in to confirm|not a bot|confirm you.?re not a bot/i.test((stderr || '').toString());
+    if (!hitBotCheck) return callback(err, stdout, stderr);
+    const retryArgs = args.map(a => a === 'youtube:player_client=android,web,tv' ? 'youtube:player_client=ios' : a);
+    execFile('yt-dlp', retryArgs, execOpts, callback);
+  });
+}
+
 // ── yt-dlp failure diagnosis ─────────────────────────────────────────────
 // ✅ FIX: .song/.download/.dl used to throw away the real yt-dlp stderr and
 // always show a hardcoded guess ("may be unsupported or private") — so
@@ -343,7 +381,7 @@ module.exports = {
     // ✅ FIX: was swallowing the real yt-dlp error and always showing a
     // hardcoded "may be private" guess for every possible failure. Now
     // captures stderr and diagnoses the actual cause.
-    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpTemplate, url], async (err, stdout, stderr) => {
+    runYtdlpWithRetry(buildYtdlpArgs(['-x', '--audio-format', 'mp3', '-o', tmpTemplate, url]), {}, async (err, stdout, stderr) => {
       if (err) {
         const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
         if (logActivity) logActivity('error', 'song', `.song ${url} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
@@ -380,7 +418,7 @@ module.exports = {
     const stamp = Date.now();
     const tmpTemplate = `/tmp/dl_${stamp}.%(ext)s`;
 
-    execFile('yt-dlp', ['-f', 'mp4/best', '-o', tmpTemplate, url], async (err, stdout, stderr) => {
+    runYtdlpWithRetry(buildYtdlpArgs(['-f', 'mp4/best', '-o', tmpTemplate, url]), {}, async (err, stdout, stderr) => {
       if (err) {
         const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
         if (logActivity) logActivity('error', 'download', `.download ${url} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
@@ -426,7 +464,7 @@ module.exports = {
 
     // ✅ FIX: was showing "may be unsupported or private" for literally every
     // failure regardless of cause. Now captures stderr and diagnoses it.
-    execFile('yt-dlp', ytArgs, { maxBuffer: 1024 * 1024 * 20 }, async (err, stdout, stderr) => {
+    runYtdlpWithRetry(buildYtdlpArgs(ytArgs), { maxBuffer: 1024 * 1024 * 20 }, async (err, stdout, stderr) => {
       if (err) {
         const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
         if (logActivity) logActivity('error', 'dl', `.dl ${url} ${wantAudio ? 'audio' : ''} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
@@ -538,7 +576,7 @@ module.exports = {
     const tmpTemplate = `/tmp/audiomack_${stamp}.%(ext)s`;
     const searchTerm = /^https?:\/\//i.test(query) ? query : `audiomacksearch1:${query}`;
 
-    execFile('yt-dlp', ['-x', '--audio-format', 'mp3', '-o', tmpTemplate, searchTerm], async (err, stdout, stderr) => {
+    runYtdlpWithRetry(buildYtdlpArgs(['-x', '--audio-format', 'mp3', '-o', tmpTemplate, searchTerm]), {}, async (err, stdout, stderr) => {
       if (err) {
         const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
         if (logActivity) logActivity('error', 'audiomack', `.audiomack ${query} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
@@ -568,7 +606,7 @@ module.exports = {
     const tmpTemplate = `/tmp/vsearch_${stamp}.%(ext)s`;
     const searchTerm = /^https?:\/\//i.test(query) ? query : `ytsearch1:${query}`;
 
-    execFile('yt-dlp', ['-f', 'mp4/best', '-o', tmpTemplate, searchTerm], async (err, stdout, stderr) => {
+    runYtdlpWithRetry(buildYtdlpArgs(['-f', 'mp4/best', '-o', tmpTemplate, searchTerm]), {}, async (err, stdout, stderr) => {
       if (err) {
         const { userMsg, raw } = diagnoseYtdlpError(stderr, err.message);
         if (logActivity) logActivity('error', 'videosearch', `.videosearch ${query} → ${raw.slice(0, 300)}`, `+${(senderJid||from).split('@')[0]}`);
