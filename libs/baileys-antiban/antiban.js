@@ -162,6 +162,20 @@ class AntiBan {
         // Owner exemption + notify-only mode (see field doc above).
         const ownerRaw = cfg.ownerJid || legacyPassthrough?.ownerJid || null;
         this.ownerJid = ownerRaw ? String(ownerRaw) : null;
+        // ✅ FIX: ownerJid above is the ONE global admin number, shared by
+        // every session's antiban config. That's correct for "did the
+        // owner send a .command" but wrong for "is this session sending to
+        // ITSELF" (view-once/antidelete recovery self-forwards) — on any
+        // session other than the one paired to the global owner number,
+        // those self-forwards were falling through to the non-owner path:
+        // hard-blocked during a ban-recovery pause in strict mode, or
+        // spamming "sent despite pause" warnings in notify-only mode, for
+        // a message that can never cause a ban (you can't get banned by
+        // WhatsApp for messaging your own linked number). selfJid fixes
+        // this per-session — same static-or-function pattern as
+        // notifyOnlyMode, since the socket's own number often isn't known
+        // yet at construction time and needs to be read live.
+        this.selfJid = cfg.selfJid ?? legacyPassthrough?.selfJid ?? null;
         this.notifyOnlyMode = cfg.notifyOnlyMode ?? legacyPassthrough?.notifyOnlyMode ?? true;
         this.onOwnerNotify = cfg.onOwnerNotify || legacyPassthrough?.onOwnerNotify || null;
         // Initialize persistence — load state before constructing modules
@@ -392,6 +406,17 @@ class AntiBan {
         this.contactGraphWarmer.onIncomingMessage(jid);
     }
     /**
+     * Resolves selfJid at call time (function form) since the socket's own
+     * paired number is often unknown at construction time. Returns true if
+     * `recipient` is this session's own number — always exempt from every
+     * ban-risk check, same as ownerJid, since you cannot be banned by
+     * WhatsApp for messaging yourself.
+     */
+    _isSelf(recipient) {
+        const self = typeof this.selfJid === 'function' ? this.selfJid() : this.selfJid;
+        return Boolean(self && recipient === self);
+    }
+    /**
      * Resolves notifyOnlyMode at call time. Accepts either a static boolean
      * (old behavior, frozen for the life of the socket) or a function that's
      * re-evaluated on every check — used by client_bridge.js to back this
@@ -404,7 +429,7 @@ class AntiBan {
             : this.notifyOnlyMode !== false;
     }
     _gate(recipient, reason, healthStatus, extra = {}) {
-        const isOwner = this.ownerJid && recipient === this.ownerJid;
+        const isOwner = (this.ownerJid && recipient === this.ownerJid) || this._isSelf(recipient);
         if (isOwner || this._isNotifyOnly()) {
             this.stats.messagesAllowed++;
             if (!isOwner) {
@@ -446,7 +471,15 @@ class AntiBan {
             // every other heuristic: OFF (default) = strict, blocks sends
             // and waits out the pause; ON = notify-only, sends go through
             // with a warning. Owner's own JID is always exempt either way.
-            const isOwner = this.ownerJid && recipient === this.ownerJid;
+            // ✅ FIX: was ownerJid-only, so a session's OWN view-once/
+            // antidelete self-forwards (recipient = that session's own
+            // number, which usually isn't the same as the one global
+            // ownerJid) fell through to the non-owner branch — hard-
+            // blocked in strict mode, or spamming a fresh "sent despite
+            // ban recovery pause" log line on every single self-forward in
+            // notify-only mode. Self-sends can never cause a ban, so they
+            // get the same clean exemption ownerJid already had.
+            const isOwner = (this.ownerJid && recipient === this.ownerJid) || this._isSelf(recipient);
             const reason = `Ban recovery: ${recoveryStatus.recommendation}`;
             if (isOwner || this._isNotifyOnly()) {
                 this.stats.messagesAllowed++;
@@ -558,7 +591,11 @@ class AntiBan {
         // bounded delay instead of a silent drop, matching every other
         // check here. Everyone else still gets the real hard block — this
         // is genuine account-throughput protection, not a false positive.
-        const isOwnerRecipient = this.ownerJid && recipient === this.ownerJid;
+        // ✅ FIX: also extended to self-sends — recovering several
+        // view-once/antidelete messages in a short burst all forward to
+        // the same self JID and could otherwise trip the identical-
+        // message/daily cap on a target that can never cause a ban.
+        const isOwnerRecipient = (this.ownerJid && recipient === this.ownerJid) || this._isSelf(recipient);
         let delay = await this.rateLimiter.getDelay(recipient, content);
         if (delay === -1 && isOwnerRecipient) {
             delay = this.resolvedConfig.maxDelayMs || 5000;

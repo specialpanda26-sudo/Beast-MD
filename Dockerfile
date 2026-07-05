@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     ffmpeg \
     curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -28,6 +29,17 @@ RUN pip3 install --break-system-packages --no-cache-dir -r requirements.txt
 # so this (newer, self-updating) binary wins on PATH instead of pip's copy.
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
     -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp
+
+# ✅ NEW: yt-dlp now requires a JS runtime to solve YouTube's signature
+# challenges — as of late 2025 it started failing with "No supported
+# JavaScript runtime could be found. Only deno is enabled by default" on
+# every YouTube link, regardless of the link itself. This is a genuinely
+# new yt-dlp requirement, not a bug in this codebase. Deno is what yt-dlp
+# looks for automatically with zero extra config once it's on PATH, so
+# .dl/.download/.song/.videosearch/.audiomack all pick it up for free.
+RUN curl -L https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip \
+    -o /tmp/deno.zip && unzip -o /tmp/deno.zip -d /usr/local/bin && \
+    chmod a+rx /usr/local/bin/deno && rm /tmp/deno.zip
 
 # Now copy the rest of the project
 COPY . .

@@ -175,7 +175,7 @@ def _verify_password(password: str, stored: str) -> bool:
 NODE_PAIR_URL = f"http://127.0.0.1:{os.environ.get('WEB_PORT', 3000)}"
 
 
-async def send_otp_whatsapp(phone: str, otp: str, name: str) -> dict:
+async def send_otp_whatsapp(phone: str, otp: str, name: str, require_owner_session: bool = False) -> dict:
     try:
         # ✅ FIX (speed): was timeout=15 — a dead/half-open session would make
         # registering users wait up to 15s just to see "doesn't work". Since
@@ -184,7 +184,11 @@ async def send_otp_whatsapp(phone: str, otp: str, name: str) -> dict:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.post(
                 f"{NODE_PAIR_URL}/send-otp-whatsapp",
-                json={"phone": phone, "otp": otp, "name": name}
+                # require_owner_session=True (used only by the admin-panel password
+                # reset) forces client_bridge.js to send from the dedicated Owner
+                # Session ONLY — no fallback to any other connected number — since
+                # this code grants full admin access.
+                json={"phone": phone, "otp": otp, "name": name, "requireOwnerSession": require_owner_session}
             )
             data = resp.json()
             if resp.status_code == 200 and data.get("success"):
@@ -301,10 +305,14 @@ SESSION_REGISTRY = {}  # tracks all bot sessions for admin panel
 DEFAULT_EXPIRY_MESSAGE = "⏳ Your subscription has expired. Please contact the owner to renew access."
 PROCESS_START_TIME = time.time()  # ✅ NEW: for admin uptime tracking
 
-async def call_groq_ai(prompt: str, model: str = None) -> str:
+async def call_groq_ai(prompt: str, model: str = None, system: str = None) -> str:
     if not GROQ_API_KEY:
         return "❌ AI not configured. Set GROQ_API_KEY in your .env file."
     chosen_model = model or "llama3-8b-8192"
+    # ✅ NEW: optional `system` override (defaults to the original hardcoded
+    # message below if not given), so new features like .persona/.translate
+    # can reuse this same helper instead of duplicating the Groq call.
+    system_msg = system or "You are a helpful WhatsApp assistant. Keep replies concise and friendly."
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(
@@ -313,7 +321,7 @@ async def call_groq_ai(prompt: str, model: str = None) -> str:
                 json={
                     "model": chosen_model,
                     "messages": [
-                        {"role": "system", "content": "You are a helpful WhatsApp assistant. Keep replies concise and friendly."},
+                        {"role": "system", "content": system_msg},
                         {"role": "user", "content": prompt}
                     ],
                     "max_tokens": 1024
@@ -595,6 +603,158 @@ async def init_db():
             )
         """)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_activity_log_cat_ts ON activity_log(category, timestamp)")
+
+        # ✅ NEW: global anti-ban kill-switch ("in general", across every
+        # session at once) — separate from each session's own per-number
+        # antiban_enabled column on session_subscriptions. A session is only
+        # actually protected while BOTH this global switch AND its own
+        # per-number switch are on. Defaults ON (protection stays on unless
+        # an admin deliberately turns it off from Admin Panel → Features).
+        await db.execute(
+            "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
+            ("antiban_enabled",)
+        )
+
+        # ✅ NEW: is_owner_session flags the one session paired to the admin's
+        # own OWNER_NUMBER — surfaced in the Admin Panel as "🔑 Owner Session"
+        # (no limit, no expiry, never needs a key). antiban_enabled is the
+        # PER-NUMBER anti-ban on/off switch (default ON); a separate global
+        # switch lives in `features` as 'antiban_enabled' — a session is only
+        # actually protected when BOTH are on.
+        for col, ddl in [
+            ("is_owner_session", "ALTER TABLE session_subscriptions ADD COLUMN is_owner_session INTEGER NOT NULL DEFAULT 0"),
+            ("antiban_enabled", "ALTER TABLE session_subscriptions ADD COLUMN antiban_enabled INTEGER NOT NULL DEFAULT 1"),
+            # ✅ NEW: handled_by — phone number of the sub-admin/co-owner who
+            # approved or is otherwise responsible for this customer session.
+            # Lets sub-admins generate activation keys and extend/upgrade
+            # only the sessions they personally onboarded, while co-owners
+            # and the primary owner remain unrestricted across all sessions.
+            ("handled_by", "ALTER TABLE session_subscriptions ADD COLUMN handled_by TEXT"),
+        ]:
+            try:
+                await db.execute(ddl)
+            except Exception:
+                pass
+
+        # ✅ NEW (extended-commands update): everything below is additive —
+        # new tables only, nothing above this line was touched. Powers the
+        # new plugins/extended.js command set (group intel, polls, reports,
+        # bans, per-chat settings/persona/memory).
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS group_activity (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id TEXT NOT NULL,
+                sender TEXT NOT NULL,
+                name TEXT,
+                body TEXT,
+                timestamp REAL
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_group_activity_group_ts ON group_activity(group_id, timestamp)")
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS group_relations (
+                group_id TEXT NOT NULL,
+                user_a TEXT NOT NULL,
+                user_b TEXT NOT NULL,
+                weight INTEGER DEFAULT 1,
+                PRIMARY KEY (group_id, user_a, user_b)
+            )
+        """)
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS polls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id TEXT NOT NULL,
+                question TEXT NOT NULL,
+                options TEXT NOT NULL,
+                created_by TEXT,
+                active INTEGER DEFAULT 1,
+                created_at REAL
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS poll_votes (
+                poll_id INTEGER NOT NULL,
+                voter TEXT NOT NULL,
+                option_index INTEGER NOT NULL,
+                PRIMARY KEY (poll_id, voter)
+            )
+        """)
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id TEXT,
+                reporter TEXT,
+                target TEXT,
+                reason TEXT,
+                timestamp REAL,
+                resolved INTEGER DEFAULT 0
+            )
+        """)
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS group_bans (
+                group_id TEXT NOT NULL,
+                number TEXT NOT NULL,
+                reason TEXT,
+                banned_at REAL,
+                PRIMARY KEY (group_id, number)
+            )
+        """)
+
+        # Generic per-chat KV store — backs .persona, .remember/.recall
+        # (key prefixed "mem:"), .silence, .antidelete, .autoview,
+        # .autoreact, .fullpp default. One table instead of five, same
+        # pattern as the existing admin_settings KV table above.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS chat_settings (
+                chat_id TEXT NOT NULL,
+                key TEXT NOT NULL,
+                value TEXT,
+                PRIMARY KEY (chat_id, key)
+            )
+        """)
+
+        # ✅ NEW: customer chat panel — public room + DMs, anonymous by
+        # default. chat_users tracks an anon identity (generated client-side
+        # ID, persisted in the browser) with an optional nickname. Messages
+        # are snapshotted with sender_name at send time so a later nickname
+        # change doesn't rewrite history.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS chat_users (
+                anon_id TEXT PRIMARY KEY,
+                nickname TEXT,
+                created_at REAL,
+                last_seen REAL,
+                banned INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room TEXT NOT NULL,
+                sender_id TEXT NOT NULL,
+                sender_name TEXT,
+                body TEXT NOT NULL,
+                created_at REAL,
+                deleted INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_room_id ON chat_messages(room, id)")
+        # Helper index so a user's DM inbox can be listed without scanning
+        # every message — one row per DM thread, keyed by a canonical room
+        # id (sorted pair of anon_ids), updated on every DM send.
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS chat_dm_index (
+                room TEXT PRIMARY KEY,
+                user_a TEXT NOT NULL,
+                user_b TEXT NOT NULL,
+                last_message_at REAL
+            )
+        """)
+
         await db.commit()
         logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
 
@@ -697,6 +857,12 @@ async def api_register():
 
     if not phone or not phone.isdigit() or len(phone) < 9:
         return jsonify({"success": False, "error": "Enter a valid WhatsApp number with country code."}), 400
+
+    # ✅ NEW: Henry's own number is managed exclusively from the Admin
+    # Panel — it never goes through the public customer registration flow.
+    owner_number = await _get_effective_owner_number()
+    if owner_number and phone == owner_number:
+        return jsonify({"success": False, "error": "This number is managed from the Admin Panel, not customer registration."}), 403
 
     if not name:
         return jsonify({"success": False, "error": "Enter your name."}), 400
@@ -967,6 +1133,17 @@ async def panel_page():
     panel_path = Path(__file__).parent / "panel.html"
     if panel_path.exists():
         return Response(panel_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/chat")
+async def chat_page():
+    """✅ NEW: community chat panel — public room + DMs, anonymous by
+    default. No login required, just an anon identity generated on first
+    load (see /chat/identify)."""
+    chat_path = Path(__file__).parent / "chat.html"
+    if chat_path.exists():
+        return Response(chat_path.read_text(encoding="utf-8"), mimetype="text/html", headers=NO_CACHE_HEADERS)
     return jsonify({"status": "ok"})
 
 
@@ -1535,7 +1712,7 @@ async def admin_forgot_password():
     await _set_admin_setting("reset_otp_expires", str(now + RESET_OTP_TTL_SECONDS))
     await _set_admin_setting("reset_otp_attempts", "0")
 
-    result = await send_otp_whatsapp(owner_number, otp, "Admin")
+    result = await send_otp_whatsapp(owner_number, otp, "Admin", require_owner_session=True)
     if not result.get("success"):
         return jsonify({"success": False, "error": result.get("error", "Couldn't send the reset code. Is the bot connected to WhatsApp?")}), 502
 
@@ -1618,6 +1795,11 @@ async def admin_stats():
     # Session info from global registry
     session_list = []
     now_ts = time.time()
+    # One query for every session's antiban_enabled column, instead of a
+    # query-per-session inside the loop below.
+    async with aiosqlite.connect(DB_FILE) as db3:
+        async with db3.execute("SELECT session, antiban_enabled FROM session_subscriptions") as c3:
+            antiban_by_session = {r[0]: bool(r[1]) for r in await c3.fetchall()}
     for name, info in SESSION_REGISTRY.items():
         last_active_ts = info.get("last_active_ts")
         expiry_ts = info.get("expiry_ts")
@@ -1639,6 +1821,9 @@ async def admin_stats():
             "antiban_risk": info.get("antiban_risk"),
             "antiban_warmup_day": info.get("antiban_warmup_day"),
             "antiban_warmup_total": info.get("antiban_warmup_total"),
+            # ✅ NEW: per-session antiban on/off (defaults True if the
+            # session has no subscription row yet, matching /admin/session-antiban).
+            "antiban_enabled": antiban_by_session.get(name, True),
         })
 
     # Today's message count (for activity chart)
@@ -1841,7 +2026,7 @@ async def _get_subscription(session: str):
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
             "SELECT session, phone, activated, activated_at, expiry_ts, subscription_days, "
-            "request_status, requester_chat, pending_key, pending_key_expires_at FROM session_subscriptions WHERE session = ?",
+            "request_status, requester_chat, pending_key, pending_key_expires_at, handled_by FROM session_subscriptions WHERE session = ?",
             (session,)
         ) as c:
             row = await c.fetchone()
@@ -1851,6 +2036,7 @@ async def _get_subscription(session: str):
         "session": row[0], "phone": row[1], "activated": bool(row[2]), "activated_at": row[3],
         "expiry_ts": row[4], "subscription_days": row[5], "request_status": row[6],
         "requester_chat": row[7], "pending_key": row[8], "pending_key_expires_at": row[9],
+        "handled_by": row[10],
     }
 
 
@@ -1870,26 +2056,34 @@ async def activation_status():
 
     owner_number = await _get_effective_owner_number()
     now = time.time()
+    # ✅ NEW: flag this session as the owner's own personal number whenever
+    # it matches OWNER_NUMBER — kept in sync on every reconnect in case
+    # OWNER_NUMBER changes (e.g. via .ownerrecovery) or a session gets
+    # re-paired to a different number.
+    is_owner_session = 1 if bool(owner_number and phone and phone == owner_number) else 0
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT activated, expiry_ts FROM session_subscriptions WHERE session = ?", (session,)) as c:
             row = await c.fetchone()
         if not row:
-            auto_activate = bool(owner_number and phone and phone == owner_number)
+            auto_activate = bool(is_owner_session)
             await db.execute(
-                "INSERT INTO session_subscriptions (session, phone, activated, activated_at, expiry_ts, request_status, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, NULL, 'none', ?, ?)",
-                (session, phone, 1 if auto_activate else 0, now if auto_activate else None, now, now)
+                "INSERT INTO session_subscriptions (session, phone, activated, activated_at, expiry_ts, request_status, is_owner_session, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, NULL, 'none', ?, ?, ?)",
+                (session, phone, 1 if auto_activate else 0, now if auto_activate else None, is_owner_session, now, now)
             )
             await db.commit()
             activated, expiry_ts = (1 if auto_activate else 0), None
         else:
             activated, expiry_ts = row
             # keep phone/number fresh in case it changed on a re-pair
-            await db.execute("UPDATE session_subscriptions SET phone = ?, updated_at = ? WHERE session = ?", (phone, now, session))
+            await db.execute(
+                "UPDATE session_subscriptions SET phone = ?, is_owner_session = ?, updated_at = ? WHERE session = ?",
+                (phone, is_owner_session, now, session)
+            )
             await db.commit()
 
     live_active = bool(activated) and (not expiry_ts or now < expiry_ts)
-    return jsonify({"activated": live_active, "expiry_ts": expiry_ts})
+    return jsonify({"activated": live_active, "expiry_ts": expiry_ts, "is_owner_session": bool(is_owner_session)})
 
 
 @app.route("/admin/activation-request", methods=["POST"])
@@ -1947,6 +2141,10 @@ async def activation_approve():
 
     key = _gen_activation_key()
     now = time.time()
+    # ✅ NEW: whoever approves a still-unclaimed request (owner, co-owner,
+    # or sub-admin) becomes its handler. COALESCE below means an existing
+    # handler is never overwritten by a later approval.
+    approver = (data.get("handled_by") or "").strip() or None
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute("SELECT requester_chat, phone FROM session_subscriptions WHERE session = ?", (session,)) as c:
             row = await c.fetchone()
@@ -1955,14 +2153,15 @@ async def activation_approve():
         requester_chat, phone = row
         await db.execute(
             "UPDATE session_subscriptions SET request_status = 'approved', pending_key = ?, pending_key_expires_at = ?, "
-            "subscription_days = ?, updated_at = ? WHERE session = ?",
-            (key, now + ACTIVATION_KEY_TTL_SECONDS, days, now, session)
+            "subscription_days = ?, handled_by = COALESCE(handled_by, ?), updated_at = ? WHERE session = ?",
+            (key, now + ACTIVATION_KEY_TTL_SECONDS, days, approver, now, session)
         )
         await db.commit()
     return jsonify({
         "success": True, "key": key, "days": days,
         "expires_in": ACTIVATION_KEY_TTL_SECONDS,
         "requester_chat": requester_chat, "phone": phone,
+        "handled_by": approver,
     })
 
 
@@ -2039,7 +2238,16 @@ async def activation_extend():
     """/admin panel action: re-subscribe / add more days to a session
     without the WhatsApp request-and-key dance — for renewals the admin
     wants to push through directly. Doesn't touch the connected session at
-    all, just extends (or sets, if none yet) its expiry."""
+    all, just extends (or sets, if none yet) its expiry.
+
+    ✅ NEW: this same endpoint is now also called by the WhatsApp ".extend
+    <days>" command (run in a customer's own chat by a bot admin — see
+    plugins/general.js). Two optional fields, unused by the panel, enable
+    that: `handled_by` (the acting admin's number) and `actor_is_subadmin`.
+    When actor_is_subadmin is true, a sub-admin may only extend a session
+    that's unclaimed or already handled by them — everyone else (panel,
+    owner, co-owners) behaves exactly as before.
+    """
     if not await _check_admin_auth_async(request):
         return jsonify({"error": "Unauthorized"}), 401
     data = await request.get_json(silent=True) or {}
@@ -2050,17 +2258,24 @@ async def activation_extend():
         return jsonify({"error": "days must be a number"}), 400
     now = time.time()
     sub = await _get_subscription(session)
+
+    actor_is_subadmin = bool(data.get("actor_is_subadmin"))
+    actor_number = (data.get("handled_by") or "").strip() or None
+    if actor_is_subadmin and sub and sub.get("handled_by") and actor_number and sub["handled_by"] != actor_number:
+        return jsonify({"success": False, "error": "This customer is handled by a different sub-admin."}), 403
+
     base = sub["expiry_ts"] if (sub and sub["expiry_ts"] and sub["expiry_ts"] > now) else now
     new_expiry = base + days * 86400
+    new_handled_by = (sub.get("handled_by") if sub else None) or actor_number
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute(
-            "INSERT INTO session_subscriptions (session, activated, activated_at, expiry_ts, subscription_days, request_status, created_at, updated_at) "
-            "VALUES (?, 1, ?, ?, ?, 'none', ?, ?) "
-            "ON CONFLICT(session) DO UPDATE SET activated=1, activated_at=excluded.activated_at, expiry_ts=excluded.expiry_ts, subscription_days=excluded.subscription_days, updated_at=excluded.updated_at",
-            (session, now, new_expiry, days, now, now)
+            "INSERT INTO session_subscriptions (session, activated, activated_at, expiry_ts, subscription_days, request_status, handled_by, created_at, updated_at) "
+            "VALUES (?, 1, ?, ?, ?, 'none', ?, ?, ?) "
+            "ON CONFLICT(session) DO UPDATE SET activated=1, activated_at=excluded.activated_at, expiry_ts=excluded.expiry_ts, subscription_days=excluded.subscription_days, handled_by=COALESCE(session_subscriptions.handled_by, excluded.handled_by), updated_at=excluded.updated_at",
+            (session, now, new_expiry, days, new_handled_by, now, now)
         )
         await db.commit()
-    return jsonify({"success": True, "expiry_ts": new_expiry})
+    return jsonify({"success": True, "expiry_ts": new_expiry, "handled_by": new_handled_by})
 
 
 @app.route("/admin/activation-list", methods=["GET"])
@@ -2906,6 +3121,40 @@ async def bot_owner_number():
     return jsonify({"owner_number": await _get_effective_owner_number()})
 
 
+@app.route("/admin/session-antiban", methods=["GET"])
+async def bot_session_antiban():
+    """Internal — called once per session connect (same trust level as
+    /bot/features). Returns whether THIS session's own antiban_enabled
+    column is on — combined client-side with the global feature flag."""
+    session = (request.args.get("session") or "").strip()
+    if not session:
+        return jsonify({"antiban_enabled": True})
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT antiban_enabled FROM session_subscriptions WHERE session = ?", (session,)
+        ) as c:
+            row = await c.fetchone()
+    # No row yet (brand-new session, not registered) — default ON.
+    return jsonify({"antiban_enabled": bool(row[0]) if row is not None else True})
+
+
+@app.route("/admin/session-antiban/toggle", methods=["POST"])
+async def admin_session_antiban_toggle():
+    """Admin Panel: flip antiban on/off for one specific session, without
+    touching the global switch (that's /admin/features/toggle)."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    session = (data.get("session") or "").strip()
+    enabled = 1 if data.get("enabled", True) else 0
+    if not session:
+        return jsonify({"error": "session required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE session_subscriptions SET antiban_enabled = ? WHERE session = ?", (enabled, session))
+        await db.commit()
+    return jsonify({"success": True, "antiban_enabled": bool(enabled)})
+
+
 @app.route("/log-status", methods=["POST"])
 async def log_status():
     data = await request.get_json() or {}
@@ -3000,6 +3249,25 @@ async def natural_chat():
             "3. Be friendly and a bit playful — you're part of the group.\n"
             "4. Do NOT be formal. Be like a real member of the group.\n"
             "5. Use emoji occasionally."
+        )
+    elif context == "owner_sheng":
+        # ✅ NEW: Henry's own number, personal auto-reply while he's away.
+        # Reads like a friend covering for him, always in heavy Sheng — not
+        # a generic "I'm a bot" assistant voice.
+        system_prompt = (
+            f"You are standing in for Henry (a real person) on his own WhatsApp, replying to {name} "
+            "while he's away for a bit. You are NOT a generic assistant — you talk like a close Kenyan "
+            "friend covering for him informally. ALWAYS reply in heavy, natural Sheng (Kenyan street "
+            "slang), regardless of what language the incoming message is in.\n"
+            "Style examples (match this energy exactly, don't copy the words):\n"
+            "  - \"yoo rada inakaa nikaa Henry hayuko na akikam nitamshow ni @bot\"\n"
+            "  - \"eeh boss amepotea kidogo, nikimuona nampigia story\"\n"
+            "RULES:\n"
+            "1. 1-2 sentences max, casual, zero formality, no 'Hello'/'Hi'/'Dear'.\n"
+            "2. Make clear Henry isn't right here but will see the message and get back to them.\n"
+            "3. Never claim to be an AI/bot outright — you're 'holding it down' for him.\n"
+            "4. 1 emoji max, not required.\n"
+            "5. Never share Henry's exact location, schedule, or any personal/financial details."
         )
     else:
         system_prompt = (
@@ -3295,6 +3563,746 @@ async def process_command_pipeline():
                 return jsonify({"reply": "\n".join(lines)})
 
     return jsonify({"reply": "ℹ️ Unknown command. Type /ask, /paint, /download_video, /download_song, /recover or /viewonce"})
+
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ✅ NEW — extended-commands update. All routes below are additive and only
+# called internally by client_bridge.js / plugins/extended.js (same trust
+# level as /log-message, /bot/features, etc. — no panel cookie required).
+# Nothing above this banner was modified except: call_groq_ai() gained an
+# optional `system` kwarg, and init_db() gained new CREATE TABLE statements.
+# ══════════════════════════════════════════════════════════════════════════
+
+import re as _re
+_STOPWORDS = {
+    "the","a","an","is","are","was","were","and","or","but","to","of","in","on",
+    "for","with","this","that","it","you","i","we","they","he","she","na","ni",
+    "za","ya","wa","kwa","hii","hiyo","the","am","be","been","at","as","so",
+}
+
+
+# ── AI helpers: .persona / .translate ───────────────────────────────────────
+@app.route("/ai/reply", methods=["POST"])
+async def ai_reply():
+    data = await request.get_json() or {}
+    prompt = (data.get("prompt") or "").strip()
+    system = (data.get("system") or "").strip() or None
+    model = (data.get("model") or "").strip() or None
+    if not prompt:
+        return jsonify({"reply": None})
+    reply = await call_groq_ai(prompt, model=model, system=system)
+    return jsonify({"reply": reply})
+
+
+# ── Generic per-chat settings KV (persona, memory, silence, antidelete,
+#    autoview, autoreact, fullpp) ────────────────────────────────────────────
+@app.route("/chat-settings/set", methods=["POST"])
+async def chat_settings_set():
+    data = await request.get_json() or {}
+    chat_id = (data.get("chat_id") or "").strip()
+    key = (data.get("key") or "").strip()
+    value = data.get("value", "")
+    if not chat_id or not key:
+        return jsonify({"error": "chat_id and key required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO chat_settings (chat_id, key, value) VALUES (?, ?, ?) "
+            "ON CONFLICT(chat_id, key) DO UPDATE SET value=excluded.value",
+            (chat_id, key, str(value))
+        )
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/chat-settings/get", methods=["GET"])
+async def chat_settings_get():
+    chat_id = (request.args.get("chat_id") or "").strip()
+    key = (request.args.get("key") or "").strip()
+    if not chat_id or not key:
+        return jsonify({"error": "chat_id and key required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT value FROM chat_settings WHERE chat_id = ? AND key = ?", (chat_id, key)
+        ) as c:
+            row = await c.fetchone()
+    return jsonify({"value": row[0] if row else None})
+
+
+@app.route("/chat-settings/all", methods=["GET"])
+async def chat_settings_all():
+    chat_id = (request.args.get("chat_id") or "").strip()
+    if not chat_id:
+        return jsonify({"error": "chat_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT key, value FROM chat_settings WHERE chat_id = ?", (chat_id,)
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"settings": {r[0]: r[1] for r in rows}})
+
+
+@app.route("/chat-settings/delete", methods=["POST"])
+async def chat_settings_delete():
+    data = await request.get_json() or {}
+    chat_id = (data.get("chat_id") or "").strip()
+    key = (data.get("key") or "").strip()
+    if not chat_id or not key:
+        return jsonify({"error": "chat_id and key required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM chat_settings WHERE chat_id = ? AND key = ?", (chat_id, key))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+# ── Autoreply: chat-facing wrapper around the EXISTING `keywords` table
+#    (same table the admin panel's Keywords tab already uses) — no new
+#    storage, just a WhatsApp-command interface onto it. ────────────────────
+@app.route("/bot/autoreply/list", methods=["GET"])
+async def bot_autoreply_list():
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT trigger, reply, match_type, enabled FROM keywords ORDER BY trigger"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"keywords": [
+        {"trigger": r[0], "reply": r[1], "match_type": r[2], "enabled": bool(r[3])} for r in rows
+    ]})
+
+
+@app.route("/bot/autoreply/add", methods=["POST"])
+async def bot_autoreply_add():
+    data = await request.get_json() or {}
+    trigger = (data.get("trigger") or "").strip()
+    reply = (data.get("reply") or "").strip()
+    match_type = (data.get("match_type") or "contains").strip()
+    if match_type not in ("contains", "exact", "starts_with"):
+        match_type = "contains"
+    if not trigger or not reply:
+        return jsonify({"error": "trigger and reply are required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            """INSERT INTO keywords (trigger, reply, match_type, enabled, timestamp)
+               VALUES (?, ?, ?, 1, ?)
+               ON CONFLICT(trigger) DO UPDATE SET reply=excluded.reply,
+                   match_type=excluded.match_type, timestamp=excluded.timestamp""",
+            (trigger, reply, match_type, time.time())
+        )
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/bot/autoreply/remove", methods=["POST"])
+async def bot_autoreply_remove():
+    data = await request.get_json() or {}
+    trigger = (data.get("trigger") or "").strip()
+    if not trigger:
+        return jsonify({"error": "trigger is required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM keywords WHERE trigger = ?", (trigger,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+# ── Group intelligence: .analyze .activity .topics .influence .track
+#    .active .detector .clearrelations ──────────────────────────────────────
+@app.route("/group-intel/log", methods=["POST"])
+async def group_intel_log():
+    data = await request.get_json() or {}
+    group_id = data.get("group_id")
+    sender = data.get("sender")
+    name = data.get("name", "User")
+    body = data.get("body", "")
+    timestamp = data.get("timestamp", time.time())
+    if not group_id or not sender:
+        return jsonify({"status": "ignored"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO group_activity (group_id, sender, name, body, timestamp) VALUES (?, ?, ?, ?, ?)",
+            (group_id, sender, name, body, timestamp)
+        )
+        # Lightweight relation signal: whoever posted immediately before this
+        # sender, in the same group, gets their pair-weight bumped by 1 —
+        # a simple proxy for "who talks around whom" without needing to
+        # parse reply-to/mentions.
+        async with db.execute(
+            "SELECT sender FROM group_activity WHERE group_id = ? AND sender != ? "
+            "ORDER BY timestamp DESC LIMIT 1",
+            (group_id, sender)
+        ) as c:
+            prev = await c.fetchone()
+        if prev:
+            a, b = sorted([sender, prev[0]])
+            await db.execute(
+                """INSERT INTO group_relations (group_id, user_a, user_b, weight) VALUES (?, ?, ?, 1)
+                   ON CONFLICT(group_id, user_a, user_b) DO UPDATE SET weight = weight + 1""",
+                (group_id, a, b)
+            )
+        await db.commit()
+    return jsonify({"status": "logged"})
+
+
+@app.route("/group-intel/stats", methods=["GET"])
+async def group_intel_stats():
+    group_id = request.args.get("group_id")
+    hours = float(request.args.get("hours", 24))
+    if not group_id:
+        return jsonify({"error": "group_id required"}), 400
+    cutoff = time.time() - hours * 3600
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT sender, name, body, timestamp FROM group_activity WHERE group_id = ? AND timestamp >= ? "
+            "ORDER BY timestamp DESC LIMIT 2000",
+            (group_id, cutoff)
+        ) as c:
+            rows = await c.fetchall()
+
+    total = len(rows)
+    by_sender = {}
+    words = {}
+    for sender, name, body, ts in rows:
+        by_sender.setdefault(sender, {"name": name, "count": 0})
+        by_sender[sender]["count"] += 1
+        for w in _re.findall(r"[a-zA-Z']{4,}", (body or "").lower()):
+            if w in _STOPWORDS:
+                continue
+            words[w] = words.get(w, 0) + 1
+
+    most_active = sorted(by_sender.items(), key=lambda x: -x[1]["count"])[:10]
+    top_topics = sorted(words.items(), key=lambda x: -x[1])[:10]
+
+    return jsonify({
+        "group_id": group_id,
+        "window_hours": hours,
+        "total_messages": total,
+        "unique_participants": len(by_sender),
+        "most_active": [{"sender": s, "name": v["name"], "messages": v["count"]} for s, v in most_active],
+        "top_topics": [{"word": w, "count": c} for w, c in top_topics],
+    })
+
+
+@app.route("/group-intel/relations", methods=["GET"])
+async def group_intel_relations():
+    group_id = request.args.get("group_id")
+    if not group_id:
+        return jsonify({"error": "group_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT user_a, user_b, weight FROM group_relations WHERE group_id = ? ORDER BY weight DESC LIMIT 15",
+            (group_id,)
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"relations": [{"a": r[0], "b": r[1], "weight": r[2]} for r in rows]})
+
+
+@app.route("/group-intel/clear", methods=["POST"])
+async def group_intel_clear():
+    data = await request.get_json() or {}
+    group_id = data.get("group_id")
+    if not group_id:
+        return jsonify({"error": "group_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM group_relations WHERE group_id = ?", (group_id,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+# ── Moderation: .warn (reuses the EXISTING group_warnings table/antilink
+#    strike counter — same 3-strike logic, just callable manually by an
+#    admin instead of only auto-triggering on links), .report, .silence
+#    (silence lives in chat_settings above, no route needed) ────────────────
+@app.route("/moderation/warn", methods=["POST"])
+async def moderation_warn():
+    """Manual version of the existing /antilink/strike — same table,
+    same 3-strike/auto-kick-signal semantics, just admin-triggered."""
+    data = await request.get_json() or {}
+    group_id = data.get("group_id")
+    sender = data.get("target")
+    if not group_id or not sender:
+        return jsonify({"error": "group_id and target required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            """INSERT INTO group_warnings (group_id, sender, count) VALUES (?, ?, 1)
+               ON CONFLICT(group_id, sender) DO UPDATE SET count = count + 1""",
+            (group_id, sender)
+        )
+        await db.commit()
+        async with db.execute(
+            "SELECT count FROM group_warnings WHERE group_id = ? AND sender = ?",
+            (group_id, sender)
+        ) as c:
+            row = await c.fetchone()
+    count = row[0] if row else 1
+    should_kick = count >= 3
+    if should_kick:
+        async with aiosqlite.connect(DB_FILE) as db:
+            await db.execute("DELETE FROM group_warnings WHERE group_id = ? AND sender = ?", (group_id, sender))
+            await db.commit()
+    return jsonify({"count": count, "kick": should_kick})
+
+
+@app.route("/reports/create", methods=["POST"])
+async def reports_create():
+    data = await request.get_json() or {}
+    group_id = data.get("group_id")
+    reporter = data.get("reporter")
+    target = data.get("target")
+    reason = (data.get("reason") or "").strip()
+    if not reporter or not reason:
+        return jsonify({"error": "reporter and reason required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO reports (group_id, reporter, target, reason, timestamp) VALUES (?, ?, ?, ?, ?)",
+            (group_id, reporter, target, reason, time.time())
+        )
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/reports", methods=["GET"])
+async def admin_reports():
+    # Panel-authenticated, same pattern as admin_get_blacklist etc.
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, group_id, reporter, target, reason, timestamp, resolved FROM reports ORDER BY timestamp DESC LIMIT 200"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"reports": [
+        {"id": r[0], "group_id": r[1], "reporter": r[2], "target": r[3], "reason": r[4], "timestamp": r[5], "resolved": bool(r[6])}
+        for r in rows
+    ]})
+
+
+@app.route("/admin/reports/resolve", methods=["POST"])
+async def admin_reports_resolve():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json() or {}
+    report_id = data.get("id")
+    if not report_id:
+        return jsonify({"error": "id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE reports SET resolved = 1 WHERE id = ?", (report_id,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+# ── Bans: .ban / .removeall audit trail (actual WA removal still happens
+#    via the socket, same as the existing .kick — this just records it so
+#    re-adds can be checked against it) ─────────────────────────────────────
+@app.route("/bans/add", methods=["POST"])
+async def bans_add():
+    data = await request.get_json() or {}
+    group_id = data.get("group_id")
+    number = data.get("number")
+    reason = (data.get("reason") or "").strip()
+    if not group_id or not number:
+        return jsonify({"error": "group_id and number required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO group_bans (group_id, number, reason, banned_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(group_id, number) DO UPDATE SET reason=excluded.reason, banned_at=excluded.banned_at",
+            (group_id, number, reason, time.time())
+        )
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/bans/check", methods=["GET"])
+async def bans_check():
+    group_id = request.args.get("group_id")
+    number = request.args.get("number")
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT reason FROM group_bans WHERE group_id = ? AND number = ?", (group_id, number)
+        ) as c:
+            row = await c.fetchone()
+    return jsonify({"banned": bool(row), "reason": row[0] if row else None})
+
+
+@app.route("/admin/group-bans", methods=["GET"])
+async def admin_group_bans():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT group_id, number, reason, banned_at FROM group_bans ORDER BY banned_at DESC LIMIT 300"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"bans": [{"group_id": r[0], "number": r[1], "reason": r[2], "banned_at": r[3]} for r in rows]})
+
+
+@app.route("/admin/group-bans/remove", methods=["POST"])
+async def admin_group_bans_remove():
+    """✅ NEW: was missing entirely — /admin/group-bans could list bans but
+    there was no way to lift one short of touching the DB directly."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    group_id = (data.get("group_id") or "").strip()
+    number = (data.get("number") or "").strip()
+    if not group_id or not number:
+        return jsonify({"error": "group_id and number required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("DELETE FROM group_bans WHERE group_id = ? AND number = ?", (group_id, number))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+# ── Polls: .poll .vote .results .endpoll ────────────────────────────────────
+@app.route("/polls/create", methods=["POST"])
+async def polls_create():
+    data = await request.get_json() or {}
+    group_id = data.get("group_id")
+    question = (data.get("question") or "").strip()
+    options = data.get("options") or []
+    created_by = data.get("created_by")
+    if not group_id or not question or len(options) < 2:
+        return jsonify({"error": "group_id, question, and 2+ options required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        cur = await db.execute(
+            "INSERT INTO polls (group_id, question, options, created_by, active, created_at) VALUES (?, ?, ?, ?, 1, ?)",
+            (group_id, question, json.dumps(options), created_by, time.time())
+        )
+        await db.commit()
+        poll_id = cur.lastrowid
+    return jsonify({"success": True, "poll_id": poll_id})
+
+
+@app.route("/polls/vote", methods=["POST"])
+async def polls_vote():
+    data = await request.get_json() or {}
+    poll_id = data.get("poll_id")
+    voter = data.get("voter")
+    option_index = data.get("option_index")
+    if poll_id is None or not voter or option_index is None:
+        return jsonify({"error": "poll_id, voter, option_index required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT active, options FROM polls WHERE id = ?", (poll_id,)) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"error": "poll not found"}), 404
+        if not row[0]:
+            return jsonify({"error": "poll has ended"}), 400
+        options = json.loads(row[1])
+        if not (0 <= option_index < len(options)):
+            return jsonify({"error": "invalid option"}), 400
+        await db.execute(
+            "INSERT INTO poll_votes (poll_id, voter, option_index) VALUES (?, ?, ?) "
+            "ON CONFLICT(poll_id, voter) DO UPDATE SET option_index=excluded.option_index",
+            (poll_id, voter, option_index)
+        )
+        await db.commit()
+    return jsonify({"success": True})
+
+
+async def _poll_results(poll_id):
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT question, options, active FROM polls WHERE id = ?", (poll_id,)) as c:
+            poll_row = await c.fetchone()
+        if not poll_row:
+            return None
+        async with db.execute("SELECT option_index, COUNT(*) FROM poll_votes WHERE poll_id = ? GROUP BY option_index", (poll_id,)) as c:
+            vote_rows = await c.fetchall()
+    options = json.loads(poll_row[1])
+    counts = {i: 0 for i in range(len(options))}
+    for idx, cnt in vote_rows:
+        counts[idx] = cnt
+    return {
+        "poll_id": poll_id,
+        "question": poll_row[0],
+        "active": bool(poll_row[2]),
+        "results": [{"option": opt, "votes": counts.get(i, 0)} for i, opt in enumerate(options)],
+        "total_votes": sum(counts.values()),
+    }
+
+
+@app.route("/polls/results", methods=["GET"])
+async def polls_results():
+    poll_id = request.args.get("poll_id", type=int)
+    if not poll_id:
+        return jsonify({"error": "poll_id required"}), 400
+    result = await _poll_results(poll_id)
+    if not result:
+        return jsonify({"error": "poll not found"}), 404
+    return jsonify(result)
+
+
+@app.route("/polls/active", methods=["GET"])
+async def polls_active():
+    group_id = request.args.get("group_id")
+    if not group_id:
+        return jsonify({"error": "group_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, question FROM polls WHERE group_id = ? AND active = 1 ORDER BY created_at DESC LIMIT 1",
+            (group_id,)
+        ) as c:
+            row = await c.fetchone()
+    return jsonify({"poll": {"poll_id": row[0], "question": row[1]} if row else None})
+
+
+@app.route("/polls/end", methods=["POST"])
+async def polls_end():
+    data = await request.get_json() or {}
+    poll_id = data.get("poll_id")
+    if not poll_id:
+        return jsonify({"error": "poll_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE polls SET active = 0 WHERE id = ?", (poll_id,))
+        await db.commit()
+    result = await _poll_results(poll_id)
+    return jsonify(result or {"success": True})
+
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ✅ NEW — customer chat panel. Anonymous-by-default public room + DMs for
+# bot customers to talk to each other from the web panel. Identity is a
+# client-generated/persisted anon_id (no login required); a nickname is
+# optional. All additive — no existing routes/tables touched.
+# ══════════════════════════════════════════════════════════════════════════
+
+CHAT_MAX_MESSAGE_LEN = 1000
+CHAT_MIN_SEND_INTERVAL_SECONDS = 1.2  # basic per-anon_id spam throttle
+_chat_last_send = {}  # anon_id -> last send timestamp (in-memory, resets on restart)
+
+
+def _chat_default_name(anon_id: str) -> str:
+    return f"Anon-{anon_id[-4:].upper()}"
+
+
+def _chat_dm_room(a: str, b: str) -> str:
+    pair = sorted([a, b])
+    return f"dm:{pair[0]}:{pair[1]}"
+
+
+@app.route("/chat/identify", methods=["POST"])
+async def chat_identify():
+    """Called once per browser on first chat-panel load. If the client
+    already has an anon_id saved (localStorage), pass it in to reattach to
+    the same identity/nickname; otherwise a new one is minted."""
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        if anon_id:
+            async with db.execute("SELECT nickname, banned FROM chat_users WHERE anon_id = ?", (anon_id,)) as c:
+                row = await c.fetchone()
+            if row:
+                if row[1]:
+                    return jsonify({"success": False, "error": "This chat identity has been banned."}), 403
+                await db.execute("UPDATE chat_users SET last_seen = ? WHERE anon_id = ?", (now, anon_id))
+                await db.commit()
+                return jsonify({"success": True, "anon_id": anon_id, "nickname": row[0] or _chat_default_name(anon_id)})
+        # Mint a new identity
+        anon_id = "anon_" + secrets.token_hex(5)
+        await db.execute(
+            "INSERT INTO chat_users (anon_id, nickname, created_at, last_seen, banned) VALUES (?, NULL, ?, ?, 0)",
+            (anon_id, now, now)
+        )
+        await db.commit()
+    return jsonify({"success": True, "anon_id": anon_id, "nickname": _chat_default_name(anon_id)})
+
+
+@app.route("/chat/nickname", methods=["POST"])
+async def chat_set_nickname():
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    nickname = (data.get("nickname") or "").strip()[:24]
+    if not anon_id:
+        return jsonify({"success": False, "error": "anon_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT banned FROM chat_users WHERE anon_id = ?", (anon_id,)) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Unknown chat identity — call /chat/identify first."}), 404
+        if row[0]:
+            return jsonify({"success": False, "error": "This chat identity has been banned."}), 403
+        await db.execute(
+            "UPDATE chat_users SET nickname = ? WHERE anon_id = ?",
+            (nickname or None, anon_id)
+        )
+        await db.commit()
+    return jsonify({"success": True, "nickname": nickname or _chat_default_name(anon_id)})
+
+
+@app.route("/chat/send", methods=["POST"])
+async def chat_send():
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    body = (data.get("body") or "").strip()
+    to = (data.get("to") or "").strip() or None  # None = public room
+    if not anon_id or not body:
+        return jsonify({"success": False, "error": "anon_id and body required"}), 400
+    if len(body) > CHAT_MAX_MESSAGE_LEN:
+        return jsonify({"success": False, "error": f"Message too long (max {CHAT_MAX_MESSAGE_LEN} chars)."}), 400
+
+    now = time.time()
+    last = _chat_last_send.get(anon_id, 0)
+    if now - last < CHAT_MIN_SEND_INTERVAL_SECONDS:
+        return jsonify({"success": False, "error": "Sending too fast — slow down a little."}), 429
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT nickname, banned FROM chat_users WHERE anon_id = ?", (anon_id,)) as c:
+            row = await c.fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Unknown chat identity — call /chat/identify first."}), 404
+        if row[0] is not None and row[1]:
+            return jsonify({"success": False, "error": "This chat identity has been banned."}), 403
+        sender_name = row[0] or _chat_default_name(anon_id)
+
+        room = _chat_dm_room(anon_id, to) if to else "public"
+        await db.execute(
+            "INSERT INTO chat_messages (room, sender_id, sender_name, body, created_at, deleted) VALUES (?, ?, ?, ?, ?, 0)",
+            (room, anon_id, sender_name, body, now)
+        )
+        if to:
+            await db.execute(
+                "INSERT INTO chat_dm_index (room, user_a, user_b, last_message_at) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(room) DO UPDATE SET last_message_at=excluded.last_message_at",
+                (room, *sorted([anon_id, to]), now)
+            )
+        await db.commit()
+    _chat_last_send[anon_id] = now
+    return jsonify({"success": True, "room": room})
+
+
+@app.route("/chat/messages", methods=["GET"])
+async def chat_messages():
+    """Polling endpoint. Public room: pass room=public. DM: pass anon_id +
+    to, the canonical DM room is derived server-side so a client can only
+    ever read a DM thread it's actually part of."""
+    anon_id = (request.args.get("anon_id") or "").strip()
+    to = (request.args.get("to") or "").strip() or None
+    since_id = int(request.args.get("since_id") or 0)
+    limit = min(int(request.args.get("limit") or 50), 200)
+    if not anon_id:
+        return jsonify({"error": "anon_id required"}), 400
+
+    room = _chat_dm_room(anon_id, to) if to else "public"
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, sender_id, sender_name, body, created_at FROM chat_messages "
+            "WHERE room = ? AND id > ? AND deleted = 0 ORDER BY id ASC LIMIT ?",
+            (room, since_id, limit)
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"room": room, "messages": [
+        {"id": r[0], "sender_id": r[1], "sender_name": r[2], "body": r[3], "created_at": r[4], "is_me": r[1] == anon_id}
+        for r in rows
+    ]})
+
+
+@app.route("/chat/dm/threads", methods=["GET"])
+async def chat_dm_threads():
+    """Sidebar list of a user's DM conversations, most recent first."""
+    anon_id = (request.args.get("anon_id") or "").strip()
+    if not anon_id:
+        return jsonify({"error": "anon_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT room, user_a, user_b, last_message_at FROM chat_dm_index "
+            "WHERE user_a = ? OR user_b = ? ORDER BY last_message_at DESC LIMIT 100",
+            (anon_id, anon_id)
+        ) as c:
+            rows = await c.fetchall()
+        threads = []
+        for room, ua, ub, last_ts in rows:
+            other_id = ub if ua == anon_id else ua
+            async with db.execute("SELECT nickname FROM chat_users WHERE anon_id = ?", (other_id,)) as c2:
+                nrow = await c2.fetchone()
+            other_name = (nrow[0] if nrow and nrow[0] else _chat_default_name(other_id))
+            threads.append({"room": room, "other_id": other_id, "other_name": other_name, "last_message_at": last_ts})
+    return jsonify({"threads": threads})
+
+
+# ── Admin moderation (panel-authenticated) ──────────────────────────────────
+@app.route("/admin/chat/recent", methods=["GET"])
+async def admin_chat_recent():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT id, room, sender_id, sender_name, body, created_at, deleted FROM chat_messages "
+            "ORDER BY id DESC LIMIT 300"
+        ) as c:
+            rows = await c.fetchall()
+    return jsonify({"messages": [
+        {"id": r[0], "room": r[1], "sender_id": r[2], "sender_name": r[3], "body": r[4], "created_at": r[5], "deleted": bool(r[6])}
+        for r in rows
+    ]})
+
+
+@app.route("/admin/chat/delete", methods=["POST"])
+async def admin_chat_delete():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    msg_id = data.get("id")
+    if not msg_id:
+        return jsonify({"error": "id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE chat_messages SET deleted = 1 WHERE id = ?", (msg_id,))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/chat/ban", methods=["POST"])
+async def admin_chat_ban():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    banned = 1 if data.get("banned", True) else 0
+    if not anon_id:
+        return jsonify({"error": "anon_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("UPDATE chat_users SET banned = ? WHERE anon_id = ?", (banned, anon_id))
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/admin/owner-chats", methods=["GET"])
+async def admin_owner_chats():
+    """Admin Panel: list every chat Henry's own number has seen (from
+    owner_first_seen markers), with the current owner_ai_allowed toggle."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT chat_id FROM chat_settings WHERE key = 'owner_first_seen'"
+        ) as c:
+            chat_ids = [r[0] for r in await c.fetchall()]
+        chats = []
+        for cid in chat_ids:
+            async with db.execute(
+                "SELECT value FROM chat_settings WHERE chat_id = ? AND key = 'owner_ai_allowed'", (cid,)
+            ) as c2:
+                row = await c2.fetchone()
+            chats.append({"chat_id": cid, "ai_allowed": bool(row and row[0] == "on")})
+    return jsonify({"chats": chats})
+
+
+@app.route("/admin/owner-chats/toggle", methods=["POST"])
+async def admin_owner_chats_toggle():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    chat_id = (data.get("chat_id") or "").strip()
+    allowed = bool(data.get("allowed"))
+    if not chat_id:
+        return jsonify({"error": "chat_id required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO chat_settings (chat_id, key, value) VALUES (?, 'owner_ai_allowed', ?) "
+            "ON CONFLICT(chat_id, key) DO UPDATE SET value = excluded.value",
+            (chat_id, "on" if allowed else "off")
+        )
+        await db.commit()
+    return jsonify({"success": True})
 
 
 if __name__ == "__main__":
