@@ -99,6 +99,7 @@ ${p}schedule repeat <ID> daily|weekly - Repeat it
 _Time: 14:30 / 9:00am / 30m / 2h_
 
 ${p}imagine [desc]   - 🎨 AI image generation (free, no API key)
+${p}claude [request] - 🤖 Ask Claude directly — file/zip requests come back as a document (needs ANTHROPIC_API_KEY, bot-admin only)
 ${p}tts [text]       - 🔊 Text-to-speech voice note
 ${p}model [name]     - 🤖 Per-chat AI model (llama/llama8/mixtral/gemma)
 /download_video  - Download video
@@ -274,6 +275,13 @@ ${ownerSection}
 ✅ View-once save  ✅ AI DM chat  ✅ Scheduler
 ✅ Fake typing  ✅ Always online  ✅ Group AI replies
 ✅ Status AI comments  ✅ Permissions  ✅ Anti-ban
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆕 *+300 more commands available* — games, group-guard, notes, sports
+scores, URL tools, temp mail, text effects, downloads, stickers, admin
+tools, search, and more. This menu only shows the core set.
+${p}commands       - 📋 Full flat list of everything currently loaded
+${p}commands sticker - 🔎 e.g. search loaded commands by keyword
 
 > 🔥 *Henry Ochibots v19™* | @henrytech254`;
 
@@ -825,6 +833,63 @@ module.exports.imagine = async ({ sock, from, msg, args }) => {
   }
 };
 
+// ── .claude ──────────────────────────────────────────────────────────────
+// ✅ NEW: lets a bot admin ask Claude directly from WhatsApp. Plain
+// questions get a normal text reply; requests that clearly want one or
+// more generated files ("give me a script", "make me a zip of...", "write
+// a document about...") come back as a zip file sent as a WhatsApp
+// document — same idea as generating files in a chat, just triggered from
+// WhatsApp instead. Bot-admin only: this hits a real paid API per call,
+// and file uploads could be abused for spam if opened to everyone.
+module.exports.claude = async ({ sock, from, msg, args, isBotAdmin, apiClient, logActivity, senderJid }) => {
+  if (!isBotAdmin) return; // silent to non-admins, same convention as .extend
+  const prompt = args.join(' ').trim();
+  if (!prompt) return sock.sendMessage(from, { text: '🤖 Usage: .claude [your question or request]\ne.g. .claude write me a Python script that renames files in a folder' }, { quoted: msg });
+
+  await sock.sendMessage(from, { text: '🤖 Asking Claude...' }, { quoted: msg });
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    const res = await apiClient.post('/claude/generate', { prompt }, { timeout: 100000 });
+    const data = res.data || {};
+    if (!data.success) {
+      return sock.sendMessage(from, { text: `❌ ${data.error || 'Claude request failed.'}` }, { quoted: msg });
+    }
+    if (data.mode === 'files' && data.zip_base64) {
+      const zipPath = `/tmp/claude_${Date.now()}.zip`;
+      fs.writeFileSync(zipPath, Buffer.from(data.zip_base64, 'base64'));
+      await sock.sendMessage(from, {
+        document: fs.readFileSync(zipPath),
+        fileName: 'claude-output.zip',
+        mimetype: 'application/zip',
+        caption: `📦 ${(data.files || []).length} file(s): ${(data.files || []).join(', ')}`
+      }, { quoted: msg });
+      fs.unlinkSync(zipPath);
+    } else {
+      // Long replies go as a downloadable .md instead of a giant wall of
+      // WhatsApp text — short ones just reply normally.
+      const reply = data.reply || '(empty response)';
+      if (reply.length > 3500) {
+        const docPath = `/tmp/claude_${Date.now()}.md`;
+        fs.writeFileSync(docPath, reply, 'utf-8');
+        await sock.sendMessage(from, {
+          document: fs.readFileSync(docPath),
+          fileName: 'claude-reply.md',
+          mimetype: 'text/markdown',
+          caption: '🤖 Reply was long, sent as a file.'
+        }, { quoted: msg });
+        fs.unlinkSync(docPath);
+      } else {
+        await sock.sendMessage(from, { text: `🤖 ${reply}` }, { quoted: msg });
+      }
+    }
+  } catch (e) {
+    const reason = e.response?.data?.error || e.message;
+    if (logActivity) logActivity('error', 'claude', `.claude ${prompt.slice(0, 200)} → ${reason}`, `+${(senderJid||from).split('@')[0]}`);
+    await sock.sendMessage(from, { text: `❌ Claude request failed: ${reason}` }, { quoted: msg });
+  }
+};
+
 // ── .status ────────────────────────────────────────────────────────────────
 module.exports.status = async ({ sock, from, msg, isOwner }) => {
   if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
@@ -1114,7 +1179,19 @@ module.exports.maintenance = async ({ sock, from, msg, isOwner, args }) => {
 module.exports.reload = async ({ sock, from, msg, isOwner }) => {
   if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
   try {
-    const pluginNames = ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet', 'games', 'osint'];
+    // ✅ FIX: kept in sync with client_bridge.js's PLUGIN_NAMES — was missing
+    // 'extended' plus every Delta/Henry plugin, so .reload silently dropped
+    // them back to their pre-reload state instead of actually refreshing them.
+    const pluginNames = [
+      'general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet',
+      'games', 'osint', 'extended',
+      'notes', 'groupguard', 'games2', 'texteffects', 'urltools', 'tempmail',
+      'sudo', 'settings-ext', 'aichat2', 'sports', 'megabackup', 'overlap-rewrites',
+      'ported_admin', 'ported_ai', 'ported_download', 'ported_fun', 'ported_games',
+      'ported_general', 'ported_group', 'ported_images', 'ported_info', 'ported_menu',
+      'ported_music', 'ported_owner', 'ported_quotes', 'ported_search', 'ported_stalk',
+      'ported_stickers', 'ported_tools', 'ported_upload', 'ported_utility',
+    ];
     const freshCommands = {};
     let loadedCount = 0;
     const failed = [];
@@ -1138,4 +1215,24 @@ module.exports.reload = async ({ sock, from, msg, isOwner }) => {
   } catch (e) {
     await sock.sendMessage(from, { text: `❌ Reload failed: ${e.message}` }, { quoted: msg });
   }
+};
+
+// ── .commands ────────────────────────────────────────────────────────────
+// ✅ NEW: flat, alphabetical list of every currently-loaded command name —
+// different from .menu (which is a curated, categorized, permission-aware
+// view). This just dumps global.allCommandsRef as-is, so it always reflects
+// reality even right after a .reload or a fresh plugin drop, without anyone
+// having to hand-edit a menu file. Useful for a quick "is .xyz actually
+// loaded?" check or searching with .commands <keyword>.
+module.exports.commands = async ({ sock, from, msg, args }) => {
+  const names = Object.keys(global.allCommandsRef || {}).sort();
+  const filter = (args || []).join(' ').trim().toLowerCase();
+  const filtered = filter ? names.filter(n => n.includes(filter)) : names;
+  if (filter && !filtered.length) {
+    return sock.sendMessage(from, { text: `No loaded command matches "${filter}".` }, { quoted: msg });
+  }
+  const header = filter
+    ? `📋 *Commands matching "${filter}"* (${filtered.length})\n\n`
+    : `📋 *All loaded commands* (${filtered.length})\n\n`;
+  await sock.sendMessage(from, { text: header + filtered.map(n => `.${n}`).join(', ') }, { quoted: msg });
 };

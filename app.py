@@ -99,6 +99,11 @@ def _client_ip(req) -> str:
 
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+# ✅ NEW: powers .claude — a separate, opt-in AI command distinct from the
+# Groq-backed natural-chat/persona/translate features above. Optional: if
+# unset, .claude just replies with a clear "not configured" message rather
+# than crashing.
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 if not GROQ_API_KEY:
     logger.warning("⚠️  GROQ_API_KEY not set! /ask command will fail.")
 
@@ -3153,6 +3158,105 @@ async def admin_session_antiban_toggle():
         await db.execute("UPDATE session_subscriptions SET antiban_enabled = ? WHERE session = ?", (enabled, session))
         await db.commit()
     return jsonify({"success": True, "antiban_enabled": bool(enabled)})
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ✅ NEW — .claude command. A separate, opt-in AI command (own API key,
+# own model) distinct from the Groq-backed natural-chat/persona/translate
+# features elsewhere. Bot-admin only (checked in the plugin, not here —
+# this endpoint trusts the same Bearer auth every other bot-facing route
+# does). Can return either a plain text reply, or — if the prompt implies
+# multiple files (asks for "a project", "files", "a zip", etc.) — several
+# named files bundled into a base64-encoded zip the WhatsApp side unpacks
+# and sends as a document.
+# ══════════════════════════════════════════════════════════════════════════
+
+CLAUDE_FILE_DELIM_START = "---FILE:"
+CLAUDE_FILE_DELIM_END = "---ENDFILE---"
+
+CLAUDE_SYSTEM_PROMPT = (
+    "You are Claude, answering a request sent from inside a WhatsApp bot via the .claude "
+    "command. Two response modes:\n\n"
+    "1. PLAIN REPLY — for questions, explanations, short code snippets, or anything that reads "
+    "fine as a normal chat message. Just answer directly, no special formatting needed.\n\n"
+    "2. MULTI-FILE — ONLY if the person is clearly asking you to generate one or more complete "
+    "files (a script, a document, a small project, \"give me a file\", \"make me a zip\", etc). "
+    "In that case, respond with ONLY this format, one block per file, nothing else outside the "
+    "blocks:\n"
+    f"{CLAUDE_FILE_DELIM_START} <relative/path/filename.ext>\n"
+    "<full file content>\n"
+    f"{CLAUDE_FILE_DELIM_END}\n\n"
+    "Repeat that block for every file. Do not add any commentary before, between, or after the "
+    "file blocks in MULTI-FILE mode — the bot parses these mechanically."
+)
+
+
+def _parse_claude_files(text: str):
+    """Returns a list of (filename, content) if the response used the
+    MULTI-FILE format, else None (meaning: treat as a plain reply)."""
+    if CLAUDE_FILE_DELIM_START not in text:
+        return None
+    files = []
+    parts = text.split(CLAUDE_FILE_DELIM_START)
+    for part in parts[1:]:
+        if CLAUDE_FILE_DELIM_END not in part:
+            continue
+        header, _, rest = part.partition("\n")
+        content, _, _ = rest.partition(CLAUDE_FILE_DELIM_END)
+        filename = header.strip()
+        if filename:
+            files.append((filename, content.strip("\n")))
+    return files or None
+
+
+@app.route("/claude/generate", methods=["POST"])
+async def claude_generate():
+    if not ANTHROPIC_API_KEY:
+        return jsonify({"success": False, "error": "Claude isn't configured yet — set ANTHROPIC_API_KEY in your environment."}), 400
+    data = await request.get_json(silent=True) or {}
+    prompt = (data.get("prompt") or "").strip()
+    if not prompt:
+        return jsonify({"success": False, "error": "prompt required"}), 400
+
+    try:
+        async with httpx.AsyncClient(timeout=90) as client:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": "claude-sonnet-4-6",
+                    "max_tokens": 4096,
+                    "system": CLAUDE_SYSTEM_PROMPT,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+        if resp.status_code != 200:
+            return jsonify({"success": False, "error": f"Claude API error ({resp.status_code}): {resp.text[:300]}"}), 502
+        body = resp.json()
+        full_text = "".join(block.get("text", "") for block in body.get("content", []) if block.get("type") == "text")
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Request to Claude failed: {e}"}), 502
+
+    files = _parse_claude_files(full_text)
+    if files:
+        # Build a zip in-memory, base64-encode it for the JSON response —
+        # the Node side writes it straight to disk and sends it as a
+        # WhatsApp document.
+        import io as _io
+        import zipfile as _zipfile
+        import base64 as _base64
+        buf = _io.BytesIO()
+        with _zipfile.ZipFile(buf, "w", _zipfile.ZIP_DEFLATED) as zf:
+            for filename, content in files:
+                zf.writestr(filename, content)
+        zip_b64 = _base64.b64encode(buf.getvalue()).decode("ascii")
+        return jsonify({"success": True, "mode": "files", "files": [f for f, _ in files], "zip_base64": zip_b64})
+
+    return jsonify({"success": True, "mode": "text", "reply": full_text.strip()})
 
 
 @app.route("/log-status", methods=["POST"])

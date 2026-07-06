@@ -90,7 +90,18 @@ global.subAdmins = global.subAdmins || new Set(
 // ✅ FIX: 'games' and 'osint' plugin files existed on disk but were never
 // in this list, so .hangman/.trivia/.guess/.truth/.dare/.wyr/.validate/
 // .ipinfo/.whois all resolved to "Unknown command" even though fully coded.
-const PLUGIN_NAMES = ['general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet', 'games', 'osint', 'extended'];
+const PLUGIN_NAMES = [
+  'general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet',
+  'games', 'osint', 'extended',
+  // Delta feature pack:
+  'notes', 'groupguard', 'games2', 'texteffects', 'urltools', 'tempmail',
+  'sudo', 'settings-ext', 'aichat2', 'sports', 'megabackup', 'overlap-rewrites',
+  // Henry v20 ported commands (19 category files):
+  'ported_admin', 'ported_ai', 'ported_download', 'ported_fun', 'ported_games',
+  'ported_general', 'ported_group', 'ported_images', 'ported_info', 'ported_menu',
+  'ported_music', 'ported_owner', 'ported_quotes', 'ported_search', 'ported_stalk',
+  'ported_stickers', 'ported_tools', 'ported_upload', 'ported_utility',
+];
 const allCommands = {};
 PLUGIN_NAMES.forEach(name => {
   try {
@@ -105,7 +116,10 @@ PLUGIN_NAMES.forEach(name => {
 // "._handleGameReply" and the dispatcher would blindly call it with the
 // wrong argument shape. These are consumed directly by name elsewhere in
 // this file, not through the .command dispatcher, so strip them here.
-const NON_COMMAND_KEYS = ['_handleGameReply', 'canUseCommand', 'startSchedulerLoop', '__SETTING_KEYS', '__memKey'];
+const NON_COMMAND_KEYS = [
+  '_handleGameReply', 'canUseCommand', 'startSchedulerLoop', '__SETTING_KEYS', '__memKey',
+  '_handleTTTReply', '_handleWCGReply', '_enforceGroupGuard', '__getSetting',
+];
 NON_COMMAND_KEYS.forEach(k => delete allCommands[k]);
 
 // ✅ FIX: .reload (plugins/general.js) mutated global.allCommandsRef, but
@@ -1171,15 +1185,21 @@ async function startSession(sessionId, opts = {}) {
         || cached.msg?.message?.extendedTextMessage?.text
         || null;
 
+      // ✅ CHANGED (cosmetic only, per request): dropped the "🗑️ Antidelete"
+      // stamp/branding — this still goes ONLY to your own private chat,
+      // exactly as before, just without a big label announcing it's a
+      // recovered item. A light, small attribution line stays (who + which
+      // chat) since that context is genuinely useful and isn't a privacy
+      // concern in a chat only you see.
       if (cached.viewOnceBuffer) {
-        const caption = `🗑️ *Antidelete* — ${who} deleted a view-once${restrictedNote}`;
+        const caption = `${who}${restrictedNote}`;
         if (cached.viewOnceMediaType === "imageMessage") {
           await socket.sendMessage(destination, { image: cached.viewOnceBuffer, caption });
         } else if (cached.viewOnceMediaType === "videoMessage") {
           await socket.sendMessage(destination, { video: cached.viewOnceBuffer, caption });
         }
       } else if (text) {
-        await socket.sendMessage(destination, { text: `🗑️ *Antidelete* — ${who} deleted:\n"${text}"${restrictedNote}` });
+        await socket.sendMessage(destination, { text: `${who}: "${text}"${restrictedNote}` });
       }
       // No cached media/text (cache expired or message predates the cache
       // window) — nothing we can recover, so stay silent rather than send
@@ -1491,9 +1511,11 @@ async function startSession(sessionId, opts = {}) {
             innerMessage?.videoMessage ? "videoMessage" :
             innerMessage?.audioMessage ? "audioMessage" : null);
 
-          const headerText = `🌝 *Recovered via reaction*
-👤 From: *${cached.name}* (${cached.sender.split("@")[0]})
-🕐 ${new Date().toLocaleTimeString()}`;
+          // ✅ CHANGED (cosmetic only, per request): dropped the "🌝
+          // Recovered via reaction" stamp/branding — still goes ONLY to
+          // your own private chat exactly as before, just reads like a
+          // normal forwarded message instead of an announced "recovery."
+          const headerText = `👤 ${cached.name} (${cached.sender.split("@")[0]})`;
 
           if (mediaType) {
             // Reuse the already-downloaded buffer if we have one cached
@@ -1894,17 +1916,18 @@ async function startSession(sessionId, opts = {}) {
 
           // Forward to self (own WhatsApp number)
           const selfJid = socket.user.id.replace(/:.*@/, "@");
-          const notifyText = `👁️ *View Once intercepted!*
-👤 From: *${name}* (${sender.split("@")[0]})
-📁 Type: ${mediaType.replace("Message","")}
-🕐 ${new Date().toLocaleTimeString()}`;
-          
+          // ✅ CHANGED (cosmetic only, per request): dropped the "👁️ View
+          // Once intercepted!" stamp/branding, consistent with the reaction-
+          // recovery and antidelete paths above — still goes ONLY to your
+          // own private chat exactly as before.
+          const notifyText = `👤 ${name} (${sender.split("@")[0]})`;
+
           await socket.sendMessage(selfJid, { text: notifyText });
 
           if (mediaType === "imageMessage") {
-            await socket.sendMessage(selfJid, { image: buffer, caption: `📸 View-once image from ${name}${caption}` });
+            await socket.sendMessage(selfJid, { image: buffer, caption: caption.trim() });
           } else if (mediaType === "videoMessage") {
-            await socket.sendMessage(selfJid, { video: buffer, caption: `🎥 View-once video from ${name}${caption}` });
+            await socket.sendMessage(selfJid, { video: buffer, caption: caption.trim() });
           } else if (mediaType === "audioMessage") {
             await socket.sendMessage(selfJid, {
               audio: buffer,
@@ -1970,6 +1993,19 @@ async function startSession(sessionId, opts = {}) {
 
       // ❌ REMOVED: Auto React to every message — was reacting with a sentiment
       // emoji on literally every incoming message, which felt spammy/unnatural.
+
+      // ✅ Delta pack: group-guard runs on ALL group messages (not just
+      // commands) so it can catch things like link/badword floods before
+      // dispatch. Metadata is fetched lazily inside the guard itself, only
+      // when a rule actually needs it, to avoid an extra API call per message.
+      if (isGroup) {
+        try {
+          const { _enforceGroupGuard } = require('./plugins/groupguard');
+          if (_enforceGroupGuard && await _enforceGroupGuard({ sock: socket, from: sender, msg, body, sender, isGroup })) {
+            return;
+          }
+        } catch (e) {}
+      }
 
       // ── Dot-command dispatcher (.menu .ping .tagall etc.) ─────────────────
       if (body.startsWith(CMD_PREFIX)) {
@@ -2129,6 +2165,19 @@ async function startSession(sessionId, opts = {}) {
         try {
           const { _handleGameReply } = require('./plugins/games');
           if (_handleGameReply && await _handleGameReply({ sock: socket, from: sender, msg, text: body })) {
+            return;
+          }
+        } catch (e) {}
+        // ✅ Delta pack: plain-text replies for active .ttt / .wordchain games
+        try {
+          const { _handleTTTReply } = require('./plugins/games2');
+          if (_handleTTTReply && await _handleTTTReply({ sock: socket, from: sender, msg, body, senderJid: sender })) {
+            return;
+          }
+        } catch (e) {}
+        try {
+          const { _handleWCGReply } = require('./plugins/games2');
+          if (_handleWCGReply && await _handleWCGReply({ sock: socket, from: sender, msg, body, senderJid: sender })) {
             return;
           }
         } catch (e) {}

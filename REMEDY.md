@@ -146,3 +146,30 @@ intentional: it stops a shared/leaked login password from being used to
 permanently take over the bot (unlimited co-owners, or changing the owner
 number outright). Left as-is pending explicit confirmation this should be
 loosened.
+
+### 10. `.reload`'s plugin list was stale (found during Delta/Henry merge)
+`plugins/general.js`'s `.reload` command rebuilds the live command table from
+a hardcoded plugin-name array — separate from `client_bridge.js`'s own
+`PLUGIN_NAMES`. It was already missing `extended` before this merge (7/9 of
+the original files), and would have silently excluded all 12 Delta and all
+19 Henry plugins going forward, meaning `.reload` would look successful but
+actually revert those commands to whatever was in memory at last boot.
+**Fix:** replaced with the full, current plugin list matching `PLUGIN_NAMES`.
+
+### 11. Command collisions between Henry's 236 ported commands and existing commands
+Henry's own audit (`README_NEW_COMMANDS.md`) checked for collisions against
+the base bot's original command set only, before Delta was merged in, and
+found none. Re-checking against both base *and* Delta found 13 real
+collisions: 8 on primary command names (`maintenance`, `reload`, `schedule`,
+`tts`, `gpt`, `define`, `tinyurl`, `catbox`) and 5 on aliases only (`status`,
+`announce`, `bio`, `dice`, `groupname`). In every case the existing,
+already-wired base/Delta command was kept and only the colliding Henry
+command or alias line was removed — verified with a `node -c` syntax check
+after every edit and a full collision re-scan showing zero remaining.
+
+### 12. Missing dependency not listed in Henry's own dependency doc
+`ported_info.js`'s `.shazam`-style command dynamically requires `acrcloud`
+via `createRequire`, which doesn't appear in `README_NEW_COMMANDS.md`'s
+`npm install` list. Caught by a full `require()`-load test of every ported
+file with stubbed dependencies (not just a syntax check). Added to
+`package.json`.

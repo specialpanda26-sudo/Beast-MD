@@ -195,6 +195,33 @@ No other known gaps remain from anything discussed so far.
 — being offline for hours/days doesn't stop it from replying. Only ~14 days of continuous phone
 inactivity triggers a real WhatsApp-side unlink (see the logout notification above).
 
+## Update 12 — Recovery labels dropped (cosmetic), new `.claude` command
+
+**View-once/antidelete recovery — cosmetic change, boundary unchanged:** dropped the "🌝
+Recovered via reaction" / "🗑️ Antidelete" / "👁️ View Once intercepted!" branding on all three
+recovery paths — they now read like a normal forwarded message with light attribution (who/which
+chat) instead of an announced "recovery." Still goes ONLY to your own private chat, exactly as
+before — this does not change where recovered content goes or make it shareable/forwardable to
+third parties in a way the original sender wouldn't expect. That distinction was intentional and
+still holds.
+
+**New: `.claude [request]`** — bot-admin only, lets you ask Claude directly from WhatsApp.
+- Plain questions get a normal text reply (long ones auto-convert to a `.md` file instead of a
+  wall of WhatsApp text).
+- Requests that clearly want generated files ("write me a script", "make me a zip of...") come
+  back as an actual `.zip` document, built server-side and sent as a WhatsApp document attachment.
+- Needs `ANTHROPIC_API_KEY` set (optional — replies with a clear "not configured" message
+  otherwise, doesn't crash). Each call costs real money on your Anthropic account.
+- New backend: `/claude/generate` in `app.py`.
+
+**Render crash investigation:** couldn't reproduce it — ran the actual `client_bridge.js`
+startup path directly (not just a syntax check) with stubbed dependencies, and it starts clean
+through to "waiting for pairing," all 112+ commands load, no exception anywhere in the code
+changed recently. Both new code paths from Update 8 (the antiban-toggle check and the connection
+watchdog) are wrapped in try/catch and can't throw uncaught. If it happens again, the "Debug"
+button on the failed-instance entry in Render's event log has the real stack trace — that's
+needed to actually diagnose it further, "exited with status 1" alone doesn't say what threw.
+
 ## Update 11 — `.antibanstats` display bug fixed
 
 Followed up on checking whether every session's bot/ban health is shown consistently —
@@ -234,3 +261,51 @@ library itself does before displaying it. Also updated the exemption note to men
   at going further to make the interception undetectable to the original sender — view-once
   exists so people can share something expecting it to disappear, and defeating that invisibly at
   commercial/resold scale is a real non-consensual-exposure risk, not something to build.
+
+## Update 13 — Delta feature pack + Henry v20 ported commands merged
+
+**Two new command packs merged in:**
+- **Delta feature pack** (12 plugin files): notes, group-guard (auto link/badword
+  enforcement + `everyone` tag), tic-tac-toe & word-chain games, text effects,
+  URL tools (tinyurl/define/etc.), temp mail, sudo management, extra settings,
+  a second AI chat backend, live sports scores/standings, MEGA cloud backup,
+  and drop-in `.vv`/`.pp` upgrades layered onto the existing media/general
+  plugins.
+- **Henry v20 ported commands** (19 plugin files, 236 commands ported from a
+  friend's MEGA-MD bot): admin, AI, download, fun, games, general, group,
+  images, info, menu, music, owner, quotes, search, stalk, stickers, tools,
+  upload, utility.
+
+**Collision resolution:** cross-checked all three command sources (base,
+Delta, Henry) key-by-key. Two intentional overrides (`.vv`/`.pp`, Delta's
+`overlap-rewrites.js` upgrading the existing media commands — by design,
+loaded last). Thirteen real collisions found between Henry's 236 commands
+and the existing base/Delta commands (`maintenance`, `reload`, `schedule`,
+`tts`, `gpt`, `define`, `tinyurl`, `catbox` as primary names; `status`,
+`announce`, `bio`, `dice`, `groupname` as aliases only) — the already-wired
+base/Delta version was kept in every case, and only the colliding Henry
+command/alias was removed, not the whole file. Verified zero collisions
+remain and zero stray internal helper exports leak into the live command
+table.
+
+**New `.commands` command:** flat, alphabetical, searchable list of every
+currently-loaded command (`.commands`, or `.commands <keyword>` to filter) —
+separate from the curated `.menu`, so newly-added commands are always
+discoverable immediately without hand-editing a menu string.
+
+**Bug found during integration (unrelated to the merge itself):** `.reload`
+had a stale, hardcoded plugin list missing `extended` and, obviously, every
+Delta/Henry plugin — so reloading silently skipped them. Fixed to match the
+full plugin list.
+
+**New dependency found during load-testing, not listed in Henry's own
+dependency doc:** `acrcloud` (used by the ported `.shazam`-style song
+recognition command). Added to `package.json` alongside the rest of
+Henry's and Delta's required packages.
+
+**Verification performed:** every modified/new file syntax-checked with
+`node -c`; every one of the 41 new/changed plugin files `require()`-load
+tested with stubbed third-party dependencies (and real `pino`/`axios`
+where already installed) to catch load-time errors, not just parse errors;
+full command table simulated end-to-end exactly as `client_bridge.js`
+builds it at boot, confirming a clean merge with no runtime collisions.
