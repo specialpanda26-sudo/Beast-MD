@@ -33,7 +33,7 @@ echo ""
 
 # ── Step 3: Node.js dependencies ────────────────────────────
 echo "📦 Step 3/5 — Installing Node.js dependencies..."
-npm install --silent
+npm install --silent --legacy-peer-deps
 echo "✅ Node dependencies installed"
 echo ""
 

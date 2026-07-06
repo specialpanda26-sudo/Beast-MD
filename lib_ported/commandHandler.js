@@ -187,6 +187,31 @@ class CommandHandler {
             this.stats.set(cmd, { calls: 0, errors: 0, totalTime: 0n, avgMs: 0 });
         }
     }
+    // ✅ NEW: the real dispatcher in client_bridge.js doesn't go through this
+    // class's own monitoredHandler wrapper (it calls plugin functions
+    // directly), so .perf/.metrics/.diagnostics had no real data to show.
+    // client_bridge.js now calls these two after every command it runs, so
+    // .perf reflects actual usage/errors instead of always reading empty.
+    recordUsage(cmdKey, ms) {
+        const key = (cmdKey || '').toLowerCase();
+        let s = this.stats.get(key);
+        if (!s) {
+            s = { calls: 0, errors: 0, totalTime: 0n, avgMs: 0 };
+            this.stats.set(key, s);
+        }
+        s.calls++;
+        s.totalTime += BigInt(Math.max(0, Math.round(ms)));
+        s.avgMs = Number(s.totalTime / BigInt(s.calls || 1));
+    }
+    recordError(cmdKey) {
+        const key = (cmdKey || '').toLowerCase();
+        let s = this.stats.get(key);
+        if (!s) {
+            s = { calls: 0, errors: 0, totalTime: 0n, avgMs: 0 };
+            this.stats.set(key, s);
+        }
+        s.errors++;
+    }
     async reloadCommands() {
         this.commands.clear();
         this.aliases.clear();

@@ -2,11 +2,11 @@ require('dotenv').config();
 const _prefixes = process.env.PREFIXES ? process.env.PREFIXES.split(',') : ['.', '!', '/', '#'];
 const config = {
     // Bot Identity
-    botName: process.env.BOT_NAME || 'MEGA-MD',
-    botOwner: process.env.BOT_OWNER || 'Qasim Ali',
-    ownerNumber: process.env.OWNER_NUMBER || '923051391007',
-    author: process.env.AUTHOR || 'GlobalTechInfo',
-    packname: process.env.PACKNAME || 'MEGA-MD',
+    botName: process.env.BOT_NAME || 'Henry Ochibots v19',
+    botOwner: process.env.BOT_OWNER || 'Henry',
+    ownerNumber: process.env.OWNER_NUMBER || '254775351698',
+    author: process.env.AUTHOR || 'henrytech254',
+    packname: process.env.PACKNAME || 'Henry Ochibots v19',
     description: process.env.DESCRIPTION || 'High performance multi-device WhatsApp bot',
     version: '6.0.0',
     // Bot Config
@@ -16,8 +16,8 @@ const config = {
     timeZone: process.env.TIMEZONE || 'Asia/Karachi',
     // Links
     channelLink: process.env.CHANNEL_LINK || 'https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07',
-    updateZipUrl: process.env.UPDATE_URL || 'https://github.com/GlobalTechInfo/MEGA-MD/archive/refs/heads/main.zip',
-    ytChannel: process.env.YT_CHANNEL || 'GlobalTechInfo',
+    updateZipUrl: process.env.UPDATE_URL || 'https://github.com/specialpanda26-sudo/Beast-bot-ogolla/archive/refs/heads/main.zip',
+    ytChannel: process.env.YT_CHANNEL || '',
     // Session
     sessionId: process.env.SESSION_ID || '',
     pairingNumber: process.env.PAIRING_NUMBER || '',

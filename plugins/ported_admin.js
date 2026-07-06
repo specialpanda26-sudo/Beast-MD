@@ -1369,8 +1369,108 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const { handleGoodbye } = require('../lib_ported/welcome.js');
-  const { isGoodByeOn, getGoodbye } = require('../lib_ported/index.js');
+  const { handleWelcome, handleGoodbye } = require('../lib_ported/welcome.js');
+  const { isWelcomeOn, getWelcome, isGoodByeOn, getGoodbye } = require('../lib_ported/index.js');
+  // --- helper code from welcome.js (Update 17, chunk 3) ---
+  // Mirrors handleLeaveEvent below: per-group custom message (.welcomecfg) →
+  // global .setwelcomemessage → hardcoded default. Fires on every join, one
+  // send per new participant, with the same image-card-then-text fallback.
+  async function handleJoinEvent(sock, id, participants) {
+      const isWelcomeEnabled = await isWelcomeOn(id);
+      if (!isWelcomeEnabled)
+          return;
+      const customMessage = await getWelcome(id);
+      const groupMetadata = await sock.groupMetadata(id);
+      const groupName = groupMetadata.subject;
+      const groupDesc = groupMetadata.desc || '';
+      for (const participant of participants) {
+          try {
+              const participantString = typeof participant === 'string' ? participant : (participant.id || participant.toString());
+              const user = participantString.split('@')[0];
+              let displayName = user;
+              try {
+                  const contact = await sock.getBusinessProfile(participantString);
+                  if (contact && contact.name) {
+                      displayName = contact.name;
+                  }
+                  else {
+                      const groupParticipants = groupMetadata.participants;
+                      const userParticipant = groupParticipants.find((p) => p.id === participantString);
+                      if (userParticipant && userParticipant.name) {
+                          displayName = userParticipant.name;
+                      }
+                  }
+              }
+              catch (nameError) {
+                  console.log('Could not fetch display name, using phone number');
+              }
+              let finalMessage;
+              const globalWelcome = customMessage ? null : (() => {
+                  try { return require('../plugins/settings-ext.js').__getSetting('welcomemessage'); }
+                  catch (_) { return null; }
+              })();
+              const effectiveMessage = customMessage || globalWelcome || null;
+              if (effectiveMessage) {
+                  finalMessage = effectiveMessage
+                      .replace(/{user}/g, `@${displayName}`)
+                      .replace(/{group}/g, groupName)
+                      .replace(/{description}/g, groupDesc);
+              }
+              else {
+                  finalMessage = `Welcome *@${displayName}* to *${groupName}*! 🎉`;
+              }
+              try {
+                  let profilePicUrl = `https://img.pyrocdn.com/dbKUgahg.png`;
+                  try {
+                      const profilePic = await sock.profilePictureUrl(participantString, 'image');
+                      if (profilePic) {
+                          profilePicUrl = profilePic;
+                      }
+                  }
+                  catch (profileError) {
+                      console.log('Could not fetch profile picture, using default');
+                  }
+                  const apiUrl = `https://api.some-random-api.com/welcome/img/2/gaming1?type=join&textcolor=white&username=${encodeURIComponent(displayName)}&guildName=${encodeURIComponent(groupName)}&memberCount=${groupMetadata.participants.length}&avatar=${encodeURIComponent(profilePicUrl)}`;
+                  const response = await fetch(apiUrl);
+                  if (response.ok) {
+                      const imageBuffer = Buffer.from(await response.arrayBuffer());
+                      await sock.sendMessage(id, {
+                          image: imageBuffer,
+                          caption: finalMessage,
+                          mentions: [participantString]
+                      });
+                      continue;
+                  }
+              }
+              catch (imageError) {
+                  console.log('Image generation failed, falling back to text');
+              }
+              await sock.sendMessage(id, {
+                  text: finalMessage,
+                  mentions: [participantString]
+              });
+          }
+          catch (error) {
+              console.error('Error sending welcome message:', error);
+              const participantString = typeof participant === 'string' ? participant : (participant.id || participant.toString());
+              const user = participantString.split('@')[0];
+              let fallbackMessage;
+              if (customMessage) {
+                  fallbackMessage = customMessage
+                      .replace(/{user}/g, `@${user}`)
+                      .replace(/{group}/g, groupName)
+                      .replace(/{description}/g, groupDesc);
+              }
+              else {
+                  fallbackMessage = `Welcome @${user}! 🎉`;
+              }
+              await sock.sendMessage(id, {
+                  text: fallbackMessage,
+                  mentions: [participantString]
+              });
+          }
+      }
+  }
   // --- helper code from goodbye.js ---
   async function handleLeaveEvent(sock, id, participants) {
       const isGoodbyeEnabled = await isGoodByeOn(id);
@@ -1401,8 +1501,17 @@ Object.assign(module.exports, (() => {
                   console.log('Could not fetch display name, using phone number');
               }
               let finalMessage;
-              if (customMessage) {
-                  finalMessage = customMessage
+              // ✅ NEW (Update 17): precedence is per-group custom message
+              // (.setgoodbye, unchanged) → global .setgoodbyemessage → the
+              // old hardcoded default. Previously the global setting was
+              // saved but never consulted at all.
+              const globalGoodbye = customMessage ? null : (() => {
+                  try { return require('../plugins/settings-ext.js').__getSetting('goodbyemessage'); }
+                  catch (_) { return null; }
+              })();
+              const effectiveMessage = customMessage || globalGoodbye || null;
+              if (effectiveMessage) {
+                  finalMessage = effectiveMessage
                       .replace(/{user}/g, `@${displayName}`)
                       .replace(/{group}/g, groupName);
               }
@@ -1492,6 +1601,30 @@ Object.assign(module.exports, (() => {
     },
     "bye": async (h) => module.exports["goodbye"](h),
     "leave": async (h) => module.exports["goodbye"](h),
+
+    // ── .welcomecfg ─── Configure welcome messages for new members | usage: .welcomecfg <on|off|set message>
+    // Named "welcomecfg" and not "welcome" because general.js already owns
+    // ".welcome <number>" (sends a manual onboarding welcome-card DM) — a
+    // second ".welcome" here would collide and break that existing command.
+    "welcomecfg": async (h) => {
+      const sock = h.sock;
+      const message = h.msg;
+      const args = h.args;
+      try {
+        const chatId = h.from || message.key.remoteJid;
+        const matchText = args.join(' ');
+        await handleWelcome(sock, chatId, message, matchText);
+      } catch (portErr) {
+        console.error('[ported:welcomecfg] error:', portErr.message);
+        try { await h.sock.sendMessage(h.from, { text: '❌ Error in .welcomecfg: ' + portErr.message }, { quoted: h.msg }); } catch (_) {}
+      }
+    },
+
+    // Internal event handlers, consumed directly by client_bridge.js's
+    // group-participants.update listener — not real user commands. Stripped
+    // from the live command table via NON_COMMAND_KEYS there.
+    "_handleJoinEvent": handleJoinEvent,
+    "_handleLeaveEvent": handleLeaveEvent,
   };
 })());
 

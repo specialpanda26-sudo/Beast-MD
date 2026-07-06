@@ -282,6 +282,7 @@ scores, URL tools, temp mail, text effects, downloads, stickers, admin
 tools, search, and more. This menu only shows the core set.
 ${p}commands       - 📋 Full flat list of everything currently loaded
 ${p}commands sticker - 🔎 e.g. search loaded commands by keyword
+${p}smenu          - 🗂️ Same full list, grouped by category with live status
 
 > 🔥 *Henry Ochibots v19™* | @henrytech254`;
 

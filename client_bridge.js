@@ -46,8 +46,23 @@ const {
 // getOwnerNumber() below for the resolution order.
 const OWNER_NUMBER_ENV = (process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
 const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ochibots';
-const BOT_NAME      = process.env.BOT_NAME      || 'Henry Ochibots v19™';
-const CMD_PREFIX    = '.';
+const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Henry Ochibots v19™';
+const CMD_PREFIX_DEFAULT = '.';
+
+// ✅ NEW (Update 15): .setbotname/.setprefix (plugins/settings-ext.js) used to
+// save successfully but never actually change anything — BOT_NAME/CMD_PREFIX
+// were frozen constants read once at startup. These two now re-read the
+// settings store live, so a change takes effect on the very next message
+// with no restart needed. Falls back to the env-based default above if
+// settings-ext can't be loaded for any reason, or hasn't been touched yet.
+function getBotName() {
+  try { return require('./plugins/settings-ext.js').__getSetting('botname') || BOT_NAME_DEFAULT; }
+  catch (_) { return BOT_NAME_DEFAULT; }
+}
+function getPrefix() {
+  try { return require('./plugins/settings-ext.js').__getSetting('prefix') || CMD_PREFIX_DEFAULT; }
+  catch (_) { return CMD_PREFIX_DEFAULT; }
+}
 
 // ✅ NEW: bot name recognition for group chats — deliberately NOT reusing the
 // old broad "bot"/"henry" substring match (see the FIX comment further down
@@ -103,9 +118,12 @@ const PLUGIN_NAMES = [
   'ported_stickers', 'ported_tools', 'ported_upload', 'ported_utility',
 ];
 const allCommands = {};
+const cmdOwnerPlugin = {};
 PLUGIN_NAMES.forEach(name => {
   try {
-    Object.assign(allCommands, require(`./plugins/${name}`));
+    const mod = require(`./plugins/${name}`);
+    Object.assign(allCommands, mod);
+    Object.keys(mod).forEach(k => { cmdOwnerPlugin[k] = name; });
   } catch (e) {
     console.warn(`⚠️  Plugin "${name}" failed to load: ${e.message}`);
   }
@@ -119,6 +137,7 @@ PLUGIN_NAMES.forEach(name => {
 const NON_COMMAND_KEYS = [
   '_handleGameReply', 'canUseCommand', 'startSchedulerLoop', '__SETTING_KEYS', '__memKey',
   '_handleTTTReply', '_handleWCGReply', '_enforceGroupGuard', '__getSetting',
+  '_handleJoinEvent', '_handleLeaveEvent',
 ];
 NON_COMMAND_KEYS.forEach(k => delete allCommands[k]);
 
@@ -129,6 +148,46 @@ global.allCommandsRef = allCommands;
 
 const loadedCmds = Object.keys(allCommands);
 console.log(`✅ Plugins loaded — ${loadedCmds.length} commands: ${loadedCmds.join(', ')}`);
+
+// ✅ FIX: lib_ported/commandHandler.js is a leftover from the original ported
+// Mega-MD bot. It expects plugins shaped like {command, handler, category},
+// but every plugin here exports flat {cmdName: fn, ...} instead — so nothing
+// ever called registerCommand() on a real command, leaving the singleton's
+// .commands/.categories/.stats permanently empty. That silently broke
+// .smenu/.shelp (rendered "0 plugins", no categories), .find/.lookup/
+// .searchcmd (always "not found"), .perf/.metrics/.diagnostics (always "no
+// performance data"), and .manage/.ctrl/.control's toggle+alias features
+// (could never find a command to act on). This backfills the registry from
+// the real dispatch table above so those commands reflect what's actually
+// installed. The dispatcher below still calls allCommands[cmd] directly for
+// real execution — this registry is metadata (for listing/search/stats)
+// plus disabled-flags and runtime aliases, which the dispatcher now honors.
+const CommandHandler = require('./lib_ported/commandHandler.js');
+const PLUGIN_CATEGORY = {
+  general: 'General', ported_general: 'General',
+  group: 'Group', ported_group: 'Group', groupguard: 'Group Guard',
+  media: 'Media', 'overlap-rewrites': 'Media',
+  cypher: 'AI & Fun', atassa: 'Utility', wallet: 'Wallet',
+  games: 'Games', games2: 'Games', ported_games: 'Games',
+  osint: 'OSINT', extended: 'Group Intelligence',
+  notes: 'Notes', texteffects: 'Text Effects', urltools: 'URL Tools',
+  tempmail: 'Temp Mail', sudo: 'Sudo', 'settings-ext': 'Settings',
+  aichat2: 'AI Chat', sports: 'Sports', megabackup: 'Backup', scheduler: 'Scheduling',
+  ported_admin: 'Admin', ported_ai: 'AI Images & Video', ported_download: 'Downloader',
+  ported_fun: 'Fun', ported_images: 'Images', ported_info: 'Info',
+  ported_menu: 'Audio & Text Tools', ported_music: 'Music', ported_owner: 'Owner',
+  ported_quotes: 'Quotes', ported_search: 'Search', ported_stalk: 'Stalk & Lookup',
+  ported_stickers: 'Stickers', ported_tools: 'Tools', ported_upload: 'Upload',
+  ported_utility: 'Utility',
+};
+loadedCmds.forEach(cmdKey => {
+  CommandHandler.registerCommand({
+    command : cmdKey,
+    category: PLUGIN_CATEGORY[cmdOwnerPlugin[cmdKey]] || 'Misc',
+    handler : allCommands[cmdKey], // metadata only — see dispatcher below for real execution
+  });
+});
+console.log(`✅ CommandHandler registry backfilled — ${CommandHandler.commands.size} commands across ${CommandHandler.categories.size} categories`);
 
 // ── Pairing Web Server ──────────────────────────────────────
 // Open /pair in browser to link any WhatsApp number without touching .env
@@ -1364,6 +1423,25 @@ async function startSession(sessionId, opts = {}) {
     }
   });
 
+  // ✅ FIX (Update 17): group-participants.update was never listened to
+  // anywhere in the codebase, so .goodbye (and the new .welcomecfg) had
+  // working commands and storage but no trigger — nothing ever fired
+  // automatically on an actual join/leave. Required directly by file path
+  // rather than pulled from allCommands, since both handlers are stripped
+  // out of the command table by NON_COMMAND_KEYS above.
+  socket.ev.on("group-participants.update", async (update) => {
+    try {
+      const { _handleJoinEvent, _handleLeaveEvent } = require('./plugins/ported_admin.js');
+      if (update.action === 'add') {
+        await _handleJoinEvent(socket, update.id, update.participants);
+      } else if (update.action === 'remove') {
+        await _handleLeaveEvent(socket, update.id, update.participants);
+      }
+    } catch (e) {
+      console.error('❌ group-participants.update handler error:', e.message);
+    }
+  });
+
   socket.ev.on("messages.upsert", async (chatUpdate) => {
     try {
       const msg = chatUpdate.messages[0];
@@ -1371,6 +1449,11 @@ async function startSession(sessionId, opts = {}) {
 
       const sender = msg.key.remoteJid;
       if (!sender) return;
+
+      // ✅ NEW (Update 15): live-read prefix/botname for this message instead
+      // of a frozen startup constant — see getPrefix()/getBotName() above.
+      const CMD_PREFIX = getPrefix();
+      const BOT_NAME = getBotName();
 
       const isStatus = sender === "status@broadcast";
       const name = msg.pushName || "User";
@@ -1389,12 +1472,17 @@ async function startSession(sessionId, opts = {}) {
       // Feature: Auto View & Like Status + AI comment on status
       if (isStatus) {
         try {
-          await socket.readMessages([msg.key]);
-          await socket.sendMessage(
-            sender,
-            { react: { text: "❤️", key: msg.key } },
-            { statusJidList: [msg.key.participant || sender] }
-          );
+          const settingsExt = require('./plugins/settings-ext.js');
+          if (settingsExt.__getSetting('autoreadstatus')) {
+            await socket.readMessages([msg.key]);
+          }
+          if (settingsExt.__getSetting('autolikestatus')) {
+            await socket.sendMessage(
+              sender,
+              { react: { text: "❤️", key: msg.key } },
+              { statusJidList: [msg.key.participant || sender] }
+            );
+          }
 
           // NEW: Auto-save status media to disk before it expires in 24h
           if (isFeatureOn("status_save")) {
@@ -1421,7 +1509,7 @@ async function startSession(sessionId, opts = {}) {
             } catch (_) { /* media download can fail on expired/protected statuses, skip silently */ }
           }
           // ✅ NEW: AI comment reply on text statuses (human-like)
-          if (body && global.botActive !== false) {
+          if (body && global.botActive !== false && settingsExt.__getSetting('autoreplystatus')) {
             try {
               const statusName = msg.pushName || 'rafiki';
               const aiReply = await apiClient.post('/natural-chat', {
@@ -1463,6 +1551,41 @@ async function startSession(sessionId, opts = {}) {
       // Henry's own number only, never a customer's session.
       const botNumber = (socket.user?.id || "").split(':')[0].split('@')[0];
       const isThisOwnerSession = Boolean(botNumber && currentOwnerNumber && botNumber === currentOwnerNumber);
+
+      // ── ✅ NEW (Update 15): PM Permit — .setpmpermit on/off was saving but
+      // doing nothing. When ON, a non-admin DMing for the first time gets a
+      // one-time "ask for permission" notice and nothing else runs for them
+      // (no AI reply, no commands) until a bot admin approves them with
+      // `.pmpermitapprove <number>`. Bot admins are always exempt. Groups
+      // and status broadcasts are unaffected — this is DMs only.
+      if (!isGroup && !isBotAdmin) {
+        try {
+          const settingsExtPm = require('./plugins/settings-ext.js');
+          if (settingsExtPm.__getSetting('pmpermit') && !settingsExtPm.__isPmApproved(senderNumber)) {
+            const strikeCount = settingsExtPm.__bumpPmStrike(senderNumber);
+            // ✅ NEW: .setautoblock on/off — only ever acts on senders who are
+            // already failing the pmpermit gate above (never blocks anyone
+            // pmpermit itself would let through), and only after repeated
+            // attempts, so a single stray message never gets someone blocked.
+            if (settingsExtPm.__getSetting('autoblock') && strikeCount > 3) {
+              try { await socket.updateBlockStatus(sender, "block"); } catch (_) {}
+              try {
+                const ownerJidForAlert = currentOwnerNumber ? `${currentOwnerNumber}@s.whatsapp.net` : null;
+                if (ownerJidForAlert) {
+                  await socket.sendMessage(ownerJidForAlert, { text: `🚫 Auto-blocked ${senderNumber} after ${strikeCount} unapproved DM attempts (PM Permit is ON).` });
+                }
+              } catch (_) {}
+              return;
+            }
+            if (strikeCount === 1) {
+              try {
+                await socket.sendMessage(sender, { text: `🔒 The owner requires permission before chatting. Your request has been noted — please wait to be approved.` }, { quoted: msg });
+              } catch (_) {}
+            }
+            return;
+          }
+        } catch (_) {}
+      }
 
       // ── 🌝 Cache this message in case it's reacted to later (view-once
       // recovery, or recovering a message after it gets deleted) ───────────
@@ -1714,6 +1837,24 @@ async function startSession(sessionId, opts = {}) {
               console.log(`⚠️ Couldn't send user guide PDF to ${sender}: ${e.message}`);
             }
           }
+
+          // ✅ Also send the "What Was Fixed" PDF, to everyone including the
+          // owner — unlike the user guide, this documents recent changes to
+          // the bot's own behavior, which is relevant regardless of role.
+          // Same PDFs are downloadable from the /pair web page too.
+          try {
+            const fs = require("fs");
+            const fixedPath = path.join(__dirname, "assets", "BeastBot-Whats-Fixed.pdf");
+            const fixedBuffer = fs.readFileSync(fixedPath);
+            await socket.sendMessage(sender, {
+              document: fixedBuffer,
+              fileName: "BeastBot-Whats-Fixed.pdf",
+              mimetype: "application/pdf",
+              caption: "🛠️ *What Was Fixed* — a plain-language rundown of recent bot fixes and what changed."
+            });
+          } catch (e) {
+            console.log(`⚠️ Couldn't send fixes PDF to ${sender}: ${e.message}`);
+          }
           return;
         }
 
@@ -1850,7 +1991,9 @@ async function startSession(sessionId, opts = {}) {
 
       // Feature: Auto Read Messages
       try {
-        await socket.readMessages([msg.key]);
+        if (require('./plugins/settings-ext.js').__getSetting('autoread')) {
+          await socket.readMessages([msg.key]);
+        }
       } catch (e) {}
 
       // Update session message count for admin panel
@@ -1985,14 +2128,31 @@ async function startSession(sessionId, opts = {}) {
       // message, then the command dispatcher below added ANOTHER 0.5-1.7s
       // on top of that. Stacked together that was 1-3s+ of pure artificial
       // delay before a command even started running.
-      try {
-        await socket.sendPresenceUpdate("composing", sender);
-        await delay(250);
-        await socket.sendPresenceUpdate("paused", sender);
-      } catch (e) {}
+      // ✅ NEW (Update 15): .setdmpresence/.setgcpresence actually control
+      // this now — set either to 'unavailable' to stay invisible (no typing
+      // indicator) in DMs/groups respectively. Anything else (default
+      // 'available') keeps the existing typing-simulation behavior.
+      const presenceSetting = isGroup
+        ? require('./plugins/settings-ext.js').__getSetting('gcpresence')
+        : require('./plugins/settings-ext.js').__getSetting('dmpresence');
+      if (presenceSetting !== 'unavailable') {
+        try {
+          await socket.sendPresenceUpdate("composing", sender);
+          await delay(250);
+          await socket.sendPresenceUpdate("paused", sender);
+        } catch (e) {}
+      }
 
-      // ❌ REMOVED: Auto React to every message — was reacting with a sentiment
-      // emoji on literally every incoming message, which felt spammy/unnatural.
+      // ✅ NEW (Update 15): Auto React — was removed for feeling spammy when
+      // it ran unconditionally on every message. Now opt-in only, via
+      // `.setautoreact on` (default OFF, matching the original removal).
+      if (body && require('./plugins/settings-ext.js').__getSetting('autoreact')) {
+        try {
+          const sentiment = await apiClient.post('/react', { body });
+          const emoji = sentiment?.data?.emoji || '👍';
+          await socket.sendMessage(sender, { react: { text: emoji, key: msg.key } });
+        } catch (_) {}
+      }
 
       // ✅ Delta pack: group-guard runs on ALL group messages (not just
       // commands) so it can catch things like link/badword floods before
@@ -2015,8 +2175,16 @@ async function startSession(sessionId, opts = {}) {
         try { await socket.sendPresenceUpdate('composing', sender); } catch (_) {}
 
         const parts  = body.slice(CMD_PREFIX.length).trim().split(/\s+/);
-        const cmd    = parts[0]?.toLowerCase();
+        let   cmd    = parts[0]?.toLowerCase();
         const args   = parts.slice(1);
+
+        // ✅ FIX: .manage alias (ported_owner.js) wrote new aliases into
+        // CommandHandler.aliases but nothing ever consulted that map, so
+        // aliases created that way silently did nothing. Resolved here,
+        // before dispatch, so they actually work.
+        if (cmd && !allCommands[cmd] && CommandHandler.aliases.has(cmd)) {
+          cmd = CommandHandler.aliases.get(cmd);
+        }
 
         const config = {
           ownerNumber  : currentOwnerNumber,
@@ -2032,6 +2200,14 @@ async function startSession(sessionId, opts = {}) {
         };
 
         if (allCommands[cmd]) {
+          // ✅ FIX: .manage toggle (ported_owner.js) wrote into
+          // CommandHandler.disabledCommands but nothing ever checked it, so
+          // "disabling" a command via .manage had no real effect — the
+          // command kept running normally. Enforced here now.
+          if (CommandHandler.disabledCommands.has(cmd)) {
+            await socket.sendMessage(sender, { text: `🚫 The command *.${cmd}* is currently disabled.` }, { quoted: msg });
+            return;
+          }
           // ── Permission check (skip for owner/admins) ──────────────────────
           if (!isOwner && !isSubAdmin && isGroup) {
             const { canUseCommand } = require('./plugins/group');
@@ -2041,6 +2217,7 @@ async function startSession(sessionId, opts = {}) {
             }
           }
           const actorTag = `+${senderJid.split('@')[0]}`;
+          const cmdStartedAt = Date.now();
           try {
             await allCommands[cmd]({
               sock    : socket,
@@ -2061,6 +2238,9 @@ async function startSession(sessionId, opts = {}) {
               apiClient, // used by plugins/scheduler.js to persist across restarts
               logActivity, // lets plugins (e.g. media.js downloads) log their own errors
             });
+            // ✅ NEW: feeds .perf/.metrics/.diagnostics real numbers instead
+            // of the permanently-empty stats the ported CommandHandler had.
+            CommandHandler.recordUsage(cmd, Date.now() - cmdStartedAt);
             // Every successful dispatch — panel-only, no WhatsApp ping.
             logActivity('command', cmd, args.join(' ').slice(0, 300), actorTag);
             // Owner/admin-tier actions additionally get flagged as sensitive,
@@ -2069,6 +2249,7 @@ async function startSession(sessionId, opts = {}) {
               logActivity('sensitive', cmd, `Ran *.${cmd} ${args.join(' ')}*`.trim(), actorTag);
             }
           } catch (e) {
+            CommandHandler.recordError(cmd);
             console.error(`❌ [${sessionId}] .${cmd} error:`, e.message);
             logActivity('error', cmd, `*.${cmd}* failed: ${e.message}`, actorTag);
             try {
@@ -2184,7 +2365,9 @@ async function startSession(sessionId, opts = {}) {
       }
 
       // ── Natural AI Chat (DM only, non-command messages) ───────────────────
-      if (!isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/')) {
+      // ✅ NEW (Update 15): .setchatbot on/off actually gates this now — was
+      // always on regardless of the toggle's saved value.
+      if (!isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/') && require('./plugins/settings-ext.js').__getSetting('chatbot')) {
         if (isThisOwnerSession) {
           // ✅ NEW: on Henry's own number, the AI never just answers every
           // DM like a customer session does. Three gates, all must pass:
@@ -2242,7 +2425,9 @@ async function startSession(sessionId, opts = {}) {
       }
 
       // ── Group AI replies — reply when bot is mentioned or name is called ──
-      if (isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/')) {
+      // ✅ NEW (Update 15): .setautoreply on/off gates this (separate switch
+      // from .setchatbot, which only covers DMs) — was always on before.
+      if (isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/') && require('./plugins/settings-ext.js').__getSetting('autoreply')) {
         try {
           const groupMeta = await socket.groupMetadata(sender);
           const isRestricted = groupMeta?.announce;
@@ -2297,8 +2482,12 @@ async function startSession(sessionId, opts = {}) {
   });
 
   // Feature: Auto Bio Update every 60 seconds
+  // ✅ NEW (Update 15): .setautobio on/off now actually gates this — checked
+  // every tick (not just once at startup) so toggling it takes effect on
+  // the very next 60s cycle, no restart needed.
   setInterval(async () => {
     try {
+      if (!require('./plugins/settings-ext.js').__getSetting('autobio')) return;
       const bioResponse = await apiClient.get("/get-bio");
       if (bioResponse?.data?.bio) {
         await socket.updateProfileStatus(bioResponse.data.bio);

@@ -210,7 +210,7 @@ Object.assign(module.exports, (() => {
 
   return {
 
-    // ── .pair ─── Get session id for MEGA-MD | usage: .pair 92305395XXXX
+    // ── .pair ─── Get session id for the bot | usage: .pair 92305395XXXX
     "pair": async (h) => {
       const sock = h.sock;
       const message = h.msg;
@@ -266,7 +266,7 @@ Object.assign(module.exports, (() => {
                 if (pairingCode.includes("Unavailable") || pairingCode.includes("Error")) {
                     throw new Error("Server is busy");
                 }
-                const successText = `✅ *MEGA-MD PAIRING CODE*\n\n` +
+                const successText = `✅ *${config.botName || 'Henry Ochibots v19'} PAIRING CODE*\n\n` +
                     `Code: *${pairingCode}*\n\n` +
                     `*How to use:*\n` +
                     `1. Open WhatsApp Settings\n` +
@@ -580,9 +580,9 @@ Object.assign(module.exports, (() => {
             const disabledEmoji = getRandomEmoji(disabledEmojis);
             const fastEmoji = getRandomEmoji(fastEmojis);
             const slowEmoji = getRandomEmoji(slowEmojis);
-            let menuText = `${menuEmoji} *${config.botName || 'MEGA-MD'}* ${menuEmoji}\n\n`;
+            let menuText = `${menuEmoji} *${config.botName || 'Henry Ochibots v19'}* ${menuEmoji}\n\n`;
             menuText += `┏━━━━━━━━━━━━━━━━┓\n`;
-            menuText += `┃ 📱 *Bot:* ${config.botName || 'MEGA-MD'}\n`;
+            menuText += `┃ 📱 *Bot:* ${config.botName || 'Henry Ochibots v19'}\n`;
             menuText += `┃ 🔖 *Version:* ${config.version || '6.0.0'}\n`;
             menuText += `┃ 👤 *Owner:* ${config.botOwner || 'Unknown'}\n`;
             menuText += `┃ ⏰ *Time:* ${formatTime()}\n`;
@@ -781,7 +781,7 @@ Object.assign(module.exports, (() => {
       try {
 
         const chatId = message.key.remoteJid;
-        const commandHandler = (await import('../lib/commandHandler.js')).default;
+        const commandHandler = (await import('../lib_ported/commandHandler.js')).default;
         const uptimeMs = process.uptime() * 1000;
         const formatUptime = (ms) => {
             const sec = Math.floor(ms / 1000) % 60;
@@ -801,7 +801,7 @@ Object.assign(module.exports, (() => {
         const startedAt = new Date(Date.now() - uptimeMs).toLocaleString();
         const ramMb = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
         const commandCount = commandHandler.commands.size;
-        const text = `🤖 *MEGA-MD STATUS*\n\n` +
+        const text = `🤖 *${config.botName || 'Henry Ochibots v19'} STATUS*\n\n` +
             `⏱ Uptime: ${formatUptime(uptimeMs)}\n` +
             `🚀 Started: ${startedAt}\n` +
             `📦 Plugins: ${commandCount}\n` +

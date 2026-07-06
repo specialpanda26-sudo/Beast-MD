@@ -19,7 +19,7 @@ Object.assign(module.exports, (() => {
 
   return {
 
-    // ── .script ─── Get information about the MEGA-MD GitHub repository | usage: .script
+    // ── .script ─── Get information about this bot's GitHub repository | usage: .script
     "script": async (h) => {
       const sock = h.sock;
       const message = h.msg;
@@ -40,7 +40,7 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await fetch('https://api.github.com/repos/GlobalTechInfo/MEGA-MD');
+            const res = await fetch('https://api.github.com/repos/specialpanda26-sudo/Beast-bot-ogolla');
             if (!res.ok)
                 throw new Error('Error fetching repository data');
             const json = await res.json();

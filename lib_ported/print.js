@@ -204,7 +204,7 @@ async function printMessage(message, sock) {
             const displayText = messageText.length > maxLength
                 ? `${messageText.substring(0, maxLength) }...`
                 : messageText;
-            const isBotResponse = messageText.includes('MEGA-MD') ||
+            const isBotResponse = messageText.includes('Henry Ochibots') ||
                 messageText.includes('Pinging...') ||
                 messageText.includes('*🤖') ||
                 (fromMe && messageText.includes('*'));

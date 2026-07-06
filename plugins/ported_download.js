@@ -270,7 +270,7 @@ Object.assign(module.exports, (() => {
             const caption = `📘 *Facebook Downloader*
 🎞 Quality: *${selected.resolution || 'Unknown'}*
 
-> *_Downloaded by MEGA-MD_*`;
+> *_Downloaded by Henry Ochibots v19_*`;
             await sock.sendMessage(chatId, { video: { url: videoUrl }, mimetype: 'video/mp4', caption }, { quoted: message });
         }
         catch (err) {
@@ -444,7 +444,7 @@ Object.assign(module.exports, (() => {
         const chatId = message.key.remoteJid;
         if (!args || args.length === 0) {
             return sock.sendMessage(chatId, {
-                text: '*🌟 Please provide a GitHub URL or username and repository name.*\n\n*Example usage:*\n\n.clone https://github.com/GlobalTechInfo/MEGA-MD\n\n.clone GlobalTechInfo MEGA-MD'
+                text: '*🌟 Please provide a GitHub URL or username and repository name.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Beast-bot-ogolla\n\n.clone specialpanda26-sudo Beast-bot-ogolla'
             });
         }
         let url = '';
@@ -466,7 +466,7 @@ Object.assign(module.exports, (() => {
         }
         else {
             return sock.sendMessage(chatId, {
-                text: '*Missing repository info.*\n\n*Example usage:*\n\n.clone https://github.com/GlobalTechInfo/MEGA-MD\n\n.clone GlobalTechInfo MEGA-MD'
+                text: '*Missing repository info.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Beast-bot-ogolla\n\n.clone specialpanda26-sudo Beast-bot-ogolla'
             });
         }
         await sock.sendMessage(chatId, { text: '⏱️ Preparing repository zip...' });
@@ -525,7 +525,7 @@ Object.assign(module.exports, (() => {
             const link = args[0];
             if (!link) {
                 return await sock.sendMessage(chatId, {
-                    text: `❌ *Missing Link!*\n\nExample: .gitclone2 https://github.com/GlobalTechInfo/MEGA-MD`
+                    text: `❌ *Missing Link!*\n\nExample: .gitclone2 https://github.com/specialpanda26-sudo/Beast-bot-ogolla`
                 }, { quoted: message });
             }
             if (!regex.test(link)) {
@@ -550,7 +550,7 @@ Object.assign(module.exports, (() => {
                 document: { url },
                 fileName: filename,
                 mimetype: 'application/zip',
-                caption: `📦 *Repository:* ${user}/${repo}\n✨ *Cloned by MEGA-MD*`
+                caption: `📦 *Repository:* ${user}/${repo}\n✨ *Cloned by Henry Ochibots v19*`
             }, { quoted: message });
         }
         catch (err) {
@@ -641,13 +641,13 @@ Object.assign(module.exports, (() => {
                     await sock.sendMessage(chatId, {
                         video: { url },
                         mimetype: 'video/mp4',
-                        caption: '📥 *Downloaded by MEGA-MD*'
+                        caption: '📥 *Downloaded by Henry Ochibots v19*'
                     }, { quoted: message });
                 }
                 else {
                     await sock.sendMessage(chatId, {
                         image: { url },
-                        caption: '📥 *Downloaded by MEGA-MD*'
+                        caption: '📥 *Downloaded by Henry Ochibots v19*'
                     }, { quoted: message });
                 }
                 if (i < mediaList.length - 1) {
@@ -1818,7 +1818,7 @@ Object.assign(module.exports, (() => {
                 video: { url: videoData.downloadUrl },
                 mimetype: 'video/mp4',
                 fileName: `${videoData.title || videoTitle || 'video'}.mp4`,
-                caption: `🎬 *${videoData.title || videoTitle || 'Video'}*\n\n> *_Downloaded by MEGA-MD_*`
+                caption: `🎬 *${videoData.title || videoTitle || 'Video'}*\n\n> *_Downloaded by Henry Ochibots v19_*`
             }, { quoted: message });
         }
         catch (err) {

@@ -2402,140 +2402,6 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const store = require('../lib_ported/lightweight_store.js');
-  // --- helper code from listrent.js ---
-  /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
-  
-  const MONGO_URL = process.env.MONGO_URL;
-  const POSTGRES_URL = process.env.POSTGRES_URL;
-  const MYSQL_URL = process.env.MYSQL_URL;
-  const SQLITE_URL = process.env.DB_URL;
-  const HAS_DB = !!(MONGO_URL || POSTGRES_URL || MYSQL_URL || SQLITE_URL);
-  async function getAllCloneSessions() {
-      if (HAS_DB) {
-          const settings = await store.getAllSettings('clones') || {};
-          return Object.entries(settings)
-              .filter(([_key, value]) => value && value.status)
-              .map(([authId, data]) => ({ authId, ...(data) }));
-      }
-      else {
-          const { default: fs } = await import('fs');
-          const { default: path } = await import('path');
-          const clonesDir = path.join(process.cwd(), 'session', 'clones');
-          if (!fs.existsSync(clonesDir))
-              return [];
-          const dirs = fs.readdirSync(clonesDir);
-          return dirs.map(authId => {
-              const sessionPath = path.join(clonesDir, authId, 'session.json');
-              if (fs.existsSync(sessionPath)) {
-                  try {
-                      const data = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
-                      return { authId, ...(data) };
-                  }
-                  catch (e) {
-                      return { authId, status: 'unknown' };
-                  }
-              }
-              return { authId, status: 'unknown' };
-          });
-      }
-  }
-  return {
-
-    // ── .listrent ─── List all currently active sub-bots | usage: .listrent
-    "listrent": async (h) => {
-      const sock = h.sock;
-      const message = h.msg;
-      const args = h.args;
-      const context = {
-        chatId: h.from,
-        senderId: h.senderJid,
-        isGroup: h.isGroup,
-        isBotAdmin: h.isBotAdmin,
-        senderIsOwnerOrSudo: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        isSenderAdmin: h.isBotAdmin,
-        isOwnerOrSudoCheck: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        config: h.config,
-        rawText: (h.config.prefix + 'listrent ' + h.args.join(' ')).trim(),
-        channelInfo: {},
-      };
-      try {
-
-        const { chatId } = context;
-        const activeConns = global.conns || [];
-        const storedClones = await getAllCloneSessions();
-        if (activeConns.length === 0 && storedClones.length === 0) {
-            return await sock.sendMessage(chatId, {
-                text: "*❌ No sub-bots are currently active or stored.*"
-            }, { quoted: message });
-        }
-        let msg = `*─── [ CLONE BOTS ] ───*\n\n`;
-        msg += `*Storage:* ${HAS_DB ? 'Database 🗄️' : 'File System 📁'}\n\n`;
-        if (activeConns.length > 0) {
-            msg += `*🟢 ONLINE CLONES:*\n\n`;
-            activeConns.forEach((conn, i) => {
-                const user = conn.user;
-                msg += `*${i + 1}.* @${user.id.split(':')[0]}\n`;
-                msg += `   └ Name: ${user.name || 'Sub-Bot'}\n`;
-                msg += `   └ Status: Connected ✅\n\n`;
-            });
-        }
-        if (HAS_DB && storedClones.length > 0) {
-            const offlineClones = storedClones.filter(clone => {
-                return !activeConns.some((conn) => {
-                    const connNumber = conn.user.id.split(':')[0];
-                    return clone.userNumber === connNumber;
-                });
-            });
-            if (offlineClones.length > 0) {
-                msg += `*⚪ STORED CLONES (Offline):*\n\n`;
-                offlineClones.forEach((clone, i) => {
-                    msg += `*${i + 1}.* ID: ${clone.authId}\n`;
-                    msg += `   └ Number: ${clone.userNumber || 'N/A'}\n`;
-                    msg += `   └ Status: ${clone.status || 'offline'}\n`;
-                    if (clone.createdAt) {
-                        const date = new Date(clone.createdAt);
-                        msg += `   └ Created: ${date.toLocaleString()}\n`;
-                    }
-                    msg += `\n`;
-                });
-            }
-        }
-        msg += `*Total Online:* ${activeConns.length}\n`;
-        if (HAS_DB) {
-            msg += `*Total Stored:* ${storedClones.length}`;
-        }
-        const mentions = activeConns.map((c) => c.user.id);
-        await sock.sendMessage(chatId, {
-            text: msg,
-            mentions
-        }, { quoted: message });
-    
-      } catch (portErr) {
-        console.error('[ported:listrent] error:', portErr.message);
-        try { await h.sock.sendMessage(h.from, { text: '❌ Error in .listrent: ' + portErr.message }, { quoted: h.msg }); } catch (_) {}
-      }
-    },
-    "listclone": async (h) => module.exports["listrent"](h),
-    "botclones": async (h) => module.exports["listrent"](h),
-  };
-})());
-
-
-Object.assign(module.exports, (() => {
   const { initConfig } = require('../lib_ported/autoreply.js');
 
   return {
@@ -3258,8 +3124,7 @@ Object.assign(module.exports, (() => {
       try {
 
         const chatId = message.key.remoteJid;
-        const commandHandler = (await import('../lib/commandHandler.js')).default;
-        const git = simpleGit();
+        const commandHandler = (await import('../lib_ported/commandHandler.js')).default;
         const start = Date.now();
         let gitStatus = 'Local reload only';
         try {
@@ -3303,233 +3168,6 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const makeWASocket = require('@whiskeysockets/baileys');
-const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, Browsers } = makeWASocket;
-  const NodeCache = require('node-cache');
-  const pino = require('pino');
-  const crypto = require('crypto');
-  const fs = require('fs');
-  const path = require('path');
-  const store = require('../lib_ported/lightweight_store.js');
-  // --- helper code from rentbot.js ---
-  /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
-  
-  
-  
-  
-  
-  
-  
-  if (!global.conns)
-      global.conns = [];
-  const MONGO_URL = process.env.MONGO_URL;
-  const POSTGRES_URL = process.env.POSTGRES_URL;
-  const MYSQL_URL = process.env.MYSQL_URL;
-  const SQLITE_URL = process.env.DB_URL;
-  const HAS_DB = !!(MONGO_URL || POSTGRES_URL || MYSQL_URL || SQLITE_URL);
-  async function saveCloneSession(authId, data) {
-      if (HAS_DB) {
-          await store.saveSetting('clones', authId, data);
-      }
-      else {
-          const sessionPath = path.join(process.cwd(), 'session', 'clones', authId);
-          if (!fs.existsSync(sessionPath)) {
-              fs.mkdirSync(sessionPath, { recursive: true });
-          }
-          fs.writeFileSync(path.join(sessionPath, 'session.json'), JSON.stringify(data));
-      }
-  }
-  async function _getCloneSession(authId) {
-      if (HAS_DB) {
-          return await store.getSetting('clones', authId);
-      }
-      else {
-          const sessionPath = path.join(process.cwd(), 'session', 'clones', authId, 'session.json');
-          if (fs.existsSync(sessionPath)) {
-              return JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
-          }
-          return null;
-      }
-  }
-  async function deleteCloneSession(authId) {
-      if (HAS_DB) {
-          await store.saveSetting('clones', authId, null);
-      }
-      else {
-          const sessionPath = path.join(process.cwd(), 'session', 'clones', authId);
-          if (fs.existsSync(sessionPath)) {
-              fs.rmSync(sessionPath, { recursive: true, force: true });
-          }
-      }
-  }
-  async function _getAllCloneSessions() {
-      if (HAS_DB) {
-          const settings = await store.getSetting('clones', 'all') || {};
-          return Object.keys(settings);
-      }
-      else {
-          const clonesDir = path.join(process.cwd(), 'session', 'clones');
-          if (!fs.existsSync(clonesDir))
-              return [];
-          return fs.readdirSync(clonesDir);
-      }
-  }
-  return {
-
-    // ── .rentbot ─── Start a sub-bot clone via pairing code | usage: .rentbot 92305xxxxxxx
-    "rentbot": async (h) => {
-      const sock = h.sock;
-      const message = h.msg;
-      const args = h.args;
-      const context = {
-        chatId: h.from,
-        senderId: h.senderJid,
-        isGroup: h.isGroup,
-        isBotAdmin: h.isBotAdmin,
-        senderIsOwnerOrSudo: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        isSenderAdmin: h.isBotAdmin,
-        isOwnerOrSudoCheck: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        config: h.config,
-        rawText: (h.config.prefix + 'rentbot ' + h.args.join(' ')).trim(),
-        channelInfo: {},
-      };
-      try {
-
-        const { chatId } = context;
-        if (!args[0]) {
-            return await sock.sendMessage(chatId, {
-                text: `*Usage:* \`.rentbot 923051391xxx\``
-            }, { quoted: message });
-        }
-        const userNumber = args[0].replace(/[^0-9]/g, '');
-        const authId = crypto.randomBytes(4).toString('hex');
-        const sessionPath = path.join(process.cwd(), 'session', 'clones', authId);
-        if (!HAS_DB && !fs.existsSync(sessionPath)) {
-            fs.mkdirSync(sessionPath, { recursive: true });
-        }
-        async function startClone() {
-            const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-            const { version } = await fetchLatestBaileysVersion();
-            const msgRetryCounterCache = new NodeCache();
-            const conn = makeWASocket({
-                version,
-                logger: pino({ level: 'silent' }),
-                printQRInTerminal: false,
-                browser: Browsers.macOS("Chrome"),
-                auth: {
-                    creds: state.creds,
-                    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
-                },
-                markOnlineOnConnect: true,
-                msgRetryCounterCache,
-                connectTimeoutMs: 120000,
-                defaultQueryTimeoutMs: 0,
-                keepAliveIntervalMs: 30000,
-                mobile: false
-            });
-            if (!conn.authState.creds.registered) {
-                await new Promise(resolve => setTimeout(resolve, 6000));
-                try {
-                    let code = await conn.requestPairingCode(userNumber);
-                    code = code?.match(/.{1,4}/g)?.join("-") || code;
-                    const pairingText = `*MEGA-MD CLONE SYSTEM*\n\n` +
-                        `Code: *${code}*\n` +
-                        `Storage: *${HAS_DB ? 'Database' : 'File System'}*\n\n` +
-                        `1. Open WhatsApp Settings\n` +
-                        `2. Tap Linked Devices > Link with Phone Number\n` +
-                        `3. Enter the code above.\n\n` +
-                        `*Tip:* If no popup appears, go to 'Link with phone number' on your phone and enter the code manually.`;
-                    await sock.sendMessage(chatId, { text: pairingText }, { quoted: message });
-                }
-                catch (err) {
-                    console.error("Pairing Error:", err);
-                    await sock.sendMessage(chatId, { text: "❌ Failed to request code. Try again in 1 minute." });
-                }
-            }
-            conn.ev.on('creds.update', async () => {
-                await saveCreds();
-                if (HAS_DB) {
-                    try {
-                        await saveCloneSession(authId, {
-                            userNumber,
-                            createdAt: Date.now(),
-                            status: 'active'
-                        });
-                    }
-                    catch (e) {
-                        console.error("DB save error:", e.message);
-                    }
-                }
-            });
-            conn.ev.on('connection.update', async (update) => {
-                const { connection, lastDisconnect } = update;
-                if (connection === 'open') {
-                    global.conns.push(conn);
-                    if (HAS_DB) {
-                        await saveCloneSession(authId, {
-                            userNumber,
-                            createdAt: Date.now(),
-                            status: 'online',
-                            connectedAt: Date.now()
-                        });
-                    }
-                    await sock.sendMessage(chatId, {
-                        text: `✅ Clone is now Online!\n\n` +
-                            `ID: ${authId}\n` +
-                            `Storage: ${HAS_DB ? 'Database' : 'File System'}`
-                    }, { quoted: message });
-                }
-                if (connection === 'close') {
-                    const code = lastDisconnect?.error?.output?.statusCode;
-                    if (code !== DisconnectReason.loggedOut) {
-                        startClone();
-                    }
-                    else {
-                        await deleteCloneSession(authId);
-                        const index = global.conns.indexOf(conn);
-                        if (index > -1)
-                            global.conns.splice(index, 1);
-                    }
-                }
-            });
-            try {
-                const { handleMessages } = await import('../lib/messageHandler.js');
-                conn.ev.on('messages.upsert', async (chatUpdate) => {
-                    await handleMessages(conn, chatUpdate);
-                });
-            }
-            catch (e) {
-                console.error("Handler linkage failed:", e.message);
-            }
-            return conn;
-        }
-        await startClone();
-    
-      } catch (portErr) {
-        console.error('[ported:rentbot] error:', portErr.message);
-        try { await h.sock.sendMessage(h.from, { text: '❌ Error in .rentbot: ' + portErr.message }, { quoted: h.msg }); } catch (_) {}
-      }
-    },
-    "botclone": async (h) => module.exports["rentbot"](h),
-    "clonebot": async (h) => module.exports["rentbot"](h),
-  };
-})());
-
-
-Object.assign(module.exports, (() => {
   const store = require('../lib_ported/lightweight_store.js');
   const axios = require('axios');
   // --- helper code from setbio.js ---
@@ -3562,7 +3200,7 @@ Object.assign(module.exports, (() => {
           if (allQuotes.length === 0) {
               // Fallback quotes if fetch fails
               return [
-                  '💎 By MEGA-MD - Your WhatsApp Bot',
+                  '💎 By Henry Ochibots v19 - Your WhatsApp Bot',
                   '🌟 Stay positive, work hard, make it happen.',
                   '✨ Believe in yourself and all that you are.',
                   '🚀 The future belongs to those who believe in the beauty of their dreams.',
@@ -3577,12 +3215,12 @@ Object.assign(module.exports, (() => {
           return allQuotes;
       }
       catch (error) {
-          return cachedQuotes.length > 0 ? cachedQuotes : ['💎 By MEGA-MD - Your WhatsApp Bot'];
+          return cachedQuotes.length > 0 ? cachedQuotes : ['💎 By Henry Ochibots v19 - Your WhatsApp Bot'];
       }
   }
   function getRandomQuote(quotes) {
       if (!quotes || quotes.length === 0)
-          return '💎 By MEGA-MD';
+          return '💎 By Henry Ochibots v19';
       return quotes[Math.floor(Math.random() * quotes.length)];
   }
   async function updateAutoBio(sock) {
@@ -3597,7 +3235,7 @@ Object.assign(module.exports, (() => {
               bio = autoBioSettings.customBio.replace('{quote}', randomQuote);
           }
           else {
-              bio = `${randomQuote}\n\n💎 MEGA-MD`;
+              bio = `${randomQuote}\n\n💎 Henry Ochibots v19`;
           }
           if (bio.length > 139) {
               bio = `${bio.substring(0, 136) }...`;
@@ -3663,7 +3301,7 @@ Object.assign(module.exports, (() => {
                         `• \`.setbio set <text>\` - Set custom bio\n` +
                         `• \`.setbio reset\` - Reset to default bio\n` +
                         `• \`.setbio preview\` - Preview random quote\n\n` +
-                        `*Default Bio:*\n{quote}\n💎 MEGA-MD\n\n` +
+                        `*Default Bio:*\n{quote}\n💎 Henry Ochibots v19\n\n` +
                         `*Custom Bio:*\n${autoBioSettings.customBio || 'Not set'}\n\n` +
                         `*Note:* Use \`{quote}\` in custom bio to insert random quotes.\n\n` +
                         `*Sources:*\n• Famous Quotes\n• Motivational Quotes\n• Pickup Lines`
@@ -3673,7 +3311,7 @@ Object.assign(module.exports, (() => {
                 const quotes = await fetchQuotes();
                 const randomQuote = getRandomQuote(quotes);
                 return await sock.sendMessage(chatId, {
-                    text: `*📝 Preview Quote*\n\n${randomQuote}\n\n💎 MEGA-MD\n\n_This is how your bio will look with random quotes_`
+                    text: `*📝 Preview Quote*\n\n${randomQuote}\n\n💎 Henry Ochibots v19\n\n_This is how your bio will look with random quotes_`
                 }, { quoted: message });
             }
             if (action === 'on') {
@@ -3734,7 +3372,7 @@ Object.assign(module.exports, (() => {
                     await updateAutoBio(sock);
                 }
                 return await sock.sendMessage(chatId, {
-                    text: '✅ *Bio reset to default!*\n\n*Default bio:*\n{quote}\n💎 MEGA-MD'
+                    text: '✅ *Bio reset to default!*\n\n*Default bio:*\n{quote}\n💎 Henry Ochibots v19'
                 }, { quoted: message });
             }
             return await sock.sendMessage(chatId, {
@@ -4272,196 +3910,6 @@ Object.assign(module.exports, (() => {
     },
     "alwaysonline": async (h) => module.exports["stealth"](h),
     "stealthmode": async (h) => module.exports["stealth"](h),
-  };
-})());
-
-
-Object.assign(module.exports, (() => {
-  const store = require('../lib_ported/lightweight_store.js');
-  const fs = require('fs');
-  const path = require('path');
-  // --- helper code from stoprent.js ---
-  /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
-  
-  
-  
-  const MONGO_URL = process.env.MONGO_URL;
-  const POSTGRES_URL = process.env.POSTGRES_URL;
-  const MYSQL_URL = process.env.MYSQL_URL;
-  const SQLITE_URL = process.env.DB_URL;
-  const HAS_DB = !!(MONGO_URL || POSTGRES_URL || MYSQL_URL || SQLITE_URL);
-  async function deleteCloneSession(authId) {
-      if (HAS_DB) {
-          await store.saveSetting('clones', authId, null);
-      }
-      else {
-          const sessionPath = path.join(process.cwd(), 'session', 'clones', authId);
-          if (fs.existsSync(sessionPath)) {
-              fs.rmSync(sessionPath, { recursive: true, force: true });
-          }
-      }
-  }
-  async function getAllCloneAuthIds() {
-      if (HAS_DB) {
-          const settings = await store.getAllSettings('clones') || {};
-          return Object.entries(settings)
-              .filter(([_key, value]) => value && value.status)
-              .map(([authId]) => authId);
-      }
-      else {
-          const clonesDir = path.join(process.cwd(), 'session', 'clones');
-          if (!fs.existsSync(clonesDir))
-              return [];
-          return fs.readdirSync(clonesDir);
-      }
-  }
-  async function deleteAllCloneSessions() {
-      const authIds = await getAllCloneAuthIds();
-      for (const authId of authIds) {
-          await deleteCloneSession(authId);
-      }
-  }
-  return {
-
-    // ── .stoprent ─── Stop a specific sub-bot or all sub-bots | usage: .stoprent [number/all]
-    "stoprent": async (h) => {
-      const sock = h.sock;
-      const message = h.msg;
-      const args = h.args;
-      const context = {
-        chatId: h.from,
-        senderId: h.senderJid,
-        isGroup: h.isGroup,
-        isBotAdmin: h.isBotAdmin,
-        senderIsOwnerOrSudo: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        isSenderAdmin: h.isBotAdmin,
-        isOwnerOrSudoCheck: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        config: h.config,
-        rawText: (h.config.prefix + 'stoprent ' + h.args.join(' ')).trim(),
-        channelInfo: {},
-      };
-      try {
-
-        const { chatId } = context;
-        if (!global.conns || global.conns.length === 0) {
-            return await sock.sendMessage(chatId, {
-                text: "❌ No sub-bots are currently running."
-            }, { quoted: message });
-        }
-        if (!args[0]) {
-            return await sock.sendMessage(chatId, {
-                text: `❌ Please provide a number from the list or type 'all'.\nExample: \`.stoprent 1\``
-            }, { quoted: message });
-        }
-        if (args[0].toLowerCase() === 'all') {
-            let stoppedCount = 0;
-            for (const conn of global.conns) {
-                try {
-                    await conn.logout();
-                    conn.end();
-                    stoppedCount++;
-                }
-                catch (e) {
-                    console.error('Error stopping clone:', e.message);
-                }
-            }
-            global.conns = [];
-            if (HAS_DB) {
-                try {
-                    await deleteAllCloneSessions();
-                }
-                catch (e) {
-                    console.error('Error deleting clone sessions:', e.message);
-                }
-            }
-            else {
-                const clonesDir = path.join(process.cwd(), 'session', 'clones');
-                if (fs.existsSync(clonesDir)) {
-                    fs.rmSync(clonesDir, { recursive: true, force: true });
-                    fs.mkdirSync(clonesDir, { recursive: true });
-                }
-            }
-            return await sock.sendMessage(chatId, {
-                text: `✅ All sub-bots have been stopped and removed.\n\n` +
-                    `Stopped: ${stoppedCount}\n` +
-                    `Storage: ${HAS_DB ? 'Database cleared' : 'Files deleted'}`
-            }, { quoted: message });
-        }
-        const index = parseInt(args[0], 10) - 1;
-        if (isNaN(index) || !global.conns[index]) {
-            return await sock.sendMessage(chatId, {
-                text: "❌ Invalid index number. Check `.listrent` first."
-            }, { quoted: message });
-        }
-        try {
-            const target = global.conns[index];
-            const targetJid = target.user.id;
-            const targetNumber = targetJid.split(':')[0];
-            await target.logout();
-            global.conns.splice(index, 1);
-            if (HAS_DB) {
-                const allSettings = await store.getAllSettings('clones') || {};
-                for (const [authId, data] of Object.entries(allSettings)) {
-                    if (data && data.userNumber === targetNumber) {
-                        await deleteCloneSession(authId);
-                        break;
-                    }
-                }
-            }
-            else {
-                const clonesDir = path.join(process.cwd(), 'session', 'clones');
-                if (fs.existsSync(clonesDir)) {
-                    const dirs = fs.readdirSync(clonesDir);
-                    for (const dir of dirs) {
-                        const sessionPath = path.join(clonesDir, dir, 'session.json');
-                        if (fs.existsSync(sessionPath)) {
-                            try {
-                                const data = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
-                                if (data.userNumber === targetNumber) {
-                                    fs.rmSync(path.join(clonesDir, dir), { recursive: true, force: true });
-                                    break;
-                                }
-                            }
-                            catch (e) {
-                                continue;
-                            }
-                        }
-                    }
-                }
-            }
-            await sock.sendMessage(chatId, {
-                text: `✅ Stopped and removed sub-bot: @${targetNumber}\n\n` +
-                    `Storage: ${HAS_DB ? 'Database cleared' : 'Files deleted'}`,
-                mentions: [targetJid]
-            }, { quoted: message });
-        }
-        catch (err) {
-            console.error(err);
-            await sock.sendMessage(chatId, {
-                text: "❌ Error while stopping the sub-bot."
-            }, { quoted: message });
-        }
-    
-      } catch (portErr) {
-        console.error('[ported:stoprent] error:', portErr.message);
-        try { await h.sock.sendMessage(h.from, { text: '❌ Error in .stoprent: ' + portErr.message }, { quoted: h.msg }); } catch (_) {}
-      }
-    },
-    "stopclone": async (h) => module.exports["stoprent"](h),
-    "delrent": async (h) => module.exports["stoprent"](h),
   };
 })());
 

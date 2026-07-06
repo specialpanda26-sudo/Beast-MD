@@ -202,6 +202,8 @@ The admin panel's Sessions list shows a live risk badge (🛡️ LOW/MEDIUM/HIGH
 | `.setperm @user [level]` | Set member permission level |
 | `.resetperm @user` | Reset to default permissions |
 | `.listperms` | List all custom permissions in group |
+| `.goodbye on\|off\|set [msg]` (aliases `.bye`, `.leave`) | Configure the auto-sent goodbye message on member leave — variables `{user}`/`{group}` |
+| `.welcomecfg on\|off\|set [msg]` | Configure the auto-sent welcome message on member join — variables `{user}`/`{group}`/`{description}`. Not `.welcome` — that name is already the manual welcome-card DM command below |
 
 ### 👑 Owner Only
 | Command | Description |
@@ -533,6 +535,30 @@ Merged additively on top of everything above — nothing existing was removed or
 - Henry's own number can no longer register through the public customer flow — Admin Panel only.
 - **`.song`** now takes a search term, not just a link. New **`.audiomack [query]`** and **`.videosearch [query]`** commands.
 - **Antiban toggle is now actually enforced** — previously the on/off columns existed but `wrapSocket()` ignored them entirely. Fixed, defaults unchanged (still ON).
+
+---
+
+## 🆕 Update 17 — Settings toggles wired up, welcome/goodbye now automatic
+
+The ~16 `.set<thing>` settings toggles (auto-read, auto-react, PM Permit, Auto Block, bot
+name/prefix, and more) previously saved but were never actually read back by the bot's
+behavior — every one is now genuinely live, with no restart needed. New: **PM Permit**
+(`.setpmpermit on` + `.pmpermitapprove`/`.pmpermitrevoke`/`.pmpermitlist`) gates first-time DMs
+behind owner approval, and **Auto Block** (`.setautoblock on`) blocks repeat unapproved DMers on
+top of it.
+
+Separately, `.goodbye` had working storage and a message command but **no trigger** — the
+`group-participants.update` WhatsApp event was never listened to anywhere, so nothing fired on an
+actual member leave. That's fixed, and a matching join-side feature (`.welcomecfg`) was added at
+the same time, both now firing automatically on real joins/leaves.
+
+Full technical write-up of every change in this pass (and all prior passes) is in
+[`CHANGES.md`](./CHANGES.md). A plain-language version — **what was broken, what was fixed, and
+how it behaves now** — is in [`assets/BeastBot-Whats-Fixed.pdf`](./assets/BeastBot-Whats-Fixed.pdf),
+downloadable from the pairing page alongside the existing
+[`assets/BeastBot-User-Guide.pdf`](./assets/BeastBot-User-Guide.pdf) (day-to-day usage, not
+technical). Both are automatically linked from `/pair` and from the bot's own `.pair` reply in
+WhatsApp chat.
 
 ---
 

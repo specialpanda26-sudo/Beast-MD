@@ -3,13 +3,14 @@
 // .setbotname/.setprefix/etc all share one consistent, inspectable JSON file
 // instead of each needing its own bespoke global variable.
 //
-// NOTE on .setprefix specifically: your bot's command prefix (CMD_PREFIX) is
-// read once from client_bridge.js at startup from config/env. Changing it
-// here updates the *stored* value and takes effect after a restart, OR
-// immediately if you wire client_bridge.js to read CMD_PREFIX from
-// getSetting('prefix') on every message instead of a constant — see
-// INTEGRATION.md for the one-line change if you want it live without a
-// restart.
+// Update 17: these used to just save to data/settings.json and stop there —
+// every toggle reported "✅ enabled" but nothing in the bot ever read the
+// file back. client_bridge.js now calls __getSetting(...) at each relevant
+// point (auto-read, auto-react, status handling, AI chat gating, presence,
+// live botname/prefix) so these actually change behavior. See CHANGES.md
+// Update 17 for exactly which default values were deliberately kept at
+// "on" to match the bot's pre-existing hardcoded behavior, so wiring this
+// up doesn't silently change what the bot already does for you.
 
 const fs = require('fs');
 const path = require('path');
@@ -17,24 +18,25 @@ const path = require('path');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const PMPERMIT_FILE = path.join(DATA_DIR, 'pmpermit.json');
 
 const DEFAULTS = {
-  botname: 'Henry Ochibots v19',
-  prefix: '.',
-  pmpermit: false,
-  chatbot: true,
-  autoreact: false,
-  autoread: false,
-  autoreadstatus: false,
-  autobio: false,
-  autoreply: false,
-  autoreplystatus: false,
-  autoblock: false,
-  autolikestatus: false,
-  dmpresence: 'available',
-  gcpresence: 'available',
-  welcomemessage: '',
-  goodbyemessage: '',
+  botname: process.env.BOT_NAME || 'Henry Ochibots v19',
+  prefix: (process.env.PREFIXES ? process.env.PREFIXES.split(',')[0] : '.'),
+  pmpermit: false,          // opt-in: strangers DMing need approval first
+  chatbot: true,            // matches existing always-on DM AI chat
+  autoreact: false,         // was explicitly removed for feeling spammy — opt-in only
+  autoread: true,           // matches existing unconditional auto-read-messages
+  autoreadstatus: true,     // matches existing unconditional status auto-read
+  autobio: true,            // matches existing unconditional 60s bio-refresh interval
+  autoreply: true,          // matches existing always-on group @mention/name AI reply
+  autoreplystatus: true,    // matches existing unconditional AI comment-on-status
+  autoblock: false,         // opt-in, only acts on unapproved DMs once pmpermit is ON too
+  autolikestatus: true,     // matches existing unconditional ❤️ status react
+  dmpresence: 'available',  // 'available' = show typing/online cues in DMs, 'unavailable' = stay invisible
+  gcpresence: 'available',  // same, for groups
+  welcomemessage: '',       // '' = use the built-in default text
+  goodbyemessage: '',       // '' = use the built-in default text
 };
 
 function loadSettings() {
@@ -69,6 +71,33 @@ function makeTextSetter(key, label) {
   };
 }
 
+// ── PM Permit list — who's allowed to DM without hitting the .pmpermit
+// gate. Only consulted at all when the `pmpermit` setting above is ON. ──────
+function loadPmPermit() {
+  try { return JSON.parse(fs.readFileSync(PMPERMIT_FILE, 'utf8')); }
+  catch (_) { return { approved: [], strikes: {} }; }
+}
+function savePmPermit(d) { fs.writeFileSync(PMPERMIT_FILE, JSON.stringify(d, null, 2)); }
+function isPmApproved(number) { return loadPmPermit().approved.includes(number); }
+function approvePm(number) {
+  const d = loadPmPermit();
+  if (!d.approved.includes(number)) d.approved.push(number);
+  delete d.strikes[number];
+  savePmPermit(d);
+}
+function revokePm(number) {
+  const d = loadPmPermit();
+  d.approved = d.approved.filter(n => n !== number);
+  savePmPermit(d);
+}
+// Returns the new strike count for this number (used by autoblock).
+function bumpPmStrike(number) {
+  const d = loadPmPermit();
+  d.strikes[number] = (d.strikes[number] || 0) + 1;
+  savePmPermit(d);
+  return d.strikes[number];
+}
+
 const exportsObj = {
   getsetting: async ({ sock, from, msg, args }) => {
     const key = args[0];
@@ -95,8 +124,35 @@ const exportsObj = {
     saveSettings({ ...DEFAULTS });
     await sock.sendMessage(from, { text: '✅ All settings reset to defaults.' }, { quoted: msg });
   },
+
+  // ── New: PM Permit management (only matters while .setpmpermit is ON) ──
+  pmpermitapprove: async ({ sock, from, msg, args, isOwner, isBotAdmin }) => {
+    if (!isBotAdmin) return sock.sendMessage(from, { text: '❌ Bot admin only!' }, { quoted: msg });
+    const number = (args[0] || '').replace(/[^0-9]/g, '');
+    if (!number) return sock.sendMessage(from, { text: '📝 Usage: .pmpermitapprove <number>' }, { quoted: msg });
+    approvePm(number);
+    await sock.sendMessage(from, { text: `✅ ${number} can now DM freely.` }, { quoted: msg });
+  },
+  pmpermitrevoke: async ({ sock, from, msg, args, isBotAdmin }) => {
+    if (!isBotAdmin) return sock.sendMessage(from, { text: '❌ Bot admin only!' }, { quoted: msg });
+    const number = (args[0] || '').replace(/[^0-9]/g, '');
+    if (!number) return sock.sendMessage(from, { text: '📝 Usage: .pmpermitrevoke <number>' }, { quoted: msg });
+    revokePm(number);
+    await sock.sendMessage(from, { text: `✅ ${number} removed from the approved list.` }, { quoted: msg });
+  },
+  pmpermitlist: async ({ sock, from, msg, isBotAdmin }) => {
+    if (!isBotAdmin) return sock.sendMessage(from, { text: '❌ Bot admin only!' }, { quoted: msg });
+    const d = loadPmPermit();
+    const text = d.approved.length
+      ? `✅ *Approved DM senders:*\n${d.approved.map(n => `• ${n}`).join('\n')}`
+      : 'No one has been approved yet.';
+    await sock.sendMessage(from, { text }, { quoted: msg });
+  },
+
   // exposed for other plugins/client_bridge.js to read behavior flags
   __getSetting: getSetting,
+  __isPmApproved: isPmApproved,
+  __bumpPmStrike: bumpPmStrike,
 };
 
 BOOL_KEYS.forEach(k => { exportsObj[`set${k}`] = makeBoolSetter(k); });

@@ -19,7 +19,11 @@ COPY package.json package.json
 COPY requirements.txt requirements.txt
 
 # Install Node.js dependencies
-RUN npm install --omit=dev
+# --legacy-peer-deps: baileys@7.0.0-rc13 lists jimp@^1.6.1 as an optional
+# peer dep, but this project pins jimp@^0.22.12 (texteffects.js uses the
+# old 0.x API). The clash is harmless since it's optional, but npm 10
+# still errors on it (ERESOLVE) unless told to skip strict peer resolution.
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Install Python dependencies straight from requirements.txt so the Docker
 # image and local/Termux installs never drift out of sync.

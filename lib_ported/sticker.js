@@ -11,7 +11,7 @@ async function sticker(isImage, url, _packname, _author) {
         const response = await fetch(url);
         const buffer = Buffer.from(await response.arrayBuffer());
         return await new Sticker(buffer, {
-            pack: config.packname || 'MEGA-MD',
+            pack: config.packname || 'Henry Ochibots v19',
             author: config.author || 'GlobalTechInfo',
             type: StickerTypes.DEFAULT
         }).toBuffer();

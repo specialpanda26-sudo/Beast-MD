@@ -282,7 +282,7 @@ Object.assign(module.exports, (() => {
             contextInfo: {
                 externalAdReply: {
                     title,
-                    body: 'Shared via Mega Md',
+                    body: 'Shared via Henry Ochibots v19',
                     thumbnailUrl: url || 'https://i.ibb.co/3S6f0mS/default.jpg',
                     mediaType: 1,
                     renderLargerThumbnail: true,
@@ -572,7 +572,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🖤 *Grayscale Image*\n\nProcessed by: MEGA-MD`
+                caption: `🖤 *Grayscale Image*\n\nProcessed by: Henry Ochibots v19`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }
@@ -729,7 +729,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🤍 *Inverted Image*\n\nProcessed by: MEGA-MD`
+                caption: `🤍 *Inverted Image*\n\nProcessed by: Henry Ochibots v19`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }
@@ -1296,7 +1296,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🧡 *Sepia Image*\n\nProcessed by: MEGA-MD`
+                caption: `🧡 *Sepia Image*\n\nProcessed by: Henry Ochibots v19`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }

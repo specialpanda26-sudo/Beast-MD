@@ -877,7 +877,7 @@ Object.assign(module.exports, (() => {
             menuText +=
                 `━━━━━━━━━━━━━━━━━━━
 💡 *Tip:* Use short & clear text for best results
-🤖 Powered by *MEGA-MD*`;
+🤖 Powered by *Henry Ochibots v19*`;
             return await sock.sendMessage(chatId, { text: menuText }, { quoted: message });
         }
         try {
@@ -944,7 +944,7 @@ Object.assign(module.exports, (() => {
             }
             await sock.sendMessage(chatId, {
                 image: { url: result.image },
-                caption: `🔥 *GENERATED SUCCESSFULLY* 🔥\n✨ Powered by *MEGA-MD*`
+                caption: `🔥 *GENERATED SUCCESSFULLY* 🔥\n✨ Powered by *Henry Ochibots v19*`
             }, { quoted: message });
         }
         catch (error) {
