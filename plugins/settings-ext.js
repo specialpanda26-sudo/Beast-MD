@@ -105,7 +105,7 @@ const exportsObj = {
     if (!key) return sock.sendMessage(from, { text: '📝 Usage: .getsetting <key>' }, { quoted: msg });
     await sock.sendMessage(from, { text: `⚙️ ${key} = ${JSON.stringify(s[key])}` }, { quoted: msg });
   },
-  mysettings: async ({ sock, from, msg }) => {
+  settings: async ({ sock, from, msg }) => {
     const s = loadSettings();
     const lines = Object.entries(s).map(([k, v]) => `${typeof v === 'boolean' ? (v ? '✅' : '❌') : 'ℹ️'} ${k}: ${v || '(empty)'}`);
     await sock.sendMessage(from, { text: `⚙️ *Bot Settings*\n\n${lines.join('\n')}` }, { quoted: msg });

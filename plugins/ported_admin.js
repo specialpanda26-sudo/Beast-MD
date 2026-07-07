@@ -176,17 +176,6 @@ Object.assign(module.exports, (() => {
       try {
 
         const chatId = context.chatId || message.key.remoteJid;
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          let senderIsGroupAdmin = false;
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(sock, chatId, h.senderJid);
-            senderIsGroupAdmin = isSenderAdmin;
-          } catch (_) {}
-          if (!senderIsGroupAdmin) {
-            return await sock.sendMessage(chatId, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: message });
-          }
-        }
-
         const match = args.join(' ');
         try {
             await handleAntiBadwordCommand(sock, chatId, message, match);
@@ -361,17 +350,6 @@ Object.assign(module.exports, (() => {
       try {
 
         const chatId = context.chatId || message.key.remoteJid;
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          let senderIsGroupAdmin = false;
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(sock, chatId, h.senderJid);
-            senderIsGroupAdmin = isSenderAdmin;
-          } catch (_) {}
-          if (!senderIsGroupAdmin) {
-            return await sock.sendMessage(chatId, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: message });
-          }
-        }
-
         const action = args[0]?.toLowerCase();
         if (!action) {
             const config = await getAntilink(chatId, 'on');
@@ -570,17 +548,6 @@ Object.assign(module.exports, (() => {
       try {
 
         const chatId = context.chatId || message.key.remoteJid;
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          let senderIsGroupAdmin = false;
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(sock, chatId, h.senderJid);
-            senderIsGroupAdmin = isSenderAdmin;
-          } catch (_) {}
-          if (!senderIsGroupAdmin) {
-            return await sock.sendMessage(chatId, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: message });
-          }
-        }
-
         const action = args[0]?.toLowerCase();
         if (!action) {
             const config = await getAntitag(chatId, 'on');
@@ -969,17 +936,6 @@ Object.assign(module.exports, (() => {
       try {
 
         const chatId = context.chatId || message.key.remoteJid;
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          let senderIsGroupAdmin = false;
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(sock, chatId, h.senderJid);
-            senderIsGroupAdmin = isSenderAdmin;
-          } catch (_) {}
-          if (!senderIsGroupAdmin) {
-            return await sock.sendMessage(chatId, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: message });
-          }
-        }
-
         const match = args.join(' ').toLowerCase();
         if (!match) {
             await showTyping(sock, chatId);
@@ -1345,17 +1301,6 @@ Object.assign(module.exports, (() => {
       };
       try {
 
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(h.sock, h.from, h.senderJid);
-            if (!isSenderAdmin) {
-              return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-            }
-          } catch (_) {
-            return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-          }
-        }
-
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
         const isBotAdmin = context.isBotAdmin || false;
@@ -1646,17 +1591,6 @@ Object.assign(module.exports, (() => {
       try {
 
         const chatId = context.chatId || message.key.remoteJid;
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          let senderIsGroupAdmin = false;
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(sock, chatId, h.senderJid);
-            senderIsGroupAdmin = isSenderAdmin;
-          } catch (_) {}
-          if (!senderIsGroupAdmin) {
-            return await sock.sendMessage(chatId, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: message });
-          }
-        }
-
         const matchText = args.join(' ');
         await handleGoodbye(sock, chatId, message, matchText);
     
@@ -1678,16 +1612,6 @@ Object.assign(module.exports, (() => {
       const args = h.args;
       try {
         const chatId = h.from || message.key.remoteJid;
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          let senderIsGroupAdmin = false;
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(sock, chatId, h.senderJid);
-            senderIsGroupAdmin = isSenderAdmin;
-          } catch (_) {}
-          if (!senderIsGroupAdmin) {
-            return await sock.sendMessage(chatId, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: message });
-          }
-        }
         const matchText = args.join(' ');
         await handleWelcome(sock, chatId, message, matchText);
       } catch (portErr) {
@@ -1743,17 +1667,6 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
-
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(h.sock, h.from, h.senderJid);
-            if (!isSenderAdmin) {
-              return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-            }
-          } catch (_) {
-            return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-          }
-        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const isBotAdmin = context.isBotAdmin;
@@ -1848,17 +1761,6 @@ Object.assign(module.exports, (() => {
       };
       try {
 
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(h.sock, h.from, h.senderJid);
-            if (!isSenderAdmin) {
-              return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-            }
-          } catch (_) {
-            return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-          }
-        }
-
         const { chatId, channelInfo } = context;
         try {
             const newCode = await sock.groupRevokeInvite(chatId);
@@ -1908,17 +1810,6 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
-
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(h.sock, h.from, h.senderJid);
-            if (!isSenderAdmin) {
-              return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-            }
-          } catch (_) {
-            return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-          }
-        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const desc = args.join(' ').trim();
@@ -1975,17 +1866,6 @@ Object.assign(module.exports, (() => {
       };
       try {
 
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(h.sock, h.from, h.senderJid);
-            if (!isSenderAdmin) {
-              return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-            }
-          } catch (_) {
-            return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-          }
-        }
-
         const chatId = context.chatId || message.key.remoteJid;
         const name = args.join(' ').trim();
         if (!name) {
@@ -2041,17 +1921,6 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
-
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(h.sock, h.from, h.senderJid);
-            if (!isSenderAdmin) {
-              return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-            }
-          } catch (_) {
-            return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-          }
-        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -2137,17 +2006,6 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
-
-        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
-          try {
-            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(h.sock, h.from, h.senderJid);
-            if (!isSenderAdmin) {
-              return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-            }
-          } catch (_) {
-            return await h.sock.sendMessage(h.from, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: h.msg });
-          }
-        }
 
         const { chatId, channelInfo } = context;
         const groupMetadata = await sock.groupMetadata(chatId);

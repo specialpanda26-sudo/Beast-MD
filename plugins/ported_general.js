@@ -73,7 +73,14 @@ Object.assign(module.exports, (() => {
             await sock.sendMessage(chatId, {
                 text,
                 contextInfo: {
+                    forwardingScore: 999,
+                    isForwarded: true,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: '120363319098372999@newsletter',
+                        newsletterName: 'GlobalTechInc',
+                        serverMessageId: -1
                     }
+                }
             }, { quoted: message });
         }
         catch (error) {
@@ -224,7 +231,14 @@ Object.assign(module.exports, (() => {
 
         const { chatId } = context;
         const forwardInfo = {
-            };
+            forwardingScore: 1,
+            isForwarded: true,
+            forwardedNewsletterMessageInfo: {
+                newsletterJid: '120363319098372999@newsletter',
+                newsletterName: 'MEGA MD',
+                serverMessageId: -1
+            }
+        };
         const query = args.join('').trim();
         if (!query) {
             return await sock.sendMessage(chatId, {
@@ -402,9 +416,19 @@ Object.assign(module.exports, (() => {
   const CommandHandler = require('../lib_ported/commandHandler.js');
   // --- helper code from searchcmd.js ---
   /*****************************************************************************
- *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
- *****************************************************************************/
+   *                                                                           *
+   *                     Developed By Qasim Ali                                *
+   *                                                                           *
+   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
+   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
+   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
+   *                                                                           *
+   *    © 2026 GlobalTechInfo. All rights reserved.                            *
+   *                                                                           *
+   *    Description: This file is part of the MEGA-MD Project.                 *
+   *                 Unauthorized copying or distribution is prohibited.       *
+   *                                                                           *
+   *****************************************************************************/
   return {
 
     // ── .find ─── Find a command by keyword or description | usage: .find [keyword]
@@ -605,7 +629,14 @@ Object.assign(module.exports, (() => {
             menuText += `├─ ${slowEmoji} Slow Response\n`;
             menuText += `⁠└────────────────`;
             const contextInfo = {
-                };
+                forwardingScore: 1,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363319098372999@newsletter',
+                    newsletterName: 'GlobalTechInc',
+                    serverMessageId: -1
+                }
+            };
             const messageOptions = thumbnail
                 ? { image: thumbnail, caption: menuText, contextInfo }
                 : { text: menuText, contextInfo };
@@ -634,9 +665,19 @@ Object.assign(module.exports, (() => {
   const CommandHandler = require('../lib_ported/commandHandler.js');
   // --- helper code from stats.js ---
   /*****************************************************************************
- *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
- *****************************************************************************/
+   *                                                                           *
+   *                     Developed By Qasim Ali                                *
+   *                                                                           *
+   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
+   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
+   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
+   *                                                                           *
+   *    © 2026 GlobalTechInfo. All rights reserved.                            *
+   *                                                                           *
+   *    Description: This file is part of the MEGA-MD Project.                 *
+   *                 Unauthorized copying or distribution is prohibited.       *
+   *                                                                           *
+   *****************************************************************************/
   return {
 
     // ── .perf ─── View command performance and error metrics | usage: .perf
@@ -675,7 +716,14 @@ Object.assign(module.exports, (() => {
             await sock.sendMessage(chatId, {
                 text: text.trim(),
                 contextInfo: {
+                    forwardingScore: 999,
+                    isForwarded: true,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: '120363319098372999@newsletter',
+                        newsletterName: 'MEGA MD PERFORMANCE',
+                        serverMessageId: -1
                     }
+                }
             }, { quoted: message });
         }
         catch (error) {
@@ -698,9 +746,19 @@ Object.assign(module.exports, (() => {
 
   // --- helper code from uptime.js ---
   /*****************************************************************************
- *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
- *****************************************************************************/
+   *                                                                           *
+   *                     Developed By Qasim Ali                                *
+   *                                                                           *
+   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
+   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
+   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
+   *                                                                           *
+   *    © 2026 GlobalTechInfo. All rights reserved.                            *
+   *                                                                           *
+   *    Description: This file is part of the MEGA-MD Project.                 *
+   *                 Unauthorized copying or distribution is prohibited.       *
+   *                                                                           *
+   *****************************************************************************/
   return {
 
     // ── .uptime ─── Show bot status information | usage: .uptime

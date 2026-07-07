@@ -110,7 +110,7 @@ Object.assign(module.exports, (() => {
         const chatId = context.chatId || message.key.remoteJid;
         if (!args.length) {
             return await sock.sendMessage(chatId, {
-                text: '*Please provide a GitHub username.*\nExample: .github torvalds'
+                text: '*Please provide a GitHub username.*\nExample: .github GlobalTechInfo'
             }, { quoted: message });
         }
         const username = args[0];

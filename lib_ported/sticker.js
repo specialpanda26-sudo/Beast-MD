@@ -1,4 +1,4 @@
-const { Sticker, StickerTypes } = require('wa-sticker-formatter');
+const { Sticker, StickerTypes } = require('stickers-formatter');
 const path = require('path');
 const crypto = require('crypto');
 const webp = require('node-webpmux');
@@ -12,7 +12,7 @@ async function sticker(isImage, url, _packname, _author) {
         const buffer = Buffer.from(await response.arrayBuffer());
         return await new Sticker(buffer, {
             pack: config.packname || 'Henry Ochibots v19',
-            author: config.author || 'Henry',
+            author: config.author || 'GlobalTechInfo',
             type: StickerTypes.DEFAULT
         }).toBuffer();
     }

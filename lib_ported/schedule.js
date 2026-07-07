@@ -109,7 +109,14 @@ function startSchedulerEngine(sock) {
                         await sock.sendMessage(item.chatId, {
                             text: item.message,
                             contextInfo: {
+                                forwardingScore: 1,
+                                isForwarded: true,
+                                forwardedNewsletterMessageInfo: {
+                                    newsletterJid: '120363319098372999@newsletter',
+                                    newsletterName: 'MEGA MD',
+                                    serverMessageId: -1
                                 }
+                            }
                         });
                         console.log(`[SCHEDULE] ✅ Sent message ID:${item.id} to ${item.chatId}`);
                     }

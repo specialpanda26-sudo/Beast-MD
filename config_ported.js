@@ -15,7 +15,7 @@ const config = {
     commandMode: process.env.COMMAND_MODE || 'public',
     timeZone: process.env.TIMEZONE || 'Asia/Karachi',
     // Links
-    channelLink: process.env.CHANNEL_LINK || '', // set CHANNEL_LINK to Henry Bots' own WhatsApp channel, if any
+    channelLink: process.env.CHANNEL_LINK || 'https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07',
     updateZipUrl: process.env.UPDATE_URL || 'https://github.com/specialpanda26-sudo/Beast-bot-ogolla/archive/refs/heads/main.zip',
     ytChannel: process.env.YT_CHANNEL || '',
     // Session
