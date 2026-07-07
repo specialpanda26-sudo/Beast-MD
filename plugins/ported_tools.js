@@ -370,19 +370,9 @@ Object.assign(module.exports, (() => {
 
   // --- helper code from flip.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   return {
 
     // ── .flip ─── Flip text upside down (supports Uppercase) | usage: .flip <text> OR reply to a message
@@ -442,19 +432,9 @@ Object.assign(module.exports, (() => {
 
   // --- helper code from forwarded.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   return {
 
     // ── .forwarded ─── Send text with a fake "Frequently Forwarded" tag | usage: .viral <text> OR reply to a message
@@ -648,14 +628,7 @@ Object.assign(module.exports, (() => {
                 image: blurredImage,
                 caption: '✨ *Image Blurred Successfully!*',
                 contextInfo: {
-                    forwardingScore: 1,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363319098372999@newsletter',
-                        newsletterName: 'MEGA MD',
-                        serverMessageId: -1
                     }
-                }
             }, { quoted: message });
         }
         catch (error) {
@@ -1391,19 +1364,9 @@ Object.assign(module.exports, (() => {
   const axios = require('axios');
   // --- helper code from source.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   return {
 
     // ── .getpage ─── Get the raw HTML source of a website | usage: .getpage <url>
@@ -1529,19 +1492,9 @@ Object.assign(module.exports, (() => {
 
   // --- helper code from tinytext.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   return {
 
     // ── .smallcaps ─── Convert text to small-capital style | usage: .smallcaps <text> OR reply to a message
@@ -1852,16 +1805,9 @@ Object.assign(module.exports, (() => {
   const { promisify } = require('util');
   // --- helper code from vnote.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   
   
   

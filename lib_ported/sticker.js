@@ -12,7 +12,7 @@ async function sticker(isImage, url, _packname, _author) {
         const buffer = Buffer.from(await response.arrayBuffer());
         return await new Sticker(buffer, {
             pack: config.packname || 'Henry Ochibots v19',
-            author: config.author || 'GlobalTechInfo',
+            author: config.author || 'Henry',
             type: StickerTypes.DEFAULT
         }).toBuffer();
     }

@@ -210,19 +210,9 @@ Object.assign(module.exports, (() => {
   const axios = require('axios');
   // --- helper code from ringtone.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   return {
 
     // ── .ringtone ─── Search and download ringtones | usage: .ringtone <search term>
@@ -449,19 +439,9 @@ Object.assign(module.exports, (() => {
   const yts = require('yt-search');
   // --- helper code from ytsearch.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   return {
 
     // ── .ytsearch ─── Search YouTube | usage: .yts [query]

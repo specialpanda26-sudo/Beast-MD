@@ -630,6 +630,16 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          let senderIsGroupAdmin = false;
+          try {
+            const { isSenderAdmin } = await (require('../lib_ported/isAdmin.js'))(sock, chatId, h.senderJid);
+            senderIsGroupAdmin = isSenderAdmin;
+          } catch (_) {}
+          if (!senderIsGroupAdmin) {
+            return await sock.sendMessage(chatId, { text: '🔒 This command requires group admin (or bot owner/admin) privileges.' }, { quoted: message });
+          }
+        }
         const rawText = (context.rawText || '').toLowerCase();
         const isApprove = rawText.startsWith('.approvejoin');
         const isReject = rawText.startsWith('.rejectjoin');
@@ -960,14 +970,7 @@ Object.assign(module.exports, (() => {
                 image: imageBuffer,
                 caption: '*your religion is simping*',
                 contextInfo: {
-                    forwardingScore: 1,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363319098372999@newsletter',
-                        newsletterName: 'MEGA MD',
-                        serverMessageId: -1
                     }
-                }
             }, { quoted: message });
         }
         catch (error) {
@@ -975,14 +978,7 @@ Object.assign(module.exports, (() => {
             await sock.sendMessage(chatId, {
                 text: '❌ Sorry, I couldn\'t generate the simp card. Please try again later!',
                 contextInfo: {
-                    forwardingScore: 1,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363319098372999@newsletter',
-                        newsletterName: 'MEGA MD',
-                        serverMessageId: -1
                     }
-                }
             }, { quoted: message });
         }
     

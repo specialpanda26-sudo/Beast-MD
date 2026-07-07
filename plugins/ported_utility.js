@@ -121,10 +121,11 @@ Object.assign(module.exports, (() => {
 
 Object.assign(module.exports, (() => {
   const { getBin } = require('../lib_ported/compile.js');
-  const { exec } = require('child_process');
+  const { exec, execFile } = require('child_process');
   const { promisify } = require('util');
   // --- helper code from cipher.js ---
   const execAsync = promisify(exec);
+  const execFileAsync = promisify(execFile);
   return {
 
     // ── .cipher ─── Encrypt or decrypt text using Caesar, Vigenere, or XOR cipher | usage: .cipher <type> <encode|decode> <key> <text>
@@ -194,9 +195,7 @@ Object.assign(module.exports, (() => {
         }
         try {
             const bin = getBin('cipher');
-            const safeText = text.replace(/"/g, '\\"');
-            const safeKey = key.replace(/"/g, '\\"');
-            const { stdout, stderr } = await execAsync(`"${bin}" ${cipherType} ${mode} "${safeKey}" "${safeText}"`, { timeout: 10000 });
+            const { stdout, stderr } = await execFileAsync(bin, [cipherType, mode, key, text], { timeout: 10000 });
             if (stderr && !stdout) {
                 return await sock.sendMessage(chatId, {
                     text: `❌ ${stderr.trim()}`,
@@ -265,6 +264,10 @@ Object.assign(module.exports, (() => {
       try {
 
         const { chatId, channelInfo } = context;
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await sock.sendMessage(chatId, { text: '🔒 *.crun is restricted to the bot owner/admins.*\n\nRunning arbitrary compiled code on the server is a security risk, so this is limited to trusted users.' }, { quoted: message });
+        }
+
         // Get code from: args, quoted message, or document
         const quoted = message?.message?.extendedTextMessage?.contextInfo?.quotedMessage;
         const quotedText = quoted?.conversation || quoted?.extendedTextMessage?.text || '';
@@ -579,12 +582,13 @@ Object.assign(module.exports, (() => {
 
 Object.assign(module.exports, (() => {
   const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-  const { exec } = require('child_process');
+  const { exec, execFile } = require('child_process');
   const { promisify } = require('util');
   const path = require('path');
   const fs = require('fs');
   // --- helper code from dna.js ---
   const execAsync = promisify(exec);
+  const execFileAsync = promisify(execFile);
   function getQuoted(message) {
       return message?.message?.extendedTextMessage?.contextInfo?.quotedMessage || null;
   }
@@ -736,7 +740,7 @@ Object.assign(module.exports, (() => {
                 }
                 const cleanDna = dnaInput.replace(/\s/g, '');
                 await sock.sendMessage(chatId, { text: '🔬 Decoding DNA...', ...channelInfo }, { quoted: message });
-                const { stdout, stderr } = await execAsync(`"${binPath}" decode "${cleanDna}"`, { timeout: 30000, maxBuffer: 50 * 1024 * 1024 });
+                const { stdout, stderr } = await execFileAsync(binPath, ['decode', cleanDna], { timeout: 30000, maxBuffer: 50 * 1024 * 1024 });
                 if (stderr && !stdout) {
                     return await sock.sendMessage(chatId, { text: `❌ ${stderr.trim()}`, ...channelInfo }, { quoted: message });
                 }
@@ -808,12 +812,13 @@ Object.assign(module.exports, (() => {
 
 Object.assign(module.exports, (() => {
   const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-  const { exec } = require('child_process');
+  const { exec, execFile } = require('child_process');
   const { promisify } = require('util');
   const path = require('path');
   const fs = require('fs');
   // --- helper code from rle.js ---
   const execAsync = promisify(exec);
+  const execFileAsync = promisify(execFile);
   function getQuoted(message) {
       return message?.message?.extendedTextMessage?.contextInfo?.quotedMessage || null;
   }
@@ -966,7 +971,7 @@ Object.assign(module.exports, (() => {
                 await sock.sendMessage(chatId, { text: '📦 Decompressing...', ...channelInfo }, { quoted: message });
                 const inFile = path.join(tempDir, `rle_dec_in_${id}.txt`);
                 fs.writeFileSync(inFile, encodedData);
-                const { stdout, stderr } = await execAsync(`"${binPath}" decompress text "${encodedData.replace(/"/g, '\\"')}"`, { timeout: 60000, maxBuffer: 100 * 1024 * 1024 });
+                const { stdout, stderr } = await execFileAsync(binPath, ['decompress', 'text', encodedData], { timeout: 60000, maxBuffer: 100 * 1024 * 1024 });
                 if (stderr && !stdout) {
                     return await sock.sendMessage(chatId, { text: `❌ ${stderr.trim()}`, ...channelInfo }, { quoted: message });
                 }
@@ -1139,11 +1144,12 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const { exec } = require('child_process');
+  const { exec, execFile } = require('child_process');
   const { promisify } = require('util');
   const path = require('path');
   // --- helper code from siminfo.js ---
   const execAsync = promisify(exec);
+  const execFileAsync = promisify(execFile);
   return {
 
     // ── .siminfo ─── Lookup phone number country, carrier and type | usage: .siminfo <phone number with country code>\nExample: .siminfo +923001234567
@@ -1182,7 +1188,7 @@ Object.assign(module.exports, (() => {
         }
         try {
             const scriptPath = path.join(process.cwd(), 'lib', 'siminfo.py');
-            const { stdout } = await execAsync(`python3 "${scriptPath}" "${input}"`, { timeout: 10000 });
+            const { stdout } = await execFileAsync('python3', [scriptPath, input], { timeout: 10000 });
             const data = JSON.parse(stdout.trim());
             if (data.error) {
                 return await sock.sendMessage(chatId, {

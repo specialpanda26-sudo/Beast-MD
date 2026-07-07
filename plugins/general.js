@@ -191,9 +191,9 @@ ${p}save           - Save view-once as file
 ${p}getpp [@user]  - Get profile picture (any number, even unsaved/private)
 ${p}share <number>  - Reply to a message to forward it to that number
 ${p}about [@user]  - Get About status text (works unsaved)
-${p}download [url] - Download video (YT/TikTok)
-${p}song [url]     - Extract MP3 audio
-${p}dl [url] (audio) - 🌐 Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
+${p}download [url] - Download video (YT/TikTok/IG/FB/X/SoundCloud+)
+${p}song [url or name] - Extract MP3 audio (paste a link OR just type a song name to search)
+${p}dl [url] (audio) - 🌐 Universal downloader, same sites as .download — add "audio" for MP3 instead of video
 ${p}convertmedia [fmt] - 🔄 Universal media converter (reply to img/video/audio)
 ${effectiveIsBotAdmin ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -266,7 +266,6 @@ ${p}report [@user] [reason] - Flag a member/issue to the admins
 ${p}fullpp [@user]  - Full-resolution profile picture (vs .getpp's preview)
 ${p}audiomack [link] - Download from a direct Audiomack link (no search-by-name — Audiomack doesn't support that; use .song for name search)
 ${p}videosearch [name] - Search YouTube by name and send the video (or paste any link)
-${p}song now also takes a search term, not just a link — e.g. ${p}song shape of you
 ${p}autoreact on/off - Bot reacts to every message in this chat
 ${ownerSection}
 
