@@ -43,8 +43,8 @@ def print_banner():
 ║   \033[1;35m██████╔╝╚██████╔╝   ██║   ███████║\033[1;36m                    ║
 ║   \033[1;35m╚═════╝  ╚═════╝    ╚═╝   ╚══════╝\033[1;36m                   ║
 ║                                                              ║
-║      \033[1;33m✦ Henry Ochibots v19™ — created by Henry ✦\033[1;36m              ║
-║      \033[1;32m⚡ HENRY OCHIBOTS v19™  |  PYTHON BACKEND\033[1;36m              ║
+║      \033[1;33m✦ Ochibots™ — created by Henry ✦\033[1;36m              ║
+║      \033[1;32m⚡ OCHIBOTS v19™  |  PYTHON BACKEND\033[1;36m              ║
 ║      \033[1;33m⚡ AI  |  DATABASE  |  COMMANDS  |  API\033[1;36m            ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -179,6 +179,31 @@ def _verify_password(password: str, stored: str) -> bool:
 # mechanism the /pair proxy routes further down use).
 NODE_PAIR_URL = f"http://127.0.0.1:{os.environ.get('WEB_PORT', 3000)}"
 
+# ✅ SECURITY FIX: paired with the same constant in client_bridge.js. Without
+# this, /send-otp-whatsapp, /notify-owner, /notify-user and /internal/action
+# were reachable by anyone who had the bot's public URL (they're on the same
+# port /pair is served from), letting a stranger send arbitrary WhatsApp
+# messages or touch the console actions below with no login at all. Set the
+# INTERNAL_SECRET env var (any random string) to the same value here and in
+# the Node process's env to close that off.
+_INTERNAL_SECRET = os.environ.get("INTERNAL_SECRET", "")
+def _node_headers() -> dict:
+    return {"X-Internal-Secret": _INTERNAL_SECRET} if _INTERNAL_SECRET else {}
+
+
+async def _call_node_internal(path: str, payload: dict, timeout: float = 8) -> dict:
+    """POST to an internal-only route on the Node bridge (/internal/action, etc.)."""
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(f"{NODE_PAIR_URL}{path}", json=payload, headers=_node_headers())
+            data = resp.json()
+            if resp.status_code == 200 and data.get("success"):
+                return {"success": True, **{k: v for k, v in data.items() if k != "success"}}
+            return {"success": False, "error": data.get("error", "Request to the bot failed.")}
+    except Exception as e:
+        logger.error("Node internal call to %s failed: %s", path, e)
+        return {"success": False, "error": "Bot isn't reachable right now. Try again shortly."}
+
 
 async def send_otp_whatsapp(phone: str, otp: str, name: str, require_owner_session: bool = False) -> dict:
     try:
@@ -189,11 +214,8 @@ async def send_otp_whatsapp(phone: str, otp: str, name: str, require_owner_sessi
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.post(
                 f"{NODE_PAIR_URL}/send-otp-whatsapp",
-                # require_owner_session=True (used only by the admin-panel password
-                # reset) forces client_bridge.js to send from the dedicated Owner
-                # Session ONLY — no fallback to any other connected number — since
-                # this code grants full admin access.
-                json={"phone": phone, "otp": otp, "name": name, "requireOwnerSession": require_owner_session}
+                json={"phone": phone, "otp": otp, "name": name, "requireOwnerSession": require_owner_session},
+                headers=_node_headers(),
             )
             data = resp.json()
             if resp.status_code == 200 and data.get("success"):
@@ -425,6 +447,24 @@ async def init_db():
                 msg_id TEXT PRIMARY KEY, sender TEXT, name TEXT, body TEXT, timestamp REAL
             )
         """)
+        # ✅ NEW: session_id/direction — messages used to be logged with no
+        # record of which bot session (customer) they belonged to, or
+        # whether they were incoming or a customer's own outgoing send from
+        # the console. Both are required for a per-customer inbox view.
+        for col, ddl in [
+            ("session_id", "ALTER TABLE messages ADD COLUMN session_id TEXT"),
+            ("direction", "ALTER TABLE messages ADD COLUMN direction TEXT NOT NULL DEFAULT 'in'"),
+            # ✅ NEW: read flag — powers unread badges in the console's chat
+            # list. Incoming messages default unread (0); outgoing messages
+            # (the customer's own sends) are marked read immediately below.
+            ("read_flag", "ALTER TABLE messages ADD COLUMN read_flag INTEGER NOT NULL DEFAULT 0"),
+        ]:
+            try:
+                await db.execute(ddl)
+            except Exception:
+                pass
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, timestamp)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_messages_session_sender ON messages(session_id, sender, timestamp)")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS viewonce_media (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -761,13 +801,13 @@ async def init_db():
         """)
 
         await db.commit()
-        logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
+        logger.info("\033[1;32m⚡ Ochibots™ — Master Database Synchronized — All tables ready.\033[0m")
 
 
 @app.before_serving
 async def startup():
     await init_db()
-    logger.info("\033[1;36m🔥 Henry Ochibots v19™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
+    logger.info("\033[1;36m🔥 Ochibots™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
     logger.info("\033[1;33m📡 Waiting for WhatsApp bot session (Node.js) to connect...\033[0m")
     if not ADMIN_PASSWORD:
         logger.warning("\033[1;31m⚠️  ADMIN_PASSWORD is not set — /admin has FULL OPEN ACCESS to anyone with the URL. Set ADMIN_PASSWORD in your environment before going live.\033[0m")
@@ -1502,7 +1542,7 @@ async def api_payment_submit():
     # Best-effort nudge to the admin on WhatsApp — never blocks the response
     try:
         async with httpx.AsyncClient(timeout=4) as client:
-            await client.post(f"{NODE_PAIR_URL}/notify-owner", json={
+            await client.post(f"{NODE_PAIR_URL}/notify-owner", headers=_node_headers(), json={
                 "text": (
                     f"💰 *New top-up request* REF-{str(new_id).zfill(4)}\n"
                     f"From: {phone}\nAmount: {amount} kesh\nCode: {mpesa_code}\n"
@@ -2584,7 +2624,7 @@ async def admin_review_payment():
         else:
             text = f"❌ Your top-up request was rejected.{(' Reason: ' + note) if note else ''} Reply to the bot if you think this is a mistake."
         async with httpx.AsyncClient(timeout=4) as client:
-            await client.post(f"{NODE_PAIR_URL}/notify-user", json={"phone": phone, "text": text})
+            await client.post(f"{NODE_PAIR_URL}/notify-user", headers=_node_headers(), json={"phone": phone, "text": text})
     except Exception:
         pass
 
@@ -2839,14 +2879,29 @@ async def log_message():
     sender = data.get("sender")
     name = data.get("name", "User")
     body = data.get("body", "")
+    session_id = data.get("session_id", "")
+    direction = data.get("direction", "in")
+    if direction not in ("in", "out"):
+        direction = "in"
     if not msg_id or not sender:
         return jsonify({"status": "ignored"}), 400
+    ts = time.time()
+    # Outgoing messages are the customer's own sends from the console — read
+    # by definition. Incoming messages start unread until mark-read fires.
+    read_flag = 1 if direction == "out" else 0
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute(
-            "INSERT OR REPLACE INTO messages VALUES (?, ?, ?, ?, ?)",
-            (msg_id, sender, name, body, time.time())
+            "INSERT OR REPLACE INTO messages (msg_id, sender, name, body, timestamp, session_id, direction, read_flag) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (msg_id, sender, name, body, ts, session_id, direction, read_flag)
         )
         await db.commit()
+    # 🔴 LIVE: push straight to any open console tab for this session so new
+    # messages/replies show up instantly instead of waiting on a manual refresh.
+    _console_push_event(session_id, {
+        "type": "message", "contact": sender, "name": name, "body": body,
+        "timestamp": ts, "direction": direction
+    })
     return jsonify({"status": "logged"})
 
 
@@ -3329,7 +3384,7 @@ async def natural_chat():
 
     if context == "status":
         system_prompt = (
-            "You are Henry Ochibots, a friendly Kenyan WhatsApp bot. "
+            "You are Ochibots, a friendly Kenyan WhatsApp bot. "
             "Someone posted a WhatsApp status and you want to leave a short, warm comment. "
             "Rules:\n"
             "1. Keep it under 2 sentences — like a real friend commenting on a status.\n"
@@ -3344,7 +3399,7 @@ async def natural_chat():
         )
     elif context == "group":
         system_prompt = (
-            f"You are Henry Ochibots, a Kenyan WhatsApp bot in a group chat. "
+            f"You are Ochibots, a Kenyan WhatsApp bot in a group chat. "
             f"You are talking to {name}. "
             "Someone mentioned you or called your name in the group. Reply naturally.\n"
             "Rules:\n"
@@ -3375,7 +3430,7 @@ async def natural_chat():
         )
     else:
         system_prompt = (
-            f"You are Henry Ochibots, a friendly WhatsApp bot assistant. "
+            f"You are Ochibots, a friendly WhatsApp bot assistant. "
             f"You are talking to {name}. "
             "You are Kenyan and understand Swahili, Sheng (Kenyan street slang), and English. "
             "IMPORTANT RULES:\n"
@@ -3389,7 +3444,7 @@ async def natural_chat():
             "4. Be warm, friendly, sometimes funny — very human-like.\n"
             "5. Do NOT start every reply with 'Hello' or 'Hi'. Be natural.\n"
             "6. Use emoji occasionally but not excessively.\n"
-            "7. Your creator is Henry Ochibots (@henrytech254)."
+            "7. Your creator is Ochibots (@henrytech254)."
         )
 
     try:
@@ -3534,10 +3589,10 @@ async def pair_proxy_post():
 @app.route("/get-bio", methods=["GET"])
 async def generate_auto_bio():
     bios = [
-        f"🤖 Henry Ochibots v19™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
-        f"⚡ Powered by Henry Ochibots | Always Active | {time.strftime('%H:%M')}",
-        f"🔥 Henry Ochibots v19™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
-        f"🔥 Henry Ochibots Automation | {time.strftime('%H:%M')} | All systems go",
+        f"🤖 Ochibots™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
+        f"⚡ Powered by Ochibots | Always Active | {time.strftime('%H:%M')}",
+        f"🔥 Ochibots™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
+        f"🔥 Ochibots Automation | {time.strftime('%H:%M')} | All systems go",
     ]
     return jsonify({"bio": random.choice(bios)})
 
@@ -4407,6 +4462,324 @@ async def admin_owner_chats_toggle():
         )
         await db.commit()
     return jsonify({"success": True})
+
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ✅ NEW: Command Console — lets a customer who has an ACTIVATED session log
+# in with their paired phone number (proved via a WhatsApp OTP, same pattern
+# as registration) and then send messages / set status / set bio / set name
+# on their own linked WhatsApp account from the website.
+#
+# Deliberately NOT included here (see chat for why):
+#   - Full inbox/message history — needs a persistent message store this
+#     bot doesn't have yet.
+#   - "Change number" — WhatsApp's real number migration is an official
+#     in-app flow; there's no safe way to do it through an unofficial
+#     library without real risk of the account getting permanently banned.
+#
+# Auth model: request-otp/verify-otp issue a short-lived opaque Bearer token
+# (kept in memory, not the DB — it's just a login session, same spirit as
+# the Bearer-password admin auth already used elsewhere in this file). The
+# owner can additionally act on ANY session using the admin Bearer password.
+# ══════════════════════════════════════════════════════════════════════════
+_console_challenges: dict = {}   # session_id -> {otp, expires, phone}
+_console_tokens: dict = {}       # token -> {session_id, phone, expires}
+CONSOLE_OTP_TTL = 300     # 5 minutes to enter the OTP
+CONSOLE_TOKEN_TTL = 3600  # 1 hour login
+
+# ✅ NEW: live event fan-out for the console — /api/console/stream (SSE).
+# Every logged-in console tab holds one asyncio.Queue per session_id here.
+# log_message() (below) and the presence hooks push events into every queue
+# for that session; the SSE route drains its own queue and forwards to the
+# browser. No message broker needed — this is single-process, in-memory,
+# same spirit as _console_tokens above.
+_console_event_subscribers: dict = {}   # session_id -> set[asyncio.Queue]
+
+def _console_push_event(session_id: str, event: dict):
+    if not session_id:
+        return
+    for q in list(_console_event_subscribers.get(session_id, ())):
+        try:
+            q.put_nowait(event)
+        except asyncio.QueueFull:
+            pass
+
+async def _get_session_phone_if_activated(session_id: str):
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT phone, activated, expiry_ts FROM session_subscriptions WHERE session = ?", (session_id,)
+        ) as c:
+            row = await c.fetchone()
+    if not row or not row[0] or not row[1]:
+        return None
+    phone, activated, expiry_ts = row
+    if expiry_ts and time.time() >= expiry_ts:
+        return None
+    return phone
+
+
+async def _console_authed_phone(req, session_id: str):
+    """Returns the authenticated phone for this session_id, or None.
+    Accepts either: a valid console Bearer token for exactly this session,
+    or the admin Bearer password (owner override, any session)."""
+    token = req.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if not token:
+        return None
+    if await _check_admin_auth_async(req):
+        return await _get_session_phone_if_activated(session_id) or "owner"
+    entry = _console_tokens.get(token)
+    if not entry or entry["session_id"] != session_id:
+        return None
+    if time.time() >= entry["expires"]:
+        _console_tokens.pop(token, None)
+        return None
+    return entry["phone"]
+
+
+@app.route("/api/console/request-otp", methods=["POST"])
+async def console_request_otp():
+    data = await request.get_json(silent=True) or {}
+    session_id = (data.get("session") or "").strip()
+    if not session_id:
+        return jsonify({"success": False, "error": "session is required"}), 400
+    phone = await _get_session_phone_if_activated(session_id)
+    if not phone:
+        return jsonify({"success": False, "error": "This session isn't an activated, paid session yet."}), 403
+    otp = _generate_otp()
+    _console_challenges[session_id] = {"otp": otp, "expires": time.time() + CONSOLE_OTP_TTL, "phone": phone}
+    result = await send_otp_whatsapp(phone, otp, "there")
+    if not result.get("success"):
+        return jsonify({"success": False, "error": result.get("error")}), 503
+    masked = ("•" * max(0, len(phone) - 4)) + phone[-4:]
+    return jsonify({"success": True, "sent_to": masked})
+
+
+@app.route("/api/console/verify-otp", methods=["POST"])
+async def console_verify_otp():
+    data = await request.get_json(silent=True) or {}
+    session_id = (data.get("session") or "").strip()
+    otp = (data.get("otp") or "").strip()
+    challenge = _console_challenges.get(session_id)
+    if not challenge or time.time() >= challenge["expires"]:
+        _console_challenges.pop(session_id, None)
+        return jsonify({"success": False, "error": "Code expired — request a new one."}), 400
+    if otp != challenge["otp"]:
+        return jsonify({"success": False, "error": "Incorrect code."}), 400
+    _console_challenges.pop(session_id, None)
+    token = secrets.token_urlsafe(32)
+    _console_tokens[token] = {
+        "session_id": session_id, "phone": challenge["phone"], "expires": time.time() + CONSOLE_TOKEN_TTL
+    }
+    return jsonify({"success": True, "token": token, "expires_in": CONSOLE_TOKEN_TTL})
+
+
+@app.route("/api/console/send", methods=["POST"])
+async def console_send():
+    data = await request.get_json(silent=True) or {}
+    session_id = (data.get("session") or "").strip()
+    if not await _console_authed_phone(request, session_id):
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+    to = (data.get("to") or "").strip()
+    text = (data.get("text") or "").strip()
+    if not to or not text:
+        return jsonify({"success": False, "error": "to and text are required"}), 400
+    result = await _call_node_internal("/internal/action", {
+        "sessionId": session_id, "action": "send-message", "to": to, "text": text
+    })
+    return jsonify(result), (200 if result.get("success") else 503)
+
+
+@app.route("/api/console/status", methods=["POST"])
+async def console_status():
+    data = await request.get_json(silent=True) or {}
+    session_id = (data.get("session") or "").strip()
+    if not await _console_authed_phone(request, session_id):
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+    text = data.get("text", "")
+    result = await _call_node_internal("/internal/action", {
+        "sessionId": session_id, "action": "set-status", "text": text
+    })
+    return jsonify(result), (200 if result.get("success") else 503)
+
+
+# WhatsApp only has one "About"/status text field — "bio" here is an alias
+# of the same action, kept as its own route so the console UI can label it
+# "Bio" without confusing customers about what "status" (disappearing
+# updates) usually means elsewhere.
+@app.route("/api/console/bio", methods=["POST"])
+async def console_bio():
+    data = await request.get_json(silent=True) or {}
+    session_id = (data.get("session") or "").strip()
+    if not await _console_authed_phone(request, session_id):
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+    text = data.get("text", "")
+    result = await _call_node_internal("/internal/action", {
+        "sessionId": session_id, "action": "set-bio", "text": text
+    })
+    return jsonify(result), (200 if result.get("success") else 503)
+
+
+@app.route("/api/console/name", methods=["POST"])
+async def console_name():
+    data = await request.get_json(silent=True) or {}
+    session_id = (data.get("session") or "").strip()
+    if not await _console_authed_phone(request, session_id):
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"success": False, "error": "name is required"}), 400
+    result = await _call_node_internal("/internal/action", {
+        "sessionId": session_id, "action": "set-name", "name": name
+    })
+    return jsonify(result), (200 if result.get("success") else 503)
+
+
+@app.route("/api/console/conversations", methods=["GET"])
+async def console_conversations():
+    """List of contacts this session has exchanged messages with, most
+    recent first, each with a preview of the last message. Powers the
+    inbox list in the console UI."""
+    session_id = (request.args.get("session") or "").strip()
+    if not await _console_authed_phone(request, session_id):
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            """
+            SELECT sender, name, body, timestamp, direction FROM messages
+            WHERE session_id = ? AND msg_id IN (
+                SELECT msg_id FROM messages m2
+                WHERE m2.session_id = messages.session_id AND m2.sender = messages.sender
+                ORDER BY m2.timestamp DESC LIMIT 1
+            )
+            ORDER BY timestamp DESC LIMIT 200
+            """,
+            (session_id,)
+        ) as c:
+            rows = await c.fetchall()
+        # ✅ NEW: unread counts per contact, for the chat-list badges.
+        async with db.execute(
+            "SELECT sender, COUNT(*) FROM messages "
+            "WHERE session_id = ? AND direction = 'in' AND read_flag = 0 "
+            "GROUP BY sender",
+            (session_id,)
+        ) as c:
+            unread_map = dict(await c.fetchall())
+    conversations = [
+        {
+            "contact": sender, "name": name, "last_message": body, "timestamp": ts,
+            "last_direction": direction, "unread_count": unread_map.get(sender, 0)
+        }
+        for sender, name, body, ts, direction in rows
+    ]
+    return jsonify({"success": True, "conversations": conversations})
+
+
+@app.route("/api/console/mark-read", methods=["POST"])
+async def console_mark_read():
+    data = await request.get_json(silent=True) or {}
+    session_id = (data.get("session") or "").strip()
+    if not await _console_authed_phone(request, session_id):
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+    contact = (data.get("contact") or "").strip()
+    if not contact:
+        return jsonify({"success": False, "error": "contact is required"}), 400
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "UPDATE messages SET read_flag = 1 WHERE session_id = ? AND sender = ? AND direction = 'in'",
+            (session_id, contact)
+        )
+        await db.commit()
+    return jsonify({"success": True})
+
+
+@app.route("/api/console/stream", methods=["GET"])
+async def console_stream():
+    """Live event feed (SSE) for the console — new messages, incoming/outgoing,
+    show up instantly without polling. EventSource can't send custom headers,
+    so auth comes from ?token=&session= query params instead of Authorization."""
+    session_id = (request.args.get("session") or "").strip()
+    token = (request.args.get("token") or "").strip()
+    entry = _console_tokens.get(token)
+    if not entry or entry["session_id"] != session_id or time.time() >= entry["expires"]:
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=200)
+    _console_event_subscribers.setdefault(session_id, set()).add(queue)
+
+    async def gen():
+        try:
+            yield "retry: 3000\n\n"
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=20)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": heartbeat\n\n"  # keep the connection alive through proxies
+        finally:
+            _console_event_subscribers.get(session_id, set()).discard(queue)
+
+    return Response(gen(), mimetype="text/event-stream", headers={
+        "Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"
+    })
+
+
+@app.route("/api/console/pic", methods=["POST"])
+async def console_pic():
+    """Update the linked WhatsApp account's profile picture. Accepts a
+    multipart file upload (field name "image") from the console UI."""
+    form = await request.form
+    session_id = (form.get("session") or "").strip()
+    if not await _console_authed_phone(request, session_id):
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+    files = await request.files
+    image = files.get("image")
+    if not image:
+        return jsonify({"success": False, "error": "image file is required"}), 400
+    raw = image.read()
+    if len(raw) > 5 * 1024 * 1024:
+        return jsonify({"success": False, "error": "Image too large — 5MB max."}), 400
+    import base64
+    b64 = base64.b64encode(raw).decode("ascii")
+    result = await _call_node_internal("/internal/action", {
+        "sessionId": session_id, "action": "set-pic", "imageBase64": b64
+    }, timeout=20)
+    return jsonify(result), (200 if result.get("success") else 503)
+
+
+@app.route("/api/console/messages", methods=["GET"])
+async def console_messages():
+    """Message thread with one contact for this session, oldest first.
+    ?before=<timestamp> pages backwards in time (for "load older")."""
+    session_id = (request.args.get("session") or "").strip()
+    if not await _console_authed_phone(request, session_id):
+        return jsonify({"success": False, "error": "Not logged in to this session."}), 401
+    contact = (request.args.get("contact") or "").strip()
+    if not contact:
+        return jsonify({"success": False, "error": "contact is required"}), 400
+    try:
+        before = float(request.args.get("before") or time.time())
+    except ValueError:
+        before = time.time()
+    limit = min(int(request.args.get("limit") or 50), 200)
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT msg_id, sender, name, body, timestamp, direction FROM messages "
+            "WHERE session_id = ? AND sender = ? AND timestamp < ? "
+            "ORDER BY timestamp DESC LIMIT ?",
+            (session_id, contact, before, limit)
+        ) as c:
+            rows = await c.fetchall()
+    messages = [
+        {"msg_id": mid, "contact": sender, "name": name, "body": body, "timestamp": ts, "direction": direction}
+        for mid, sender, name, body, ts, direction in reversed(rows)
+    ]
+    return jsonify({"success": True, "messages": messages})
+
+
+@app.route("/console")
+async def console_page():
+    return Response((Path(__file__).parent / "console.html").read_text(encoding="utf-8"), mimetype="text/html")
 
 
 if __name__ == "__main__":

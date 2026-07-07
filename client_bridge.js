@@ -45,8 +45,8 @@ const {
 // owner themself via the hidden `.ownerrecovery` WhatsApp command. See
 // getOwnerNumber() below for the resolution order.
 const OWNER_NUMBER_ENV = (process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
-const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ochibots';
-const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Henry Ochibots v19™';
+const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Ochibots';
+const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Ochibots™';
 const CMD_PREFIX_DEFAULT = '.';
 
 // ✅ NEW (Update 15): .setbotname/.setprefix (plugins/settings-ext.js) used to
@@ -69,9 +69,9 @@ function getPrefix() {
 // explaining why that was removed: it fired on "I saw a robot", "chatbot",
 // anyone named Henry in the group, etc.). This only matches full name
 // phrases, on word boundaries, so "robot"/"chatbot" still won't trigger it —
-// customize via BOT_NAME_ALIASES (comma-separated) if "Henry Ochibots" ever
+// customize via BOT_NAME_ALIASES (comma-separated) if "Ochibots" ever
 // changes for a reseller/white-label deployment.
-const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'ochibots,henry ochibots,beast bot,beastbot')
+const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'ochibots,OCHIBOTS,beast bot,beastbot')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 function isBotAddressedByName(text) {
   if (!text) return false;
@@ -280,6 +280,119 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
+// ✅ SECURITY FIX: /send-otp-whatsapp, /notify-owner, /notify-user and the
+// new /internal/action route below are meant to be called ONLY by app.py
+// over 127.0.0.1 — but this HTTP server listens on the same public port as
+// /pair, so with no check, anyone who found the bot's public URL could POST
+// straight to them and use the live WhatsApp socket to send arbitrary
+// messages, or (with /internal/action) message strangers, set the bot's
+// status, or change its bio — no login required. Every internal route now
+// requires this header; app.py sends it on every internal call.
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET || "";
+function isInternalCall(req) {
+  if (!INTERNAL_SECRET) return true; // no secret configured — old behavior, but logs a warning below
+  return req.headers["x-internal-secret"] === INTERNAL_SECRET;
+}
+if (!INTERNAL_SECRET) {
+  console.warn("⚠️  INTERNAL_SECRET is not set — internal routes (/send-otp-whatsapp, " +
+    "/notify-owner, /notify-user, /internal/action) are reachable by anyone who has " +
+    "your bot's public URL. Set INTERNAL_SECRET to the same random value in both " +
+    "this process's env and app.py's env to lock them down.");
+}
+
+// ✅ NEW: customer-facing web actions (Command Console + status/bio editor).
+// Only reachable internally (see isInternalCall above) — app.py is the one
+// that actually checks "is this logged-in customer allowed to touch this
+// sessionId" before ever calling here. This endpoint trusts that check and
+// just does the requested action against that session's live socket.
+//
+// Scope of v1 (deliberately NOT everything asked for):
+//   - send-message  : send a text message to a phone number or group JID
+//   - set-status    : update the WhatsApp "About" status text
+//   - set-bio       : alias of set-status (WhatsApp only has one "About" field)
+//   - set-name      : update the profile display name
+//   - set-pic       : update the profile picture (imageBase64 field, raw bytes base64-encoded)
+// NOT included yet: full inbox/message history (needs a persistent message
+// store this bot doesn't have yet), and "change number" (WhatsApp's real
+// number migration is an official in-app flow — there's no safe way to do
+// it through an unofficial library like Baileys without real risk of the
+// account getting permanently banned, so this deliberately isn't offered).
+async function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", d => body += d);
+    req.on("end", () => {
+      try { resolve(JSON.parse(body || "{}")); } catch (e) { reject(e); }
+    });
+    req.on("error", reject);
+  });
+}
+
+async function pairServerRoutesExtra(req, res, url) {
+  if (req.method === "POST" && url.pathname === "/internal/action") {
+    if (!isInternalCall(req)) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: false, error: "forbidden" }));
+      return true;
+    }
+    try {
+      const { sessionId, action, to, text, name, imageBase64 } = await readJsonBody(req);
+      const socket = sessionId && activeSockets.get(sessionId);
+      if (!socket) {
+        res.writeHead(503, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: false, error: "That session isn't connected right now." }));
+        return true;
+      }
+      if (action === "send-message") {
+        const cleanTo = (to || "").replace(/[^0-9@.\-]/g, "");
+        const jid = cleanTo.includes("@") ? cleanTo : `${cleanTo.replace(/[^0-9]/g, "")}@s.whatsapp.net`;
+        if (!text) throw new Error("text is required");
+        await socket.sendMessage(jid, { text });
+        // Log so it shows up in the customer's own console inbox thread —
+        // /internal/action is fire-and-forget from app.py's perspective for
+        // logging purposes, so this is best-effort and doesn't block the response.
+        apiClient.post("/log-message", {
+          msg_id: `out_${sessionId}_${Date.now()}`,
+          sender: jid, name: "You", body: text, session_id: sessionId, direction: "out"
+        }).catch(() => {});
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+        return true;
+      }
+      if (action === "set-status" || action === "set-bio") {
+        if (typeof text !== "string") throw new Error("text is required");
+        await socket.updateProfileStatus(text);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+        return true;
+      }
+      if (action === "set-name") {
+        if (!name) throw new Error("name is required");
+        await socket.updateProfileName(name);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+        return true;
+      }
+      if (action === "set-pic") {
+        if (!imageBase64) throw new Error("imageBase64 is required");
+        const buffer = Buffer.from(imageBase64, "base64");
+        await socket.updateProfilePicture(socket.user.id, buffer);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true }));
+        return true;
+      }
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: false, error: `Unknown action "${action}"` }));
+      return true;
+    } catch (e) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: false, error: e.message }));
+      return true;
+    }
+  }
+  return false;
+}
+
 const pairServer = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -349,6 +462,10 @@ function getOwnerSessionSocket() {
   // email. Internal-only: app.py reaches this over 127.0.0.1, same as the
   // /pair proxy routes below.
   if (req.method === "POST" && url.pathname === "/send-otp-whatsapp") {
+    if (!isInternalCall(req)) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ success: false, error: "forbidden" }));
+    }
     let body = "";
     req.on("data", d => body += d);
     req.on("end", async () => {
@@ -382,7 +499,7 @@ function getOwnerSessionSocket() {
           }
         }
         await socket.sendMessage(`${cleanPhone}@s.whatsapp.net`, {
-          text: `🔐 *Henry Ochibots v19™ — Verification Code*\n\n` +
+          text: `🔐 *Ochibots™ — Verification Code*\n\n` +
                 `Hi ${name || "there"}, your code is: *${otp}*\n\n` +
                 `This code expires in 10 minutes. Enter it on the registration page to verify your number and unlock your trust badge + free credit.`
         });
@@ -400,6 +517,10 @@ function getOwnerSessionSocket() {
   // the bot owner's attention right away (e.g. a new wallet top-up request
   // waiting for approval). Sends a WhatsApp message straight to OWNER_NUMBER.
   if (req.method === "POST" && url.pathname === "/notify-owner") {
+    if (!isInternalCall(req)) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ success: false, error: "forbidden" }));
+    }
     let body = "";
     req.on("data", d => body += d);
     req.on("end", async () => {
@@ -429,6 +550,10 @@ function getOwnerSessionSocket() {
   // POST /notify-user — called locally by app.py to message a specific
   // user directly (e.g. their top-up request was approved/rejected).
   if (req.method === "POST" && url.pathname === "/notify-user") {
+    if (!isInternalCall(req)) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ success: false, error: "forbidden" }));
+    }
     let body = "";
     req.on("data", d => body += d);
     req.on("end", async () => {
@@ -605,6 +730,8 @@ function getOwnerSessionSocket() {
     res.end(JSON.stringify({ status: "ok", online: botOnline, version: "V6" }));
     return;
   }
+
+  if (await pairServerRoutesExtra(req, res, url)) return;
 
   res.writeHead(404);
   res.end("Not found");
@@ -865,7 +992,7 @@ function prompt(question) {
 
 function printBanner() {
   console.log("\n╔══════════════════════════════════════╗");
-  console.log("   🔥 HENRY OCHIBOTS v19™ 🔥   ");
+  console.log("   🔥 OCHIBOTS v19™ 🔥   ");
   console.log("╚══════════════════════════════════════╝\n");
 }
 
@@ -2010,9 +2137,9 @@ async function startSession(sessionId, opts = {}) {
         }).catch(() => {});
       }
 
-      // Log message to DB for /recover
+      // Log message to DB for /recover and the customer console inbox
       if (body) {
-        apiClient.post("/log-message", { msg_id: msgId, sender, name, body }).catch(() => {});
+        apiClient.post("/log-message", { msg_id: msgId, sender, name, body, session_id: sessionId, direction: "in" }).catch(() => {});
       }
 
       // Feature: Save View Once Media
@@ -2600,7 +2727,7 @@ async function startSession(sessionId, opts = {}) {
     }
 
     if (connection === "open") {
-      console.log(`\n✅ [${sessionId}] HENRY OCHIBOTS v19™ IS ONLINE AND READY! 🔥\n`);
+      console.log(`\n✅ [${sessionId}] OCHIBOTS v19™ IS ONLINE AND READY! 🔥\n`);
       botOnline = true;
       fatalRetryCounts[sessionId] = 0;  // ✅ FIX: reset fatal-retry count on a clean connect
       // ✅ Only now is the socket actually safe to use for OTP delivery.
@@ -2660,7 +2787,7 @@ async function startSession(sessionId, opts = {}) {
 
           const welcomeText =
 `╔════════════════════════════════════╗
-║  🔥 *HENRY OCHIBOTS V19™* 🔥        ║
+║  🔥 *OCHIBOTS V19™* 🔥        ║
 ║       _by @henrytech254_            ║
 ╚════════════════════════════════════╝
 
@@ -2704,7 +2831,7 @@ Your bot is now live and connected. 🌐
 Type *.menu* to see all commands.
 Use *.addadmin 254XXXXXXXXX* to give friends access.
 
-_Henry Ochibots v19™ — @henrytech254_ 🔥`;
+_Ochibots™ — @henrytech254_ 🔥`;
 
           await delay(3000);
           await socket.sendMessage(selfJid, { text: welcomeText });

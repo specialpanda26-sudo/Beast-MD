@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ochibots™ — Command Console</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    /* ✅ WhatsApp-themed palette — teal/green accents, WA-style bubbles */
+    :root{ --accent:#25D366; --accent2:#128C7E; --bg:#0b141a; --card:#111b21; --wa-dark:#075E54; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      background:var(--bg); color:#e9edef; min-height:100vh;
+      font-family:'Space Grotesk','Segoe UI',system-ui,sans-serif;
+      display:flex; flex-direction:column; align-items:center; padding:0 0 60px;
+    }
+    .wrap{width:100%;max-width:420px;padding:0 16px}
+    .brand{
+      text-align:center;font-weight:700;letter-spacing:.5px;color:#fff;
+      background:var(--wa-dark); width:100%; padding:16px; margin-bottom:20px;
+      display:flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .brand .wa-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block;box-shadow:0 0 6px var(--accent)}
+    .brand span{color:var(--accent)}
+    .card{
+      background:var(--card); border:1px solid rgba(255,255,255,.06); border-radius:12px;
+      padding:22px; margin-bottom:16px;
+    }
+    h2{font-size:16px;margin-bottom:4px}
+    p.sub{color:#8a96a8;font-size:13px;margin-bottom:16px}
+    label{display:block;font-size:12px;color:#9fb0c6;margin-bottom:6px}
+    input{
+      width:100%;padding:12px 14px;background:#0a1420;border:1px solid rgba(255,255,255,.12);
+      border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:14px;
+      transition:border .2s;
+    }
+    input:focus{border-color:var(--accent2)}
+    button{
+      width:100%;padding:12px;border:none;border-radius:10px;cursor:pointer;
+      background:var(--accent2);color:#fff;
+      font-size:14px;font-weight:700;transition:opacity .2s,transform .1s;
+    }
+    button:hover{opacity:.9}
+    button:active{transform:scale(.98)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    button.secondary{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+    .msg{font-size:13px;margin-top:10px;min-height:18px}
+    .msg.err{color:#ff6b6b}
+    .msg.ok{color:#4ade80}
+    .hidden{display:none}
+    .badge{
+      display:inline-block;font-size:11px;padding:3px 10px;border-radius:20px;
+      background:rgba(37,211,102,.12);color:var(--accent);margin-bottom:12px;
+    }
+    .note{font-size:12px;color:#8696a0;margin-top:6px;line-height:1.5}
+    .convo-item{
+      display:flex;justify-content:space-between;gap:10px;padding:10px 12px;
+      background:#202c33;border:1px solid rgba(255,255,255,.05);border-radius:10px;
+      cursor:pointer;text-align:left;
+    }
+    .convo-item:hover{border-color:var(--accent)}
+    .convo-name{font-size:13px;font-weight:600;color:#e9edef}
+    .convo-preview{font-size:12px;color:#8696a0;margin-top:2px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .convo-time{font-size:11px;color:#8696a0;white-space:nowrap}
+    .convo-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+    .unread-pill{
+      background:var(--accent);color:#0b141a;font-weight:700;font-size:10.5px;
+      min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;
+      justify-content:center;padding:0 5px;
+    }
+    .bubble{max-width:85%;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.4}
+    .bubble.in{align-self:flex-start;background:#202c33;border:1px solid rgba(255,255,255,.05)}
+    .bubble.out{align-self:flex-end;background:#005c4b;color:#e9edef}
+    .bubble-time{font-size:10px;color:#8696a0;margin-top:4px}
+    .live-dot{
+      width:8px;height:8px;border-radius:50%;background:#3a4a52;display:inline-block;
+      margin-right:6px;transition:background .3s;
+    }
+    .live-dot.on{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+    .pic-preview{
+      width:72px;height:72px;border-radius:50%;object-fit:cover;background:#202c33;
+      display:block;margin:0 auto 12px;border:2px solid var(--accent2);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand"><span class="wa-dot"></span><span>OCHIBOTS</span>&nbsp;— Command Console</div>
+
+    <!-- LOGIN -->
+    <div class="card" id="loginCard">
+      <h2>Log in with your session</h2>
+      <p class="sub">Enter the session ID you paired with — we'll send a code to your linked WhatsApp number.</p>
+      <label>Session ID</label>
+      <input id="sessionId" placeholder="e.g. 254712345678 or your session name"/>
+      <button id="btnRequestOtp" onclick="requestOtp()">Send Code to WhatsApp</button>
+
+      <div id="otpBlock" class="hidden" style="margin-top:14px">
+        <label>Code (sent to <span id="sentTo"></span>)</label>
+        <input id="otpInput" inputmode="numeric" maxlength="6" placeholder="6-digit code"/>
+        <button id="btnVerifyOtp" onclick="verifyOtp()">Verify & Log In</button>
+      </div>
+      <div class="msg" id="loginMsg"></div>
+    </div>
+
+    <!-- CONSOLE (shown after login) -->
+    <div id="consoleArea" class="hidden">
+      <div class="card">
+        <span class="badge"><span class="live-dot" id="liveDot"></span>Logged in</span>
+        <h2>Inbox</h2>
+        <p class="sub">Conversations on your paired number. Tap one to read the thread. Updates live.</p>
+        <div id="conversationList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+        <button class="secondary" onclick="loadConversations()">Refresh Inbox</button>
+        <div class="msg" id="inboxMsg"></div>
+      </div>
+
+      <div class="card">
+        <h2>Profile Picture</h2>
+        <p class="sub">Upload a new WhatsApp profile photo (JPG/PNG, max 5MB).</p>
+        <img id="picPreview" class="pic-preview hidden" alt="Preview"/>
+        <input id="picFile" type="file" accept="image/*" onchange="previewPic(event)" style="margin-bottom:14px"/>
+        <button onclick="uploadPic()">Update Profile Picture</button>
+        <div class="msg" id="picMsg"></div>
+      </div>
+
+      <div class="card hidden" id="threadCard">
+        <h2 id="threadTitle">Thread</h2>
+        <div id="threadMessages" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;margin-bottom:10px"></div>
+        <button class="secondary" onclick="loadOlderMessages()">Load Older</button>
+        <button class="secondary" onclick="closeThread()" style="margin-top:8px">Close Thread</button>
+      </div>
+
+      <div class="card">
+        <h2>Send a Message</h2>
+        <label>To (phone number or group)</label>
+        <input id="sendTo" placeholder="254712345678"/>
+        <label>Message</label>
+        <input id="sendText" placeholder="Type your message"/>
+        <button onclick="doAction('send')">Send</button>
+        <div class="msg" id="sendMsg"></div>
+      </div>
+
+      <div class="card">
+        <h2>Update Status / About</h2>
+        <label>New status text</label>
+        <input id="statusText" placeholder="e.g. Available"/>
+        <button onclick="doAction('status')">Update Status</button>
+        <div class="msg" id="statusMsg"></div>
+      </div>
+
+      <div class="card">
+        <h2>Update Bio</h2>
+        <label>New bio text</label>
+        <input id="bioText" placeholder="e.g. Booking open — DM me"/>
+        <button onclick="doAction('bio')">Update Bio</button>
+        <div class="msg" id="bioMsg"></div>
+      </div>
+
+      <div class="card">
+        <h2>Update Profile Name</h2>
+        <label>New display name</label>
+        <input id="nameText" placeholder="e.g. Henry's Bot"/>
+        <button onclick="doAction('name')">Update Name</button>
+        <div class="msg" id="nameMsg"></div>
+        <div class="note">
+          Changing your registered phone number isn't available here — WhatsApp's real
+          number-migration is an official in-app flow, and doing it through an unofficial
+          library risks the account getting permanently banned.
+        </div>
+      </div>
+
+      <button class="secondary" onclick="logout()">Log out</button>
+    </div>
+  </div>
+
+<script>
+let SESSION_ID = "";
+let TOKEN = "";
+
+// ✅ NEW: if arriving from /panel's "Open Console →" link (/console?session=xyz),
+// pre-fill the session field so the customer doesn't have to re-type it.
+(function prefillSessionFromQuery(){
+  const params = new URLSearchParams(window.location.search);
+  const s = params.get("session");
+  if (s) {
+    document.addEventListener("DOMContentLoaded", () => {
+      const el = document.getElementById("sessionId");
+      if (el) el.value = s;
+    });
+  }
+})();
+
+function setMsg(id, text, ok){
+  const el = document.getElementById(id);
+  el.textContent = text || "";
+  el.className = "msg " + (ok ? "ok" : (text ? "err" : ""));
+}
+
+async function requestOtp(){
+  SESSION_ID = document.getElementById("sessionId").value.trim();
+  if(!SESSION_ID){ setMsg("loginMsg", "Enter your session ID first."); return; }
+  const btn = document.getElementById("btnRequestOtp");
+  btn.disabled = true; btn.textContent = "Sending…";
+  try{
+    const r = await fetch("/api/console/request-otp", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({session: SESSION_ID})
+    });
+    const data = await r.json();
+    if(!data.success){ setMsg("loginMsg", data.error || "Couldn't send the code."); return; }
+    document.getElementById("sentTo").textContent = data.sent_to || "your number";
+    document.getElementById("otpBlock").classList.remove("hidden");
+    setMsg("loginMsg", "Code sent — check WhatsApp.", true);
+  }catch(e){ setMsg("loginMsg", "Network error — try again."); }
+  finally{ btn.disabled = false; btn.textContent = "Send Code to WhatsApp"; }
+}
+
+async function verifyOtp(){
+  const otp = document.getElementById("otpInput").value.trim();
+  if(!otp){ setMsg("loginMsg", "Enter the code."); return; }
+  const btn = document.getElementById("btnVerifyOtp");
+  btn.disabled = true; btn.textContent = "Verifying…";
+  try{
+    const r = await fetch("/api/console/verify-otp", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({session: SESSION_ID, otp})
+    });
+    const data = await r.json();
+    if(!data.success){ setMsg("loginMsg", data.error || "Incorrect code."); return; }
+    TOKEN = data.token;
+    document.getElementById("loginCard").classList.add("hidden");
+    document.getElementById("consoleArea").classList.remove("hidden");
+    loadConversations();
+    connectLive();
+  }catch(e){ setMsg("loginMsg", "Network error — try again."); }
+  finally{ btn.disabled = false; btn.textContent = "Verify & Log In"; }
+}
+
+// ✅ NEW: live event stream (SSE) — new messages show up instantly instead
+// of waiting for a manual "Refresh Inbox" tap.
+let EVT_SOURCE = null;
+function connectLive(){
+  if (EVT_SOURCE) EVT_SOURCE.close();
+  const url = `/api/console/stream?session=${encodeURIComponent(SESSION_ID)}&token=${encodeURIComponent(TOKEN)}`;
+  EVT_SOURCE = new EventSource(url);
+  EVT_SOURCE.onopen = () => document.getElementById("liveDot")?.classList.add("on");
+  EVT_SOURCE.onerror = () => document.getElementById("liveDot")?.classList.remove("on");
+  EVT_SOURCE.onmessage = (e) => {
+    let event;
+    try { event = JSON.parse(e.data); } catch(_) { return; }
+    if (event.type !== "message") return;
+    // Always refresh the inbox list so previews/unread counts stay current.
+    loadConversations();
+    // If the open thread is this contact, append the bubble live too.
+    if (event.contact === CURRENT_CONTACT && !document.getElementById("threadCard").classList.contains("hidden")) {
+      const container = document.getElementById("threadMessages");
+      const el = document.createElement("div");
+      el.className = "bubble " + (event.direction === "out" ? "out" : "in");
+      el.innerHTML = `${(event.body || "").replace(/[<>&]/g, "")}<div class="bubble-time">${fmtTime(event.timestamp)}</div>`;
+      container.appendChild(el);
+      container.scrollTop = container.scrollHeight;
+      if (event.direction === "in") markRead(event.contact);
+    }
+  };
+}
+
+let CURRENT_CONTACT = "";
+let OLDEST_LOADED_TS = null;
+
+function fmtTime(ts){
+  const d = new Date(ts * 1000);
+  return d.toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+
+async function loadConversations(){
+  setMsg("inboxMsg", "Loading…");
+  try{
+    const r = await fetch(`/api/console/conversations?session=${encodeURIComponent(SESSION_ID)}`, {
+      headers: {"Authorization": "Bearer " + TOKEN}
+    });
+    const data = await r.json();
+    if(!data.success){ setMsg("inboxMsg", data.error || "Couldn't load inbox."); return; }
+    const list = document.getElementById("conversationList");
+    list.innerHTML = "";
+    if(!data.conversations.length){
+      list.innerHTML = '<div class="sub">No messages yet.</div>';
+    }
+    data.conversations.forEach(c => {
+      const el = document.createElement("div");
+      el.className = "convo-item";
+      el.onclick = () => openThread(c.contact, c.name);
+      const preview = (c.last_direction === "out" ? "You: " : "") + (c.last_message || "");
+      const unreadPill = c.unread_count > 0
+        ? `<span class="unread-pill">${c.unread_count > 99 ? "99+" : c.unread_count}</span>` : "";
+      el.innerHTML = `
+        <div>
+          <div class="convo-name">${(c.name || c.contact).replace(/[<>&]/g, "")}</div>
+          <div class="convo-preview">${preview.replace(/[<>&]/g, "")}</div>
+        </div>
+        <div class="convo-right">
+          <div class="convo-time">${fmtTime(c.timestamp)}</div>
+          ${unreadPill}
+        </div>`;
+      list.appendChild(el);
+    });
+    setMsg("inboxMsg", "");
+  }catch(e){ setMsg("inboxMsg", "Network error — try again."); }
+}
+
+async function openThread(contact, name){
+  CURRENT_CONTACT = contact;
+  OLDEST_LOADED_TS = null;
+  document.getElementById("threadTitle").textContent = "Thread — " + (name || contact);
+  document.getElementById("threadMessages").innerHTML = "";
+  document.getElementById("threadCard").classList.remove("hidden");
+  await loadOlderMessages();
+  markRead(contact);
+}
+
+async function markRead(contact){
+  try{
+    await fetch("/api/console/mark-read", {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "Authorization": "Bearer " + TOKEN},
+      body: JSON.stringify({session: SESSION_ID, contact})
+    });
+    loadConversations(); // refresh so the unread pill clears
+  }catch(e){}
+}
+
+async function loadOlderMessages(){
+  if(!CURRENT_CONTACT) return;
+  const before = OLDEST_LOADED_TS || (Date.now() / 1000 + 1);
+  try{
+    const r = await fetch(
+      `/api/console/messages?session=${encodeURIComponent(SESSION_ID)}&contact=${encodeURIComponent(CURRENT_CONTACT)}&before=${before}&limit=50`,
+      { headers: {"Authorization": "Bearer " + TOKEN} }
+    );
+    const data = await r.json();
+    if(!data.success || !data.messages.length) return;
+    const container = document.getElementById("threadMessages");
+    const frag = document.createDocumentFragment();
+    data.messages.forEach(m => {
+      const el = document.createElement("div");
+      el.className = "bubble " + (m.direction === "out" ? "out" : "in");
+      el.innerHTML = `${(m.body || "").replace(/[<>&]/g, "")}<div class="bubble-time">${fmtTime(m.timestamp)}</div>`;
+      frag.appendChild(el);
+    });
+    container.prepend(frag);
+    OLDEST_LOADED_TS = data.messages[0].timestamp;
+    if(!document.getElementById("threadMessages").dataset.scrolled){
+      container.scrollTop = container.scrollHeight;
+      document.getElementById("threadMessages").dataset.scrolled = "1";
+    }
+  }catch(e){}
+}
+
+function closeThread(){
+  document.getElementById("threadCard").classList.add("hidden");
+  CURRENT_CONTACT = "";
+  OLDEST_LOADED_TS = null;
+  delete document.getElementById("threadMessages").dataset.scrolled;
+}
+
+function previewPic(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = document.getElementById("picPreview");
+  img.src = URL.createObjectURL(file);
+  img.classList.remove("hidden");
+}
+
+async function uploadPic(){
+  const fileInput = document.getElementById("picFile");
+  const file = fileInput.files[0];
+  if(!file){ setMsg("picMsg", "Choose an image first."); return; }
+  if(file.size > 5 * 1024 * 1024){ setMsg("picMsg", "Image too large — 5MB max."); return; }
+  setMsg("picMsg", "Uploading…");
+  try{
+    const form = new FormData();
+    form.append("session", SESSION_ID);
+    form.append("image", file);
+    const r = await fetch("/api/console/pic", {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + TOKEN},
+      body: form
+    });
+    const data = await r.json();
+    setMsg("picMsg", data.success ? "Profile picture updated." : (data.error || "Something went wrong."), data.success);
+  }catch(e){ setMsg("picMsg", "Network error — try again."); }
+}
+
+async function doAction(kind){
+  const endpoints = { send: "/api/console/send", status: "/api/console/status", bio: "/api/console/bio", name: "/api/console/name" };
+  const msgIds = { send: "sendMsg", status: "statusMsg", bio: "bioMsg", name: "nameMsg" };
+  let body = { session: SESSION_ID };
+  if(kind === "send"){
+    body.to = document.getElementById("sendTo").value.trim();
+    body.text = document.getElementById("sendText").value.trim();
+  } else if(kind === "status"){
+    body.text = document.getElementById("statusText").value;
+  } else if(kind === "bio"){
+    body.text = document.getElementById("bioText").value;
+  } else if(kind === "name"){
+    body.name = document.getElementById("nameText").value.trim();
+  }
+  try{
+    const r = await fetch(endpoints[kind], {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "Authorization": "Bearer " + TOKEN},
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    setMsg(msgIds[kind], data.success ? "Done." : (data.error || "Something went wrong."), data.success);
+    if(kind === "send" && data.success){
+      document.getElementById("sendText").value = "";
+      loadConversations();
+      if(CURRENT_CONTACT) openThread(CURRENT_CONTACT, document.getElementById("threadTitle").textContent.replace("Thread — ", ""));
+    }
+  }catch(e){ setMsg(msgIds[kind], "Network error — try again."); }
+}
+
+function logout(){
+  if (EVT_SOURCE) { EVT_SOURCE.close(); EVT_SOURCE = null; }
+  document.getElementById("liveDot")?.classList.remove("on");
+  TOKEN = ""; SESSION_ID = "";
+  closeThread();
+  document.getElementById("conversationList").innerHTML = "";
+  document.getElementById("picPreview").classList.add("hidden");
+  document.getElementById("picFile").value = "";
+  document.getElementById("consoleArea").classList.add("hidden");
+  document.getElementById("loginCard").classList.remove("hidden");
+  document.getElementById("otpBlock").classList.add("hidden");
+  document.getElementById("sessionId").value = "";
+  document.getElementById("otpInput").value = "";
+  setMsg("loginMsg", "");
+}
+</script>
+</body>
+</html>

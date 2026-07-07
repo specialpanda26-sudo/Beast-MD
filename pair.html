@@ -234,7 +234,7 @@
       border:1px solid rgba(255,255,255,.1);
       border-radius:12px;color:#fff;font-size:15px;outline:none;
       transition:border .2s,box-shadow .2s;
-      margin-bottom:12px;
+      margin-bottom:18px;
     }
     .phone-input::placeholder{color:#3a3a4a}
     .phone-input:focus{
@@ -269,6 +269,19 @@
     .btn-generate:hover{opacity:.9;box-shadow:0 6px 32px rgba(124,58,237,.5)}
     .btn-generate:active{transform:scale(.98)}
     .btn-generate:disabled{opacity:.5;cursor:not-allowed}
+    /* ✅ FIX: the QR "Load QR Code" button reused the full-width
+       .btn-generate style, so under the 200px QR box it looked oversized
+       next to the phone-input button. Smaller, centered, auto-width. */
+    .btn-qr{
+      width:auto;padding:10px 22px;border-radius:10px;border:none;cursor:pointer;
+      background:linear-gradient(135deg,#7c3aed,var(--accent2));
+      color:#fff;font-size:13px;font-weight:700;letter-spacing:.3px;
+      transition:opacity .2s,transform .1s,box-shadow .2s;
+      box-shadow:0 4px 20px rgba(124,58,237,.3);
+    }
+    .btn-qr:hover{opacity:.9;box-shadow:0 6px 26px rgba(124,58,237,.45)}
+    .btn-qr:active{transform:scale(.98)}
+    .btn-qr:disabled{opacity:.5;cursor:not-allowed}
 
     /* ── LOADING ── */
     .loading-state{display:none;flex-direction:column;align-items:center;gap:14px;width:100%}
@@ -541,7 +554,6 @@
                   padding:12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;
                   color:#a78bfa;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);">
           🛠️ Download What Was Fixed (PDF)</a>
-        </div>
       </div>
 
       <!-- ERROR STATE -->
@@ -562,7 +574,7 @@
         <div class="qr-note">
           Scan the QR code with WhatsApp → <strong style="color:var(--accent2)">Linked Devices</strong> → Link a Device
         </div>
-        <button class="btn-generate" id="qrBtn" onclick="loadQR()" style="margin-top:4px">
+        <button class="btn-qr" id="qrBtn" onclick="loadQR()" style="margin-top:4px">
           📷 Load QR Code
         </button>
       </div>
@@ -583,7 +595,10 @@
   <div class="badges">
     <div class="badge"><div class="badge-icon">🔒</div><div class="badge-label">Encrypted</div></div>
     <div class="badge"><div class="badge-icon">⚡</div><div class="badge-label">Instant</div></div>
-    <div class="badge"><div class="badge-icon">📱</div><div class="badge-label">No QR Scan</div></div>
+    <!-- ✅ FIX: "No QR Scan" read like an error/status message. It was
+         actually describing the pair-code method as a scan-free option —
+         relabeled so it can't be misread as "the QR is broken". -->
+    <div class="badge"><div class="badge-icon">📱</div><div class="badge-label">Code or QR</div></div>
   </div>
 </div><!-- /main -->
 
