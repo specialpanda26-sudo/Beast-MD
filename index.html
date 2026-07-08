@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Henry Ochibots v19™</title>
+  <title>Ochibots™</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -518,6 +518,44 @@
       margin: 0;
     }
 
+    /* ✅ NEW: LIVE DEMO WIDGETS — try safe, no-session commands right here */
+    .widgets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+    .widget-card {
+      position: relative; background: var(--card);
+      border: 1px solid rgba(0,229,255,0.08); border-radius: 12px;
+      padding: 1.5rem 1.5rem 1.35rem; overflow: hidden;
+      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+    }
+    .widget-card:hover { border-color: rgba(0,229,255,0.25); box-shadow: 0 10px 40px rgba(0,0,0,0.35); }
+    .widget-card h3 { font-size: 0.98rem; font-weight: 600; margin-bottom: 0.35rem; display:flex; align-items:center; gap:0.5rem; }
+    .widget-card .cmd-tag { margin-bottom: 0.7rem; }
+    .widget-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+    .widget-input {
+      flex: 1; background: rgba(0,0,0,0.35); border: 1px solid var(--border); border-radius: 7px;
+      padding: 0.55rem 0.7rem; color: var(--text); font-size: 0.85rem; font-family: inherit;
+    }
+    .widget-input:focus { outline: none; border-color: var(--accent); }
+    .widget-btn {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      border: none; border-radius: 7px; padding: 0.55rem 1rem; color: #fff; font-weight: 700;
+      font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: opacity 0.2s;
+    }
+    .widget-btn:hover { opacity: 0.88; }
+    .widget-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .widget-select {
+      background: rgba(0,0,0,0.35); border: 1px solid var(--border); border-radius: 7px;
+      color: var(--text); font-size: 0.8rem; padding: 0.55rem 0.5rem; font-family: inherit;
+    }
+    .widget-out {
+      margin-top: 0.8rem; font-size: 0.83rem; color: var(--muted); word-break: break-word;
+      background: rgba(0,229,255,0.04); border: 1px solid rgba(0,229,255,0.1);
+      border-radius: 7px; padding: 0.65rem 0.8rem; min-height: 1.2rem; line-height: 1.55;
+    }
+    .widget-out.err { color: #ff8a8a; border-color: rgba(255,100,100,0.2); background: rgba(255,80,80,0.05); }
+    .widget-out a { color: var(--accent); }
+    .widget-out img { max-width: 140px; border-radius: 6px; display: block; margin-top: 0.4rem; }
+    .widget-note { font-size: 0.72rem; color: var(--muted); margin-top: 0.6rem; opacity: 0.7; }
+
     .glow-strip {
       position: relative; z-index: 1; height: 1px;
       background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
@@ -552,13 +590,14 @@
 <div class="radial-glow bottom"></div>
 
 <nav>
-  <div class="nav-logo">HENRY <span>OCHIBOTS</span> <span class="v">V19™</span></div>
+  <div class="nav-logo"><span>OCHIBOTS</span> <span class="v">V19™</span></div>
   <div class="nav-links">
     <a href="#commands">Commands</a>
     <a href="#how-it-works">How It Works</a>
     <a href="#deploy">Deploy</a>
     <a href="/register" class="nav-pair-btn" style="background:linear-gradient(90deg,#22d3ee,#a78bfa)">🪪 Register</a>
     <a href="/pair" class="nav-pair-btn">Pair Now</a>
+    <a href="/console" class="nav-pair-btn" style="background:linear-gradient(90deg,#7c3aed,#00e5ff)">💬 Console</a>
   </div>
   <div class="nav-status">
     <div class="pulse"></div>
@@ -578,6 +617,7 @@
     <a href="#deploy" onclick="closeMobileMenu()">🚀 Deploy</a>
     <a href="/register" onclick="closeMobileMenu()">🪪 Register</a>
     <a href="/panel" onclick="closeMobileMenu()">🔓 Bot Panel Login</a>
+    <a href="/console" onclick="closeMobileMenu()">💬 Chat Console (paired numbers)</a>
     <a href="/pair" class="nav-pair-btn">📱 Pair Now</a>
     <a href="/admin">🛡️ Admin Panel</a>
   </div>
@@ -590,7 +630,7 @@
 <!-- HERO -->
 <div class="hero">
   <div class="hero-bg-image"></div>
-  <div class="hero-badge">⚡ BUILT &amp; MAINTAINED BY HENRY — V19™ PRODUCTION BUILD</div>
+  <div class="hero-badge">⚡ BUILT &amp; MAINTAINED BY OCHIBOTS — V19™ PRODUCTION BUILD</div>
   <h1>
     <span class="line1">WhatsApp Automation</span>
     <span class="line2">Unleashed.</span>
@@ -608,7 +648,7 @@
       <div class="dot r"></div>
       <div class="dot y"></div>
       <div class="dot g"></div>
-      <div class="terminal-label">henry-beast-v19 — node</div>
+      <div class="terminal-label">ochibots-v19 — node</div>
     </div>
     <div class="terminal-body">
       <div class="t-line"><span class="t-muted">$</span> <span class="t-cyan">node</span> client_bridge.js</div>
@@ -617,7 +657,7 @@
       <div class="t-line"><span class="t-green">✔</span> Groq LLaMA-3 AI engine loaded</div>
       <div class="t-line"><span class="t-green">✔</span> SQLite database synchronized</div>
       <div class="t-line"><span class="t-green">✔</span> Pairing web UI active at /pair</div>
-      <div class="t-line"><span class="t-purple">⚡</span> Henry Ochibots v19™ — ALL SYSTEMS GO 🔥</div>
+      <div class="t-line"><span class="t-purple">⚡</span> Ochibots™ — ALL SYSTEMS GO 🔥</div>
     </div>
   </div>
 </div>
@@ -717,6 +757,64 @@
 
 <div class="divider"></div>
 
+<!-- ✅ NEW: LIVE DEMO WIDGETS -->
+<section>
+  <div class="reveal">
+    <div class="section-label">// try it now</div>
+    <div class="section-title">No WhatsApp needed for these</div>
+    <p class="section-sub">A few safe commands you can try right here in the browser — no login, no session, no strings.</p>
+  </div>
+
+  <div class="widgets-grid reveal">
+    <div class="widget-card">
+      <h3>🔗 Link Shortener</h3>
+      <div class="cmd-tag">.shortener [url]</div>
+      <div class="widget-row">
+        <input class="widget-input" id="w-shorten-in" placeholder="https://example.com/long-link" />
+        <button class="widget-btn" onclick="runWidget('shorten')">Go</button>
+      </div>
+      <div class="widget-out" id="w-shorten-out" style="display:none"></div>
+    </div>
+
+    <div class="widget-card">
+      <h3>📱 QR Code Generator</h3>
+      <div class="cmd-tag">.createqr [text]</div>
+      <div class="widget-row">
+        <input class="widget-input" id="w-qr-in" placeholder="Text or URL to encode" />
+        <button class="widget-btn" onclick="runWidget('qr')">Go</button>
+      </div>
+      <div class="widget-out" id="w-qr-out" style="display:none"></div>
+    </div>
+
+    <div class="widget-card">
+      <h3>📖 Dictionary Lookup</h3>
+      <div class="cmd-tag">.define [word]</div>
+      <div class="widget-row">
+        <input class="widget-input" id="w-define-in" placeholder="e.g. serendipity" />
+        <button class="widget-btn" onclick="runWidget('define')">Go</button>
+      </div>
+      <div class="widget-out" id="w-define-out" style="display:none"></div>
+    </div>
+
+    <div class="widget-card">
+      <h3>🔐 Base64 Encode/Decode</h3>
+      <div class="cmd-tag">.ebase / .dbase</div>
+      <div class="widget-row">
+        <select class="widget-select" id="w-base64-mode">
+          <option value="encode">Encode</option>
+          <option value="decode">Decode</option>
+        </select>
+        <input class="widget-input" id="w-base64-in" placeholder="Text to convert" />
+        <button class="widget-btn" onclick="runWidget('base64')">Go</button>
+      </div>
+      <div class="widget-out" id="w-base64-out" style="display:none"></div>
+    </div>
+  </div>
+  <p class="widget-note">These run through a sandboxed, rate-limited endpoint — not your WhatsApp session. On WhatsApp, the same commands work exactly like this, plus hundreds more.</p>
+</section>
+
+<div class="divider"></div>
+
 <!-- HOW IT WORKS -->
 <div id="how-it-works" class="pair-section" style="position:relative;">
   <div class="pair-bg-photo"></div>
@@ -729,7 +827,7 @@
   <div class="pair-card reveal" id="howCard">
     <div class="pair-logo">
       <div class="pair-logo-icon">🔐</div>
-      <div class="pair-logo-title">HENRY OCHIBOTS V19™</div>
+      <div class="pair-logo-title">OCHIBOTS V19™</div>
       <div class="pair-logo-sub">HOW IT WORKS</div>
     </div>
 
@@ -791,9 +889,9 @@
 
 <section style="text-align:center;padding-top:4rem;padding-bottom:4rem;">
   <div class="reveal">
-    <div class="section-label" style="justify-content:center;display:flex;">// work with henry</div>
+    <div class="section-label" style="justify-content:center;display:flex;">// work with ochibots</div>
     <div class="section-title">Want a bot like this for your number?</div>
-    <p class="section-sub" style="margin:0 auto 2rem;">Henry builds and deploys custom WhatsApp bots, HTTP configs, and web tools for clients across Kenya. Reach out to get set up.</p>
+    <p class="section-sub" style="margin:0 auto 2rem;">Ochibots builds and deploys custom WhatsApp bots, HTTP configs, and web tools for clients across Kenya. Reach out to get set up.</p>
     <div class="hero-cta" style="justify-content:center;">
       <!-- 📞 Contact number comes from PUBLIC_CONTACT_NUMBER env var, injected server-side -->
       <a href="https://wa.me/{{PUBLIC_CONTACT_NUMBER}}" target="_blank" class="btn-pair-hero" id="contact-whatsapp-btn">💬 Chat on WhatsApp</a>
@@ -803,7 +901,7 @@
 </section>
 
 <footer>
-  Built by <span>@henrytech254</span> · Henry Ochibots v19™ · <span>All systems online 🟢</span>
+  Built by <span>@henrytech254</span> · Ochibots™ · <span>All systems online 🟢</span>
 </footer>
 
 <script>
@@ -852,6 +950,58 @@
   reveals.forEach(r=>observer.observe(r));
 
   // PAIRING now lives entirely on /pair — see pair.html
+
+  // ✅ NEW: LIVE DEMO WIDGETS — safe, no-session commands, powered by
+  // /api/widgets/* (sandboxed + rate-limited server-side, see app.py)
+  async function runWidget(kind) {
+    const outEl = document.getElementById(`w-${kind}-out`);
+    outEl.style.display = "block";
+    outEl.classList.remove("err");
+    outEl.textContent = "Working…";
+    try {
+      let endpoint, payload;
+      if (kind === "shorten") {
+        endpoint = "/api/widgets/shorten";
+        payload = { url: document.getElementById("w-shorten-in").value.trim() };
+      } else if (kind === "qr") {
+        endpoint = "/api/widgets/qr";
+        payload = { text: document.getElementById("w-qr-in").value.trim() };
+      } else if (kind === "define") {
+        endpoint = "/api/widgets/define";
+        payload = { word: document.getElementById("w-define-in").value.trim() };
+      } else if (kind === "base64") {
+        endpoint = "/api/widgets/base64";
+        payload = {
+          mode: document.getElementById("w-base64-mode").value,
+          text: document.getElementById("w-base64-in").value
+        };
+      }
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        outEl.classList.add("err");
+        outEl.textContent = data.error || "Something went wrong.";
+        return;
+      }
+      if (kind === "shorten") {
+        outEl.innerHTML = `<a href="${data.result}" target="_blank" rel="noopener">${data.result}</a>`;
+      } else if (kind === "qr") {
+        outEl.innerHTML = `<img src="${data.result}" alt="QR code" />`;
+      } else if (kind === "define") {
+        outEl.innerHTML = `<strong>${data.result.word}</strong><br/>` +
+          data.result.meanings.map(m => m.replace(/[<>&]/g, "")).join("<br/>");
+      } else if (kind === "base64") {
+        outEl.textContent = data.result;
+      }
+    } catch (e) {
+      outEl.classList.add("err");
+      outEl.textContent = "Network error — try again.";
+    }
+  }
 </script>
 </body>
 </html>

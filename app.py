@@ -4782,6 +4782,112 @@ async def console_page():
     return Response((Path(__file__).parent / "console.html").read_text(encoding="utf-8"), mimetype="text/html")
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# ✅ NEW: website demo widgets — safe, no-session commands visitors can try
+# straight from index.html (no WhatsApp login needed). Each one proxies a
+# single external call server-side (never the browser directly), so no API
+# keys are exposed and everything is rate-limited per IP to stop abuse.
+# ══════════════════════════════════════════════════════════════════════════
+from collections import deque, defaultdict
+
+_widget_rate_log: dict = defaultdict(deque)  # ip -> deque[timestamps]
+WIDGET_RATE_LIMIT = 20     # max requests
+WIDGET_RATE_WINDOW = 300   # per 5 minutes, per IP, across all widgets combined
+
+def _widget_rate_ok(req) -> bool:
+    ip = req.headers.get("X-Forwarded-For", req.remote_addr or "unknown").split(",")[0].strip()
+    now = time.time()
+    log = _widget_rate_log[ip]
+    while log and now - log[0] > WIDGET_RATE_WINDOW:
+        log.popleft()
+    if len(log) >= WIDGET_RATE_LIMIT:
+        return False
+    log.append(now)
+    return True
+
+
+@app.route("/api/widgets/shorten", methods=["POST"])
+async def widget_shorten():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url or not url.startswith(("http://", "https://")):
+        return jsonify({"success": False, "error": "Enter a full URL starting with http:// or https://"}), 400
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get("https://tinyurl.com/api-create.php", params={"url": url})
+        if r.status_code != 200 or not r.text.startswith("http"):
+            raise ValueError("shortener service error")
+        return jsonify({"success": True, "result": r.text.strip()})
+    except Exception:
+        return jsonify({"success": False, "error": "Could not shorten that URL right now."}), 502
+
+
+@app.route("/api/widgets/qr", methods=["POST"])
+async def widget_qr():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()[:500]  # cap length, this is a public demo endpoint
+    if not text:
+        return jsonify({"success": False, "error": "Enter some text or a URL to encode."}), 400
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get("https://api.qrserver.com/v1/create-qr-code/",
+                                  params={"size": "300x300", "data": text})
+        if r.status_code != 200:
+            raise ValueError("qr service error")
+        import base64
+        b64 = base64.b64encode(r.content).decode("ascii")
+        return jsonify({"success": True, "result": f"data:image/png;base64,{b64}"})
+    except Exception:
+        return jsonify({"success": False, "error": "Could not generate a QR code right now."}), 502
+
+
+@app.route("/api/widgets/define", methods=["POST"])
+async def widget_define():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    word = (data.get("word") or "").strip()[:80]
+    if not word:
+        return jsonify({"success": False, "error": "Enter a word to look up."}), 400
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}")
+        if r.status_code != 200:
+            return jsonify({"success": False, "error": f"No definition found for \"{word}\"."}), 404
+        entry = r.json()[0]
+        meanings = []
+        for m in entry.get("meanings", [])[:3]:
+            defn = m["definitions"][0]["definition"]
+            meanings.append(f"({m['partOfSpeech']}) {defn}")
+        return jsonify({"success": True, "result": {"word": entry["word"], "meanings": meanings}})
+    except Exception:
+        return jsonify({"success": False, "error": f"No definition found for \"{word}\"."}), 404
+
+
+@app.route("/api/widgets/base64", methods=["POST"])
+async def widget_base64():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    mode = (data.get("mode") or "encode").strip()
+    text = (data.get("text") or "")[:2000]
+    if not text:
+        return jsonify({"success": False, "error": "Enter some text first."}), 400
+    import base64
+    try:
+        if mode == "decode":
+            result = base64.b64decode(text.encode("utf-8")).decode("utf-8", errors="replace")
+        else:
+            result = base64.b64encode(text.encode("utf-8")).decode("ascii")
+        return jsonify({"success": True, "result": result})
+    except Exception:
+        return jsonify({"success": False, "error": "Couldn't decode that — is it valid Base64?"}), 400
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)

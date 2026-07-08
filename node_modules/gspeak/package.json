@@ -1,0 +1,82 @@
+{
+  "name": "gspeak",
+  "version": "0.0.4",
+  "description": "Google Text to Speech — a modern TypeScript rewrite of gtts with zero deprecated dependencies",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "bin": {
+    "gspeak": "./dist/bin/gspeak.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "rimraf dist",
+    "build": "tsc -p .",
+    "prepublishOnly": "npm run build",
+    "lint": "eslint src/**/*.ts bin/**/*.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "verify": "npm run build && npx ts-node verify-languages.ts"
+  },
+  "keywords": [
+    "google",
+    "tts",
+    "text-to-speech",
+    "gtts",
+    "gspeak",
+    "speech",
+    "audio",
+    "mp3",
+    "typescript"
+  ],
+  "author": "Qasim Ali",
+  "license": "MIT",
+  "dependencies": {
+    "yargs": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/yargs": "^17.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "eslint": "^9.0.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^4.1.0"
+  },
+  "publishConfig": {
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GlobalTechInfo/gspeak.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GlobalTechInfo/gspeak/issues"
+  },
+  "homepage": "https://github.com/GlobalTechInfo/gspeak#readme",
+  "vitest": {
+    "coverage": {
+      "provider": "v8",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "exclude": [
+        "src/index.ts"
+      ],
+      "reporter": [
+        "text",
+        "html"
+      ],
+      "thresholds": {
+        "lines": 100,
+        "functions": 100,
+        "branches": 100,
+        "statements": 100
+      }
+    }
+  }
+}
