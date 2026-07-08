@@ -19,11 +19,7 @@ Object.assign(module.exports, (() => {
    *                                                                           *
    *                     Developed By Qasim Ali                                *
    *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
    *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
    *                                                                           *
    *    Description: This file is part of the MEGA-MD Project.                 *
    *                 Unauthorized copying or distribution is prohibited.       *
@@ -270,7 +266,7 @@ Object.assign(module.exports, (() => {
             const caption = `📘 *Facebook Downloader*
 🎞 Quality: *${selected.resolution || 'Unknown'}*
 
-> *_Downloaded by Henry Ochibots v19_*`;
+> *_Downloaded by Ochibots_*`;
             await sock.sendMessage(chatId, { video: { url: videoUrl }, mimetype: 'video/mp4', caption }, { quoted: message });
         }
         catch (err) {
@@ -550,7 +546,7 @@ Object.assign(module.exports, (() => {
                 document: { url },
                 fileName: filename,
                 mimetype: 'application/zip',
-                caption: `📦 *Repository:* ${user}/${repo}\n✨ *Cloned by Henry Ochibots v19*`
+                caption: `📦 *Repository:* ${user}/${repo}\n✨ *Cloned by Ochibots*`
             }, { quoted: message });
         }
         catch (err) {
@@ -641,13 +637,13 @@ Object.assign(module.exports, (() => {
                     await sock.sendMessage(chatId, {
                         video: { url },
                         mimetype: 'video/mp4',
-                        caption: '📥 *Downloaded by Henry Ochibots v19*'
+                        caption: '📥 *Downloaded by Ochibots*'
                     }, { quoted: message });
                 }
                 else {
                     await sock.sendMessage(chatId, {
                         image: { url },
-                        caption: '📥 *Downloaded by Henry Ochibots v19*'
+                        caption: '📥 *Downloaded by Ochibots*'
                     }, { quoted: message });
                 }
                 if (i < mediaList.length - 1) {
@@ -1764,6 +1760,15 @@ Object.assign(module.exports, (() => {
       }
       throw new Error('All download attempts failed');
   };
+  // ✅ NEW: try the self-hosted yt-dlp pipeline first (properly maintained,
+  // updated on every deploy — see app.py's /internal/ytdl). Only fall back
+  // to the third-party scraper above if that fails for any reason, so
+  // nothing that worked before stops working.
+  const downloadViaYtdlp = async (apiClient, url, mode = 'video') => {
+    const { data } = await apiClient.post('/internal/ytdl', { url, mode }, { timeout: 50000 });
+    if (!data?.success || !data.url) throw new Error(data?.error || 'yt-dlp had no result for that link');
+    return { downloadUrl: data.url, title: data.title };
+  };
   return {
 
     // ── .video ─── Download YouTube videos by link or search | usage: .video <youtube link | search query>
@@ -1813,12 +1818,16 @@ Object.assign(module.exports, (() => {
                 image: { url: thumb },
                 caption: `🎬 *${videoTitle || query}*\n⬇️ Downloading... *(may take up to 30s)*`
             }, { quoted: message });
-            const videoData = await downloadWithRetry(videoUrl);
+            const videoData = await downloadViaYtdlp(h.apiClient, videoUrl, 'video')
+                .catch(async (ytErr) => {
+                    console.log('[VIDEO] internal yt-dlp failed, falling back to scraper:', ytErr.message);
+                    return downloadWithRetry(videoUrl);
+                });
             await sock.sendMessage(chatId, {
                 video: { url: videoData.downloadUrl },
                 mimetype: 'video/mp4',
                 fileName: `${videoData.title || videoTitle || 'video'}.mp4`,
-                caption: `🎬 *${videoData.title || videoTitle || 'Video'}*\n\n> *_Downloaded by Henry Ochibots v19_*`
+                caption: `🎬 *${videoData.title || videoTitle || 'Video'}*\n\n> *_Downloaded by Ochibots_*`
             }, { quoted: message });
         }
         catch (err) {

@@ -380,6 +380,13 @@ async def get_video_url(url: str) -> dict:
         proc = await asyncio.create_subprocess_exec(
             "yt-dlp", "--dump-json", "--no-playlist",
             "-f", "best[ext=mp4][filesize<50M]/best[ext=mp4]/best",
+            # ✅ NEW: as of 2025, YouTube started blocking datacenter/cloud IPs
+            # (Render's included) with "Sign in to confirm you're not a bot" on
+            # the default web client. The android/ios clients use a different
+            # auth path that isn't subject to that same IP-based block, so
+            # falling back through them recovers most links that would
+            # otherwise fail purely because of where this bot is hosted.
+            "--extractor-args", "youtube:player_client=android,ios,web",
             "--no-warnings", url,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
@@ -393,7 +400,10 @@ async def get_video_url(url: str) -> dict:
                 "duration": data.get("duration_string", ""),
                 "filesize": data.get("filesize", 0)
             }
-        return {"success": False, "error": stderr.decode()[:300]}
+        err = stderr.decode()[:300]
+        if "Sign in to confirm" in err or "not a bot" in err:
+            err = "YouTube is blocking this server's IP for that video right now. Try a different link, or try again shortly."
+        return {"success": False, "error": err}
     except asyncio.TimeoutError:
         return {"success": False, "error": "Timed out. Try a shorter video."}
     except Exception as e:
@@ -405,6 +415,7 @@ async def get_audio_url(url: str) -> dict:
         proc = await asyncio.create_subprocess_exec(
             "yt-dlp", "--dump-json", "--no-playlist",
             "-f", "bestaudio[ext=m4a]/bestaudio/best",
+            "--extractor-args", "youtube:player_client=android,ios,web",
             "--no-warnings", url,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
@@ -417,7 +428,10 @@ async def get_audio_url(url: str) -> dict:
                 "title": data.get("title", "Audio"),
                 "ext": data.get("ext", "mp3")
             }
-        return {"success": False, "error": stderr.decode()[:300]}
+        err = stderr.decode()[:300]
+        if "Sign in to confirm" in err or "not a bot" in err:
+            err = "YouTube is blocking this server's IP for that video right now. Try a different link, or try again shortly."
+        return {"success": False, "error": err}
     except asyncio.TimeoutError:
         return {"success": False, "error": "Timed out. Try again."}
     except Exception as e:
@@ -3179,6 +3193,25 @@ async def bot_owner_number():
     change made in the Admin Panel takes effect without a redeploy/restart.
     Not part of the public admin API (same convention as /bot/features)."""
     return jsonify({"owner_number": await _get_effective_owner_number()})
+
+
+@app.route("/internal/ytdl", methods=["POST"])
+async def internal_ytdl():
+    """✅ NEW — internal — called by .video/.ytdl/.ytmp4/.play/.plays instead
+    of the old third-party scraper (api.qasimdev.dpdns.org, a stranger's free
+    API with a hardcoded shared key, capped at 360p, no uptime guarantee).
+    This uses the yt-dlp + Deno pipeline the Dockerfile already keeps
+    up to date on every build — same trust level as /bot/features above,
+    Node and Python share a network so no separate auth needed here.
+    The old scraper is kept as an automatic fallback in the plugin code
+    (not removed), in case yt-dlp itself ever fails on a specific link."""
+    data = await request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    mode = (data.get("mode") or "video").strip()
+    if not url:
+        return jsonify({"success": False, "error": "url is required"}), 400
+    result = await (get_audio_url(url) if mode == "audio" else get_video_url(url))
+    return jsonify(result)
 
 
 @app.route("/admin/session-antiban", methods=["GET"])

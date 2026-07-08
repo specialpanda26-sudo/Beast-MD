@@ -130,6 +130,13 @@ Object.assign(module.exports, (() => {
       }
       throw new Error('All download attempts failed');
   };
+  // ✅ NEW: same self-hosted yt-dlp fallback chain as ported_download.js —
+  // try the properly-maintained pipeline first, old scraper as backup only.
+  const downloadAudioViaYtdlp = async (apiClient, url) => {
+    const { data } = await apiClient.post('/internal/ytdl', { url, mode: 'audio' }, { timeout: 50000 });
+    if (!data?.success || !data.url) throw new Error(data?.error || 'yt-dlp had no result for that link');
+    return { downloadUrl: data.url, title: data.title };
+  };
   return {
 
     // ── .play ─── Search and download a song as MP3 from YouTube | usage: .play <song name>
@@ -164,10 +171,14 @@ Object.assign(module.exports, (() => {
             await sock.sendMessage(chatId, {
                 text: `✅ *Found:* ${video.title}\n⏱️ ${video.timestamp}\n👤 ${video.author.name}\n\n⏳ *Downloading... (this may take up to 30s)*`
             }, { quoted: message });
-            const songData = await downloadWithRetry(video.url);
+            const songData = await downloadAudioViaYtdlp(h.apiClient, video.url)
+                .catch(async (ytErr) => {
+                    console.log('[PLAY] internal yt-dlp failed, falling back to scraper:', ytErr.message);
+                    return downloadWithRetry(video.url);
+                });
             let thumbnailBuffer;
             try {
-                const img = await axios.get(songData.thumbnail, { responseType: 'arraybuffer', timeout: 15000 });
+                const img = await axios.get(songData.thumbnail || video.thumbnail, { responseType: 'arraybuffer', timeout: 15000 });
                 thumbnailBuffer = Buffer.from(img.data);
             }
             catch { /* no thumbnail */ }
@@ -213,11 +224,7 @@ Object.assign(module.exports, (() => {
    *                                                                           *
    *                     Developed By Qasim Ali                                *
    *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
    *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
    *                                                                           *
    *    Description: This file is part of the MEGA-MD Project.                 *
    *                 Unauthorized copying or distribution is prohibited.       *
@@ -452,11 +459,7 @@ Object.assign(module.exports, (() => {
    *                                                                           *
    *                     Developed By Qasim Ali                                *
    *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
    *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
    *                                                                           *
    *    Description: This file is part of the MEGA-MD Project.                 *
    *                 Unauthorized copying or distribution is prohibited.       *
