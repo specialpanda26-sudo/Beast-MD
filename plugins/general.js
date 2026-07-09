@@ -284,10 +284,10 @@ ${menuBox('✨', 'ALWAYS-ON FEATURES')}
 ${boxClose}
 
 ${menuBox('🆕', 'MORE COMMANDS', '(874 total loaded)')}
-│➽ Games, group-guard, notes, sports scores, URL tools, temp mail,
-│  text effects, downloads, stickers, admin tools, search & more —
-│  this menu only shows the core set.
-│➽ ${p}menu all — 📚 EVERY command, described (sent as several messages)
+│➽ Every one of the 874 loaded commands, described, is sent right
+│  after this as follow-up messages — this card is just the quick
+│  summary up top.
+│➽ ${p}menu quick — Skip the full catalog, just this quick view
 │➽ ${p}commands — 📋 Full flat list of everything currently loaded
 │➽ ${p}commands sticker — 🔎 e.g. search loaded commands by keyword
 │➽ ${p}loadmenu / ${p}smenu — Same menu you're looking at now (all one command)
@@ -337,7 +337,14 @@ ${boxClose}
     // collapsed under their base command. Left off by default so a plain
     // .menu stays the fast, curated view above; ".menu all" is the
     // comprehensive one, gated to what the caller's permission tier can see.
-    const wantsFull = args && args[0] && ['all', 'full', 'everything'].includes(args[0].toLowerCase());
+    // ── .menu quick / .menu fast ─────────────────────────────────────────
+    // Plain ".menu" now sends the FULL catalog by default (every one of the
+    // 874 live commands, described — see assets/commands-db.json +
+    // scripts/build-command-db.js). ".menu quick" skips that and gives you
+    // just the fast curated view above, same as the old default — kept
+    // rather than removed, per the "never remove, only add" rule.
+    const wantsQuickOnly = args && args[0] && ['quick', 'fast', 'short'].includes(args[0].toLowerCase());
+    const wantsFull = !wantsQuickOnly;
     if (wantsFull) {
       try {
         const { buildFullCatalogMessages } = require('../lib_ported/menuCatalog.js');
