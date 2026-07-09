@@ -4,2120 +4,6991 @@
     "usage": ".8ball Will I be rich?",
     "description": "Ask the magic 8-ball a question",
     "category": "fun",
-    "source": "ported_fun.js"
+    "source": "ported_fun.js",
+    "quality": "source"
   },
   {
     "command": "about",
     "usage": ".about — get someone's WhatsApp \"About\" status text",
-    "description": ".about (your own) | .about @user | .about 254712345678 | reply with .about   //",
+    "description": "about",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "source"
+  },
+  {
+    "command": "abw",
+    "usage": ".abw",
+    "description": "Alias for .antibadword",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "acall",
+    "usage": ".acall",
+    "description": "Alias for .anticall",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "accept",
+    "usage": ".accept",
+    "description": "Approve one pending group join request by number",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "acceptall",
+    "usage": ".acceptall",
+    "description": "Approve all pending group join requests at once",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "achat",
+    "usage": ".achat",
+    "description": "Alias for .chatbot",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "active",
+    "usage": ".active [hours]",
+    "description": "top most active members",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "activity",
+    "usage": ".activity [hours]",
+    "description": "message volume for this group over a window (default 24h)",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
   },
   {
     "command": "add",
     "usage": ".add",
-    "description": ".add [number with country code]",
+    "description": "Add a member to the group by number",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "manual"
   },
   {
     "command": "addadmin",
     "usage": ".addadmin",
-    "description": ".addadmin 254XXXXXXXXX",
+    "description": "Add a sub-admin by number",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "addcmd",
+    "usage": ".addcmd",
+    "description": "Alias for .setcmd",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "addcoowner",
     "usage": ".addcoowner / .removecoowner / .listcoowners",
-    "description": ".addcoowner 254XXXXXXXXX",
+    "description": "Add a co-owner (full access) by number",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "addfunds",
     "usage": ".addfunds <amount> <mpesa_code>",
-    "description": "* .addfunds <amount> <mpesa_code>\\n",
+    "description": ".addfunds <amount> <mpesa_code>",
     "category": "wallet",
-    "source": "wallet.js"
+    "source": "wallet.js",
+    "quality": "source"
+  },
+  {
+    "command": "addnote",
+    "usage": ".addnote",
+    "description": "Save a named note in this chat",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "manual"
   },
   {
     "command": "addplugin",
     "usage": ".addplugin <Gist URL>",
     "description": "Install a plugin from a GitHub Gist URL (owner only)",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "addreply",
     "usage": ".addreply <trigger> | <response>\\nFor exact match: .addreply exact:<trigger> | <response>\\nUse {name} in response to mention sender name",
     "description": "Add an auto-reply trigger",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "addtogroup",
     "usage": ".addtogroup",
-    "description": "* run this command inside the group you want people added to:\\n${",
+    "description": "run this command inside the group you want people added to",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "source"
+  },
+  {
+    "command": "adduser",
+    "usage": ".adduser <number>",
+    "description": "different from .add: takes a plain number arg",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "adminclearnotes",
+    "usage": ".adminclearnotes",
+    "description": "── Admin variants (owner/sub-admin can manage notes in ANY chat by id) ──",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "source"
+  },
+  {
+    "command": "admindelnote",
+    "usage": ".admindelnote",
+    "description": "Delete a note in any chat by JID (owner/sub-admin)",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "manual"
+  },
+  {
+    "command": "adminlist",
+    "usage": ".adminlist",
+    "description": "Alias for .staff",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "admins",
+    "usage": ".admins",
+    "description": "list current group admins",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "adminupdatenote",
+    "usage": ".adminupdatenote",
+    "description": "Update a note in any chat by JID (owner/sub-admin)",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "manual"
+  },
+  {
+    "command": "aiimage",
+    "usage": ".aiimage",
+    "description": "Alias for .dalle",
+    "category": "ai",
+    "source": "ported_ai.js",
+    "quality": "alias"
+  },
+  {
+    "command": "airtelmoney",
+    "usage": ".airtelmoney",
+    "description": "Alias for .momo",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "aivideo",
+    "usage": ".aivideo",
+    "description": "Alias for .sora",
+    "category": "ai",
+    "source": "ported_ai.js",
+    "quality": "alias"
   },
   {
     "command": "alamy",
     "usage": ".alamy <Alamy URL>",
     "description": "Download image or video from Alamy URL",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "alamydl",
+    "usage": ".alamydl",
+    "description": "Alias for .alamy",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "alamydownload",
+    "usage": ".alamydownload",
+    "description": "Alias for .alamy",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "alink",
+    "usage": ".alink",
+    "description": "Alias for .antilink",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "alive",
     "usage": ".alive",
     "description": "Check bot status and system info",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
+  },
+  {
+    "command": "allnotes",
+    "usage": ".allnotes",
+    "description": "Alias for .getnotes",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "alias"
+  },
+  {
+    "command": "alwaysonline",
+    "usage": ".alwaysonline",
+    "description": "Alias for .stealth",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "an1apk",
+    "usage": ".an1apk",
+    "description": "Alias for .apkdl",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "analyze",
+    "usage": ".analyze [hours]",
+    "description": "combined summary (activity + top people + topics)",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "animeimg",
+    "usage": ".animeimg",
+    "description": "Alias for .animes",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "animepic",
+    "usage": ".animepic",
+    "description": "Alias for .animes",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "animes",
     "usage": ".animes <anime_name>",
     "description": "Send random anime images",
     "category": "menu",
-    "source": "ported_menu.js"
+    "source": "ported_menu.js",
+    "quality": "source"
   },
   {
     "command": "announce",
     "usage": ".announce — owner-only broadcast to everyone who's messaged the bot",
-    "description": ".announce [message] // Queues the message on the backend",
+    "description": "announce [message]",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
+  },
+  {
+    "command": "announcedm",
+    "usage": ".announcedm",
+    "description": "Alias for .broadcastdm",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "antibad",
+    "usage": ".antibad",
+    "description": "Alias for .antibadword",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "antibadwarn",
+    "usage": ".antibadwarn",
+    "description": "Toggle warning users before deleting their bad-word messages",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
   },
   {
     "command": "antibadword",
     "usage": ".antibadword <on|off|add|remove|list>",
     "description": "Configure anti-badword filter to delete messages containing inappropriate words",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
   },
   {
     "command": "antibanstats",
     "usage": ".antibanstats",
-    "description": "antibanstats command",
+    "description": "Health/rate-limit/session status for this number",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "anticall",
     "usage": ".anticall <on|off|status>",
     "description": "Enable or disable auto-blocking of incoming calls",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "antidelete",
+    "usage": ".antidelete on/off",
+    "description": "per-chat toggle. When on, client_bridge.js's",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "antidemote",
+    "usage": ".antidemote",
+    "description": "Toggle auto-block of unauthorized demotions in this group",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "antigroupmention",
+    "usage": ".antigroupmention",
+    "description": "Toggle auto-warn when someone @-mentions the whole group",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
   },
   {
     "command": "antilink",
     "usage": ".antilink <on|off|set>",
     "description": "Prevent users from sending links in the group",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "antipm",
+    "usage": ".antipm",
+    "description": "Alias for .pmblocker",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "antipromote",
+    "usage": ".antipromote",
+    "description": "Toggle auto-block of unauthorized promotions in this group",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
   },
   {
     "command": "antispam",
     "usage": ".antispam",
-    "description": ".antispam on/off",
+    "description": "antispam on",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "source"
   },
   {
     "command": "antitag",
     "usage": ".antitag <on|off|set>",
     "description": "Prevent users from tagging all members",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "apk",
+    "usage": ".apk",
+    "description": "Alias for .apkdl",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "apkdl",
     "usage": ".apkdl <apk_name>",
     "description": "Search APKs and download by reply",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "app",
+    "usage": ".app",
+    "description": "Alias for .apkdl",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "appdl",
+    "usage": ".appdl",
+    "description": "Alias for .apkdl",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "approvejoin",
+    "usage": ".approvejoin",
+    "description": "Alias for .joinrequests",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "archive",
+    "usage": ".archive",
+    "description": "Alias for .archivechat",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "archivechat",
     "usage": ".archivechat <archive|unarchive>",
     "description": "Archive or unarchive the current chat",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "at",
+    "usage": ".at",
+    "description": "Alias for .antitag",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "atom",
+    "usage": ".atom",
+    "description": "Alias for .element",
+    "category": "search",
+    "source": "ported_search.js",
+    "quality": "alias"
   },
   {
     "command": "attp",
     "usage": ".attp <text>",
     "description": "Generate an animated sticker from text",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
   },
   {
     "command": "audiofx",
     "usage": ".bass / .nightcore (reply to audio)",
     "description": "Apply audio effects to voice notes",
     "category": "menu",
-    "source": "ported_menu.js"
+    "source": "ported_menu.js",
+    "quality": "source"
   },
   {
     "command": "audiomack",
     "usage": ".audiomack — download from a direct Audiomack link",
-    "description": ".audiomack [Audiomack link] — for search by name, use .song [name] instead (sear",
+    "description": "audiomack [Audiomack link]",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "source"
+  },
+  {
+    "command": "aup",
+    "usage": ".aup",
+    "description": "Alias for .aupload",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
   },
   {
     "command": "aupload",
     "usage": ".aupload (reply to image/video/gif/sticker)",
     "description": "Upload media to cloud and get URL",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
+  },
+  {
+    "command": "autobio",
+    "usage": ".autobio",
+    "description": "Alias for .setbio",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "autoreact",
+    "usage": ".autoreact",
+    "description": "Bot reacts to every message in this chat",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "manual"
   },
   {
     "command": "autoread",
     "usage": ".autoread <on|off>",
     "description": "Toggle automatic message reading (blue ticks)",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "autoreadmsg",
+    "usage": ".autoreadmsg",
+    "description": "Alias for .autoread",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "autoreplies",
+    "usage": ".autoreplies",
+    "description": "Alias for .listreplies",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "autoreply",
+    "usage": ".autoreply",
+    "description": "Manage keyword auto-replies from chat (add/remove/list)",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "manual"
   },
   {
     "command": "autostatus",
     "usage": ".autostatus <on|off|react on|react off>",
     "description": "Automatically view and react to WhatsApp statuses",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "autotype",
+    "usage": ".autotype",
+    "description": "Alias for .autotyping",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "autotyping",
     "usage": ".autotyping <on|off>",
     "description": "Toggle auto-typing indicator when bot is processing messages",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "autoview",
+    "usage": ".autoview on/off",
+    "description": "per-chat toggle. When on, view-once media sent here",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "ayah",
+    "usage": ".ayah",
+    "description": "Alias for .quran",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "b64",
+    "usage": ".b64",
+    "description": "Alias for .base64",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "badword",
+    "usage": ".badword",
+    "description": "Alias for .antibadword",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "badwords",
+    "usage": ".badwords",
+    "description": "Manage this group's banned-word list (add/remove/list)",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "ban",
+    "usage": ".ban @user [reason]",
+    "description": "kick + record so re-adds can be flagged",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
   },
   {
     "command": "base64",
     "usage": ".base64 <text> OR reply to a message",
     "description": "Encode text to Base64",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "bass",
+    "usage": ".bass",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "bc",
+    "usage": ".bc",
+    "description": "Alias for .broadcast",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "bcdm",
+    "usage": ".bcdm",
+    "description": "Alias for .broadcastdm",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "bcgc",
     "usage": ".bcgc",
-    "description": ".bcgc [message]\\nExample: .bcgc Good morning everyone!",
+    "description": "bcgc [message]",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "source"
+  },
+  {
+    "command": "bfcode",
+    "usage": ".bfcode",
+    "description": "Alias for .brainfuck",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "bfdecode",
     "usage": "Reply to BF code with .bfdecode",
     "description": "Decode/Run Brainfuck code",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "bfread",
+    "usage": ".bfread",
+    "description": "Alias for .bfdecode",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "bgremove",
+    "usage": ".bgremove",
+    "description": "Alias for .removebg",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "bio",
     "usage": ".bio",
-    "description": ".bio [text]",
+    "description": "Update the bot's WhatsApp bio/about text",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "blockpm",
+    "usage": ".blockpm",
+    "description": "Alias for .pmblocker",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "blown",
+    "usage": ".blown",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "blur",
     "usage": ".blur (reply to an image or send image with caption)",
     "description": "Apply a blur effect to an image",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "blurimg",
+    "usage": ".blurimg",
+    "description": "Alias for .blur",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "blurpic",
+    "usage": ".blurpic",
+    "description": "Alias for .blur",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "bollywood",
+    "usage": ".bollywood",
+    "description": "Alias for .movie",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "bot",
+    "usage": ".bot",
+    "description": "Alias for .alive",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
   },
   {
     "command": "brainfuck",
     "usage": ".brainfuck <text> OR reply to a message",
     "description": "Convert text into Brainfuck code",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
   },
   {
     "command": "broadcast",
     "usage": ".broadcast <message>",
     "description": "Broadcast a message to all groups the bot is in",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "broadcastdm",
     "usage": ".broadcastdm <message>",
     "description": "Broadcast a message to all saved DM contacts",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "brun",
+    "usage": ".brun",
+    "description": "Alias for .bfdecode",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "bye",
+    "usage": ".bye",
+    "description": "Alias for .goodbye",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "calc",
     "usage": ".calc <expression>",
     "description": "Advanced calculator",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "calculate",
+    "usage": ".calculate",
+    "description": "Alias for .calc",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "callblock",
+    "usage": ".callblock",
+    "description": "Alias for .anticall",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "cancelschedule",
+    "usage": ".cancelschedule",
+    "description": "Alias for .schedulecancel",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "carrier",
+    "usage": ".carrier",
+    "description": "Alias for .siminfo",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "cat",
+    "usage": ".cat",
+    "description": "Alias for .inspect",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "catbox",
+    "usage": ".catbox",
+    "description": "── .catbox — reply to an image/video/audio to get a permanent catbox.moe link",
+    "category": "urltools",
+    "source": "urltools.js",
+    "quality": "source"
   },
   {
     "command": "channelid",
     "usage": ".channelid <url>",
     "description": "Get the internal JID of a WhatsApp Channel",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
   },
   {
     "command": "character",
     "usage": ".character @user",
-    "description": "character command",
+    "description": "AI-analyze a mentioned/replied user's chat personality",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "manual"
+  },
+  {
+    "command": "chatai",
+    "usage": ".chatai",
+    "description": "Alias for .gpt",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "alias"
   },
   {
     "command": "chatbot",
     "usage": ".chatbot <on|off>",
     "description": "Enable or disable AI chatbot for the group",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
   },
   {
     "command": "checkblocked",
     "usage": ".checkblocked <number> (owner/sub-admin)",
-    "description": ".checkblocked 254712345678",
+    "description": "Heuristic check whether a number has blocked the bot",
     "category": "wallet",
-    "source": "wallet.js"
+    "source": "wallet.js",
+    "quality": "manual"
   },
   {
     "command": "checklink",
     "usage": ".checklink — heuristic URL safety checker (no external API)",
-    "description": ".checklink [url] // Flags common phishing/scam red flags. This is NOT a guarante",
+    "description": "checklink [url]",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
+  },
+  {
+    "command": "checkwarn",
+    "usage": ".checkwarn",
+    "description": "Alias for .warnings",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "cheems",
+    "usage": ".cheems",
+    "description": "Alias for .meme",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
+  },
+  {
+    "command": "chipmunk",
+    "usage": ".chipmunk",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "cipher",
     "usage": ".cipher <type> <encode|decode> <key> <text>",
     "description": "Encrypt or decrypt text using Caesar, Vigenere, or XOR cipher",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "citydist",
+    "usage": ".citydist",
+    "description": "Alias for .distance",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "claude",
     "usage": ".claude",
-    "description": ".claude [your question or request]\\ne.g. .claude write me a Python script that r",
+    "description": "claude [your question or request]",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
+  },
+  {
+    "command": "clean",
+    "usage": ".clean",
+    "description": "Alias for .clear",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "cleanuri",
     "usage": ".cleanuri <url> — strip tracking params",
-    "description": ".cleanuri <url>",
+    "description": "Shorten a URL using CleanURI",
     "category": "urltools",
-    "source": "urltools.js"
+    "source": "urltools.js",
+    "quality": "manual"
   },
   {
     "command": "clear",
     "usage": ".clear",
     "description": "Clear bot messages from chat",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "clearchat",
     "usage": ".clearchat",
     "description": "Clear/delete the current chat",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "clearrelations",
+    "usage": ".clearrelations",
+    "description": "bot-admin only, wipes the interaction graph for this group",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "clearses",
+    "usage": ".clearses",
+    "description": "Alias for .clearsession",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "clearsession",
     "usage": ".clearsession",
     "description": "Clear session files",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "cleartemp",
+    "usage": ".cleartemp",
+    "description": "Alias for .cleartmp",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "cleartmp",
     "usage": ".cleartmp",
     "description": "Clear tmp and temp directories",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "clone",
+    "usage": ".clone",
+    "description": "Alias for .gitclone",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "clone2",
+    "usage": ".clone2",
+    "description": "Alias for .gitclone2",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "clr",
+    "usage": ".clr",
+    "description": "Alias for .clear",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "cmdlist",
+    "usage": ".cmdlist",
+    "description": "Alias for .listcmd",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "cmdreact",
     "usage": ".creact on/off",
     "description": "Toggle command reactions",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "coding",
     "usage": ".coding",
     "description": "Get a random programming image",
     "category": "images",
-    "source": "ported_images.js"
+    "source": "ported_images.js",
+    "quality": "source"
+  },
+  {
+    "command": "codingimg",
+    "usage": ".codingimg",
+    "description": "Alias for .coding",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
+  },
+  {
+    "command": "commandreact",
+    "usage": ".commandreact",
+    "description": "Alias for .cmdreact",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "commands",
     "usage": ".commands",
-    "description": "commands command",
+    "description": "Flat alphabetical list of every currently-loaded command",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "compliment",
     "usage": ".compliment @user",
     "description": "Send a random compliment to a user",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "compress",
+    "usage": ".compress",
+    "description": "Alias for .rle",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "config",
+    "usage": ".config",
+    "description": "Alias for .settings",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "control",
+    "usage": ".control",
+    "description": "Alias for .manage",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "conv",
+    "usage": ".conv",
+    "description": "Alias for .units",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "convert",
     "usage": ".convert [amount] [from] [to]",
-    "description": ".convert 100 USD KES",
+    "description": "Convert an amount between currencies (e.g. .convert 100 USD KES)",
     "category": "atassa",
-    "source": "atassa.js"
+    "source": "atassa.js",
+    "quality": "manual"
   },
   {
     "command": "convertmedia",
     "usage": ".convertmedia — UNIVERSAL MEDIA CONVERTER",
-    "description": "reply to an image/video/audio file with .convertmedia [target format]   // e.g.",
+    "description": "reply to an image",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "source"
+  },
+  {
+    "command": "couple",
+    "usage": ".couple",
+    "description": "Alias for .ship",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "cpp",
+    "usage": ".cpp",
+    "description": "Alias for .crun",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "creact",
+    "usage": ".creact",
+    "description": "Alias for .cmdreact",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "creategroup",
     "usage": ".creategroup",
-    "description": ".creategroup Group Name | 254712345678,254798765432,0712345678 module.exports.cr",
+    "description": "creategroup Group Name | 254712345678,254798765432,0712345678 module.exports.cre",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "source"
   },
   {
     "command": "createqr",
     "usage": ".createqr <text>",
-    "description": ".createqr <text or url>",
+    "description": "Generate a QR code from text or a URL",
     "category": "urltools",
-    "source": "urltools.js"
+    "source": "urltools.js",
+    "quality": "manual"
+  },
+  {
+    "command": "creator",
+    "usage": ".creator",
+    "description": "Alias for .owner",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
   },
   {
     "command": "credsrestore",
     "usage": ".credsrestore",
-    "description": "credsrestore command",
+    "description": "Restore creds.json from the latest local backup (needs restart after)",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "credssnapshot",
     "usage": ".credssnapshot",
-    "description": "credssnapshot command",
+    "description": "Manually back up creds.json right now",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "crop",
     "usage": ".crop (reply to image/video/sticker)",
     "description": "Crop image/video/sticker to circle sticker",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
   },
   {
     "command": "crun",
     "usage": ".crun <c++ code>",
     "description": "Compile and run C++ code",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "crypt",
+    "usage": ".crypt",
+    "description": "Alias for .cipher",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "csession",
+    "usage": ".csession",
+    "description": "Alias for .clearsession",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ctrl",
+    "usage": ".ctrl",
+    "description": "Alias for .manage",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "cyber",
+    "usage": ".cyber",
+    "description": "Alias for .cyberimg",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
   },
   {
     "command": "cyberimg",
     "usage": ".cyberimg",
     "description": "Get a random cyberspace image",
     "category": "images",
-    "source": "ported_images.js"
+    "source": "ported_images.js",
+    "quality": "source"
+  },
+  {
+    "command": "cyberspace",
+    "usage": ".cyberspace",
+    "description": "Alias for .cyberimg",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
   },
   {
     "command": "dado",
     "usage": ".dado",
     "description": "Roll a random dice sticker",
     "category": "games",
-    "source": "ported_games.js"
+    "source": "ported_games.js",
+    "quality": "source"
+  },
+  {
+    "command": "dados",
+    "usage": ".dados",
+    "description": "Alias for .dado",
+    "category": "games",
+    "source": "ported_games.js",
+    "quality": "alias"
   },
   {
     "command": "dalle",
     "usage": ".dalle <prompt>",
     "description": "Generate an AI image based on your prompt",
     "category": "ai",
-    "source": "ported_ai.js"
+    "source": "ported_ai.js",
+    "quality": "source"
   },
   {
     "command": "dare",
     "usage": ".dare",
-    "description": "dare command",
+    "description": "Truth or Dare: get a dare",
     "category": "games",
-    "source": "games.js"
+    "source": "games.js",
+    "quality": "manual"
+  },
+  {
+    "command": "dbase",
+    "usage": ".dbase",
+    "description": "Decode a base64 string back to text",
+    "category": "urltools",
+    "source": "urltools.js",
+    "quality": "manual"
+  },
+  {
+    "command": "debinary",
+    "usage": ".debinary",
+    "description": "Decode binary (0s and 1s) back to text",
+    "category": "urltools",
+    "source": "urltools.js",
+    "quality": "manual"
+  },
+  {
+    "command": "decodeqr",
+    "usage": ".decodeqr",
+    "description": "Alias for .readqr",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "decompress",
+    "usage": ".decompress",
+    "description": "Alias for .rle",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "decrypt",
+    "usage": ".decrypt",
+    "description": "Alias for .cipher",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "deep",
+    "usage": ".deep",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "define",
     "usage": ".define <word>",
-    "description": ".define <word>",
+    "description": "Get a word's dictionary definition",
     "category": "urltools",
-    "source": "urltools.js"
+    "source": "urltools.js",
+    "quality": "manual"
+  },
+  {
+    "command": "del",
+    "usage": ".del",
+    "description": "Alias for .delete",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "delallnotes",
+    "usage": ".delallnotes",
+    "description": "Delete every saved note in this chat (bot admin)",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "manual"
   },
   {
     "command": "delcmd",
     "usage": ".delcmd <text>",
     "description": "Delete a sticker command",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "delete",
     "usage": ".delete <count> [@user] or reply with .delete",
     "description": "Delete recent messages from group or specific user",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "deletechat",
+    "usage": ".deletechat",
+    "description": "Alias for .clearchat",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "deleteplugin",
+    "usage": ".deleteplugin",
+    "description": "Alias for .delplugin",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "delmail",
+    "usage": ".delmail",
+    "description": "Discard your current disposable temp-mail address",
+    "category": "tempmail",
+    "source": "tempmail.js",
+    "quality": "manual"
+  },
+  {
+    "command": "delnote",
+    "usage": ".delnote",
+    "description": "Delete a saved note in this chat",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "manual"
   },
   {
     "command": "delplugin",
     "usage": ".delplugin <plugin_name>",
     "description": "Delete a plugin by name (owner only)",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "delreply",
     "usage": ".delreply <trigger>",
     "description": "Delete an auto-reply trigger",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "delsudo",
+    "usage": ".delsudo",
+    "description": "Remove a number from the sudo (sub-admin) list",
+    "category": "sudo",
+    "source": "sudo.js",
+    "quality": "manual"
   },
   {
     "command": "demote",
     "usage": ".demote",
-    "description": "demote command",
+    "description": "Demote a member from group admin",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "manual"
+  },
+  {
+    "command": "detector",
+    "usage": ".detector",
+    "description": "quick 24h health snapshot (spam-y volume / topic spike)",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "diagnostics",
+    "usage": ".diagnostics",
+    "description": "Alias for .perf",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "dice",
+    "usage": ".dice",
+    "description": "Roll a single six-sided die",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "manual"
   },
   {
     "command": "dict",
     "usage": ".dict [word]",
-    "description": ".dict [word]",
+    "description": "Get a word's dictionary definition",
     "category": "atassa",
-    "source": "atassa.js"
+    "source": "atassa.js",
+    "quality": "manual"
   },
   {
     "command": "diffusion",
     "usage": ".diffusion <prompt>",
     "description": "Generate an AI image based on your prompt",
     "category": "ai",
-    "source": "ported_ai.js"
+    "source": "ported_ai.js",
+    "quality": "source"
   },
   {
     "command": "disappear",
     "usage": ".disappear off | .disappear 24h | .disappear 7d | .disappear 90d",
     "description": "Enable or disable disappearing messages in chat",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "disappearing",
+    "usage": ".disappearing",
+    "description": "Alias for .disappear",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "dist",
+    "usage": ".dist",
+    "description": "Alias for .distance",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "distance",
     "usage": ".distance <city1> to <city2>\\nExample: .distance karachi to dubai",
     "description": "Calculate distance between two cities with flight and driving time estimates",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "distancecalc",
+    "usage": ".distancecalc",
+    "description": "Alias for .distance",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "dl",
     "usage": ".dl — UNIVERSAL DOWNLOADER",
-    "description": ".dl [URL] (video, default) | .dl [URL] audio | .dl [URL] mp3   // Powered by yt-",
+    "description": "dl [URL]",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "source"
   },
   {
     "command": "dlstatus",
     "usage": "Reply to a status and type .dlstatus",
     "description": "Download quoted Status updates",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "dmall",
+    "usage": ".dmall",
+    "description": "Alias for .broadcastdm",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "dna",
     "usage": ".dna encode <text or reply to media>\\n.dna decode <DNA or reply to DNA file>",
     "description": "Encode any text or media to DNA sequence (ATCG) or decode it back",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "dnadecode",
+    "usage": ".dnadecode",
+    "description": "Alias for .dna",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "dnaencode",
+    "usage": ".dnaencode",
+    "description": "Alias for .dna",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "domaincheck",
+    "usage": ".domaincheck",
+    "description": "── .domaincheck <domain> — alias of the existing, already-solid .whois",
+    "category": "urltools",
+    "source": "urltools.js",
+    "quality": "source"
   },
   {
     "command": "download",
     "usage": ".download — ✅ FIX: use execFile to prevent shell injection",
-    "description": ".download [URL]",
+    "description": "Download a video from a URL (YouTube/TikTok)",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "manual"
+  },
+  {
+    "command": "draw",
+    "usage": ".draw",
+    "description": "Alias for .dalle",
+    "category": "ai",
+    "source": "ported_ai.js",
+    "quality": "alias"
+  },
+  {
+    "command": "drug",
+    "usage": ".drug",
+    "description": "Alias for .medicine",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "druginfo",
+    "usage": ".druginfo",
+    "description": "Alias for .medicine",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "dumb",
+    "usage": ".dumb",
+    "description": "Alias for .stupid",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "earrape",
+    "usage": ".earrape",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ebase",
+    "usage": ".ebase",
+    "description": "── base64 / binary encode-decode (pure local, always works) ────────────",
+    "category": "urltools",
+    "source": "urltools.js",
+    "quality": "source"
+  },
+  {
+    "command": "ebinary",
+    "usage": ".ebinary",
+    "description": "Encode text into binary",
+    "category": "urltools",
+    "source": "urltools.js",
+    "quality": "manual"
   },
   {
     "command": "echo",
     "usage": ".echo <text> <count>",
     "description": "Repeats your message a specified number of times.",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
+  },
+  {
+    "command": "eightball",
+    "usage": ".eightball",
+    "description": "Alias for .8ball",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
   },
   {
     "command": "element",
     "usage": ".element <name or symbol>",
     "description": "Get information about a chemical element",
     "category": "search",
-    "source": "ported_search.js"
+    "source": "ported_search.js",
+    "quality": "source"
+  },
+  {
+    "command": "emix",
+    "usage": ".emix",
+    "description": "Alias for .emojimix",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "emojimix",
     "usage": ".emojimix 😎+🥰",
     "description": "Mix two emojis into a sticker",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "encode",
+    "usage": ".encode",
+    "description": "Alias for .base64",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "encrypt",
+    "usage": ".encrypt",
+    "description": "Alias for .cipher",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "endpoll",
+    "usage": ".endpoll <pollId>",
+    "description": "bot-admin only",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "enhance",
+    "usage": ".enhance",
+    "description": "Alias for .sharpen",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ephemeral",
+    "usage": ".ephemeral",
+    "description": "Alias for .disappear",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "ephoto",
     "usage": ".ephoto <type> <text>",
     "description": "Generate styled text with various effects",
     "category": "menu",
-    "source": "ported_menu.js"
+    "source": "ported_menu.js",
+    "quality": "source"
+  },
+  {
+    "command": "everyone",
+    "usage": ".everyone",
+    "description": "Tag every member in the group (alias of .tagall)",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
   },
   {
     "command": "excard",
     "usage": ".excard Title | Body | ImageURL",
     "description": "Create a rich media card",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "extend",
+    "usage": ".extend",
+    "description": "Upgrade this customer's subscription by N days (sub-admins: only customers you personally approved)",
+    "category": "general",
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "extractlinks",
+    "usage": ".extractlinks",
+    "description": "Alias for .urldecode",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "facebook",
     "usage": ".fb <facebook video link>",
     "description": "Download Facebook videos",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "fakeforward",
+    "usage": ".fakeforward",
+    "description": "Alias for .forwarded",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fakehack",
+    "usage": ".fakehack",
+    "description": "Alias for .hack",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fakereply",
+    "usage": ".fakereply",
+    "description": "Alias for .quoted",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fancytext",
+    "usage": ".fancytext",
+    "description": "Alias for .stext",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fast",
+    "usage": ".fast",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fat",
+    "usage": ".fat",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fb",
+    "usage": ".fb",
+    "description": "Alias for .facebook",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fbdl",
+    "usage": ".fbdl",
+    "description": "Alias for .facebook",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "fetch",
     "usage": ".fetch <url>",
     "description": "Download a file directly from a URL",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "filelength",
+    "usage": ".filelength",
+    "description": "Alias for .length",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "film",
+    "usage": ".film",
+    "description": "Alias for .imdb",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fimg",
+    "usage": ".fimg",
+    "description": "Alias for .freeimage",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
   },
   {
     "command": "find",
     "usage": ".find [keyword]",
     "description": "Find a command by keyword or description",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
   },
   {
     "command": "flip",
     "usage": ".flip <text> OR reply to a message",
     "description": "Flip text upside down (supports Uppercase)",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
   },
   {
     "command": "flirt",
     "usage": ".flirt",
     "description": "Get a random flirt message",
     "category": "fun",
-    "source": "ported_fun.js"
+    "source": "ported_fun.js",
+    "quality": "source"
+  },
+  {
+    "command": "flirty",
+    "usage": ".flirty",
+    "description": "Alias for .flirt",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
   },
   {
     "command": "flux",
     "usage": ".flux <prompt>",
     "description": "Generate an AI image based on your prompt",
     "category": "ai",
-    "source": "ported_ai.js"
+    "source": "ported_ai.js",
+    "quality": "source"
   },
   {
     "command": "forwarded",
     "usage": ".viral <text> OR reply to a message",
     "description": "Send text with a fake \"Frequently Forwarded\" tag",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
   },
   {
     "command": "freeimage",
     "usage": ".freeimage (reply to image)",
     "description": "Upload to Freeimage.host",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
+  },
+  {
+    "command": "freeimg",
+    "usage": ".freeimg",
+    "description": "Alias for .freeimage",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "fullpp",
+    "usage": ".fullpp [@user]",
+    "description": "like .getpp, but requests the full-resolution image",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "funny",
+    "usage": ".funny",
+    "description": "Alias for .joke",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
+  },
+  {
+    "command": "funny2",
+    "usage": ".funny2",
+    "description": "Alias for .joke2",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
   },
   {
     "command": "game",
     "usage": ".game",
     "description": "Get a random gaming image",
     "category": "images",
-    "source": "ported_images.js"
+    "source": "ported_images.js",
+    "quality": "source"
+  },
+  {
+    "command": "gamehistory",
+    "usage": ".gamehistory",
+    "description": "Show the last 10 finished games in this chat",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "gameimg",
+    "usage": ".gameimg",
+    "description": "Alias for .game",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
+  },
+  {
+    "command": "games",
+    "usage": ".games",
+    "description": "List all available games and how to start them",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "gaming",
+    "usage": ".gaming",
+    "description": "Alias for .game",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ganit",
+    "usage": ".ganit",
+    "description": "Alias for .math",
+    "category": "games",
+    "source": "ported_games.js",
+    "quality": "alias"
+  },
+  {
+    "command": "gcdesc",
+    "usage": ".gcdesc",
+    "description": "Change the group description",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "gcinfo",
+    "usage": ".gcinfo",
+    "description": "Alias for .gcmtdata",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "gcjoin",
+    "usage": ".gcjoin",
+    "description": "Alias for .joingroup",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "gcleave",
     "usage": ".groupleave — leave current group\\n.groupleave <jid> — leave specific group",
     "description": "Make the bot leave a group",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "gclink",
+    "usage": ".gclink",
+    "description": "Alias for .invitelink",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "gcmetadata",
+    "usage": ".gcmetadata",
+    "description": "Alias for .gcmtdata",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "gcmtdata",
     "usage": ".gcinfo",
     "description": "Get detailed info about the current group",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "gcreqs",
+    "usage": ".gcreqs",
+    "description": "Alias for .joinrequests",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "gcset",
     "usage": ".gcset <setting>",
     "description": "Change group settings (lock/unlock messages or settings)",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "gemini",
+    "usage": ".gemini",
+    "description": "Ask Google Gemini a question directly",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "genimage",
+    "usage": ".genimage",
+    "description": "Alias for .dalle",
+    "category": "ai",
+    "source": "ported_ai.js",
+    "quality": "alias"
   },
   {
     "command": "genshin",
     "usage": ".genshin <UID>",
     "description": "Stalk Genshin Impact UID",
     "category": "stalk",
-    "source": "ported_stalk.js"
+    "source": "ported_stalk.js",
+    "quality": "source"
+  },
+  {
+    "command": "get",
+    "usage": ".get",
+    "description": "Alias for .fetch",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "getfile",
     "usage": ".getfile <filename>",
     "description": "Read and display file contents from bot directory",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "getnote",
+    "usage": ".getnote",
+    "description": "Recall a saved note by name",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "manual"
+  },
+  {
+    "command": "getnotes",
+    "usage": ".getnotes",
+    "description": "List all saved note names in this chat",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "manual"
   },
   {
     "command": "getpage",
     "usage": ".getpage <url>",
     "description": "Get the raw HTML source of a website",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "getplugin",
+    "usage": ".getplugin",
+    "description": "Alias for .inspect",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "getpp",
     "usage": ".getpp (upgraded)",
-    "description": ".getpp (your own pfp) | .getpp @user | .getpp 254712345678 | reply to someone",
+    "description": "getpp",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "source"
+  },
+  {
+    "command": "getsession",
+    "usage": ".getsession",
+    "description": "Alias for .pair",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "getsetting",
+    "usage": ".getsetting",
+    "description": "Show the current value of one bot-wide setting",
+    "category": "settings ext",
+    "source": "settings-ext.js",
+    "quality": "manual"
+  },
+  {
+    "command": "getsudo",
+    "usage": ".getsudo",
+    "description": "List current sudo (sub-admin) numbers",
+    "category": "sudo",
+    "source": "sudo.js",
+    "quality": "manual"
   },
   {
     "command": "getty",
     "usage": ".getty <Getty URL>",
     "description": "Download video or image from Getty Images",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "gettydl",
+    "usage": ".gettydl",
+    "description": "Alias for .getty",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "gettyvideo",
+    "usage": ".gettyvideo",
+    "description": "Alias for .getty",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "geturl",
+    "usage": ".geturl",
+    "description": "Alias for .url",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "gh",
+    "usage": ".gh",
+    "description": "Alias for .genshin",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ghprofile",
+    "usage": ".ghprofile",
+    "description": "Alias for .github",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
   },
   {
     "command": "gif",
     "usage": ".gif <search term>",
     "description": "Get a GIF based on a search term",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "giftedai",
+    "usage": ".giftedai",
+    "description": "Alias for .gpt",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "alias"
   },
   {
     "command": "gimage",
     "usage": ".gimage <search query>",
     "description": "Search and send first 4 Google images",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "gimg",
+    "usage": ".gimg",
+    "description": "Alias for .gimage",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ginfo",
+    "usage": ".ginfo",
+    "description": "Alias for .groupinfo",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "giphy",
+    "usage": ".giphy",
+    "description": "Alias for .gif",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "gitclone",
     "usage": ".gitclone <url> OR <username> <repo>",
     "description": "Download a GitHub repository as zip",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
   },
   {
     "command": "gitclone2",
     "usage": ".gitclone2 <github-link>",
     "description": "Download a GitHub repository as a ZIP file",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
   },
   {
     "command": "github",
     "usage": ".github <username>",
     "description": "Lookup GitHub user profile",
     "category": "stalk",
-    "source": "ported_stalk.js"
+    "source": "ported_stalk.js",
+    "quality": "source"
+  },
+  {
+    "command": "githubdl",
+    "usage": ".githubdl",
+    "description": "Alias for .gitclone",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "githubdl2",
+    "usage": ".githubdl2",
+    "description": "Alias for .gitclone2",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "gitinfo",
     "usage": ".gitinfo",
     "description": "Show detailed git repository information",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "gitpull",
     "usage": ".gitpull",
     "description": "Reload all plugins (Pull changes from git if available)",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "gn",
+    "usage": ".gn",
+    "description": "Alias for .goodnight",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
   },
   {
     "command": "goodbye",
     "usage": ".goodbye <on|off|set message>",
     "description": "Configure goodbye messages for leaving members",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
   },
   {
     "command": "goodnight",
     "usage": ".goodnight",
     "description": "Send a random good night message",
     "category": "quotes",
-    "source": "ported_quotes.js"
+    "source": "ported_quotes.js",
+    "quality": "source"
+  },
+  {
+    "command": "googleimage",
+    "usage": ".googleimage",
+    "description": "Alias for .gimage",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "gpset",
+    "usage": ".gpset",
+    "description": "Alias for .gcset",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "gpt",
+    "usage": ".gpt",
+    "description": "Ask OpenAI GPT a question directly",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "gpt4",
+    "usage": ".gpt4",
+    "description": "Ask OpenAI GPT-4 a question directly",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "gpt4o",
+    "usage": ".gpt4o",
+    "description": "Alias for .gpt4",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "alias"
+  },
+  {
+    "command": "gray",
+    "usage": ".gray",
+    "description": "Alias for .grayscale",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "grayscale",
     "usage": "Reply to an image with .grayscale",
     "description": "Convert an image to grayscale",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "grey",
+    "usage": ".grey",
+    "description": "Alias for .grayscale",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "groupdata",
+    "usage": ".groupdata",
+    "description": "Alias for .gcmtdata",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "groupdesc",
+    "usage": ".groupdesc",
+    "description": "Alias for .setgdesc",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "groupinfo",
     "usage": ".groupinfo",
     "description": "Display detailed group information",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "groupleave",
+    "usage": ".groupleave",
+    "description": "Alias for .gcleave",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "grouplink",
+    "usage": ".grouplink",
+    "description": "Alias for .invitelink",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "groupname",
+    "usage": ".groupname",
+    "description": "── Group info helpers ───────────────────────────────────────────────────",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "source"
+  },
+  {
+    "command": "grouppp",
+    "usage": ".grouppp",
+    "description": "Alias for .setgpp",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "groupreqs",
+    "usage": ".groupreqs",
+    "description": "Alias for .joinrequests",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "groupset",
+    "usage": ".groupset",
+    "description": "Alias for .gcset",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "groupsettings",
+    "usage": ".groupsettings",
+    "description": "Show this group's current protection/feature toggle states",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "gsetting",
+    "usage": ".gsetting",
+    "description": "Alias for .gcset",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "guess",
     "usage": ".guess [max]",
-    "description": "guess command",
+    "description": "Number guessing game (default range 1-100)",
     "category": "games",
-    "source": "games.js"
+    "source": "games.js",
+    "quality": "manual"
   },
   {
     "command": "hack",
     "usage": ".hack <target>",
     "description": "Simulate a hack sequence (fun prank)",
     "category": "fun",
-    "source": "ported_fun.js"
+    "source": "ported_fun.js",
+    "quality": "source"
   },
   {
     "command": "hangman",
     "usage": ".hangman",
-    "description": "hangman command",
+    "description": "Start a game of hangman (reply with letters)",
     "category": "games",
-    "source": "games.js"
+    "source": "games.js",
+    "quality": "manual"
+  },
+  {
+    "command": "headlines",
+    "usage": ".headlines",
+    "description": "Alias for .news",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "help2",
+    "usage": ".help2",
+    "description": "Alias for .smenu",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
   },
   {
     "command": "hidetag",
     "usage": ".hidetag <message> or reply to message",
     "description": "Tag all non-admin members without showing their names",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "ht",
+    "usage": ".ht",
+    "description": "Alias for .hidetag",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "htag",
+    "usage": ".htag",
+    "description": "Alias for .hidetag",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ig",
+    "usage": ".ig",
+    "description": "Alias for .instagram",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "igdl",
+    "usage": ".igdl",
+    "description": "Alias for .instagram",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "igs",
     "usage": ".igs <instagram URL>",
     "description": "Convert Instagram post/reel to sticker",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
   },
   {
     "command": "igsc",
     "usage": ".igsc <instagram URL>",
     "description": "Convert Instagram post/reel to cropped sticker",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "igsticker",
+    "usage": ".igsticker",
+    "description": "Alias for .igs",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "igstickercrop",
+    "usage": ".igstickercrop",
+    "description": "Alias for .igsc",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "imagen",
+    "usage": ".imagen",
+    "description": "Alias for .flux",
+    "category": "ai",
+    "source": "ported_ai.js",
+    "quality": "alias"
   },
   {
     "command": "images",
     "usage": ".images <category>",
     "description": "Send 3 random images for a given category",
     "category": "menu",
-    "source": "ported_menu.js"
+    "source": "ported_menu.js",
+    "quality": "source"
   },
   {
     "command": "imagine",
     "usage": ".imagine — free, keyless AI image generation via Pollinations.ai",
-    "description": ".imagine [description]\\ne.g. .imagine a lion wearing sunglasses, cyberpunk style",
+    "description": "imagine [description]",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
   },
   {
     "command": "imdb",
     "usage": ".imdb <movie/series title>",
     "description": "Get detailed information about a movie or series from IMDB",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "influence",
+    "usage": ".influence [hours]",
+    "description": "same underlying ranking as .active, framed as",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "infogit",
+    "usage": ".infogit",
+    "description": "Alias for .gitinfo",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "infogroup",
+    "usage": ".infogroup",
+    "description": "Alias for .groupinfo",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "inspect",
     "usage": ".inspect [plugin_name]",
     "description": "Read the source code of a specific plugin",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "insta",
+    "usage": ".insta",
+    "description": "Alias for .instagram",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "instacrop",
+    "usage": ".instacrop",
+    "description": "Alias for .igsc",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "instagram",
     "usage": ".ig <instagram link>",
     "description": "Download Instagram posts, reels & videos",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "install",
+    "usage": ".install",
+    "description": "Alias for .addplugin",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "installplugin",
+    "usage": ".installplugin",
+    "description": "Alias for .addplugin",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "instasticker",
+    "usage": ".instasticker",
+    "description": "Alias for .igs",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "insult",
     "usage": ".insult @username or reply to their message with .insult",
     "description": "Send a playful insult to someone by mentioning them or replying to their message",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
   },
   {
     "command": "invert",
     "usage": "Reply to an image with .invert",
     "description": "Convert an image to negative",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "invite",
+    "usage": ".invite",
+    "description": "Alias for .invitelink",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "invitelink",
     "usage": ".invitelink — get link\\n.revokeinvite — reset link",
     "description": "Get or revoke the group invite link",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "ip",
+    "usage": ".ip",
+    "description": "Alias for .whoisip",
+    "category": "search",
+    "source": "ported_search.js",
+    "quality": "alias"
   },
   {
     "command": "ipinfo",
     "usage": ".ipinfo <ip>",
-    "description": "*.ipinfo 8.8.8.8*",
+    "description": "ipinfo 8.8.8.8",
     "category": "osint",
-    "source": "osint.js"
+    "source": "osint.js",
+    "quality": "source"
+  },
+  {
+    "command": "iplookup",
+    "usage": ".iplookup",
+    "description": "Alias for .whoisip",
+    "category": "search",
+    "source": "ported_search.js",
+    "quality": "alias"
   },
   {
     "command": "islamic",
     "usage": ".islamic",
     "description": "Get a random Islamic image",
     "category": "images",
-    "source": "ported_images.js"
+    "source": "ported_images.js",
+    "quality": "source"
+  },
+  {
+    "command": "islampic",
+    "usage": ".islampic",
+    "description": "Alias for .islamic",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
   },
   {
     "command": "istock",
     "usage": ".istock <iStock URL>",
     "description": "Download image or video from iStock URL",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "istockdl",
+    "usage": ".istockdl",
+    "description": "Alias for .istock",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "istockdownload",
+    "usage": ".istockdownload",
+    "description": "Alias for .istock",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "itunes",
     "usage": ".itunes <song name>",
     "description": "Get detailed information about a song from iTunes",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "join",
+    "usage": ".join",
+    "description": "Alias for .joingroup",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "joingroup",
     "usage": ".joingroup <link or code>\\n.groupinfo <link or code>",
     "description": "Join a group via invite link or get group info from link",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "joinrequests",
     "usage": ".joinrequests — list pending\\n.approvejoin <number|all>\\n.rejectjoin <number|all>",
     "description": "View, approve or reject group join requests",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
   },
   {
     "command": "joke",
     "usage": ".joke",
     "description": "Get a random dad joke",
     "category": "fun",
-    "source": "ported_fun.js"
+    "source": "ported_fun.js",
+    "quality": "source"
   },
   {
     "command": "joke2",
     "usage": ".joke2",
     "description": "Get a random general joke",
     "category": "fun",
-    "source": "ported_fun.js"
+    "source": "ported_fun.js",
+    "quality": "source"
+  },
+  {
+    "command": "jokes",
+    "usage": ".jokes",
+    "description": "Alias for .joke",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
+  },
+  {
+    "command": "jokes2",
+    "usage": ".jokes2",
+    "description": "Alias for .joke2",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
   },
   {
     "command": "kick",
     "usage": ".kick",
-    "description": "kick command",
+    "description": "Remove a member from the group",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "manual"
+  },
+  {
+    "command": "killgc",
+    "usage": ".killgc",
+    "description": "Bot leaves the current group immediately (owner only)",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "lain",
+    "usage": ".lain",
+    "description": "Alias for .pomf",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "latestnews",
+    "usage": ".latestnews",
+    "description": "Alias for .news",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "leaderboard",
+    "usage": ".leaderboard",
+    "description": "Alias for .rank",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "leave",
+    "usage": ".leave",
+    "description": "Alias for .goodbye",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "leavegc",
+    "usage": ".leavegc",
+    "description": "Alias for .gcleave",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "leavegroup",
+    "usage": ".leavegroup",
+    "description": "Alias for .gcleave",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "length",
     "usage": ".length <size> (reply to media)",
     "description": "Send an image or video with a custom file length",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "letmegpt",
+    "usage": ".letmegpt",
+    "description": "Alias for .gpt",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "alias"
+  },
+  {
+    "command": "linkblock",
+    "usage": ".linkblock",
+    "description": "Alias for .antilink",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "links",
+    "usage": ".links",
+    "description": "Alias for .urldecode",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "listadmins",
     "usage": ".listadmins",
-    "description": ".login [username] [password]   // Grants the user temporary session-level owner",
+    "description": "login [username] [password]",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
   },
   {
     "command": "listcmd",
     "usage": ".listcmd",
     "description": "List all sticker commands",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "listcoowners",
+    "usage": ".listcoowners",
+    "description": "List all current co-owners",
+    "category": "general",
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "listreplies",
     "usage": ".listreplies",
     "description": "List all configured auto-reply triggers",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "listrequests",
+    "usage": ".listrequests",
+    "description": "── Join request management (WhatsApp community/group approval mode) ───",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "source"
+  },
+  {
+    "command": "litr",
+    "usage": ".litr",
+    "description": "Alias for .litterbox",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "litter",
+    "usage": ".litter",
+    "description": "Alias for .litterbox",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
   },
   {
     "command": "litterbox",
     "usage": ".litterbox <1h/12h/24h/72h> (reply to media)",
     "description": "Upload temporarily (1h/12h/24h/72h)",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
+  },
+  {
+    "command": "livescore",
+    "usage": ".livescore",
+    "description": "Live match scores for a league (default EPL)",
+    "category": "sports",
+    "source": "sports.js",
+    "quality": "manual"
   },
   {
     "command": "llama",
     "usage": ".llama <question>",
     "description": "Ask a question to AI",
     "category": "ai",
-    "source": "ported_ai.js"
+    "source": "ported_ai.js",
+    "quality": "source"
   },
   {
     "command": "loadmenu",
     "usage": ".loadmenu",
-    "description": "loadmenu command",
+    "description": "Show the main menu (same as .menu)",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "login",
     "usage": ".login — unlock full access with credentials",
-    "description": ".login [username] [password]   // Grants the user temporary session-level owner",
+    "description": "login [username] [password]",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
   },
   {
     "command": "logout",
     "usage": ".logout — remove session access",
-    "description": ".welcome 254XXXXXXXXX",
+    "description": "Remove your unlocked access for this session",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "lookup",
+    "usage": ".lookup",
+    "description": "Alias for .find",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "lyric",
+    "usage": ".lyric",
+    "description": "Alias for .lyrics",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
   },
   {
     "command": "lyrics",
     "usage": ".lyrics <song name>",
     "description": "Get lyrics of a song along with artist and image",
     "category": "music",
-    "source": "ported_music.js"
+    "source": "ported_music.js",
+    "quality": "source"
+  },
+  {
+    "command": "magic8ball",
+    "usage": ".magic8ball",
+    "description": "Alias for .8ball",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
   },
   {
     "command": "maintenance",
     "usage": ".maintenance",
-    "description": ".maintenance on/off",
+    "description": "maintenance on",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
   },
   {
     "command": "manage",
     "usage": ".manage [toggle/alias] [command_name] [new_alias]",
     "description": "Manage bot commands and aliases",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "math",
     "usage": ".math",
     "description": "Solve math problems",
     "category": "games",
-    "source": "ported_games.js"
+    "source": "ported_games.js",
+    "quality": "source"
+  },
+  {
+    "command": "maths",
+    "usage": ".maths",
+    "description": "Alias for .math",
+    "category": "games",
+    "source": "ported_games.js",
+    "quality": "alias"
+  },
+  {
+    "command": "med",
+    "usage": ".med",
+    "description": "Alias for .medicine",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
   },
   {
     "command": "mediafire",
     "usage": ".mediafire <url>",
     "description": "Download files from MediaFire",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "mediaurl",
+    "usage": ".mediaurl",
+    "description": "Alias for .tourl",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "medicine",
     "usage": ".medicine aspirin\\n.medicine paracetamol",
     "description": "Get medicine/drug info: uses, side effects, warnings",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "medinfo",
+    "usage": ".medinfo",
+    "description": "Alias for .medicine",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
   },
   {
     "command": "mega",
     "usage": ".mega <mega-url>",
     "description": "Download from MEGA with real-time progress",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "megabackup",
+    "usage": ".megabackup",
+    "description": "Upload creds.json session backup to Mega.nz cloud storage",
+    "category": "megabackup",
+    "source": "megabackup.js",
+    "quality": "manual"
+  },
+  {
+    "command": "megadl",
+    "usage": ".megadl",
+    "description": "Alias for .mega",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "megarestore",
+    "usage": ".megarestore",
+    "description": "Restore the latest session backup from Mega.nz",
+    "category": "megabackup",
+    "source": "megabackup.js",
+    "quality": "manual"
   },
   {
     "command": "meme",
     "usage": ".meme",
     "description": "Get a random cheems meme with buttons for another meme or joke",
     "category": "fun",
-    "source": "ported_fun.js"
+    "source": "ported_fun.js",
+    "quality": "source"
+  },
+  {
+    "command": "memes",
+    "usage": ".memes",
+    "description": "Alias for .meme",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
   },
   {
     "command": "mention",
     "usage": ".mention <on|off> or .setmention (reply to media)",
     "description": "Toggle or set custom mention reply",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "mentionreply",
+    "usage": ".mentionreply",
+    "description": "Alias for .mention",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "menu",
     "usage": ".menu",
-    "description": "menu command",
+    "description": "Show the main command menu",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "metrics",
+    "usage": ".metrics",
+    "description": "Alias for .perf",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "mf",
+    "usage": ".mf",
+    "description": "Alias for .mediafire",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "mfire",
+    "usage": ".mfire",
+    "description": "Alias for .mediafire",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "mini",
+    "usage": ".mini",
+    "description": "Alias for .smallcaps",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "mirror",
+    "usage": ".mirror",
+    "description": "Alias for .flip",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "mistral",
     "usage": ".mistral <question>",
     "description": "Ask a question to AI",
     "category": "ai",
-    "source": "ported_ai.js"
+    "source": "ported_ai.js",
+    "quality": "source"
+  },
+  {
+    "command": "mixemoji",
+    "usage": ".mixemoji",
+    "description": "Alias for .emojimix",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "mobilemoney",
+    "usage": ".mobilemoney",
+    "description": "Alias for .momo",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "mock",
+    "usage": ".mock",
+    "description": "Alias for .insult",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "model",
     "usage": ".model — per-chat AI model switcher",
-    "description": "model command",
+    "description": "Switch the AI model used in this chat (llama/llama8/mixtral/gemma)",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "momo",
     "usage": ".momo mtn\\n.momo mpesa\\n.momo airtel",
     "description": "Mobile Money info for African networks (MTN, Airtel, M-Pesa, Wave, Orange)",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
   },
   {
     "command": "mountain",
     "usage": ".mountain",
     "description": "Get a random mountain image",
     "category": "images",
-    "source": "ported_images.js"
+    "source": "ported_images.js",
+    "quality": "source"
+  },
+  {
+    "command": "mountainimg",
+    "usage": ".mountainimg",
+    "description": "Alias for .mountain",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
+  },
+  {
+    "command": "mountains",
+    "usage": ".mountains",
+    "description": "Alias for .mountain",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
   },
   {
     "command": "movie",
     "usage": ".movie <movie name>\\n.movie Pathaan\\n.movie Jawan 2023",
     "description": "Search movie info, ratings, cast, plot",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "mpesa",
+    "usage": ".mpesa",
+    "description": "Alias for .momo",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "mtnmomo",
+    "usage": ".mtnmomo",
+    "description": "Alias for .momo",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "music",
+    "usage": ".music",
+    "description": "Alias for .itunes",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "muslimpic",
+    "usage": ".muslimpic",
+    "description": "Alias for .islamic",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
   },
   {
     "command": "mute",
     "usage": ".mute / .unmute",
-    "description": "mute command",
+    "description": "Mute the group (only admins can send messages)",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "manual"
+  },
+  {
+    "command": "mygroups",
+    "usage": ".mygroups",
+    "description": "List every group the bot is currently a member of",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "mysettings",
+    "usage": ".mysettings",
+    "description": "Show current bot-wide settings toggles",
+    "category": "settings ext",
+    "source": "settings-ext.js",
+    "quality": "manual"
+  },
+  {
+    "command": "negative",
+    "usage": ".negative",
+    "description": "Alias for .invert",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "netspeed",
+    "usage": ".netspeed",
+    "description": "Alias for .speedtest",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "newgroup",
+    "usage": ".newgroup",
+    "description": "Create a new group from a name + comma-separated numbers",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "newlink",
+    "usage": ".newlink",
+    "description": "Alias for .resetlink",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "news",
     "usage": ".news",
     "description": "Get the latest top 5 news headlines from the US",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "newsletterid",
+    "usage": ".newsletterid",
+    "description": "Alias for .channelid",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "newtrigger",
+    "usage": ".newtrigger",
+    "description": "Alias for .addreply",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "nice",
+    "usage": ".nice",
+    "description": "Alias for .compliment",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "night",
+    "usage": ".night",
+    "description": "Alias for .goodnight",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
+  },
+  {
+    "command": "nightcore",
+    "usage": ".nightcore",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "note",
+    "usage": ".note",
+    "description": "Alias for .notes",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "notes",
     "usage": ".notes <add|all|del|delall> [text|ID]",
     "description": "Store, view, and delete your personal notes",
     "category": "menu",
-    "source": "ported_menu.js"
+    "source": "ported_menu.js",
+    "quality": "source"
   },
   {
     "command": "npmstalk",
     "usage": ".npmstalk <package-name>",
     "description": "Get details about an NPM package",
     "category": "stalk",
-    "source": "ported_stalk.js"
+    "source": "ported_stalk.js",
+    "quality": "source"
+  },
+  {
+    "command": "npmstlk",
+    "usage": ".npmstlk",
+    "description": "Alias for .npmstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
+  },
+  {
+    "command": "numinfo",
+    "usage": ".numinfo",
+    "description": "Alias for .siminfo",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "obfuscate",
+    "usage": ".obfuscate",
+    "description": "Alias for .brainfuck",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "omdb",
+    "usage": ".omdb",
+    "description": "Alias for .movie",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "openai",
+    "usage": ".openai",
+    "description": "Alias for .gpt",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "alias"
   },
   {
     "command": "owner",
     "usage": ".owner",
     "description": "Get the contact of the bot owner",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
   },
   {
     "command": "ownerrecovery",
     "usage": ".ownerrecovery — change owner number via secret passphrase",
-    "description": ".ownerrecovery [OWNER_RECOVERY_SECRET] 254NEWPHONE   ownerrecovery: async ({ soc",
+    "description": "ownerrecovery [OWNER_RECOVERY_SECRET] 254NEWPHONE ownerrecovery",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
   },
   {
     "command": "pair",
     "usage": ".pair 92305395XXXX",
     "description": "Get session id for the bot",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
+  },
+  {
+    "command": "paircode",
+    "usage": ".paircode",
+    "description": "Alias for .pair",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "pardon",
+    "usage": ".pardon",
+    "description": "Alias for .unban",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "pbp",
     "usage": ".pbp [action] - Play by Post RPG tracker",
-    "description": "pbp command",
+    "description": "Play-by-play RPG session tracker",
     "category": "cypher",
-    "source": "cypher.js"
+    "source": "cypher.js",
+    "quality": "manual"
+  },
+  {
+    "command": "pendingjoins",
+    "usage": ".pendingjoins",
+    "description": "Alias for .joinrequests",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "perf",
     "usage": ".perf",
     "description": "View command performance and error metrics",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
+  },
+  {
+    "command": "periodictable",
+    "usage": ".periodictable",
+    "description": "Alias for .element",
+    "category": "search",
+    "source": "ported_search.js",
+    "quality": "alias"
+  },
+  {
+    "command": "persona",
+    "usage": ".persona [description]",
+    "description": "sets a custom AI personality for THIS chat.",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "personality",
+    "usage": ".personality",
+    "description": "Alias for .character",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ph",
+    "usage": ".ph",
+    "description": "Alias for .pixhost",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "phinfo",
+    "usage": ".phinfo",
+    "description": "Alias for .siminfo",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "phoneinfo",
+    "usage": ".phoneinfo",
+    "description": "Alias for .siminfo",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "pickuplines",
+    "usage": ".pickuplines",
+    "description": "Alias for .flirt",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
+  },
+  {
+    "command": "pics",
+    "usage": ".pics",
+    "description": "Alias for .images",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "pie",
+    "usage": ".pie",
+    "description": "Alias for .pies",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
   },
   {
     "command": "pies",
     "usage": ".pies",
     "description": "Get a pies image from a specific country",
     "category": "images",
-    "source": "ported_images.js"
+    "source": "ported_images.js",
+    "quality": "source"
+  },
+  {
+    "command": "pin",
+    "usage": ".pin",
+    "description": "Alias for .pinchat",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "pinchat",
     "usage": ".pinchat pin | .pinchat unpin",
     "description": "Pin or unpin the current chat",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "ping",
     "usage": ".ping",
-    "description": "ping command",
+    "description": "Check the bot's response speed",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "pingweb",
     "usage": ".pingweb [website URL]",
     "description": "Check bot response time and ping a website",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
+  },
+  {
+    "command": "pinprofile",
+    "usage": ".pinprofile",
+    "description": "Alias for .pinstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
   },
   {
     "command": "pinstalk",
     "usage": ".pinstalk <username>",
     "description": "Lookup Pinterest user profile",
     "category": "stalk",
-    "source": "ported_stalk.js"
+    "source": "ported_stalk.js",
+    "quality": "source"
+  },
+  {
+    "command": "pix",
+    "usage": ".pix",
+    "description": "Alias for .pixhost",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
   },
   {
     "command": "pixhost",
     "usage": ".pixhost (reply to media or caption on media)",
     "description": "Upload to Pixhost (images only)",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
   },
   {
     "command": "play",
     "usage": ".play <song name>",
     "description": "Search and download a song as MP3 from YouTube",
     "category": "music",
-    "source": "ported_music.js"
+    "source": "ported_music.js",
+    "quality": "source"
+  },
+  {
+    "command": "playlist",
+    "usage": ".playlist",
+    "description": "Alias for .ytsearch",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
+  },
+  {
+    "command": "playlista",
+    "usage": ".playlista",
+    "description": "Alias for .ytsearch",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
+  },
+  {
+    "command": "plays",
+    "usage": ".plays",
+    "description": "Alias for .play",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
+  },
+  {
+    "command": "pmblock",
+    "usage": ".pmblock",
+    "description": "Alias for .pmblocker",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "pmblocker",
     "usage": ".pmblocker <on|off|status|setmsg>",
     "description": "Block private messages and auto-block users who DM the bot",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "pmpermitapprove",
+    "usage": ".pmpermitapprove",
+    "description": "── New: PM Permit management (only matters while .setpmpermit is ON) ──",
+    "category": "settings ext",
+    "source": "settings-ext.js",
+    "quality": "source"
+  },
+  {
+    "command": "pmpermitlist",
+    "usage": ".pmpermitlist",
+    "description": "List DM senders currently approved under PM-permit mode",
+    "category": "settings ext",
+    "source": "settings-ext.js",
+    "quality": "manual"
+  },
+  {
+    "command": "pmpermitrevoke",
+    "usage": ".pmpermitrevoke",
+    "description": "Revoke a number's approval to DM the bot under PM-permit mode",
+    "category": "settings ext",
+    "source": "settings-ext.js",
+    "quality": "manual"
+  },
+  {
+    "command": "poetry",
+    "usage": ".poetry",
+    "description": "Alias for .shayari",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
+  },
+  {
+    "command": "poke",
+    "usage": ".poke",
+    "description": "Alias for .pokedex",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
   },
   {
     "command": "pokedex",
     "usage": ".pokedex <pokemon name>",
     "description": "Get information about a Pokémon",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "pokemon",
+    "usage": ".pokemon",
+    "description": "Alias for .pokedex",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "poll",
+    "usage": ".poll",
+    "description": "\"Question\" opt1 | opt2 | opt3",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
   },
   {
     "command": "pomf",
     "usage": ".pomf (reply to media)",
     "description": "Upload to Pomf.lain.la (1GB, permanent)",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
   },
   {
     "command": "pp",
     "usage": ".pp",
-    "description": "pp command",
+    "description": "Update the bot's profile picture",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "praise",
+    "usage": ".praise",
+    "description": "Alias for .compliment",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "prankhack",
+    "usage": ".prankhack",
+    "description": "Alias for .hack",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
+  },
+  {
+    "command": "pri",
+    "usage": ".pri",
+    "description": "Alias for .privacy",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "pricing",
     "usage": ".pricing — show current config prices (anyone can check)",
-    "description": "pricing command",
+    "description": "Show current config/service prices",
     "category": "wallet",
-    "source": "wallet.js"
+    "source": "wallet.js",
+    "quality": "manual"
   },
   {
     "command": "privacy",
     "usage": ".privacy — show menu",
     "description": "Manage all WhatsApp privacy settings, block/unblock users",
     "category": "menu",
-    "source": "ported_menu.js"
+    "source": "ported_menu.js",
+    "quality": "source"
+  },
+  {
+    "command": "private",
+    "usage": ".private",
+    "description": "Set the bot to private mode (owner & admins only)",
+    "category": "general",
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "profile",
     "usage": ".profile",
-    "description": "profile command",
+    "description": "View your wallet balance and trust badge",
     "category": "wallet",
-    "source": "wallet.js"
+    "source": "wallet.js",
+    "quality": "manual"
+  },
+  {
+    "command": "programming",
+    "usage": ".programming",
+    "description": "Alias for .coding",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
+  },
+  {
+    "command": "programmingimg",
+    "usage": ".programmingimg",
+    "description": "Alias for .coding",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
   },
   {
     "command": "promote",
     "usage": ".promote",
-    "description": "promote command",
+    "description": "Promote a member to group admin",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "manual"
+  },
+  {
+    "command": "pstalk",
+    "usage": ".pstalk",
+    "description": "Alias for .pinstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
   },
   {
     "command": "public",
     "usage": ".public / .private / .setmode",
-    "description": "public command",
+    "description": "Set the bot to public mode (anyone can use it)",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "pull",
+    "usage": ".pull",
+    "description": "Alias for .gitpull",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "pvcy",
+    "usage": ".pvcy",
+    "description": "Alias for .privacy",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "pweb",
+    "usage": ".pweb",
+    "description": "Alias for .pingweb",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "q",
+    "usage": ".q",
+    "description": "Alias for .quoted",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "qmaker",
     "usage": ".qmaker <text> or reply to a message",
     "description": "Create a quote image from text or replied message",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "qmkr",
+    "usage": ".qmkr",
+    "description": "Alias for .qmaker",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "qr",
+    "usage": ".qr",
+    "description": "Alias for .qrcode",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "qrcode",
     "usage": ".qrcode <text>",
     "description": "Generate a QR code from text",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "qrread",
+    "usage": ".qrread",
+    "description": "Alias for .readqr",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "qu",
+    "usage": ".qu",
+    "description": "Alias for .quax",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
   },
   {
     "command": "quax",
     "usage": ".quax (reply to media or caption on media)",
     "description": "Upload to Qu.ax (anonymous)",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
+  },
+  {
+    "command": "question",
+    "usage": ".question",
+    "description": "Alias for .why",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
   },
   {
     "command": "quote",
     "usage": ".quote",
     "description": "Get a random quote",
     "category": "quotes",
-    "source": "ported_quotes.js"
+    "source": "ported_quotes.js",
+    "quality": "source"
   },
   {
     "command": "quote2",
     "usage": ".quote2",
     "description": "Get a random inspirational quote",
     "category": "quotes",
-    "source": "ported_quotes.js"
+    "source": "ported_quotes.js",
+    "quality": "source"
   },
   {
     "command": "quoted",
     "usage": ".quote <text> or reply to a message",
     "description": "Generate a quote sticker from text",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "quotes",
+    "usage": ".quotes",
+    "description": "Alias for .quote",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
+  },
+  {
+    "command": "quotes2",
+    "usage": ".quotes2",
+    "description": "Alias for .quote2",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
+  },
+  {
+    "command": "quotetext",
+    "usage": ".quotetext",
+    "description": "Alias for .quote",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
+  },
+  {
+    "command": "quozio",
+    "usage": ".quozio",
+    "description": "Alias for .qmaker",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "quran",
     "usage": ".quran 1:1\\n.quran 2:255\\n.quran mercy",
     "description": "Search Quran verses by surah:ayah or keyword",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "quranverse",
+    "usage": ".quranverse",
+    "description": "Alias for .quran",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "qx",
+    "usage": ".qx",
+    "description": "Alias for .quax",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "randomquote",
+    "usage": ".randomquote",
+    "description": "Alias for .quote2",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
   },
   {
     "command": "rank",
     "usage": ".rank",
     "description": "Show top 5 most active members based on message count",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "ranks",
+    "usage": ".ranks",
+    "description": "Alias for .rank",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "read",
+    "usage": ".read",
+    "description": "Alias for .autoread",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "readadd",
+    "usage": ".readadd",
+    "description": "Alias for .readmore",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "readcode",
+    "usage": ".readcode",
+    "description": "Alias for .inspect",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "readfile",
+    "usage": ".readfile",
+    "description": "Alias for .getfile",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "readmail",
+    "usage": ".readmail",
+    "description": "List messages waiting in your temp-mail inbox",
+    "category": "tempmail",
+    "source": "tempmail.js",
+    "quality": "manual"
   },
   {
     "command": "readmore",
     "usage": ".readmore text\\n.readmore text1|text2",
     "description": "Hide text using read more",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
   },
   {
     "command": "readqr",
     "usage": "Reply to an image with .readqr",
     "description": "Read QR code from an image",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "recall",
+    "usage": ".recall <key>",
+    "description": "get back a saved note. .recall with no args isn't",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
   },
   {
     "command": "referral",
     "usage": ".referral — show your referral code/link + earnings",
-    "description": "referral command",
+    "description": "Get your referral link and track earnings",
     "category": "wallet",
-    "source": "wallet.js"
+    "source": "wallet.js",
+    "quality": "manual"
+  },
+  {
+    "command": "refresh",
+    "usage": ".refresh",
+    "description": "Alias for .gitpull",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "register",
     "usage": ".register",
-    "description": "register command",
+    "description": "Get the web panel link (free credits + trust badge)",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "reject",
+    "usage": ".reject",
+    "description": "Deny one pending group join request by number",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "rejectall",
+    "usage": ".rejectall",
+    "description": "Deny all pending group join requests at once",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "rejectjoin",
+    "usage": ".rejectjoin",
+    "description": "Alias for .joinrequests",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "reload",
     "usage": ".reload",
-    "description": "reload command",
+    "description": "Hot-reload all plugins without restarting the bot",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "remember",
+    "usage": ".remember <key> <value>",
+    "description": "save a note for this chat",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "reminders",
+    "usage": ".reminders",
+    "description": "Alias for .schedulelist",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "remove",
+    "usage": ".remove",
+    "description": "Alias for .delete",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "removeadmin",
     "usage": ".removeadmin",
-    "description": ".removeadmin 254XXXXXXXXX",
+    "description": "Remove a sub-admin by number",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "removeall",
+    "usage": ".removeall <num1> <num2> ...",
+    "description": "bulk-remove numbers from the group",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
   },
   {
     "command": "removebg",
     "usage": ".removebg (reply to image or send image with caption)",
     "description": "Remove background from an image",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "removecmd",
+    "usage": ".removecmd",
+    "description": "Alias for .delcmd",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "removecoowner",
+    "usage": ".removecoowner",
+    "description": "Remove a co-owner (primary owner only)",
+    "category": "general",
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "removereply",
+    "usage": ".removereply",
+    "description": "Alias for .delreply",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "replies",
+    "usage": ".replies",
+    "description": "Alias for .listreplies",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "replylist",
+    "usage": ".replylist",
+    "description": "Alias for .listreplies",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "repo",
+    "usage": ".repo",
+    "description": "Alias for .script",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "report",
+    "usage": ".report @user [reason]",
+    "description": "anyone can file, admins get pinged",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "resetallsettings",
+    "usage": ".resetallsettings",
+    "description": "Reset every bot-wide setting back to defaults",
+    "category": "settings ext",
+    "source": "settings-ext.js",
+    "quality": "manual"
+  },
+  {
+    "command": "resetgroup",
+    "usage": ".resetgroup",
+    "description": "Reset this group's protection settings back to defaults",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
   },
   {
     "command": "resetlink",
     "usage": ".resetlink",
     "description": "Reset group invite link",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "resetsetting",
+    "usage": ".resetsetting",
+    "description": "Reset one specific bot-wide setting back to default",
+    "category": "settings ext",
+    "source": "settings-ext.js",
+    "quality": "manual"
+  },
+  {
+    "command": "resetsudo",
+    "usage": ".resetsudo",
+    "description": "Clear the entire sudo (sub-admin) list",
+    "category": "sudo",
+    "source": "sudo.js",
+    "quality": "manual"
+  },
+  {
+    "command": "resize",
+    "usage": ".resize",
+    "description": "Alias for .length",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "restart",
+    "usage": ".restart",
+    "description": "Alias for .update",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "results",
+    "usage": ".results",
+    "description": "<pollId>",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
   },
   {
     "command": "reverse",
     "usage": ".reverse <text>",
     "description": "Reverse any text",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "reversetext",
+    "usage": ".reversetext",
+    "description": "Alias for .reverse",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "revoke",
     "usage": ".revoke",
-    "description": ".antispam on/off",
+    "description": "antispam on",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "source"
+  },
+  {
+    "command": "revokeinvite",
+    "usage": ".revokeinvite",
+    "description": "Alias for .invitelink",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "revt",
+    "usage": ".revt",
+    "description": "Alias for .reverse",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ring",
+    "usage": ".ring",
+    "description": "Alias for .ringtone",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
   },
   {
     "command": "ringtone",
     "usage": ".ringtone <search term>",
     "description": "Search and download ringtones",
     "category": "music",
-    "source": "ported_music.js"
+    "source": "ported_music.js",
+    "quality": "source"
   },
   {
     "command": "rle",
     "usage": ".rle compress <text or reply to media>\\n.rle decompress <encoded or reply to compressed file>",
     "description": "Compress or decompress text/files using Run-Length Encoding (C++ powered)",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "rlecompress",
+    "usage": ".rlecompress",
+    "description": "Alias for .rle",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "rmadd",
+    "usage": ".rmadd",
+    "description": "Alias for .readmore",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "rmbg",
+    "usage": ".rmbg",
+    "description": "Alias for .removebg",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "rmplugin",
+    "usage": ".rmplugin",
+    "description": "Alias for .delplugin",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "rmreply",
+    "usage": ".rmreply",
+    "description": "Alias for .delreply",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "roast",
+    "usage": ".roast",
+    "description": "Alias for .insult",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "robot",
+    "usage": ".robot",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "roll",
     "usage": ".roll [dice] e.g .roll 3d6+2",
-    "description": ".roll 3d6+2\\nFormat: [count]d[sides][+/-modifier]",
+    "description": "roll 3d6",
     "category": "cypher",
-    "source": "cypher.js"
+    "source": "cypher.js",
+    "quality": "source"
+  },
+  {
+    "command": "rose",
+    "usage": ".rose",
+    "description": "Alias for .roseday",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
   },
   {
     "command": "roseday",
     "usage": ".roseday",
     "description": "Get a random Rose Day message/quote",
     "category": "quotes",
-    "source": "ported_quotes.js"
+    "source": "ported_quotes.js",
+    "quality": "source"
+  },
+  {
+    "command": "rosequote",
+    "usage": ".rosequote",
+    "description": "Alias for .roseday",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
+  },
+  {
+    "command": "runcpp",
+    "usage": ".runcpp",
+    "description": "Alias for .crun",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "runtime",
     "usage": ".runtime",
-    "description": "runtime command",
+    "description": "Show bot uptime and system info",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "s2",
+    "usage": ".s2",
+    "description": "Alias for .sticker2",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "s2img",
     "usage": ".s2img (reply to a sticker)",
     "description": "Convert a sticker to an image",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "save",
+    "usage": ".save",
+    "description": "Save the replied view-once media as a file",
+    "category": "media",
+    "source": "media.js",
+    "quality": "manual"
+  },
+  {
+    "command": "sc",
+    "usage": ".sc",
+    "description": "Alias for .script",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "schedcancel",
+    "usage": ".schedcancel",
+    "description": "Alias for .schedulecancel",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "schedlist",
+    "usage": ".schedlist",
+    "description": "Alias for .schedulelist",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "schedule",
-    "usage": ".schedule add",
-    "description": "*\\n.schedule add <time> <to> <message>\\n\\n*Time formats:*\\n• \\",
+    "usage": ".schedule del",
+    "description": "Manage scheduled messages (add/list/del/repeat)",
     "category": "scheduler",
-    "source": "scheduler.js"
+    "source": "scheduler.js",
+    "quality": "manual"
   },
   {
     "command": "schedulecancel",
     "usage": ".schedulecancel <ID>",
     "description": "Cancel a scheduled message by its ID",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
   },
   {
     "command": "schedulelist",
     "usage": ".schedulelist",
     "description": "View all scheduled messages for this chat",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "schedules",
+    "usage": ".schedules",
+    "description": "Alias for .schedulelist",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "scloud",
     "usage": ".scloud <song name>",
     "description": "Search for tracks on SoundCloud",
     "category": "music",
-    "source": "ported_music.js"
+    "source": "ported_music.js",
+    "quality": "source"
   },
   {
     "command": "screenshot",
     "usage": ".screenshot <url>",
     "description": "Get a screenshot of a website",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
   },
   {
     "command": "script",
     "usage": ".script",
     "description": "Get information about this bot's GitHub repository",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "scrop",
+    "usage": ".scrop",
+    "description": "Alias for .crop",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "scsearch",
+    "usage": ".scsearch",
+    "description": "Alias for .scloud",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
+  },
+  {
+    "command": "scspot",
+    "usage": ".scspot",
+    "description": "Alias for .snapchat",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "sdk",
+    "usage": ".sdk",
+    "description": "Alias for .sudoku",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "searchcmd",
+    "usage": ".searchcmd",
+    "description": "Alias for .find",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "searchgif",
+    "usage": ".searchgif",
+    "description": "Alias for .gif",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "searchwattpad",
+    "usage": ".searchwattpad",
+    "description": "Alias for .wattpad",
+    "category": "search",
+    "source": "ported_search.js",
+    "quality": "alias"
   },
   {
     "command": "sepia",
     "usage": "Reply to an image with .sepia",
     "description": "Convert an image to sepia",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "serverinfo",
+    "usage": ".serverinfo",
+    "description": "Alias for .sysinfo",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "serverstats",
+    "usage": ".serverstats",
+    "description": "Alias for .sysinfo",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "session",
+    "usage": ".session",
+    "description": "Alias for .pair",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "sessionid",
+    "usage": ".sessionid",
+    "description": "Alias for .pair",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
+  },
+  {
+    "command": "setantigcmentionwarnlimit",
+    "usage": ".setantigcmentionwarnlimit",
+    "description": "Set how many @everyone-mentions trigger a warning",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
+  },
+  {
+    "command": "setantilink",
+    "usage": ".setantilink",
+    "description": "── Toggles ────────────────────────────────────────────────────────────",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "source"
   },
   {
     "command": "setbio",
     "usage": ".setbio <on|off|set|reset>",
     "description": "Set custom WhatsApp bio with random quotes",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "setcmd",
     "usage": ".setcmd <text>",
     "description": "Set a sticker command",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "setdesc",
+    "usage": ".setdesc",
+    "description": "<new description>",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "setdp",
+    "usage": ".setdp",
+    "description": "Alias for .setpp",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "setgdesc",
     "usage": ".setgdesc <new description>",
     "description": "Change group description",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
   },
   {
     "command": "setgname",
     "usage": ".setgname <new name>",
     "description": "Change group name",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "setgpic",
+    "usage": ".setgpic",
+    "description": "Alias for .setgpp",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "setgpp",
     "usage": ".setgpp (reply to image)",
     "description": "Change group profile picture",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "setgrouppic",
+    "usage": ".setgrouppic",
+    "description": "Alias for .setgpp",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "setmention",
+    "usage": ".setmention",
+    "description": "Alias for .mention",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "setmode",
+    "usage": ".setmode",
+    "description": "Turn the bot on or off (.setmode on/off)",
+    "category": "general",
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "setname",
+    "usage": ".setname",
+    "description": "<new group name>",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
   },
   {
     "command": "setpp",
     "usage": ".setpp (reply to an image)",
     "description": "Set or update the bot profile picture (owner only)",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "setppic",
+    "usage": ".setppic",
+    "description": "Alias for .setpp",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "setprice",
     "usage": ".setprice <text> — owner-only, updates what .pricing shows",
-    "description": ".setprice <text>\\ne.g. *.setprice Airtel Premium - 50 kesh/30 days\\\\nAirtel 24H",
+    "description": "setprice <text>",
     "category": "wallet",
-    "source": "wallet.js"
+    "source": "wallet.js",
+    "quality": "source"
+  },
+  {
+    "command": "setprivacy",
+    "usage": ".setprivacy",
+    "description": "Alias for .privacy",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "setreply",
+    "usage": ".setreply",
+    "description": "Alias for .addreply",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "setsudo",
+    "usage": ".setsudo",
+    "description": "Add a number to the sudo (sub-admin) list",
+    "category": "sudo",
+    "source": "sudo.js",
+    "quality": "manual"
   },
   {
     "command": "settier",
     "usage": ".settier — owner-only, assign ANY number to ANY permission tier",
-    "description": ".settier 254XXXXXXXXX [subadmin|coowner]   // Unlike .addadmin (sub-admin only),",
+    "description": "settier 254XXXXXXXXX [subadmin|coowner]",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
+  },
+  {
+    "command": "setting",
+    "usage": ".setting",
+    "description": "Alias for .settings",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "settings",
     "usage": ".settings",
     "description": "Show bot settings and per-group configurations",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "share",
     "usage": ".share — forward a replied-to message (text/image/video/audio/doc)",
-    "description": "reply to any message with .share <number>   // Forwards the exact quoted message",
+    "description": "reply to any message with .share <number>",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "source"
   },
   {
     "command": "sharechat",
     "usage": ".sharechat <ShareChat URL>",
     "description": "Download video from ShareChat",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "sharechatdl",
+    "usage": ".sharechatdl",
+    "description": "Alias for .sharechat",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "sharechatvideo",
+    "usage": ".sharechatvideo",
+    "description": "Alias for .sharechat",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "sharpen",
     "usage": "Reply to an image with .sharpen",
     "description": "Convert an image to sharpen",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "shayar",
+    "usage": ".shayar",
+    "description": "Alias for .shayari",
+    "category": "quotes",
+    "source": "ported_quotes.js",
+    "quality": "alias"
   },
   {
     "command": "shayari",
     "usage": ".shayari",
     "description": "Get a random shayari",
     "category": "quotes",
-    "source": "ported_quotes.js"
+    "source": "ported_quotes.js",
+    "quality": "source"
   },
   {
     "command": "shazam",
     "usage": ".shazam (reply to audio or video)",
     "description": "Identify a song from audio or video",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
+  },
+  {
+    "command": "shelp",
+    "usage": ".shelp",
+    "description": "Alias for .smenu",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
   },
   {
     "command": "ship",
     "usage": ".ship",
     "description": "Randomly ship two members in the group",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
   },
   {
     "command": "shortener",
     "usage": ".shortener <url> / .tinyurl <url>",
-    "description": ".shortener <url>",
+    "description": "Shorten a long URL",
     "category": "urltools",
-    "source": "urltools.js"
+    "source": "urltools.js",
+    "quality": "manual"
+  },
+  {
+    "command": "silence",
+    "usage": ".silence on/off",
+    "description": "mutes the BOT's own AI auto-replies in this chat.",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "simage",
+    "usage": ".simage",
+    "description": "Alias for .s2img",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "siminfo",
     "usage": ".siminfo <phone number with country code>\\nExample: .siminfo +923001234567",
     "description": "Lookup phone number country, carrier and type",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
   },
   {
     "command": "simp",
     "usage": ".simp (reply to user or mention someone)",
     "description": "Generate a simp card for a user",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "simpcard",
+    "usage": ".simpcard",
+    "description": "Alias for .simp",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "slow",
+    "usage": ".slow",
+    "description": "Alias for .audiofx",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "smallcaps",
     "usage": ".smallcaps <text> OR reply to a message",
     "description": "Convert text to small-capital style",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "smart",
+    "usage": ".smart",
+    "description": "Alias for .smenu",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
   },
   {
     "command": "smenu",
     "usage": ".smenu",
     "description": "Now just an alias for the unified .loadmenu / .menu ──────",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
   },
   {
     "command": "snack",
     "usage": ".snack <SnackVideo URL>",
     "description": "Download media (video or image) from SnackVideo URL",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "snackdl",
+    "usage": ".snackdl",
+    "description": "Alias for .snack",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "snackvideo",
+    "usage": ".snackvideo",
+    "description": "Alias for .snack",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "snapchat",
     "usage": ".snapchat <Snapchat URL>",
     "description": "Download media (video or image) from Snapchat Spotlight URL",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "snapdl",
+    "usage": ".snapdl",
+    "description": "Alias for .snapchat",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "solve",
+    "usage": ".solve",
+    "description": "Alias for .calc",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "song",
     "usage": ".song — ✅ FIX: use execFile to prevent shell injection",
-    "description": ".song [YouTube URL or song name]",
+    "description": "Extract MP3 audio from a YouTube URL or search term",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "manual"
+  },
+  {
+    "command": "songid",
+    "usage": ".songid",
+    "description": "Alias for .shazam",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "songlyrics",
+    "usage": ".songlyrics",
+    "description": "Alias for .lyrics",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
   },
   {
     "command": "sora",
     "usage": ".sora <prompt>",
     "description": "Generate AI video from text prompt",
     "category": "ai",
-    "source": "ported_ai.js"
+    "source": "ported_ai.js",
+    "quality": "source"
+  },
+  {
+    "command": "soundcloud",
+    "usage": ".soundcloud",
+    "description": "Alias for .scloud",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
+  },
+  {
+    "command": "source",
+    "usage": ".source",
+    "description": "Alias for .getpage",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "speed",
+    "usage": ".speed",
+    "description": "Alias for .speedtest",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "speedtest",
     "usage": ".speedtest",
     "description": "Test internet speed of the server",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "sportnews",
+    "usage": ".sportnews",
+    "description": "Latest sports news headlines for a topic (default football)",
+    "category": "sports",
+    "source": "sports.js",
+    "quality": "manual"
   },
   {
     "command": "spotify",
     "usage": ".spotify <spotify-url>",
     "description": "Download music from Spotify",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "spotifydl",
+    "usage": ".spotifydl",
+    "description": "Alias for .spotify",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "sptfdl",
+    "usage": ".sptfdl",
+    "description": "Alias for .spotify",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ss",
+    "usage": ".ss",
+    "description": "Alias for .screenshot",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ssticker",
+    "usage": ".ssticker",
+    "description": "Alias for .stickers",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ssweb",
+    "usage": ".ssweb",
+    "description": "Alias for .screenshot",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "staff",
     "usage": ".staff",
     "description": "Display list of group admins",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "standings",
+    "usage": ".standings",
+    "description": "League table standings for a given league/season",
+    "category": "sports",
+    "source": "sports.js",
+    "quality": "manual"
   },
   {
     "command": "star",
     "usage": ".star — reply to a message | .unstar — reply to a message",
     "description": "Star or unstar a replied message",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "starmsg",
+    "usage": ".starmsg",
+    "description": "Alias for .star",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "status",
     "usage": ".status",
-    "description": "status command",
+    "description": "Post an image as the bot's WhatsApp status",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
+  },
+  {
+    "command": "statusdl",
+    "usage": ".statusdl",
+    "description": "Alias for .dlstatus",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "statusview",
+    "usage": ".statusview",
+    "description": "Alias for .autostatus",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "steal",
+    "usage": ".steal",
+    "description": "Alias for .take",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "stealth",
     "usage": ".stealth <on|off>",
     "description": "Toggle online status - bot will not send presence updates if off",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "stealthmode",
+    "usage": ".stealthmode",
+    "description": "Alias for .stealth",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "stext",
     "usage": ".stext <text>",
     "description": "Style text in different fancy formats",
     "category": "menu",
-    "source": "ported_menu.js"
+    "source": "ported_menu.js",
+    "quality": "source"
   },
   {
     "command": "sticker",
     "usage": ".sticker",
-    "description": "sticker command",
+    "description": "Convert a replied image/video into a sticker",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "manual"
   },
   {
     "command": "sticker2",
     "usage": ".sticker2 (reply to image/video or send with caption)",
     "description": "Convert image/video to sticker",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "stickercrop",
+    "usage": ".stickercrop",
+    "description": "Alias for .crop",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "stickers",
     "usage": ".stickers <search term>",
     "description": "Search for stickers using Tenor",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "stickersearch",
+    "usage": ".stickersearch",
+    "description": "Alias for .stickers",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "stik2",
+    "usage": ".stik2",
+    "description": "Alias for .sticker2",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "stoimg",
+    "usage": ".stoimg",
+    "description": "Alias for .s2img",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "string",
     "usage": ".string <text>",
     "description": "Get detailed info about a text string",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
   },
   {
     "command": "stupid",
     "usage": ".stupid (reply to user, mention someone, or add text)",
     "description": "Generate a stupid card for a user",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "stupidcard",
+    "usage": ".stupidcard",
+    "description": "Alias for .stupid",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "styletext",
+    "usage": ".styletext",
+    "description": "Alias for .stext",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
   },
   {
     "command": "sudo",
     "usage": ".sudo add|del|list <@user|number>",
     "description": "Add or remove sudo users or list them",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
   },
   {
     "command": "sudoku",
     "usage": ".sudoku generate [easy|medium|hard]\\n.sudoku solve <81 digits, 0 for empty>",
     "description": "Generate Sudoku puzzles or solve them",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "sudokugen",
+    "usage": ".sudokugen",
+    "description": "Alias for .sudoku",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "sudokusolve",
+    "usage": ".sudokusolve",
+    "description": "Alias for .sudoku",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "summarize",
     "usage": ".summarize",
-    "description": ".summarize [text] or reply to a message",
+    "description": "AI-summarize a block of text or a replied message",
     "category": "cypher",
-    "source": "cypher.js"
+    "source": "cypher.js",
+    "quality": "manual"
+  },
+  {
+    "command": "surah",
+    "usage": ".surah",
+    "description": "Alias for .quran",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "swdl",
+    "usage": ".swdl",
+    "description": "Alias for .dlstatus",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "sysinfo",
     "usage": ".sysinfo",
     "description": "Show detailed server system information",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "system",
+    "usage": ".system",
+    "description": "Alias for .sysinfo",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "tag",
     "usage": ".tag [message] or reply to a message",
     "description": "Tag all group members",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "tagadmins",
+    "usage": ".tagadmins",
+    "description": "Tag only the group's admins",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "manual"
   },
   {
     "command": "tagall",
     "usage": ".tagall",
-    "description": "tagall command",
+    "description": "Tag every member in the group with a message",
     "category": "group",
-    "source": "group.js"
+    "source": "group.js",
+    "quality": "manual"
+  },
+  {
+    "command": "tagblock",
+    "usage": ".tagblock",
+    "description": "Alias for .antitag",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tagmembers",
+    "usage": ".tagmembers",
+    "description": "Alias for .tagnotadmin",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tagnon",
+    "usage": ".tagnon",
+    "description": "Alias for .tagnotadmin",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
   },
   {
     "command": "tagnotadmin",
     "usage": ".tagnotadmin",
     "description": "Tag all non-admin members in the group",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
   },
   {
     "command": "take",
     "usage": ".take <packname> (reply to sticker)",
     "description": "Change sticker pack name",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "tbdl",
+    "usage": ".tbdl",
+    "description": "Alias for .terabox",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tbox",
+    "usage": ".tbox",
+    "description": "Alias for .terabox",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "tech",
     "usage": ".tech",
     "description": "Get a random tech image",
     "category": "images",
-    "source": "ported_images.js"
+    "source": "ported_images.js",
+    "quality": "source"
+  },
+  {
+    "command": "techimg",
+    "usage": ".techimg",
+    "description": "Alias for .tech",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
+  },
+  {
+    "command": "technology",
+    "usage": ".technology",
+    "description": "Alias for .tech",
+    "category": "images",
+    "source": "ported_images.js",
+    "quality": "alias"
   },
   {
     "command": "teddy",
     "usage": ".teddy",
     "description": "Send an animated teddy with cute emojis",
     "category": "fun",
-    "source": "ported_fun.js"
+    "source": "ported_fun.js",
+    "quality": "source"
+  },
+  {
+    "command": "telegram",
+    "usage": ".telegram",
+    "description": "Alias for .tgstk",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tempmail",
+    "usage": ".tempmail",
+    "description": "Get or create your disposable email address",
+    "category": "tempmail",
+    "source": "tempmail.js",
+    "quality": "manual"
+  },
+  {
+    "command": "tempmailhelp",
+    "usage": ".tempmailhelp",
+    "description": "Show the temp-mail command list (.tempmail/.readmail/.delmail)",
+    "category": "tempmail",
+    "source": "tempmail.js",
+    "quality": "manual"
+  },
+  {
+    "command": "tempup",
+    "usage": ".tempup",
+    "description": "Alias for .litterbox",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tera",
+    "usage": ".tera",
+    "description": "Alias for .terabox",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "terabox",
     "usage": ".terabox <terabox link>",
     "description": "Download files from TeraBox",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "textinfo",
+    "usage": ".textinfo",
+    "description": "Alias for .string",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "textmaker",
+    "usage": ".textmaker",
+    "description": "Alias for .ephoto",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "texts",
+    "usage": ".texts",
+    "description": "Alias for .attp",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "textstats",
+    "usage": ".textstats",
+    "description": "Alias for .string",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "textsticker",
+    "usage": ".textsticker",
+    "description": "Alias for .attp",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
+  },
+  {
+    "command": "textstyle",
+    "usage": ".textstyle",
+    "description": "Alias for .stext",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tfiles",
+    "usage": ".tfiles",
+    "description": "Alias for .tmpfiles",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tginfo",
+    "usage": ".tginfo",
+    "description": "Alias for .tgstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
   },
   {
     "command": "tgstalk",
     "usage": ".tgstalk <username>",
     "description": "Lookup Telegram channel or user",
     "category": "stalk",
-    "source": "ported_stalk.js"
+    "source": "ported_stalk.js",
+    "quality": "source"
+  },
+  {
+    "command": "tgsticker",
+    "usage": ".tgsticker",
+    "description": "Alias for .tgstk",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "tgstk",
     "usage": ".tgstk <telegram sticker URL>",
     "description": "Download stickers from Telegram",
     "category": "stickers",
-    "source": "ported_stickers.js"
+    "source": "ported_stickers.js",
+    "quality": "source"
+  },
+  {
+    "command": "tguser",
+    "usage": ".tguser",
+    "description": "Alias for .tgstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
+  },
+  {
+    "command": "threadsprofile",
+    "usage": ".threadsprofile",
+    "description": "Alias for .thrstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
+  },
+  {
+    "command": "threadsuser",
+    "usage": ".threadsuser",
+    "description": "Alias for .thrstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
   },
   {
     "command": "thrstalk",
     "usage": ".thrstalk <username>",
     "description": "Lookup Threads user profile",
     "category": "stalk",
-    "source": "ported_stalk.js"
+    "source": "ported_stalk.js",
+    "quality": "source"
   },
   {
     "command": "tictactoe",
     "usage": ".tictactoe [room name]",
     "description": "Play TicTacToe game with another user",
     "category": "games",
-    "source": "ported_games.js"
+    "source": "ported_games.js",
+    "quality": "source"
+  },
+  {
+    "command": "tikstalk",
+    "usage": ".tikstalk",
+    "description": "Alias for .ttstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
   },
   {
     "command": "tiktok",
     "usage": ".tiktok <TikTok URL>",
     "description": "Download TikTok video without watermark (HD if available)",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "tiktokdl",
+    "usage": ".tiktokdl",
+    "description": "Alias for .tiktok",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tinytext",
+    "usage": ".tinytext",
+    "description": "Alias for .smallcaps",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tinyurl",
+    "usage": ".tinyurl",
+    "description": "Alias for .shortener",
+    "category": "urltools",
+    "source": "urltools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tmaker",
+    "usage": ".tmaker",
+    "description": "Alias for .ephoto",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tmpclear",
+    "usage": ".tmpclear",
+    "description": "Alias for .cleartmp",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tmpf",
+    "usage": ".tmpf",
+    "description": "Alias for .tmpfiles",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
   },
   {
     "command": "tmpfiles",
     "usage": ".tmpfiles (reply to media or caption on media)",
     "description": "Upload to Tmpfiles.org (temporary)",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
+  },
+  {
+    "command": "toall",
+    "usage": ".toall",
+    "description": "Alias for .aupload",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tone",
+    "usage": ".tone",
+    "description": "Alias for .ringtone",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
+  },
+  {
+    "command": "top",
+    "usage": ".top",
+    "description": "Alias for .rank",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "topics",
+    "usage": ".topics [hours]",
+    "description": "most-mentioned words/topics",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "topscorers",
+    "usage": ".topscorers",
+    "description": "Top-scorer stats (requires a paid SportsDB API tier)",
+    "category": "sports",
+    "source": "sports.js",
+    "quality": "manual"
+  },
+  {
+    "command": "topusers",
+    "usage": ".topusers",
+    "description": "Alias for .rank",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "topwords",
+    "usage": ".topwords",
+    "description": "Alias for .wordcloud",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "tourl",
     "usage": ".tourl (reply to media or send media with caption)",
     "description": "Upload media and get a URL.",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "track",
+    "usage": ".track @user [hours]",
+    "description": "how active one specific member has been",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "traits",
+    "usage": ".traits",
+    "description": "Alias for .character",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
+  },
+  {
+    "command": "translate",
+    "usage": ".translate",
+    "description": "<lang> <text>",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "trend",
+    "usage": ".trend",
+    "description": "Alias for .trends",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "trending",
+    "usage": ".trending",
+    "description": "Alias for .trends",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
   },
   {
     "command": "trends",
     "usage": ".trends <country-name>",
     "description": "Get trending topics from a country.",
     "category": "info",
-    "source": "ported_info.js"
+    "source": "ported_info.js",
+    "quality": "source"
   },
   {
     "command": "trivia",
     "usage": ".trivia",
-    "description": "trivia command",
+    "description": "Get a random trivia question",
     "category": "games",
-    "source": "games.js"
+    "source": "games.js",
+    "quality": "manual"
   },
   {
     "command": "truth",
     "usage": ".truth",
-    "description": "truth command",
+    "description": "Truth or Dare: get a truth question",
     "category": "games",
-    "source": "games.js"
+    "source": "games.js",
+    "quality": "manual"
+  },
+  {
+    "command": "tt",
+    "usage": ".tt",
+    "description": "Alias for .tiktok",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ttdl",
+    "usage": ".ttdl",
+    "description": "Alias for .tiktok",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ttprofile",
+    "usage": ".ttprofile",
+    "description": "Alias for .ttstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
   },
   {
     "command": "tts",
     "usage": ".tts — free text-to-speech via Google Translate's TTS endpoint",
-    "description": ".tts [text]\\n(or reply to a text message with .tts)",
+    "description": "tts [text]",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "source"
   },
   {
     "command": "ttstalk",
     "usage": ".ttstalk <username>",
     "description": "Lookup TikTok user profile",
     "category": "stalk",
-    "source": "ported_stalk.js"
+    "source": "ported_stalk.js",
+    "quality": "source"
+  },
+  {
+    "command": "ttt",
+    "usage": ".ttt",
+    "description": "Alias for .tictactoe",
+    "category": "games",
+    "source": "ported_games.js",
+    "quality": "alias"
+  },
+  {
+    "command": "tttboard",
+    "usage": ".tttboard",
+    "description": "Show the current Tic-Tac-Toe board",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "tttend",
+    "usage": ".tttend",
+    "description": "End the active Tic-Tac-Toe game in this chat",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "tttjoin",
+    "usage": ".tttjoin",
+    "description": "── Tic-Tac-Toe ──────────────────────────────────────────────────────────",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "source"
+  },
+  {
+    "command": "tweetdl",
+    "usage": ".tweetdl",
+    "description": "Alias for .twitter",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   },
   {
     "command": "twitter",
     "usage": ".twitter <Tweet URL>",
     "description": "Download media (video or image) from X/Twitter post",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "twitterdl",
+    "usage": ".twitterdl",
+    "description": "Alias for .twitter",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "twstalk",
+    "usage": ".twstalk",
+    "description": "Alias for .xstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
+  },
+  {
+    "command": "txt2video",
+    "usage": ".txt2video",
+    "description": "Alias for .sora",
+    "category": "ai",
+    "source": "ported_ai.js",
+    "quality": "alias"
+  },
+  {
+    "command": "typing",
+    "usage": ".typing",
+    "description": "Alias for .autotyping",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ug",
+    "usage": ".ug",
+    "description": "Alias for .uguu",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
   },
   {
     "command": "uguu",
     "usage": ".uguu (reply to media or caption on media)",
     "description": "Upload to Uguu.se (temporary)",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
+  },
+  {
+    "command": "uguuse",
+    "usage": ".uguuse",
+    "description": "Alias for .uguu",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "uid",
+    "usage": ".uid",
+    "description": "Alias for .genshin",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
+  },
+  {
+    "command": "unarchive",
+    "usage": ".unarchive",
+    "description": "Alias for .archivechat",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "unarchivechat",
+    "usage": ".unarchivechat",
+    "description": "Alias for .archivechat",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
   },
   {
     "command": "unban",
     "usage": ".unban [@user] or reply to message",
     "description": "Unban a user from using the bot",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "unit",
+    "usage": ".unit",
+    "description": "Alias for .units",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "units",
     "usage": ".units <value> <from> to <to>\\nExample: .units 100 km to miles",
     "description": "Convert between 100+ units — length, weight, speed, data, temperature and more",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "unmute",
+    "usage": ".unmute",
+    "description": "Unmute the group",
+    "category": "group",
+    "source": "group.js",
+    "quality": "manual"
+  },
+  {
+    "command": "unpin",
+    "usage": ".unpin",
+    "description": "Alias for .pinchat",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "unpinchat",
+    "usage": ".unpinchat",
+    "description": "Alias for .pinchat",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "unschedule",
+    "usage": ".unschedule",
+    "description": "Alias for .schedulecancel",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "unstar",
+    "usage": ".unstar",
+    "description": "Alias for .star",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "unstarmsg",
+    "usage": ".unstarmsg",
+    "description": "Alias for .star",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "upall",
+    "usage": ".upall",
+    "description": "Alias for .aupload",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "upcomingmatches",
+    "usage": ".upcomingmatches",
+    "description": "Upcoming fixtures for a given team",
+    "category": "sports",
+    "source": "sports.js",
+    "quality": "manual"
   },
   {
     "command": "update",
     "usage": ".update [zip_url]",
     "description": "Update bot from git or zip without stopping",
     "category": "owner",
-    "source": "ported_owner.js"
+    "source": "ported_owner.js",
+    "quality": "source"
+  },
+  {
+    "command": "updatenote",
+    "usage": ".updatenote",
+    "description": "Overwrite an existing note's text",
+    "category": "notes",
+    "source": "notes.js",
+    "quality": "manual"
+  },
+  {
+    "command": "upgrade",
+    "usage": ".upgrade",
+    "description": "Alias for .update",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "upload",
+    "usage": ".upload",
+    "description": "Alias for .tourl",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "upside",
+    "usage": ".upside",
+    "description": "Alias for .flip",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "uptime",
     "usage": ".uptime",
     "description": "Show bot status information",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
   },
   {
     "command": "url",
     "usage": ".url (send or reply to media)",
     "description": "Get a URL for media (image, video, audio, sticker, document).",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
   },
   {
     "command": "urldecode",
     "usage": ".urldecode <url>\\n.urlencode <text>\\n.extractlinks <text or reply to file>",
     "description": "Encode/decode URLs or extract all links from text/files",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "urlencode",
+    "usage": ".urlencode",
+    "description": "Alias for .urldecode",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "urlextract",
+    "usage": ".urlextract",
+    "description": "Alias for .urldecode",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "validate",
     "usage": ".validate <number>",
-    "description": "*.validate 2547XXXXXXXX*",
+    "description": "validate 2547XXXXXXXX",
     "category": "osint",
-    "source": "osint.js"
+    "source": "osint.js",
+    "quality": "source"
+  },
+  {
+    "command": "vanish",
+    "usage": ".vanish",
+    "description": "Alias for .disappear",
+    "category": "admin",
+    "source": "ported_admin.js",
+    "quality": "alias"
+  },
+  {
+    "command": "venice",
+    "usage": ".venice",
+    "description": "Ask Venice AI a question (needs VENICE_API_KEY configured)",
+    "category": "aichat2",
+    "source": "aichat2.js",
+    "quality": "manual"
   },
   {
     "command": "video",
     "usage": ".video <youtube link | search query>",
     "description": "Download YouTube videos by link or search",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "videosearch",
+    "usage": ".videosearch",
+    "description": "Search YouTube by name and send the video (or paste any link)",
+    "category": "media",
+    "source": "media.js",
+    "quality": "manual"
   },
   {
     "command": "vidsplay",
     "usage": ".vidsplay <Vidsplay URL>",
     "description": "Download video and thumbnail from Vidsplay",
     "category": "download",
-    "source": "ported_download.js"
+    "source": "ported_download.js",
+    "quality": "source"
+  },
+  {
+    "command": "vidsplaydl",
+    "usage": ".vidsplaydl",
+    "description": "Alias for .vidsplay",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "vidsplayvideo",
+    "usage": ".vidsplayvideo",
+    "description": "Alias for .vidsplay",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "viewfile",
+    "usage": ".viewfile",
+    "description": "Alias for .getfile",
+    "category": "owner",
+    "source": "ported_owner.js",
+    "quality": "alias"
+  },
+  {
+    "command": "viewmedia",
+    "usage": ".viewmedia",
+    "description": "Alias for .viewonce",
+    "category": "general",
+    "source": "ported_general.js",
+    "quality": "alias"
   },
   {
     "command": "viewonce",
     "usage": ".viewonce (reply to a view-once media)",
     "description": "Re-send a view-once image or video.",
     "category": "general",
-    "source": "ported_general.js"
+    "source": "ported_general.js",
+    "quality": "source"
+  },
+  {
+    "command": "viewsource",
+    "usage": ".viewsource",
+    "description": "Alias for .getpage",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "vintage",
+    "usage": ".vintage",
+    "description": "Alias for .sepia",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "viral",
+    "usage": ".viral",
+    "description": "Alias for .forwarded",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "vn",
+    "usage": ".vn",
+    "description": "Alias for .vnote",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
   },
   {
     "command": "vnote",
     "usage": "Reply to an audio file with .vnote",
     "description": "Convert any audio message into a voice note",
     "category": "tools",
-    "source": "ported_tools.js"
+    "source": "ported_tools.js",
+    "quality": "source"
+  },
+  {
+    "command": "voicenote",
+    "usage": ".voicenote",
+    "description": "Alias for .vnote",
+    "category": "tools",
+    "source": "ported_tools.js",
+    "quality": "alias"
+  },
+  {
+    "command": "vote",
+    "usage": ".vote",
+    "description": "<pollId> <optionNumber>",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
   },
   {
     "command": "vv",
     "usage": ".vv",
-    "description": "vv command",
+    "description": "Show your saved view-once media",
     "category": "media",
-    "source": "media.js"
+    "source": "media.js",
+    "quality": "manual"
+  },
+  {
+    "command": "wallpics",
+    "usage": ".wallpics",
+    "description": "Alias for .images",
+    "category": "menu",
+    "source": "ported_menu.js",
+    "quality": "alias"
+  },
+  {
+    "command": "warn",
+    "usage": ".warn @user [reason]",
+    "description": "bot-admin only. Reuses the SAME group_warnings",
+    "category": "extended",
+    "source": "extended.js",
+    "quality": "source"
+  },
+  {
+    "command": "warncount",
+    "usage": ".warncount",
+    "description": "Alias for .warnings",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "warnings",
     "usage": ".warnings [@user]",
     "description": "Check warning count of a user",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
+  },
+  {
+    "command": "waste",
+    "usage": ".waste",
+    "description": "Alias for .wasted",
+    "category": "group",
+    "source": "ported_group.js",
+    "quality": "alias"
   },
   {
     "command": "wasted",
     "usage": ".wasted @user",
     "description": "Waste someone in style!",
     "category": "group",
-    "source": "ported_group.js"
+    "source": "ported_group.js",
+    "quality": "source"
   },
   {
     "command": "wattpad",
     "usage": ".wattpad <query>",
     "description": "Search for stories on Wattpad!",
     "category": "search",
-    "source": "ported_search.js"
+    "source": "ported_search.js",
+    "quality": "source"
+  },
+  {
+    "command": "wattpadsearch",
+    "usage": ".wattpadsearch",
+    "description": "Alias for .wattpad",
+    "category": "search",
+    "source": "ported_search.js",
+    "quality": "alias"
+  },
+  {
+    "command": "wave",
+    "usage": ".wave",
+    "description": "Alias for .momo",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
+  },
+  {
+    "command": "wcgbegin",
+    "usage": ".wcgbegin",
+    "description": "── Word Chain ───────────────────────────────────────────────────────────",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "source"
+  },
+  {
+    "command": "wcgend",
+    "usage": ".wcgend",
+    "description": "End the active Word Chain game",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "wcgjoin",
+    "usage": ".wcgjoin",
+    "description": "Join the running Word Chain game",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "manual"
+  },
+  {
+    "command": "wcgscores",
+    "usage": ".wcgscores",
+    "description": "Show current Word Chain leaderboard for this chat",
+    "category": "games2",
+    "source": "games2.js",
+    "quality": "manual"
   },
   {
     "command": "weather",
     "usage": ".weather [city]",
-    "description": ".weather [city name]",
+    "description": "Live weather info for a city",
     "category": "atassa",
-    "source": "atassa.js"
+    "source": "atassa.js",
+    "quality": "manual"
   },
   {
     "command": "welcome",
     "usage": ".welcome",
-    "description": ".welcome 254XXXXXXXXX",
+    "description": "Send the welcome card to a number",
     "category": "general",
-    "source": "general.js"
+    "source": "general.js",
+    "quality": "manual"
   },
   {
     "command": "welcomecfg",
     "usage": ".welcomecfg <on|off|set message>",
     "description": "Configure welcome messages for new members",
     "category": "admin",
-    "source": "ported_admin.js"
+    "source": "ported_admin.js",
+    "quality": "source"
+  },
+  {
+    "command": "whatmusic",
+    "usage": ".whatmusic",
+    "description": "Alias for .shazam",
+    "category": "info",
+    "source": "ported_info.js",
+    "quality": "alias"
   },
   {
     "command": "whois",
     "usage": ".whois <domain>",
-    "description": "*.whois example.com*",
+    "description": "whois example.com",
     "category": "osint",
-    "source": "osint.js"
+    "source": "osint.js",
+    "quality": "source"
   },
   {
     "command": "whoisip",
     "usage": ".ip <address/domain>",
     "description": "Get location info from an IP or Domain",
     "category": "search",
-    "source": "ported_search.js"
+    "source": "ported_search.js",
+    "quality": "source"
   },
   {
     "command": "why",
     "usage": ".why",
     "description": "Get a random “why” question from the API",
     "category": "fun",
-    "source": "ported_fun.js"
+    "source": "ported_fun.js",
+    "quality": "source"
+  },
+  {
+    "command": "whyme",
+    "usage": ".whyme",
+    "description": "Alias for .why",
+    "category": "fun",
+    "source": "ported_fun.js",
+    "quality": "alias"
   },
   {
     "command": "wiki",
     "usage": ".wiki <query>",
     "description": "Search Wikipedia for a topic!",
     "category": "search",
-    "source": "ported_search.js"
+    "source": "ported_search.js",
+    "quality": "source"
+  },
+  {
+    "command": "wikipedia",
+    "usage": ".wikipedia",
+    "description": "Alias for .wiki",
+    "category": "search",
+    "source": "ported_search.js",
+    "quality": "alias"
+  },
+  {
+    "command": "wm",
+    "usage": ".wm",
+    "description": "Alias for .take",
+    "category": "stickers",
+    "source": "ported_stickers.js",
+    "quality": "alias"
   },
   {
     "command": "wordcloud",
     "usage": ".wordcloud <text or reply to any message/file>",
     "description": "Analyze text and show top 20 most used words with stats",
     "category": "utility",
-    "source": "ported_utility.js"
+    "source": "ported_utility.js",
+    "quality": "source"
+  },
+  {
+    "command": "wordcount",
+    "usage": ".wordcount",
+    "description": "Alias for .wordcloud",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
+  },
+  {
+    "command": "wordfreq",
+    "usage": ".wordfreq",
+    "description": "Alias for .wordcloud",
+    "category": "utility",
+    "source": "ported_utility.js",
+    "quality": "alias"
   },
   {
     "command": "wyr",
     "usage": ".wyr (would you rather)",
-    "description": "wyr command",
+    "description": "Would You Rather — get a random prompt",
     "category": "games",
-    "source": "games.js"
+    "source": "games.js",
+    "quality": "manual"
+  },
+  {
+    "command": "x0",
+    "usage": ".x0",
+    "description": "Alias for .xoat",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "x0at",
+    "usage": ".x0at",
+    "description": "Alias for .xoat",
+    "category": "upload",
+    "source": "ported_upload.js",
+    "quality": "alias"
+  },
+  {
+    "command": "xo",
+    "usage": ".xo",
+    "description": "Alias for .tictactoe",
+    "category": "games",
+    "source": "ported_games.js",
+    "quality": "alias"
   },
   {
     "command": "xoat",
     "usage": ".xoat (reply to media or caption on media)",
     "description": "Upload to X0.at (anonymous)",
     "category": "upload",
-    "source": "ported_upload.js"
+    "source": "ported_upload.js",
+    "quality": "source"
+  },
+  {
+    "command": "xprofile",
+    "usage": ".xprofile",
+    "description": "Alias for .xstalk",
+    "category": "stalk",
+    "source": "ported_stalk.js",
+    "quality": "alias"
   },
   {
     "command": "xstalk",
     "usage": ".xstalk <username>",
     "description": "Lookup Twitter user profile",
     "category": "stalk",
-    "source": "ported_stalk.js"
+    "source": "ported_stalk.js",
+    "quality": "source"
+  },
+  {
+    "command": "xtweet",
+    "usage": ".xtweet",
+    "description": "Alias for .twitter",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ytdl",
+    "usage": ".ytdl",
+    "description": "Alias for .video",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "ytmp4",
+    "usage": ".ytmp4",
+    "description": "Alias for .video",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
+  },
+  {
+    "command": "yts",
+    "usage": ".yts",
+    "description": "Alias for .ytsearch",
+    "category": "music",
+    "source": "ported_music.js",
+    "quality": "alias"
   },
   {
     "command": "ytsearch",
     "usage": ".yts [query]",
     "description": "Search YouTube",
     "category": "music",
-    "source": "ported_music.js"
+    "source": "ported_music.js",
+    "quality": "source"
+  },
+  {
+    "command": "ytvideo",
+    "usage": ".ytvideo",
+    "description": "Alias for .video",
+    "category": "download",
+    "source": "ported_download.js",
+    "quality": "alias"
   }
 ]

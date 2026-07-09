@@ -283,10 +283,11 @@ ${menuBox('✨', 'ALWAYS-ON FEATURES')}
 │➽ Status AI comments ✅  Permissions ✅  Anti-ban ✅
 ${boxClose}
 
-${menuBox('🆕', 'MORE COMMANDS', '(+300 total)')}
+${menuBox('🆕', 'MORE COMMANDS', '(874 total loaded)')}
 │➽ Games, group-guard, notes, sports scores, URL tools, temp mail,
 │  text effects, downloads, stickers, admin tools, search & more —
 │  this menu only shows the core set.
+│➽ ${p}menu all — 📚 EVERY command, described (sent as several messages)
 │➽ ${p}commands — 📋 Full flat list of everything currently loaded
 │➽ ${p}commands sticker — 🔎 e.g. search loaded commands by keyword
 │➽ ${p}loadmenu / ${p}smenu — Same menu you're looking at now (all one command)
@@ -326,6 +327,36 @@ ${boxClose}
           headerType: 1
         }, { quoted: msg });
       } catch (_) { /* buttons unsupported here, text/image menu already sent */ }
+    }
+
+    // ── .menu all / .menu full ───────────────────────────────────────────
+    // Same single .menu command, just with an argument — sends the FULL
+    // catalog of every live command (874+, auto-generated + hand-described,
+    // see assets/commands-db.json + scripts/build-command-db.js) as a
+    // series of readable follow-up messages, grouped by category, aliases
+    // collapsed under their base command. Left off by default so a plain
+    // .menu stays the fast, curated view above; ".menu all" is the
+    // comprehensive one, gated to what the caller's permission tier can see.
+    const wantsFull = args && args[0] && ['all', 'full', 'everything'].includes(args[0].toLowerCase());
+    if (wantsFull) {
+      try {
+        const { buildFullCatalogMessages } = require('../lib_ported/menuCatalog.js');
+        const catalogMessages = buildFullCatalogMessages(
+          { isOwner: effectiveIsOwner, isBotAdmin: effectiveIsBotAdmin },
+          p
+        );
+        if (!catalogMessages.length) {
+          await sock.sendMessage(from, { text: '⚠️ Command catalog not built yet. Run `node scripts/build-command-db.js` on the server first.' }, { quoted: msg });
+        } else {
+          for (const chunk of catalogMessages) {
+            await sock.sendMessage(from, { text: chunk }, { quoted: msg });
+            await new Promise(resolve => setTimeout(resolve, 700)); // small pacing gap between messages
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ .menu all failed:', e.message);
+        await sock.sendMessage(from, { text: `❌ Couldn't build the full catalog: ${e.message}` }, { quoted: msg });
+      }
     }
   },
 
