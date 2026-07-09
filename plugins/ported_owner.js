@@ -36,6 +36,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const senderId = context.senderId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
@@ -175,6 +179,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const state = await readState();
         const sub = args.join(' ').trim().toLowerCase();
@@ -239,6 +247,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
@@ -425,6 +437,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
         try {
@@ -528,15 +544,7 @@ Object.assign(module.exports, (() => {
       }, null, 2));
   }
   const channelInfo = {
-      contextInfo: {
-          forwardingScore: 1,
-          isForwarded: true,
-          forwardedNewsletterMessageInfo: {
-              newsletterJid: '120363319098372999@newsletter',
-              newsletterName: 'GlobalTechInc',
-              serverMessageId: -1
-          }
-      }
+      contextInfo: {}
   };
   async function readConfig() {
       try {
@@ -692,6 +700,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
@@ -946,6 +958,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
         try {
@@ -1049,6 +1065,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
         const text = args.join(' ').trim();
@@ -1083,15 +1103,7 @@ Object.assign(module.exports, (() => {
             try {
                 await sock.sendMessage(groupJid, {
                     text: broadcastText,
-                    contextInfo: {
-                        forwardingScore: 1,
-                        isForwarded: true,
-                        forwardedNewsletterMessageInfo: {
-                            newsletterJid: '120363319098372999@newsletter',
-                            newsletterName: 'GlobalTechInc',
-                            serverMessageId: -1
-                        }
-                    }
+                    contextInfo: {}
                 });
                 sent++;
             }
@@ -1141,6 +1153,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
         const text = args.join(' ').trim();
@@ -1176,15 +1192,7 @@ Object.assign(module.exports, (() => {
             try {
                 await sock.sendMessage(contactJid, {
                     text: broadcastText,
-                    contextInfo: {
-                        forwardingScore: 1,
-                        isForwarded: true,
-                        forwardedNewsletterMessageInfo: {
-                            newsletterJid: '120363319098372999@newsletter',
-                            newsletterName: 'GlobalTechInc',
-                            serverMessageId: -1
-                        }
-                    }
+                    contextInfo: {}
                 });
                 sent++;
             }
@@ -1235,6 +1243,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const { chatId, channelInfo } = context;
         try {
@@ -1287,6 +1299,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
@@ -1368,6 +1384,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
@@ -1500,6 +1520,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const senderId = message.key.participant || message.key.remoteJid;
         try {
@@ -1564,6 +1588,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const { chatId, channelInfo } = context;
         if (!args[0] || !['on', 'off'].includes(args[0])) {
@@ -1661,6 +1689,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const { chatId } = context;
         let hash = args.join(' ');
         if (message.message?.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage) {
@@ -1732,6 +1764,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         try {
             if (!args || !args[0]) {
@@ -1792,6 +1828,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
         if (!args || args.length === 0) {
@@ -1850,6 +1890,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
@@ -1920,6 +1964,24 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
+            const projectRoot = process.cwd();
+            const SENSITIVE_FILE_PATTERN = /(^|[\\/])(\.env(\..*)?|creds\.json|session[\\/].*|\.git[\\/]config)$/i;
+            if (SENSITIVE_FILE_PATTERN.test(filename)) {
+                return await sock.sendMessage(chatId, {
+                    text: `🔒 *Blocked*\n\nReading credential/session files via *.getfile* is disabled for security.`
+                }, { quoted: message });
+            }
+            let filePath = path.join(projectRoot, filename);
+            if (!filePath.startsWith(projectRoot + path.sep) && filePath !== projectRoot) {
+                return await sock.sendMessage(chatId, {
+                    text: `🔒 *Blocked*\n\nPath traversal outside the bot's project folder is not allowed.`
+                }, { quoted: message });
+            }
+                const distPath = path.join(projectRoot, 'dist', filename);
         const chatId = context.chatId || message.key.remoteJid;
         const filename = args.join(' ').trim();
         try {
@@ -1929,13 +1991,25 @@ Object.assign(module.exports, (() => {
                 }, { quoted: message });
             }
             // Check project root first, then dist/ for compiled files
-            let filePath = path.join(process.cwd(), filename);
+            const projectRoot = process.cwd();
+            const SENSITIVE_FILE_PATTERN = /(^|[\\/])(\.env(\..*)?|creds\.json|session[\\/].*|\.git[\\/]config)$/i;
+            if (SENSITIVE_FILE_PATTERN.test(filename)) {
+                return await sock.sendMessage(chatId, {
+                    text: `🔒 *Blocked*\n\nReading credential/session files via *.getfile* is disabled for security.`
+                }, { quoted: message });
+            }
+            let filePath = path.join(projectRoot, filename);
+            if (!filePath.startsWith(projectRoot + path.sep) && filePath !== projectRoot) {
+                return await sock.sendMessage(chatId, {
+                    text: `🔒 *Blocked*\n\nPath traversal outside the bot's project folder is not allowed.`
+                }, { quoted: message });
+            }
             try {
                 await fs.access(filePath);
             }
             catch {
                 // Try dist/ for .js files
-                const distPath = path.join(process.cwd(), 'dist', filename);
+                const distPath = path.join(projectRoot, 'dist', filename);
                 try {
                     await fs.access(distPath);
                     filePath = distPath;
@@ -1996,19 +2070,9 @@ Object.assign(module.exports, (() => {
   const path = require('path');
   // --- helper code from getplugin.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   return {
 
     // ── .inspect ─── Read the source code of a specific plugin | usage: .inspect [plugin_name]
@@ -2029,6 +2093,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = message.key.remoteJid;
         const pluginName = args[0];
@@ -2109,6 +2177,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = message.key.remoteJid;
         const git = simpleGit();
         try {
@@ -2178,6 +2250,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const text = args?.[0];
         if (!text) {
@@ -2245,6 +2321,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
         const rawText = (context.rawText || '').toLowerCase();
@@ -2311,19 +2391,9 @@ Object.assign(module.exports, (() => {
   const { dataFile } = require('../lib_ported/paths.js');
   // --- helper code from listcmd.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   
   
   
@@ -2370,6 +2440,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const { chatId } = context;
         const stickers = await getStickerCommands();
@@ -2424,6 +2498,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
@@ -2485,6 +2563,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const action = args[0]?.toLowerCase();
@@ -2875,6 +2957,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const onoff = args[0]?.toLowerCase();
         if (!onoff || !['on', 'off'].includes(onoff)) {
@@ -2923,6 +3009,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
@@ -3040,6 +3130,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const state = await readState();
         const sub = args[0]?.toLowerCase();
@@ -3122,6 +3216,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = message.key.remoteJid;
         const commandHandler = (await import('../lib_ported/commandHandler.js')).default;
@@ -3283,6 +3381,10 @@ Object.assign(module.exports, (() => {
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const action = args[0]?.toLowerCase();
         try {
@@ -3403,19 +3505,9 @@ Object.assign(module.exports, (() => {
   const { dataFile } = require('../lib_ported/paths.js');
   // --- helper code from setcmd.js ---
   /*****************************************************************************
-   *                                                                           *
-   *                     Developed By Qasim Ali                                *
-   *                                                                           *
-   *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
-   *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
-   *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
-   *                                                                           *
-   *    © 2026 GlobalTechInfo. All rights reserved.                            *
-   *                                                                           *
-   *    Description: This file is part of the MEGA-MD Project.                 *
-   *                 Unauthorized copying or distribution is prohibited.       *
-   *                                                                           *
-   *****************************************************************************/
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
+ *****************************************************************************/
   
   
   
@@ -3480,6 +3572,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const { chatId, senderId } = context;
         if (!message.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
@@ -3560,6 +3656,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
@@ -3645,6 +3745,10 @@ const { cleanJid } = isOwnerOrSudo;
       };
       try {
 
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
+
         const chatId = context.chatId || message.key.remoteJid;
         const senderId = message.key.participant || message.key.remoteJid;
         try {
@@ -3723,15 +3827,7 @@ const { cleanJid } = isOwnerOrSudo;
             await sock.sendMessage(chatId, {
                 text: menuText,
                 mentions: [senderId],
-                contextInfo: {
-                    externalAdReply: {
-                        title: "SYSTEM SETTINGS PANEL",
-                        body: "Configuration Status",
-                        thumbnailUrl: "https://github.com/GlobalTechInfo.png",
-                        mediaType: 1,
-                        renderLargerThumbnail: true
-                    }
-                }
+                contextInfo: {}
             }, { quoted: message });
         }
         catch (error) {
@@ -3775,6 +3871,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const channelInfo = context.channelInfo || {};
@@ -3856,6 +3956,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const { chatId } = context;
         const action = args[0]?.toLowerCase();
@@ -3952,6 +4056,10 @@ const { cleanJid } = isOwnerOrSudo;
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const chatId = context.chatId || message.key.remoteJid;
         const config = context.config;
@@ -4055,6 +4163,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const { chatId, channelInfo } = context;
         try {
@@ -4382,6 +4494,10 @@ Object.assign(module.exports, (() => {
         channelInfo: {},
       };
       try {
+
+        if (!(h.isOwner || h.isSubAdmin || h.isCoOwner)) {
+          return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
+        }
 
         const { chatId, channelInfo } = context;
         try {

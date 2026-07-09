@@ -43,8 +43,8 @@ def print_banner():
 ║   \033[1;35m██████╔╝╚██████╔╝   ██║   ███████║\033[1;36m                    ║
 ║   \033[1;35m╚═════╝  ╚═════╝    ╚═╝   ╚══════╝\033[1;36m                   ║
 ║                                                              ║
-║      \033[1;33m✦ Ochibots™ — created by Henry ✦\033[1;36m              ║
-║      \033[1;32m⚡ OCHIBOTS v19™  |  PYTHON BACKEND\033[1;36m              ║
+║      \033[1;33m✦ Henry Ochibots v19™ — created by Henry ✦\033[1;36m              ║
+║      \033[1;32m⚡ HENRY OCHIBOTS v19™  |  PYTHON BACKEND\033[1;36m              ║
 ║      \033[1;33m⚡ AI  |  DATABASE  |  COMMANDS  |  API\033[1;36m            ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -376,64 +376,71 @@ async def call_groq_ai(prompt: str, model: str = None, system: str = None) -> st
 
 
 async def get_video_url(url: str) -> dict:
+    return await _ytdlp_extract(url, ["-f", "best[ext=mp4][filesize<50M]/best[ext=mp4]/best"], "url", "title", "Video")
+
+
+async def get_audio_url(url: str) -> dict:
+    return await _ytdlp_extract(url, ["-f", "bestaudio[ext=m4a]/bestaudio/best"], "url", "title", "Audio")
+
+
+# ✅ FIX: kept in sync with plugins/media.js's mitigation (the "properly
+# maintained" reference implementation) — the client order (android,web,tv,
+# not android,ios,web), optional YTDLP_COOKIES_FILE support, and a single
+# automatic retry against the ios client specifically when the FIRST attempt
+# hits YouTube's bot-detection challenge were all missing here, so this
+# internal pipeline was actually LESS resilient than the older scraper
+# fallback it's meant to replace — likely the real cause of the bot-detection
+# failures reported on .video/.play, even though media.js's own commands
+# (.dl/.song) already had the fix. Both code paths now share one mitigation.
+_YTDLP_COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "").strip()
+
+
+def _ytdlp_base_args() -> list:
+    args = ["--extractor-args", "youtube:player_client=android,web,tv"]
+    if _YTDLP_COOKIES_FILE and os.path.isfile(_YTDLP_COOKIES_FILE):
+        args += ["--cookies", _YTDLP_COOKIES_FILE]
+    return args
+
+
+async def _run_ytdlp_json(url: str, format_args: list, extractor_args: list) -> tuple:
+    proc = await asyncio.create_subprocess_exec(
+        "yt-dlp", "--dump-json", "--no-playlist", *format_args,
+        *extractor_args, "--no-warnings", url,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=45)
+    return proc.returncode, stdout, stderr
+
+
+async def _ytdlp_extract(url: str, format_args: list, url_key: str, title_key: str, default_title: str) -> dict:
     try:
-        proc = await asyncio.create_subprocess_exec(
-            "yt-dlp", "--dump-json", "--no-playlist",
-            "-f", "best[ext=mp4][filesize<50M]/best[ext=mp4]/best",
-            # ✅ NEW: as of 2025, YouTube started blocking datacenter/cloud IPs
-            # (Render's included) with "Sign in to confirm you're not a bot" on
-            # the default web client. The android/ios clients use a different
-            # auth path that isn't subject to that same IP-based block, so
-            # falling back through them recovers most links that would
-            # otherwise fail purely because of where this bot is hosted.
-            "--extractor-args", "youtube:player_client=android,ios,web",
-            "--no-warnings", url,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=45)
-        if proc.returncode == 0:
+        base_args = _ytdlp_base_args()
+        returncode, stdout, stderr = await _run_ytdlp_json(url, format_args, base_args)
+        err = stderr.decode(errors="ignore")[:300]
+        hit_bot_check = "Sign in to confirm" in err or "not a bot" in err
+        if returncode != 0 and hit_bot_check:
+            # One retry, narrowed to the ios client specifically — mirrors
+            # media.js's runYtdlpWithRetry behavior.
+            retry_args = ["--extractor-args", "youtube:player_client=ios"]
+            if _YTDLP_COOKIES_FILE and os.path.isfile(_YTDLP_COOKIES_FILE):
+                retry_args += ["--cookies", _YTDLP_COOKIES_FILE]
+            returncode, stdout, stderr = await _run_ytdlp_json(url, format_args, retry_args)
+            err = stderr.decode(errors="ignore")[:300]
+        if returncode == 0:
             data = json.loads(stdout.decode())
             return {
                 "success": True,
-                "url": data.get("url", ""),
-                "title": data.get("title", "Video"),
+                "url": data.get(url_key, ""),
+                "title": data.get(title_key, default_title),
                 "duration": data.get("duration_string", ""),
-                "filesize": data.get("filesize", 0)
+                "filesize": data.get("filesize", 0),
+                "ext": data.get("ext", "mp3"),
             }
-        err = stderr.decode()[:300]
         if "Sign in to confirm" in err or "not a bot" in err:
             err = "YouTube is blocking this server's IP for that video right now. Try a different link, or try again shortly."
         return {"success": False, "error": err}
     except asyncio.TimeoutError:
         return {"success": False, "error": "Timed out. Try a shorter video."}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-async def get_audio_url(url: str) -> dict:
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "yt-dlp", "--dump-json", "--no-playlist",
-            "-f", "bestaudio[ext=m4a]/bestaudio/best",
-            "--extractor-args", "youtube:player_client=android,ios,web",
-            "--no-warnings", url,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=45)
-        if proc.returncode == 0:
-            data = json.loads(stdout.decode())
-            return {
-                "success": True,
-                "url": data.get("url", ""),
-                "title": data.get("title", "Audio"),
-                "ext": data.get("ext", "mp3")
-            }
-        err = stderr.decode()[:300]
-        if "Sign in to confirm" in err or "not a bot" in err:
-            err = "YouTube is blocking this server's IP for that video right now. Try a different link, or try again shortly."
-        return {"success": False, "error": err}
-    except asyncio.TimeoutError:
-        return {"success": False, "error": "Timed out. Try again."}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -815,13 +822,13 @@ async def init_db():
         """)
 
         await db.commit()
-        logger.info("\033[1;32m⚡ Ochibots™ — Master Database Synchronized — All tables ready.\033[0m")
+        logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
 
 
 @app.before_serving
 async def startup():
     await init_db()
-    logger.info("\033[1;36m🔥 Ochibots™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
+    logger.info("\033[1;36m🔥 Henry Ochibots v19™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
     logger.info("\033[1;33m📡 Waiting for WhatsApp bot session (Node.js) to connect...\033[0m")
     if not ADMIN_PASSWORD:
         logger.warning("\033[1;31m⚠️  ADMIN_PASSWORD is not set — /admin has FULL OPEN ACCESS to anyone with the URL. Set ADMIN_PASSWORD in your environment before going live.\033[0m")
@@ -3417,7 +3424,7 @@ async def natural_chat():
 
     if context == "status":
         system_prompt = (
-            "You are Ochibots, a friendly Kenyan WhatsApp bot. "
+            "You are Henry Ochibots, a friendly Kenyan WhatsApp bot. "
             "Someone posted a WhatsApp status and you want to leave a short, warm comment. "
             "Rules:\n"
             "1. Keep it under 2 sentences — like a real friend commenting on a status.\n"
@@ -3432,7 +3439,7 @@ async def natural_chat():
         )
     elif context == "group":
         system_prompt = (
-            f"You are Ochibots, a Kenyan WhatsApp bot in a group chat. "
+            f"You are Henry Ochibots, a Kenyan WhatsApp bot in a group chat. "
             f"You are talking to {name}. "
             "Someone mentioned you or called your name in the group. Reply naturally.\n"
             "Rules:\n"
@@ -3463,7 +3470,7 @@ async def natural_chat():
         )
     else:
         system_prompt = (
-            f"You are Ochibots, a friendly WhatsApp bot assistant. "
+            f"You are Henry Ochibots, a friendly WhatsApp bot assistant. "
             f"You are talking to {name}. "
             "You are Kenyan and understand Swahili, Sheng (Kenyan street slang), and English. "
             "IMPORTANT RULES:\n"
@@ -3477,7 +3484,7 @@ async def natural_chat():
             "4. Be warm, friendly, sometimes funny — very human-like.\n"
             "5. Do NOT start every reply with 'Hello' or 'Hi'. Be natural.\n"
             "6. Use emoji occasionally but not excessively.\n"
-            "7. Your creator is Ochibots (@henrytech254)."
+            "7. Your creator is Henry Ochibots (@henrytech254)."
         )
 
     try:
@@ -3622,10 +3629,10 @@ async def pair_proxy_post():
 @app.route("/get-bio", methods=["GET"])
 async def generate_auto_bio():
     bios = [
-        f"🤖 Ochibots™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
-        f"⚡ Powered by Ochibots | Always Active | {time.strftime('%H:%M')}",
-        f"🔥 Ochibots™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
-        f"🔥 Ochibots Automation | {time.strftime('%H:%M')} | All systems go",
+        f"🤖 Henry Ochibots v19™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
+        f"⚡ Powered by Henry Ochibots | Always Active | {time.strftime('%H:%M')}",
+        f"🔥 Henry Ochibots v19™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
+        f"🔥 Henry Ochibots Automation | {time.strftime('%H:%M')} | All systems go",
     ]
     return jsonify({"bio": random.choice(bios)})
 

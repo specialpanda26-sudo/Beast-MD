@@ -2,18 +2,8 @@
 const { createRequire } = require('module');
 
 /*****************************************************************************
- *                                                                           *
- *                     Developed By Qasim Ali                                *
- *                                                                           *
- *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
- *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
- *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
- *                                                                           *
- *    © 2026 GlobalTechInfo. All rights reserved.                            *
- *                                                                           *
- *    Description: This file is part of the MEGA-MD Project.                 *
- *                 Unauthorized copying or distribution is prohibited.       *
- *                                                                           *
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
  *****************************************************************************/
 const fs = require('fs');
 const path = require('path');
@@ -2060,16 +2050,6 @@ process.on('unhandledRejection', (reason, promise) => {
 // console.log(`[STORE] Message limit per chat: ${messageLimit === Infinity ? 'unlimited' : messageLimit}`)
 module.exports = store;
 /*****************************************************************************
- *                                                                           *
- *                     Developed By Qasim Ali                                *
- *                                                                           *
- *  🌐  GitHub   : https://github.com/GlobalTechInfo                         *
- *  ▶️  YouTube  : https://youtube.com/@GlobalTechInfo                       *
- *  💬  WhatsApp : https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07     *
- *                                                                           *
- *    © 2026 GlobalTechInfo. All rights reserved.                            *
- *                                                                           *
- *    Description: This file is part of the MEGA-MD Project.                 *
- *                 Unauthorized copying or distribution is prohibited.       *
- *                                                                           *
+ *  Henry Bots / Henry Config Tools                                          *
+ *  Owner: Henry (henrytech254)                                              *
  *****************************************************************************/

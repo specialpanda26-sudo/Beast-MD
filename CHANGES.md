@@ -1,5 +1,63 @@
 # Changes
 
+## Update 19 — Merged two divergent zips back into one (main + main-fixed)
+
+You uploaded two zips that had drifted apart from the same Update 18 base, each with real,
+non-overlapping work — this merges both into one file with nothing dropped from either side.
+
+**From `main` (kept as the base — it had the bigger feature additions):**
+- The self-hosted yt-dlp download pipeline (`/internal/ytdl` in `app.py`, called first by
+  `.video`/`.play`/`.plays`/`.song` before falling back to the old third-party scraper).
+- `INTERNAL_SECRET`-gated internal routes and the new Command Console backend
+  (`/internal/action`, SSE live events, customer OTP login) — `main-fixed` didn't have these yet.
+- Message logging with `session_id`/`direction`/`read_flag` columns for the console inbox.
+
+**From `main-fixed` (ported over on top of that base):**
+- **Real security fixes** `main` was still missing: 38 owner-only commands and several group-admin
+  commands in `ported_owner.js`/`ported_admin.js`/`ported_group.js` had no permission check at
+  all — any user could run them. All now correctly gated.
+- **`.getfile` hardened** — blocks reading `.env`/`creds.json`/session files, and blocks path
+  traversal outside the project folder (both were previously wide open).
+- **`.crun`/DNA-decode/decompress/python-script runners switched from `exec` (shell string
+  interpolation — a command-injection risk) to `execFile` (arguments passed as an array, no shell
+  involved)**, and `.crun` is now owner/admin-only (running arbitrary compiled code was open to
+  anyone).
+- **Forwarded-newsletter-message spoofing removed** — every bot reply was silently tagged as
+  "forwarded via a newsletter channel" to look more legitimate/viral; stripped from all 9 places
+  it appeared, replaced with a plain `contextInfo: {}`.
+- **Full branding sweep completed** — remaining bare "Ochibots™"/"OCHIBOTS" strings (missed by
+  the Update 16 pass) now consistently read "Henry Ochibots v19™"; the "Developed By Qasim Ali /
+  GlobalTechInfo" block-comment headers in 8 files replaced with a Henry Bots header (per your
+  explicit call to finish the sweep — this supersedes Update 16's note to leave them, since you'd
+  since said you want them gone too).
+- **Sticker library swapped**: `stickers-formatter` → `wa-sticker-formatter` (better maintained,
+  matches what `main-fixed` had already moved to) — `package.json` updated to match; the lockfile
+  will resolve it on the next `npm install` (the Dockerfile already runs `npm install`, not
+  `npm ci`, so this isn't a build blocker).
+- A leftover, never-wired `SaveCreds()` helper in `lib_ported/session.js` had a hardcoded
+  stranger's GitHub username as the credentials-gist owner — disabled behind an env var so it
+  can't silently pull from someone else's account if it's ever wired in later.
+- `settings-ext.js`'s shadowed `.settings` duplicate renamed to `.mysettings` so it can't collide
+  with the real one in `ported_owner.js`/`ported_stickers.js`.
+- Dropped a stray default `channelLink` that pointed at what looks like someone else's WhatsApp
+  channel invite, not yours.
+
+**New fix, found while checking your download-reliability report (not in either zip):** the new
+`/internal/ytdl` pipeline (`app.py`'s `get_video_url`/`get_audio_url`) was using an older, weaker
+bot-detection mitigation than `plugins/media.js`'s already-hardened `.dl`/`.song` path — wrong
+client order (`android,ios,web` instead of `android,web,tv`), no `YTDLP_COOKIES_FILE` support, and
+no retry-on-bot-check. Since `.video`/`.play`/`.plays` try this pipeline *first*, it was actually
+less resilient than the fallback scraper it was supposed to upgrade — a likely real contributor to
+the "bot detection" failures you saw. Rewritten to share the exact same mitigation as `media.js`:
+`android,web,tv` client order, one automatic retry against `ios` specifically on a bot-check hit,
+and the same optional `YTDLP_COOKIES_FILE` support. Both download code paths are now consistent.
+
+**Verification performed:** every `.js` file `node -c` syntax-checked, `app.py` and the two Python
+scripts under `lib_ported/` `py_compile`-checked, `package.json`/`package-lock.json` both
+JSON-parse cleanly. All 38 + 13 + 1 permission-check insertions and all 9 newsletter-spoof removals
+applied via exact context matching (not line numbers), so nothing landed in the wrong spot even
+though the two source files had already diverged.
+
 ## Update 18 — Full correctness pass: menu/command-table audit, docs, "what was fixed" PDF
 
 **Menu/command-table audit (requested check):** traced `.menu` → `.commands` → `.smenu` end to

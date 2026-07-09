@@ -37,7 +37,7 @@
     "sharp": "^0.33.4",
     "simple-git": "^3.25.0",
     "socks-proxy-agent": "^10.1.0",
-    "stickers-formatter": "^0.0.2",
+    "wa-sticker-formatter": "^4.4.4",
     "yt-search": "^2.11.1"
   },
   "_comment_new_deps": "jimp/form-data required by Delta pack (megajs optional, only for .megabackup/.megarestore). Everything from api-qasim through yt-search is required by Henry v20 ported commands — mongoose/pg/mysql2/better-sqlite3 are only used by a handful of commands with optional DB backends; safe to leave uninstalled/ignore errors on those specific commands if you don't use that DB.",

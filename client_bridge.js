@@ -45,8 +45,8 @@ const {
 // owner themself via the hidden `.ownerrecovery` WhatsApp command. See
 // getOwnerNumber() below for the resolution order.
 const OWNER_NUMBER_ENV = (process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
-const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Ochibots';
-const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Ochibots™';
+const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ochibots';
+const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Henry Ochibots v19™';
 const CMD_PREFIX_DEFAULT = '.';
 
 // ✅ NEW (Update 15): .setbotname/.setprefix (plugins/settings-ext.js) used to
@@ -69,9 +69,9 @@ function getPrefix() {
 // explaining why that was removed: it fired on "I saw a robot", "chatbot",
 // anyone named Henry in the group, etc.). This only matches full name
 // phrases, on word boundaries, so "robot"/"chatbot" still won't trigger it —
-// customize via BOT_NAME_ALIASES (comma-separated) if "Ochibots" ever
+// customize via BOT_NAME_ALIASES (comma-separated) if "Henry Ochibots" ever
 // changes for a reseller/white-label deployment.
-const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'ochibots,OCHIBOTS,beast bot,beastbot')
+const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'ochibots,henry ochibots,beast bot,beastbot')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 function isBotAddressedByName(text) {
   if (!text) return false;
@@ -499,7 +499,7 @@ function getOwnerSessionSocket() {
           }
         }
         await socket.sendMessage(`${cleanPhone}@s.whatsapp.net`, {
-          text: `🔐 *Ochibots™ — Verification Code*\n\n` +
+          text: `🔐 *Henry Ochibots v19™ — Verification Code*\n\n` +
                 `Hi ${name || "there"}, your code is: *${otp}*\n\n` +
                 `This code expires in 10 minutes. Enter it on the registration page to verify your number and unlock your trust badge + free credit.`
         });
@@ -992,7 +992,7 @@ function prompt(question) {
 
 function printBanner() {
   console.log("\n╔══════════════════════════════════════╗");
-  console.log("   🔥 OCHIBOTS v19™ 🔥   ");
+  console.log("   🔥 HENRY OCHIBOTS v19™ 🔥   ");
   console.log("╚══════════════════════════════════════╝\n");
 }
 
@@ -2727,7 +2727,7 @@ async function startSession(sessionId, opts = {}) {
     }
 
     if (connection === "open") {
-      console.log(`\n✅ [${sessionId}] OCHIBOTS v19™ IS ONLINE AND READY! 🔥\n`);
+      console.log(`\n✅ [${sessionId}] HENRY OCHIBOTS v19™ IS ONLINE AND READY! 🔥\n`);
       botOnline = true;
       fatalRetryCounts[sessionId] = 0;  // ✅ FIX: reset fatal-retry count on a clean connect
       // ✅ Only now is the socket actually safe to use for OTP delivery.
@@ -2787,7 +2787,7 @@ async function startSession(sessionId, opts = {}) {
 
           const welcomeText =
 `╔════════════════════════════════════╗
-║  🔥 *OCHIBOTS V19™* 🔥        ║
+║  🔥 *HENRY OCHIBOTS V19™* 🔥        ║
 ║       _by @henrytech254_            ║
 ╚════════════════════════════════════╝
 
@@ -2831,7 +2831,7 @@ Your bot is now live and connected. 🌐
 Type *.menu* to see all commands.
 Use *.addadmin 254XXXXXXXXX* to give friends access.
 
-_Ochibots™ — @henrytech254_ 🔥`;
+_Henry Ochibots v19™ — @henrytech254_ 🔥`;
 
           await delay(3000);
           await socket.sendMessage(selfJid, { text: welcomeText });

@@ -1,4 +1,4 @@
-const { Sticker, StickerTypes } = require('stickers-formatter');
+const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 const path = require('path');
 const { tmpdir } = require('os');
 const crypto = require('crypto');

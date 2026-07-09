@@ -767,7 +767,7 @@ Object.assign(module.exports, (() => {
 
 Object.assign(module.exports, (() => {
   const axios = require('axios');
-  const { Sticker, StickerTypes } = require('stickers-formatter');
+  const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 
   return {
 
