@@ -524,101 +524,18 @@ Object.assign(module.exports, (() => {
   }
   return {
 
-    // ── .smenu ─── Interactive smart menu with live status | usage: .smenu
+    // ── .smenu ─── Now just an alias for the unified .loadmenu / .menu ──────
+    // ✅ MERGED: .smenu used to run its own separate "live status" menu with
+    // a different look and no command descriptions. That's gone — .smenu,
+    // .shelp, .smart, and .help2 all now show exactly the same styled menu
+    // as .menu/.loadmenu, so there's one menu to maintain, not two.
     "smenu": async (h) => {
-      const sock = h.sock;
-      const message = h.msg;
-      const args = h.args;
-      const context = {
-        chatId: h.from,
-        senderId: h.senderJid,
-        isGroup: h.isGroup,
-        isBotAdmin: h.isBotAdmin,
-        senderIsOwnerOrSudo: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        isSenderAdmin: h.isBotAdmin,
-        isOwnerOrSudoCheck: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        config: h.config,
-        rawText: (h.config.prefix + 'smenu ' + h.args.join(' ')).trim(),
-        channelInfo: {},
-      };
-      try {
-
-        const chatId = context.chatId || message.key.remoteJid;
-        try {
-            const imagePath = path.join(process.cwd(), 'assets/thumb.png');
-            const thumbnail = fs.existsSync(imagePath) ? fs.readFileSync(imagePath) : null;
-            const categories = Array.from(CommandHandler.categories.keys());
-            const stats = CommandHandler.getDiagnostics();
-            const menuEmoji = getRandomEmoji(menuEmojis);
-            const activeEmoji = getRandomEmoji(activeEmojis);
-            const disabledEmoji = getRandomEmoji(disabledEmojis);
-            const fastEmoji = getRandomEmoji(fastEmojis);
-            const slowEmoji = getRandomEmoji(slowEmojis);
-            let menuText = `${menuEmoji} *${config.botName || 'Henry Ochibots v19'}* ${menuEmoji}\n\n`;
-            menuText += `┏━━━━━━━━━━━━━━━━┓\n`;
-            menuText += `┃ 📱 *Bot:* ${config.botName || 'Henry Ochibots v19'}\n`;
-            menuText += `┃ 🔖 *Version:* ${config.version || '6.0.0'}\n`;
-            menuText += `┃ 👤 *Owner:* ${config.botOwner || 'Unknown'}\n`;
-            menuText += `┃ ⏰ *Time:* ${formatTime()}\n`;
-            menuText += `┃ ℹ️ *Prefix:* ${config.prefixes ? config.prefixes.join(', ') : '.'}\n`;
-            menuText += `┃ 📊 *Plugins:* ${CommandHandler.commands.size}\n`;
-            menuText += `┗━━━━━━━━━━━━━━━━┛\n\n`;
-            const topCmds = stats.slice(0, 3).filter(s => s.usage > 0);
-            if (topCmds.length > 0) {
-                menuText += `🔥 *TOP COMMANDS:*\n`;
-                topCmds.forEach((c, i) => {
-                    const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
-                    menuText += `${rank} .${c.command} • ${c.usage} uses\n`;
-                });
-                menuText += `\n`;
-            }
-            for (const cat of categories) {
-                const catEmoji = getCategoryEmoji(cat);
-                menuText += `${catEmoji} *${cat.toUpperCase()}*\n`;
-                menuText += `┌─────────────────\n`;
-                const catCmds = CommandHandler.getCommandsByCategory(cat);
-                catCmds.forEach((cmdName, index) => {
-                    const isLast = index === catCmds.length - 1;
-                    const prefix = isLast ? '└' : '├';
-                    const isOff = CommandHandler.disabledCommands.has(cmdName.toLowerCase());
-                    const cmdStats = stats.find(s => s.command === cmdName.toLowerCase());
-                    const statusIcon = isOff ? disabledEmoji : activeEmoji;
-                    let speedTag = '';
-                    if (cmdStats && !isOff) {
-                        const ms = parseFloat(cmdStats.average_speed);
-                        if (ms > 0 && ms < 100)
-                            speedTag = ` ${fastEmoji}`;
-                        else if (ms > 1000)
-                            speedTag = ` ${slowEmoji}`;
-                    }
-                    menuText += `${prefix}─ ${statusIcon} .${cmdName}${speedTag}\n`;
-                });
-                menuText += `\n`;
-            }
-            menuText += `┌────────────────\n`;
-            menuText += `├  💡 *LEGEND*\n`;
-            menuText += `├─ ${activeEmoji} Active Command\n`;
-            menuText += `├─ ${disabledEmoji} Disabled Command\n`;
-            menuText += `├─ ${fastEmoji} Fast Response\n`;
-            menuText += `├─ ${slowEmoji} Slow Response\n`;
-            menuText += `⁠└────────────────`;
-            const contextInfo = {};
-            const messageOptions = thumbnail
-                ? { image: thumbnail, caption: menuText, contextInfo }
-                : { text: menuText, contextInfo };
-            await sock.sendMessage(chatId, messageOptions, { quoted: message });
-        }
-        catch (error) {
-            console.error('Menu Error:', error);
-            await sock.sendMessage(chatId, {
-                text: `❌ *Menu Error*\n\n${error.message}`
-            }, { quoted: message });
-        }
-    
-      } catch (portErr) {
-        console.error('[ported:smenu] error:', portErr.message);
-        try { await h.sock.sendMessage(h.from, { text: '❌ Error in .smenu: ' + portErr.message }, { quoted: h.msg }); } catch (_) {}
-      }
+      const generalPlugin = require('./general.js');
+      return generalPlugin.menu({
+        sock: h.sock, from: h.from, msg: h.msg, config: h.config,
+        isOwner: h.isOwner, isSubAdmin: h.isSubAdmin, isBotAdmin: h.isBotAdmin,
+        args: h.args, senderJid: h.senderJid,
+      });
     },
     "shelp": async (h) => module.exports["smenu"](h),
     "smart": async (h) => module.exports["smenu"](h),

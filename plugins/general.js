@@ -1,5 +1,20 @@
 const os = require('os');
 
+// ── Small-caps text helper (for fancy menu section headers) ─────────────────
+const SMALL_CAPS_MAP = {
+  a: 'ᴀ', b: 'ʙ', c: 'ᴄ', d: 'ᴅ', e: 'ᴇ', f: 'ғ', g: 'ɢ', h: 'ʜ',
+  i: 'ɪ', j: 'ᴊ', k: 'ᴋ', l: 'ʟ', m: 'ᴍ', n: 'ɴ', o: 'ᴏ', p: 'ᴘ',
+  q: 'ǫ', r: 'ʀ', s: 's', t: 'ᴛ', u: 'ᴜ', v: 'ᴠ', w: 'ᴡ', x: 'x',
+  y: 'ʏ', z: 'ᴢ'
+};
+function smallCaps(str) {
+  return String(str).split('').map(ch => SMALL_CAPS_MAP[ch.toLowerCase()] || ch).join('');
+}
+function menuBox(emoji, label, trail = '') {
+  return `┏▣ ◈ ${emoji} *${smallCaps(label)}*${trail ? ' ' + trail : ''} ◈`;
+}
+const boxClose = '┗▣';
+
 module.exports = {
 
   // ── .menu ──────────────────────────────────────────────────────────────────
@@ -62,41 +77,41 @@ module.exports = {
     // ── OWNER-ONLY MENU ────────────────────────────────────────────────────
     const ownerSection = effectiveIsOwner ? `
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👑 *OWNER ONLY* (you only, Henry)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}addadmin [num]    - Add a sub-admin
-${p}removeadmin [n]   - Remove sub-admin
-${p}listadmins        - List all sub-admins
-${p}addcoowner [num]  - Add a co-owner (full access)
-${p}removecoowner [n] - Remove co-owner
-${p}listcoowners      - List co-owners
-${p}settier [num] [subadmin|coowner] - Assign any number to any tier (auto-notifies them)
-${p}setprice <text> - Update what .pricing shows customers
-${p}announce [message] - Broadcast a message to every bot contact
-${p}checkblocked [num] - Heuristic check if a number has blocked the bot
-${p}welcome [num]     - Send welcome card
-${p}status            - Post image as status
-${p}pp                - Update profile pic
-${p}bio [text]        - Update bio
-${p}bcgc [msg]        - Broadcast to groups
-${p}creategroup [name] | [numbers] - Create group from a number list
-${p}addtogroup [numbers]           - Bulk-add numbers to current group
-${p}public            - Set bot public mode
-${p}private           - Set bot private mode
-${p}setmode [on/off]  - Toggle bot on/off
-${p}summarize [text]  - AI text summarizer (cypher.js)
-${p}pbp [text]        - RPG session tracker
+${menuBox('👑', 'OWNER ONLY', '(you only, Henry)')}
+│➽ ${p}addadmin [num] — Add a sub-admin
+│➽ ${p}removeadmin [n] — Remove sub-admin
+│➽ ${p}listadmins — List all sub-admins
+│➽ ${p}addcoowner [num] — Add a co-owner (full access)
+│➽ ${p}removecoowner [n] — Remove co-owner
+│➽ ${p}listcoowners — List co-owners
+│➽ ${p}settier [num] [subadmin|coowner] — Assign any number to any tier (auto-notifies them)
+│➽ ${p}setprice <text> — Update what .pricing shows customers
+│➽ ${p}announce [message] — Broadcast a message to every bot contact
+│➽ ${p}checkblocked [num] — Heuristic check if a number has blocked the bot
+│➽ ${p}welcome [num] — Send welcome card
+│➽ ${p}status — Post image as status
+│➽ ${p}pp — Update profile pic
+│➽ ${p}bio [text] — Update bio
+│➽ ${p}bcgc [msg] — Broadcast to groups
+│➽ ${p}creategroup [name] | [numbers] — Create group from a number list
+│➽ ${p}addtogroup [numbers] — Bulk-add numbers to current group
+│➽ ${p}public — Set bot public mode
+│➽ ${p}private — Set bot private mode
+│➽ ${p}setmode [on/off] — Toggle bot on/off
+│➽ ${p}summarize [text] — AI text summarizer (cypher.js)
+│➽ ${p}pbp [text] — RPG session tracker
+${boxClose}
 
 🔑 Manage keyword auto-replies & feature toggles from the *Admin Panel* (/admin → Keywords / Features tabs)
 🔑 Forgot the /admin panel password? Tap "Forgot password?" on its login screen — a reset code is sent here to your own WhatsApp number.
 
-⏰ *MESSAGE SCHEDULER*
-${p}schedule add <time> <to> <msg> - Schedule a message
-${p}schedule list    - See all scheduled msgs
-${p}schedule del <ID> - Cancel a scheduled msg
-${p}schedule repeat <ID> daily|weekly - Repeat it
-_Time: 14:30 / 9:00am / 30m / 2h_
+${menuBox('⏰', 'MESSAGE SCHEDULER')}
+│➽ ${p}schedule add <time> <to> <msg> — Schedule a message
+│➽ ${p}schedule list — See all scheduled msgs
+│➽ ${p}schedule del <ID> — Cancel a scheduled msg
+│➽ ${p}schedule repeat <ID> daily|weekly — Repeat it
+│  _Time: 14:30 / 9:00am / 30m / 2h_
+${boxClose}
 
 ${p}imagine [desc]   - 🎨 AI image generation (free, no API key)
 ${p}claude [request] - 🤖 Ask Claude directly — file/zip requests come back as a document (needs ANTHROPIC_API_KEY, bot-admin only)
@@ -105,13 +120,15 @@ ${p}model [name]     - 🤖 Per-chat AI model (llama/llama8/mixtral/gemma)
 /download_video  - Download video
 /download_song   - Download MP3
 
-🔑 *RECOVERY*
-${p}ownerrecovery [passphrase] [new_num] - Emergency owner change
+${menuBox('🔑', 'RECOVERY')}
+│➽ ${p}ownerrecovery [passphrase] [new_num] — Emergency owner change
+${boxClose}
 
-🛡️ *ANTI-BAN*
-${p}antibanstats     - Health/rate-limit/session status for this number
-${p}credssnapshot    - Manually back up creds.json right now
-${p}credsrestore     - Restore creds.json from latest backup (needs restart after)` : '';
+${menuBox('🛡️', 'ANTI-BAN')}
+│➽ ${p}antibanstats — Health/rate-limit/session status for this number
+│➽ ${p}credssnapshot — Manually back up creds.json right now
+│➽ ${p}credsrestore — Restore creds.json from latest backup (needs restart after)
+${boxClose}` : '';
 
     const roleTag = effectiveIsOwner
       ? '👑 *OWNER*'
@@ -129,48 +146,45 @@ ${roleTag} | 📅 ${now.toLocaleDateString()} | 🕐 ${now.toLocaleTimeString()}
 ⏱️ *Uptime:* ${h}h ${m}m ${s}s
 💾 *RAM:* ${ramUsed}MB / ${ramTotal}MB  |  📊 *CPU Load:* ${cpuLoad}%
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💬 *PUBLIC COMMANDS* (everyone)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}menu           - Show this menu
-${p}ping           - Bot response speed
-${p}runtime        - Uptime & system info
-${p}weather [city] - Live weather info
-${p}dict [word]    - Dictionary definition
-${p}convert [amt] [from] [to] - Currency converter (e.g. .convert 100 USD KES)
-${p}roll [sides]   - Roll a dice 🎲
-${p}myperm         - Check your permissions
-${p}register       - Get web panel link (free credits + trust badge)
-${p}profile        - View your wallet balance & badge
-${p}addfunds [amt] [code] - Top up wallet via M-Pesa (admin reviews it)
-${p}referral       - Get your referral link & track earnings
-${p}pricing        - See current config prices
-${p}imagine [desc] - 🎨 AI image generation (free, no API key)
-${p}tts [text]     - 🔊 Text-to-speech voice note
-${p}model [name]   - 🤖 Switch AI model (llama/llama8/mixtral/gemma)
-${p}checklink [url] - 🔗 Check if a link is safe or suspicious
-${p}pair           - 🔗 Link your OWN WhatsApp number as a new bot session (get a pairing code, right here in chat)
+${menuBox('💬', 'PUBLIC COMMANDS', '(everyone)')}
+│➽ ${p}menu — Show this menu
+│➽ ${p}ping — Bot response speed
+│➽ ${p}runtime — Uptime & system info
+│➽ ${p}weather [city] — Live weather info
+│➽ ${p}dict [word] — Dictionary definition
+│➽ ${p}convert [amt] [from] [to] — Currency converter (e.g. .convert 100 USD KES)
+│➽ ${p}roll [sides] — Roll a dice 🎲
+│➽ ${p}myperm — Check your permissions
+│➽ ${p}register — Get web panel link (free credits + trust badge)
+│➽ ${p}profile — View your wallet balance & badge
+│➽ ${p}addfunds [amt] [code] — Top up wallet via M-Pesa (admin reviews it)
+│➽ ${p}referral — Get your referral link & track earnings
+│➽ ${p}pricing — See current config prices
+│➽ ${p}imagine [desc] — 🎨 AI image generation (free, no API key)
+│➽ ${p}tts [text] — 🔊 Text-to-speech voice note
+│➽ ${p}model [name] — 🤖 Switch AI model (llama/llama8/mixtral/gemma)
+│➽ ${p}checklink [url] — 🔗 Check if a link is safe or suspicious
+│➽ ${p}pair — 🔗 Link your OWN WhatsApp number as a new bot session (get a pairing code, right here in chat)
+${boxClose}
 
 🛡️ Open the Bot Panel (${p}register for the link) to see your session's live ban-risk health and buy extra subscription days straight from your kesh wallet — no admin approval needed for that part.
 
 🔑 Forgot your panel password? Open the panel and tap "Forgot password?" — a reset code is sent right here on WhatsApp.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎮 *GAMES*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}hangman        - Start hangman (reply with letters)
-${p}trivia         - Random trivia question
-${p}guess [max]    - Number guessing game (default 1-100)
-${p}truth          - Truth or Dare: Truth
-${p}dare           - Truth or Dare: Dare
-${p}wyr            - Would You Rather
+${menuBox('🎮', 'GAMES')}
+│➽ ${p}hangman — Start hangman (reply with letters)
+│➽ ${p}trivia — Random trivia question
+│➽ ${p}guess [max] — Number guessing game (default 1-100)
+│➽ ${p}truth — Truth or Dare: Truth
+│➽ ${p}dare — Truth or Dare: Dare
+│➽ ${p}wyr — Would You Rather
+${boxClose}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔎 *LOOKUP TOOLS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}validate [num] - Check a phone number's format/region
-${p}ipinfo [ip]    - Public geo/ASN info for an IP address
-${p}whois [domain] - Public WHOIS/RDAP data for a domain
+${menuBox('🔎', 'LOOKUP TOOLS')}
+│➽ ${p}validate [num] — Check a phone number's format/region
+│➽ ${p}ipinfo [ip] — Public geo/ASN info for an IP address
+│➽ ${p}whois [domain] — Public WHOIS/RDAP data for a domain
+${boxClose}
 
 🤖 *Just DM me anything!*
 I reply in Swahili, Sheng or English 🇰🇪
@@ -182,107 +196,101 @@ I reply in Swahili, Sheng or English 🇰🇪
 ${p}login [user] [pass] - Unlock full access
 ${p}logout             - Remove your access
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📥 *MEDIA COMMANDS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}sticker        - Image/video → Sticker
-${p}vv             - View saved view-once media
-${p}save           - Save view-once as file
-${p}getpp [@user]  - Get profile picture (any number, even unsaved/private)
-${p}share <number>  - Reply to a message to forward it to that number
-${p}about [@user]  - Get About status text (works unsaved)
-${p}download [url] - Download video (YT/TikTok)
-${p}song [url]     - Extract MP3 audio
-${p}dl [url] (audio) - 🌐 Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
-${p}convertmedia [fmt] - 🔄 Universal media converter (reply to img/video/audio)
+${menuBox('📥', 'MEDIA COMMANDS')}
+│➽ ${p}sticker — Image/video → Sticker
+│➽ ${p}vv — View saved view-once media
+│➽ ${p}save — Save view-once as file
+│➽ ${p}getpp [@user] — Get profile picture (any number, even unsaved/private)
+│➽ ${p}share <number> — Reply to a message to forward it to that number
+│➽ ${p}about [@user] — Get About status text (works unsaved)
+│➽ ${p}download [url] — Download video (YT/TikTok)
+│➽ ${p}song [url] — Extract MP3 audio
+│➽ ${p}dl [url] (audio) — 🌐 Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
+│➽ ${p}convertmedia [fmt] — 🔄 Universal media converter (reply to img/video/audio)
+${boxClose}
 ${effectiveIsBotAdmin ? `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🛡️ *ADMIN COMMANDS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}tagall [msg]   - Tag all members (bot admin)
-${p}kick [@user]   - Kick a member
-${p}add [number]   - Add a member
-${p}promote [@u]   - Promote to admin
-${p}demote [@u]    - Demote from admin
-${p}mute           - Mute group (admins only)
-${p}unmute         - Unmute group
-${p}revoke         - Reset invite link
-${p}antispam on/off- Toggle antispam
-${p}setperm @u lvl - Set member permissions
-${p}resetperm @u   - Reset member permissions
-${p}listperms      - List all custom permissions
-${p}checklink [url] - Check if a link looks safe or suspicious
-${p}extend [days]  - 💳 Upgrade THIS customer's subscription by [days] (send it in their own chat). Sub-admins: only for customers you personally approved.
-${p}ban [@user] [reason]       - Kick + record a ban
-${p}removeall [num1] [num2].. - Bulk-remove members
-${p}setname [name]  - Change group name
-${p}setdesc [text]  - Change group description
-${p}adduser [number] - Add a member by number (no reply needed)
-${p}admins          - List current group admins
-${p}warn [@user]     - Warn a member (3 warnings = auto-kick, same counter as antilink)
-${p}silence on/off   - Mute the BOT's own AI replies in this chat (not the group itself)
-${p}clearrelations   - Wipe this group's interaction/relationship data
-${p}autoreply set/remove/list - Manage keyword auto-replies from chat (same list as the Admin Panel)
-${p}antidelete on/off - Auto-repost deleted messages/media in this chat
-${p}autoview on/off  - Also repost intercepted view-once media into this chat (not just privately to you)
-
+${menuBox('🛡️', 'ADMIN COMMANDS')}
+│➽ ${p}tagall [msg] — Tag all members (bot admin)
+│➽ ${p}kick [@user] — Kick a member
+│➽ ${p}add [number] — Add a member
+│➽ ${p}promote [@u] — Promote to admin
+│➽ ${p}demote [@u] — Demote from admin
+│➽ ${p}mute — Mute group (admins only)
+│➽ ${p}unmute — Unmute group
+│➽ ${p}revoke — Reset invite link
+│➽ ${p}antispam on/off — Toggle antispam
+│➽ ${p}setperm @u lvl — Set member permissions
+│➽ ${p}resetperm @u — Reset member permissions
+│➽ ${p}listperms — List all custom permissions
+│➽ ${p}checklink [url] — Check if a link looks safe or suspicious
+│➽ ${p}extend [days] — 💳 Upgrade THIS customer's subscription by [days] (send it in their own chat). Sub-admins: only for customers you personally approved.
+│➽ ${p}ban [@user] [reason] — Kick + record a ban
+│➽ ${p}removeall [num1] [num2].. — Bulk-remove members
+│➽ ${p}setname [name] — Change group name
+│➽ ${p}setdesc [text] — Change group description
+│➽ ${p}adduser [number] — Add a member by number (no reply needed)
+│➽ ${p}admins — List current group admins
+│➽ ${p}warn [@user] — Warn a member (3 warnings = auto-kick, same counter as antilink)
+│➽ ${p}silence on/off — Mute the BOT's own AI replies in this chat (not the group itself)
+│➽ ${p}clearrelations — Wipe this group's interaction/relationship data
+│➽ ${p}autoreply set/remove/list — Manage keyword auto-replies from chat (same list as the Admin Panel)
+│➽ ${p}antidelete on/off — Auto-repost deleted messages/media in this chat
+│➽ ${p}autoview on/off — Also repost intercepted view-once media into this chat (not just privately to you)
+${boxClose}
 🌝 React with this emoji on any message (or view-once) to privately recover it to the bot's own number` : ''}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧠 *AI & CONTENT* (everyone)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}persona [desc]  - Set a custom AI personality for this chat
-${p}translate [lang] [text] - Translate text
-${p}remember [key] [value] - Save a note for this chat
-${p}recall [key]    - Get back a saved note
+${menuBox('🧠', 'AI & CONTENT', '(everyone)')}
+│➽ ${p}persona [desc] — Set a custom AI personality for this chat
+│➽ ${p}translate [lang] [text] — Translate text
+│➽ ${p}remember [key] [value] — Save a note for this chat
+│➽ ${p}recall [key] — Get back a saved note
+${boxClose}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📈 *GROUP INTELLIGENCE* (group only)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}analyze [hrs]   - Combined activity + top voices + topics
-${p}activity [hrs]  - Message volume over a time window (default 24h)
-${p}active [hrs]    - Most active members
-${p}topics [hrs]    - Trending words/topics
-${p}influence [hrs] - Members ranked by share of chat activity
-${p}track @user [hrs] - Activity for one specific member
-${p}detector        - Quick 1-hour activity health check
+${menuBox('📈', 'GROUP INTELLIGENCE', '(group only)')}
+│➽ ${p}analyze [hrs] — Combined activity + top voices + topics
+│➽ ${p}activity [hrs] — Message volume over a time window (default 24h)
+│➽ ${p}active [hrs] — Most active members
+│➽ ${p}topics [hrs] — Trending words/topics
+│➽ ${p}influence [hrs] — Members ranked by share of chat activity
+│➽ ${p}track @user [hrs] — Activity for one specific member
+│➽ ${p}detector — Quick 1-hour activity health check
+${boxClose}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🗳️ *POLLS* (group only)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}poll Question | opt1 | opt2 - Start a poll
-${p}vote [pollId] [option#]    - Vote
-${p}results [pollId]           - See live/final results
-${p}endpoll [pollId]           - Close a poll (admin)
+${menuBox('🗳️', 'POLLS', '(group only)')}
+│➽ ${p}poll Question | opt1 | opt2 — Start a poll
+│➽ ${p}vote [pollId] [option#] — Vote
+│➽ ${p}results [pollId] — See live/final results
+│➽ ${p}endpoll [pollId] — Close a poll (admin)
+${boxClose}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🛡️ *REPORT SOMETHING*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}report [@user] [reason] - Flag a member/issue to the admins
+${menuBox('🛡️', 'REPORT SOMETHING')}
+│➽ ${p}report [@user] [reason] — Flag a member/issue to the admins
+${boxClose}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📸 *MEDIA EXTRAS*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${p}fullpp [@user]  - Full-resolution profile picture (vs .getpp's preview)
-${p}audiomack [link] - Download from a direct Audiomack link (no search-by-name — Audiomack doesn't support that; use .song for name search)
-${p}videosearch [name] - Search YouTube by name and send the video (or paste any link)
-${p}song now also takes a search term, not just a link — e.g. ${p}song shape of you
-${p}autoreact on/off - Bot reacts to every message in this chat
+${menuBox('📸', 'MEDIA EXTRAS')}
+│➽ ${p}fullpp [@user] — Full-resolution profile picture (vs .getpp's preview)
+│➽ ${p}audiomack [link] — Download from a direct Audiomack link (no search-by-name — Audiomack doesn't support that; use .song for name search)
+│➽ ${p}videosearch [name] — Search YouTube by name and send the video (or paste any link)
+│➽ ${p}song now also takes a search term, not just a link — e.g. ${p}song shape of you
+│➽ ${p}autoreact on/off — Bot reacts to every message in this chat
+${boxClose}
 ${ownerSection}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Auto-read  ✅ Anti-call  ✅ Auto-status
-✅ View-once save  ✅ AI DM chat  ✅ Scheduler
-✅ Fake typing  ✅ Always online  ✅ Group AI replies
-✅ Status AI comments  ✅ Permissions  ✅ Anti-ban
+${menuBox('✨', 'ALWAYS-ON FEATURES')}
+│➽ Auto-read ✅  Anti-call ✅  Auto-status ✅
+│➽ View-once save ✅  AI DM chat ✅  Scheduler ✅
+│➽ Fake typing ✅  Always online ✅  Group AI replies ✅
+│➽ Status AI comments ✅  Permissions ✅  Anti-ban ✅
+${boxClose}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🆕 *+300 more commands available* — games, group-guard, notes, sports
-scores, URL tools, temp mail, text effects, downloads, stickers, admin
-tools, search, and more. This menu only shows the core set.
-${p}commands       - 📋 Full flat list of everything currently loaded
-${p}commands sticker - 🔎 e.g. search loaded commands by keyword
-${p}smenu          - 🗂️ Same full list, grouped by category with live status
+${menuBox('🆕', 'MORE COMMANDS', '(+300 total)')}
+│➽ Games, group-guard, notes, sports scores, URL tools, temp mail,
+│  text effects, downloads, stickers, admin tools, search & more —
+│  this menu only shows the core set.
+│➽ ${p}commands — 📋 Full flat list of everything currently loaded
+│➽ ${p}commands sticker — 🔎 e.g. search loaded commands by keyword
+│➽ ${p}loadmenu / ${p}smenu — Same menu you're looking at now (all one command)
+${boxClose}
 
 > 🔥 *Henry Ochibots v19™* | @henrytech254`;
 
@@ -1237,3 +1245,9 @@ module.exports.commands = async ({ sock, from, msg, args }) => {
     : `📋 *All loaded commands* (${filtered.length})\n\n`;
   await sock.sendMessage(from, { text: header + filtered.map(n => `.${n}`).join(', ') }, { quoted: msg });
 };
+
+// ── .loadmenu ────────────────────────────────────────────────────────────
+// ✅ NEW: single unified entry point that replaces the old split between
+// .menu and .smenu — both now point here too, so there's only ONE menu
+// command/codepath to maintain and style going forward.
+module.exports.loadmenu = module.exports.menu;

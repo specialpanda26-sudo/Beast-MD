@@ -276,6 +276,7 @@
       <div class="tab" data-tab="sessions" onclick="switchTab('sessions')">📱 Sessions</div>
       <div class="tab" data-tab="contacts" onclick="switchTab('contacts')">👥 Contacts</div>
       <div class="tab" data-tab="search" onclick="switchTab('search')">🔍 Search</div>
+      <div class="tab" data-tab="cmdfinder" onclick="switchTab('cmdfinder')">🧭 Command Finder</div>
       <div class="tab" data-tab="keywords" onclick="switchTab('keywords')">🔑 Keywords</div>
       <div class="tab" data-tab="ownerchats" onclick="switchTab('ownerchats')">💬 Owner Chats</div>
       <div class="tab" data-tab="features" onclick="switchTab('features')">⚙️ Features</div>
@@ -347,6 +348,18 @@
         <button class="btn" style="width:auto" onclick="doSearch()">Search</button>
       </div>
       <div id="search-results"></div>
+    </div>
+
+    <!-- ✅ NEW: COMMAND FINDER TAB — describe what you want, get the command -->
+    <div class="tab-content" id="tab-cmdfinder">
+      <div class="form-card">
+        <div class="section-title">🧭 Command Finder</div>
+        <div class="hint" style="margin-bottom:14px">Type what you want in plain words — e.g. "save a view once" or "block a number" — and it'll show you the exact command to send on WhatsApp.</div>
+        <label>What do you want to do?</label>
+        <input type="text" id="admin-cmd-finder-in" placeholder="e.g. download a youtube video" onkeydown="if(event.key==='Enter')runAdminCommandFinder()"/>
+        <button class="btn" style="width:auto" onclick="runAdminCommandFinder()">Find it</button>
+      </div>
+      <div id="admin-cmd-finder-out"></div>
     </div>
 
     <!-- KEYWORDS TAB -->
@@ -1490,6 +1503,29 @@
     window.open(`/admin/session-detail?session=${encodeURIComponent(name)}&pass=${encodeURIComponent(token)}`, '_blank');
   }
 
+  // ✅ NEW: COMMAND FINDER — shares assets/command-finder.js with the public site
+  async function runAdminCommandFinder() {
+    const q = document.getElementById('admin-cmd-finder-in').value.trim();
+    const out = document.getElementById('admin-cmd-finder-out');
+    if (!q) { out.innerHTML = ''; return; }
+    out.innerHTML = '<div class="empty">Searching...</div>';
+    try {
+      const results = await window.CommandFinder.findCommands(q, 8);
+      if (!results.length) {
+        out.innerHTML = '<div class="empty">No matching command found — try different words.</div>';
+        return;
+      }
+      out.innerHTML = results.map(cmd => `
+        <div class="msg-result">
+          <div class="msg-meta" style="cursor:pointer" onclick="navigator.clipboard && navigator.clipboard.writeText('.${cmd.usage.replace(/^\./, '')}')">.${cmd.usage.replace(/^\./, '')} 📋</div>
+          <div class="msg-body">${cmd.description}</div>
+        </div>
+      `).join('');
+    } catch (e) {
+      out.innerHTML = `<div class="empty">${e.message}</div>`;
+    }
+  }
+
   async function doSearch() {
     const q = document.getElementById("search-query").value.trim();
     const resultsEl = document.getElementById("search-results");
@@ -1599,5 +1635,6 @@
     }).catch(() => {});
   }
 </script>
+<script src="/assets/command-finder.js"></script>
 </body>
 </html>

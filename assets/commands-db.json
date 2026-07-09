@@ -1,0 +1,2123 @@
+[
+  {
+    "command": "8ball",
+    "usage": ".8ball Will I be rich?",
+    "description": "Ask the magic 8-ball a question",
+    "category": "fun",
+    "source": "ported_fun.js"
+  },
+  {
+    "command": "about",
+    "usage": ".about — get someone's WhatsApp \"About\" status text",
+    "description": ".about (your own) | .about @user | .about 254712345678 | reply with .about   //",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "add",
+    "usage": ".add",
+    "description": ".add [number with country code]",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "addadmin",
+    "usage": ".addadmin",
+    "description": ".addadmin 254XXXXXXXXX",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "addcoowner",
+    "usage": ".addcoowner / .removecoowner / .listcoowners",
+    "description": ".addcoowner 254XXXXXXXXX",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "addfunds",
+    "usage": ".addfunds <amount> <mpesa_code>",
+    "description": "* .addfunds <amount> <mpesa_code>\\n",
+    "category": "wallet",
+    "source": "wallet.js"
+  },
+  {
+    "command": "addplugin",
+    "usage": ".addplugin <Gist URL>",
+    "description": "Install a plugin from a GitHub Gist URL (owner only)",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "addreply",
+    "usage": ".addreply <trigger> | <response>\\nFor exact match: .addreply exact:<trigger> | <response>\\nUse {name} in response to mention sender name",
+    "description": "Add an auto-reply trigger",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "addtogroup",
+    "usage": ".addtogroup",
+    "description": "* run this command inside the group you want people added to:\\n${",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "alamy",
+    "usage": ".alamy <Alamy URL>",
+    "description": "Download image or video from Alamy URL",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "alive",
+    "usage": ".alive",
+    "description": "Check bot status and system info",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "animes",
+    "usage": ".animes <anime_name>",
+    "description": "Send random anime images",
+    "category": "menu",
+    "source": "ported_menu.js"
+  },
+  {
+    "command": "announce",
+    "usage": ".announce — owner-only broadcast to everyone who's messaged the bot",
+    "description": ".announce [message] // Queues the message on the backend",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "antibadword",
+    "usage": ".antibadword <on|off|add|remove|list>",
+    "description": "Configure anti-badword filter to delete messages containing inappropriate words",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "antibanstats",
+    "usage": ".antibanstats",
+    "description": "antibanstats command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "anticall",
+    "usage": ".anticall <on|off|status>",
+    "description": "Enable or disable auto-blocking of incoming calls",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "antilink",
+    "usage": ".antilink <on|off|set>",
+    "description": "Prevent users from sending links in the group",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "antispam",
+    "usage": ".antispam",
+    "description": ".antispam on/off",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "antitag",
+    "usage": ".antitag <on|off|set>",
+    "description": "Prevent users from tagging all members",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "apkdl",
+    "usage": ".apkdl <apk_name>",
+    "description": "Search APKs and download by reply",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "archivechat",
+    "usage": ".archivechat <archive|unarchive>",
+    "description": "Archive or unarchive the current chat",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "attp",
+    "usage": ".attp <text>",
+    "description": "Generate an animated sticker from text",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "audiofx",
+    "usage": ".bass / .nightcore (reply to audio)",
+    "description": "Apply audio effects to voice notes",
+    "category": "menu",
+    "source": "ported_menu.js"
+  },
+  {
+    "command": "audiomack",
+    "usage": ".audiomack — download from a direct Audiomack link",
+    "description": ".audiomack [Audiomack link] — for search by name, use .song [name] instead (sear",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "aupload",
+    "usage": ".aupload (reply to image/video/gif/sticker)",
+    "description": "Upload media to cloud and get URL",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "autoread",
+    "usage": ".autoread <on|off>",
+    "description": "Toggle automatic message reading (blue ticks)",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "autostatus",
+    "usage": ".autostatus <on|off|react on|react off>",
+    "description": "Automatically view and react to WhatsApp statuses",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "autotyping",
+    "usage": ".autotyping <on|off>",
+    "description": "Toggle auto-typing indicator when bot is processing messages",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "base64",
+    "usage": ".base64 <text> OR reply to a message",
+    "description": "Encode text to Base64",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "bcgc",
+    "usage": ".bcgc",
+    "description": ".bcgc [message]\\nExample: .bcgc Good morning everyone!",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "bfdecode",
+    "usage": "Reply to BF code with .bfdecode",
+    "description": "Decode/Run Brainfuck code",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "bio",
+    "usage": ".bio",
+    "description": ".bio [text]",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "blur",
+    "usage": ".blur (reply to an image or send image with caption)",
+    "description": "Apply a blur effect to an image",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "brainfuck",
+    "usage": ".brainfuck <text> OR reply to a message",
+    "description": "Convert text into Brainfuck code",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "broadcast",
+    "usage": ".broadcast <message>",
+    "description": "Broadcast a message to all groups the bot is in",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "broadcastdm",
+    "usage": ".broadcastdm <message>",
+    "description": "Broadcast a message to all saved DM contacts",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "calc",
+    "usage": ".calc <expression>",
+    "description": "Advanced calculator",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "channelid",
+    "usage": ".channelid <url>",
+    "description": "Get the internal JID of a WhatsApp Channel",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "character",
+    "usage": ".character @user",
+    "description": "character command",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "chatbot",
+    "usage": ".chatbot <on|off>",
+    "description": "Enable or disable AI chatbot for the group",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "checkblocked",
+    "usage": ".checkblocked <number> (owner/sub-admin)",
+    "description": ".checkblocked 254712345678",
+    "category": "wallet",
+    "source": "wallet.js"
+  },
+  {
+    "command": "checklink",
+    "usage": ".checklink — heuristic URL safety checker (no external API)",
+    "description": ".checklink [url] // Flags common phishing/scam red flags. This is NOT a guarante",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "cipher",
+    "usage": ".cipher <type> <encode|decode> <key> <text>",
+    "description": "Encrypt or decrypt text using Caesar, Vigenere, or XOR cipher",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "claude",
+    "usage": ".claude",
+    "description": ".claude [your question or request]\\ne.g. .claude write me a Python script that r",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "cleanuri",
+    "usage": ".cleanuri <url> — strip tracking params",
+    "description": ".cleanuri <url>",
+    "category": "urltools",
+    "source": "urltools.js"
+  },
+  {
+    "command": "clear",
+    "usage": ".clear",
+    "description": "Clear bot messages from chat",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "clearchat",
+    "usage": ".clearchat",
+    "description": "Clear/delete the current chat",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "clearsession",
+    "usage": ".clearsession",
+    "description": "Clear session files",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "cleartmp",
+    "usage": ".cleartmp",
+    "description": "Clear tmp and temp directories",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "cmdreact",
+    "usage": ".creact on/off",
+    "description": "Toggle command reactions",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "coding",
+    "usage": ".coding",
+    "description": "Get a random programming image",
+    "category": "images",
+    "source": "ported_images.js"
+  },
+  {
+    "command": "commands",
+    "usage": ".commands",
+    "description": "commands command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "compliment",
+    "usage": ".compliment @user",
+    "description": "Send a random compliment to a user",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "convert",
+    "usage": ".convert [amount] [from] [to]",
+    "description": ".convert 100 USD KES",
+    "category": "atassa",
+    "source": "atassa.js"
+  },
+  {
+    "command": "convertmedia",
+    "usage": ".convertmedia — UNIVERSAL MEDIA CONVERTER",
+    "description": "reply to an image/video/audio file with .convertmedia [target format]   // e.g.",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "creategroup",
+    "usage": ".creategroup",
+    "description": ".creategroup Group Name | 254712345678,254798765432,0712345678 module.exports.cr",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "createqr",
+    "usage": ".createqr <text>",
+    "description": ".createqr <text or url>",
+    "category": "urltools",
+    "source": "urltools.js"
+  },
+  {
+    "command": "credsrestore",
+    "usage": ".credsrestore",
+    "description": "credsrestore command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "credssnapshot",
+    "usage": ".credssnapshot",
+    "description": "credssnapshot command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "crop",
+    "usage": ".crop (reply to image/video/sticker)",
+    "description": "Crop image/video/sticker to circle sticker",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "crun",
+    "usage": ".crun <c++ code>",
+    "description": "Compile and run C++ code",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "cyberimg",
+    "usage": ".cyberimg",
+    "description": "Get a random cyberspace image",
+    "category": "images",
+    "source": "ported_images.js"
+  },
+  {
+    "command": "dado",
+    "usage": ".dado",
+    "description": "Roll a random dice sticker",
+    "category": "games",
+    "source": "ported_games.js"
+  },
+  {
+    "command": "dalle",
+    "usage": ".dalle <prompt>",
+    "description": "Generate an AI image based on your prompt",
+    "category": "ai",
+    "source": "ported_ai.js"
+  },
+  {
+    "command": "dare",
+    "usage": ".dare",
+    "description": "dare command",
+    "category": "games",
+    "source": "games.js"
+  },
+  {
+    "command": "define",
+    "usage": ".define <word>",
+    "description": ".define <word>",
+    "category": "urltools",
+    "source": "urltools.js"
+  },
+  {
+    "command": "delcmd",
+    "usage": ".delcmd <text>",
+    "description": "Delete a sticker command",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "delete",
+    "usage": ".delete <count> [@user] or reply with .delete",
+    "description": "Delete recent messages from group or specific user",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "delplugin",
+    "usage": ".delplugin <plugin_name>",
+    "description": "Delete a plugin by name (owner only)",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "delreply",
+    "usage": ".delreply <trigger>",
+    "description": "Delete an auto-reply trigger",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "demote",
+    "usage": ".demote",
+    "description": "demote command",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "dict",
+    "usage": ".dict [word]",
+    "description": ".dict [word]",
+    "category": "atassa",
+    "source": "atassa.js"
+  },
+  {
+    "command": "diffusion",
+    "usage": ".diffusion <prompt>",
+    "description": "Generate an AI image based on your prompt",
+    "category": "ai",
+    "source": "ported_ai.js"
+  },
+  {
+    "command": "disappear",
+    "usage": ".disappear off | .disappear 24h | .disappear 7d | .disappear 90d",
+    "description": "Enable or disable disappearing messages in chat",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "distance",
+    "usage": ".distance <city1> to <city2>\\nExample: .distance karachi to dubai",
+    "description": "Calculate distance between two cities with flight and driving time estimates",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "dl",
+    "usage": ".dl — UNIVERSAL DOWNLOADER",
+    "description": ".dl [URL] (video, default) | .dl [URL] audio | .dl [URL] mp3   // Powered by yt-",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "dlstatus",
+    "usage": "Reply to a status and type .dlstatus",
+    "description": "Download quoted Status updates",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "dna",
+    "usage": ".dna encode <text or reply to media>\\n.dna decode <DNA or reply to DNA file>",
+    "description": "Encode any text or media to DNA sequence (ATCG) or decode it back",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "download",
+    "usage": ".download — ✅ FIX: use execFile to prevent shell injection",
+    "description": ".download [URL]",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "echo",
+    "usage": ".echo <text> <count>",
+    "description": "Repeats your message a specified number of times.",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "element",
+    "usage": ".element <name or symbol>",
+    "description": "Get information about a chemical element",
+    "category": "search",
+    "source": "ported_search.js"
+  },
+  {
+    "command": "emojimix",
+    "usage": ".emojimix 😎+🥰",
+    "description": "Mix two emojis into a sticker",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "ephoto",
+    "usage": ".ephoto <type> <text>",
+    "description": "Generate styled text with various effects",
+    "category": "menu",
+    "source": "ported_menu.js"
+  },
+  {
+    "command": "excard",
+    "usage": ".excard Title | Body | ImageURL",
+    "description": "Create a rich media card",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "facebook",
+    "usage": ".fb <facebook video link>",
+    "description": "Download Facebook videos",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "fetch",
+    "usage": ".fetch <url>",
+    "description": "Download a file directly from a URL",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "find",
+    "usage": ".find [keyword]",
+    "description": "Find a command by keyword or description",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "flip",
+    "usage": ".flip <text> OR reply to a message",
+    "description": "Flip text upside down (supports Uppercase)",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "flirt",
+    "usage": ".flirt",
+    "description": "Get a random flirt message",
+    "category": "fun",
+    "source": "ported_fun.js"
+  },
+  {
+    "command": "flux",
+    "usage": ".flux <prompt>",
+    "description": "Generate an AI image based on your prompt",
+    "category": "ai",
+    "source": "ported_ai.js"
+  },
+  {
+    "command": "forwarded",
+    "usage": ".viral <text> OR reply to a message",
+    "description": "Send text with a fake \"Frequently Forwarded\" tag",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "freeimage",
+    "usage": ".freeimage (reply to image)",
+    "description": "Upload to Freeimage.host",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "game",
+    "usage": ".game",
+    "description": "Get a random gaming image",
+    "category": "images",
+    "source": "ported_images.js"
+  },
+  {
+    "command": "gcleave",
+    "usage": ".groupleave — leave current group\\n.groupleave <jid> — leave specific group",
+    "description": "Make the bot leave a group",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "gcmtdata",
+    "usage": ".gcinfo",
+    "description": "Get detailed info about the current group",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "gcset",
+    "usage": ".gcset <setting>",
+    "description": "Change group settings (lock/unlock messages or settings)",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "genshin",
+    "usage": ".genshin <UID>",
+    "description": "Stalk Genshin Impact UID",
+    "category": "stalk",
+    "source": "ported_stalk.js"
+  },
+  {
+    "command": "getfile",
+    "usage": ".getfile <filename>",
+    "description": "Read and display file contents from bot directory",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "getpage",
+    "usage": ".getpage <url>",
+    "description": "Get the raw HTML source of a website",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "getpp",
+    "usage": ".getpp (upgraded)",
+    "description": ".getpp (your own pfp) | .getpp @user | .getpp 254712345678 | reply to someone",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "getty",
+    "usage": ".getty <Getty URL>",
+    "description": "Download video or image from Getty Images",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "gif",
+    "usage": ".gif <search term>",
+    "description": "Get a GIF based on a search term",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "gimage",
+    "usage": ".gimage <search query>",
+    "description": "Search and send first 4 Google images",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "gitclone",
+    "usage": ".gitclone <url> OR <username> <repo>",
+    "description": "Download a GitHub repository as zip",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "gitclone2",
+    "usage": ".gitclone2 <github-link>",
+    "description": "Download a GitHub repository as a ZIP file",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "github",
+    "usage": ".github <username>",
+    "description": "Lookup GitHub user profile",
+    "category": "stalk",
+    "source": "ported_stalk.js"
+  },
+  {
+    "command": "gitinfo",
+    "usage": ".gitinfo",
+    "description": "Show detailed git repository information",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "gitpull",
+    "usage": ".gitpull",
+    "description": "Reload all plugins (Pull changes from git if available)",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "goodbye",
+    "usage": ".goodbye <on|off|set message>",
+    "description": "Configure goodbye messages for leaving members",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "goodnight",
+    "usage": ".goodnight",
+    "description": "Send a random good night message",
+    "category": "quotes",
+    "source": "ported_quotes.js"
+  },
+  {
+    "command": "grayscale",
+    "usage": "Reply to an image with .grayscale",
+    "description": "Convert an image to grayscale",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "groupinfo",
+    "usage": ".groupinfo",
+    "description": "Display detailed group information",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "guess",
+    "usage": ".guess [max]",
+    "description": "guess command",
+    "category": "games",
+    "source": "games.js"
+  },
+  {
+    "command": "hack",
+    "usage": ".hack <target>",
+    "description": "Simulate a hack sequence (fun prank)",
+    "category": "fun",
+    "source": "ported_fun.js"
+  },
+  {
+    "command": "hangman",
+    "usage": ".hangman",
+    "description": "hangman command",
+    "category": "games",
+    "source": "games.js"
+  },
+  {
+    "command": "hidetag",
+    "usage": ".hidetag <message> or reply to message",
+    "description": "Tag all non-admin members without showing their names",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "igs",
+    "usage": ".igs <instagram URL>",
+    "description": "Convert Instagram post/reel to sticker",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "igsc",
+    "usage": ".igsc <instagram URL>",
+    "description": "Convert Instagram post/reel to cropped sticker",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "images",
+    "usage": ".images <category>",
+    "description": "Send 3 random images for a given category",
+    "category": "menu",
+    "source": "ported_menu.js"
+  },
+  {
+    "command": "imagine",
+    "usage": ".imagine — free, keyless AI image generation via Pollinations.ai",
+    "description": ".imagine [description]\\ne.g. .imagine a lion wearing sunglasses, cyberpunk style",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "imdb",
+    "usage": ".imdb <movie/series title>",
+    "description": "Get detailed information about a movie or series from IMDB",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "inspect",
+    "usage": ".inspect [plugin_name]",
+    "description": "Read the source code of a specific plugin",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "instagram",
+    "usage": ".ig <instagram link>",
+    "description": "Download Instagram posts, reels & videos",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "insult",
+    "usage": ".insult @username or reply to their message with .insult",
+    "description": "Send a playful insult to someone by mentioning them or replying to their message",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "invert",
+    "usage": "Reply to an image with .invert",
+    "description": "Convert an image to negative",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "invitelink",
+    "usage": ".invitelink — get link\\n.revokeinvite — reset link",
+    "description": "Get or revoke the group invite link",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "ipinfo",
+    "usage": ".ipinfo <ip>",
+    "description": "*.ipinfo 8.8.8.8*",
+    "category": "osint",
+    "source": "osint.js"
+  },
+  {
+    "command": "islamic",
+    "usage": ".islamic",
+    "description": "Get a random Islamic image",
+    "category": "images",
+    "source": "ported_images.js"
+  },
+  {
+    "command": "istock",
+    "usage": ".istock <iStock URL>",
+    "description": "Download image or video from iStock URL",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "itunes",
+    "usage": ".itunes <song name>",
+    "description": "Get detailed information about a song from iTunes",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "joingroup",
+    "usage": ".joingroup <link or code>\\n.groupinfo <link or code>",
+    "description": "Join a group via invite link or get group info from link",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "joinrequests",
+    "usage": ".joinrequests — list pending\\n.approvejoin <number|all>\\n.rejectjoin <number|all>",
+    "description": "View, approve or reject group join requests",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "joke",
+    "usage": ".joke",
+    "description": "Get a random dad joke",
+    "category": "fun",
+    "source": "ported_fun.js"
+  },
+  {
+    "command": "joke2",
+    "usage": ".joke2",
+    "description": "Get a random general joke",
+    "category": "fun",
+    "source": "ported_fun.js"
+  },
+  {
+    "command": "kick",
+    "usage": ".kick",
+    "description": "kick command",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "length",
+    "usage": ".length <size> (reply to media)",
+    "description": "Send an image or video with a custom file length",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "listadmins",
+    "usage": ".listadmins",
+    "description": ".login [username] [password]   // Grants the user temporary session-level owner",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "listcmd",
+    "usage": ".listcmd",
+    "description": "List all sticker commands",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "listreplies",
+    "usage": ".listreplies",
+    "description": "List all configured auto-reply triggers",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "litterbox",
+    "usage": ".litterbox <1h/12h/24h/72h> (reply to media)",
+    "description": "Upload temporarily (1h/12h/24h/72h)",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "llama",
+    "usage": ".llama <question>",
+    "description": "Ask a question to AI",
+    "category": "ai",
+    "source": "ported_ai.js"
+  },
+  {
+    "command": "loadmenu",
+    "usage": ".loadmenu",
+    "description": "loadmenu command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "login",
+    "usage": ".login — unlock full access with credentials",
+    "description": ".login [username] [password]   // Grants the user temporary session-level owner",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "logout",
+    "usage": ".logout — remove session access",
+    "description": ".welcome 254XXXXXXXXX",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "lyrics",
+    "usage": ".lyrics <song name>",
+    "description": "Get lyrics of a song along with artist and image",
+    "category": "music",
+    "source": "ported_music.js"
+  },
+  {
+    "command": "maintenance",
+    "usage": ".maintenance",
+    "description": ".maintenance on/off",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "manage",
+    "usage": ".manage [toggle/alias] [command_name] [new_alias]",
+    "description": "Manage bot commands and aliases",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "math",
+    "usage": ".math",
+    "description": "Solve math problems",
+    "category": "games",
+    "source": "ported_games.js"
+  },
+  {
+    "command": "mediafire",
+    "usage": ".mediafire <url>",
+    "description": "Download files from MediaFire",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "medicine",
+    "usage": ".medicine aspirin\\n.medicine paracetamol",
+    "description": "Get medicine/drug info: uses, side effects, warnings",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "mega",
+    "usage": ".mega <mega-url>",
+    "description": "Download from MEGA with real-time progress",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "meme",
+    "usage": ".meme",
+    "description": "Get a random cheems meme with buttons for another meme or joke",
+    "category": "fun",
+    "source": "ported_fun.js"
+  },
+  {
+    "command": "mention",
+    "usage": ".mention <on|off> or .setmention (reply to media)",
+    "description": "Toggle or set custom mention reply",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "menu",
+    "usage": ".menu",
+    "description": "menu command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "mistral",
+    "usage": ".mistral <question>",
+    "description": "Ask a question to AI",
+    "category": "ai",
+    "source": "ported_ai.js"
+  },
+  {
+    "command": "model",
+    "usage": ".model — per-chat AI model switcher",
+    "description": "model command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "momo",
+    "usage": ".momo mtn\\n.momo mpesa\\n.momo airtel",
+    "description": "Mobile Money info for African networks (MTN, Airtel, M-Pesa, Wave, Orange)",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "mountain",
+    "usage": ".mountain",
+    "description": "Get a random mountain image",
+    "category": "images",
+    "source": "ported_images.js"
+  },
+  {
+    "command": "movie",
+    "usage": ".movie <movie name>\\n.movie Pathaan\\n.movie Jawan 2023",
+    "description": "Search movie info, ratings, cast, plot",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "mute",
+    "usage": ".mute / .unmute",
+    "description": "mute command",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "news",
+    "usage": ".news",
+    "description": "Get the latest top 5 news headlines from the US",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "notes",
+    "usage": ".notes <add|all|del|delall> [text|ID]",
+    "description": "Store, view, and delete your personal notes",
+    "category": "menu",
+    "source": "ported_menu.js"
+  },
+  {
+    "command": "npmstalk",
+    "usage": ".npmstalk <package-name>",
+    "description": "Get details about an NPM package",
+    "category": "stalk",
+    "source": "ported_stalk.js"
+  },
+  {
+    "command": "owner",
+    "usage": ".owner",
+    "description": "Get the contact of the bot owner",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "ownerrecovery",
+    "usage": ".ownerrecovery — change owner number via secret passphrase",
+    "description": ".ownerrecovery [OWNER_RECOVERY_SECRET] 254NEWPHONE   ownerrecovery: async ({ soc",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "pair",
+    "usage": ".pair 92305395XXXX",
+    "description": "Get session id for the bot",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "pbp",
+    "usage": ".pbp [action] - Play by Post RPG tracker",
+    "description": "pbp command",
+    "category": "cypher",
+    "source": "cypher.js"
+  },
+  {
+    "command": "perf",
+    "usage": ".perf",
+    "description": "View command performance and error metrics",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "pies",
+    "usage": ".pies",
+    "description": "Get a pies image from a specific country",
+    "category": "images",
+    "source": "ported_images.js"
+  },
+  {
+    "command": "pinchat",
+    "usage": ".pinchat pin | .pinchat unpin",
+    "description": "Pin or unpin the current chat",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "ping",
+    "usage": ".ping",
+    "description": "ping command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "pingweb",
+    "usage": ".pingweb [website URL]",
+    "description": "Check bot response time and ping a website",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "pinstalk",
+    "usage": ".pinstalk <username>",
+    "description": "Lookup Pinterest user profile",
+    "category": "stalk",
+    "source": "ported_stalk.js"
+  },
+  {
+    "command": "pixhost",
+    "usage": ".pixhost (reply to media or caption on media)",
+    "description": "Upload to Pixhost (images only)",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "play",
+    "usage": ".play <song name>",
+    "description": "Search and download a song as MP3 from YouTube",
+    "category": "music",
+    "source": "ported_music.js"
+  },
+  {
+    "command": "pmblocker",
+    "usage": ".pmblocker <on|off|status|setmsg>",
+    "description": "Block private messages and auto-block users who DM the bot",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "pokedex",
+    "usage": ".pokedex <pokemon name>",
+    "description": "Get information about a Pokémon",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "pomf",
+    "usage": ".pomf (reply to media)",
+    "description": "Upload to Pomf.lain.la (1GB, permanent)",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "pp",
+    "usage": ".pp",
+    "description": "pp command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "pricing",
+    "usage": ".pricing — show current config prices (anyone can check)",
+    "description": "pricing command",
+    "category": "wallet",
+    "source": "wallet.js"
+  },
+  {
+    "command": "privacy",
+    "usage": ".privacy — show menu",
+    "description": "Manage all WhatsApp privacy settings, block/unblock users",
+    "category": "menu",
+    "source": "ported_menu.js"
+  },
+  {
+    "command": "profile",
+    "usage": ".profile",
+    "description": "profile command",
+    "category": "wallet",
+    "source": "wallet.js"
+  },
+  {
+    "command": "promote",
+    "usage": ".promote",
+    "description": "promote command",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "public",
+    "usage": ".public / .private / .setmode",
+    "description": "public command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "qmaker",
+    "usage": ".qmaker <text> or reply to a message",
+    "description": "Create a quote image from text or replied message",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "qrcode",
+    "usage": ".qrcode <text>",
+    "description": "Generate a QR code from text",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "quax",
+    "usage": ".quax (reply to media or caption on media)",
+    "description": "Upload to Qu.ax (anonymous)",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "quote",
+    "usage": ".quote",
+    "description": "Get a random quote",
+    "category": "quotes",
+    "source": "ported_quotes.js"
+  },
+  {
+    "command": "quote2",
+    "usage": ".quote2",
+    "description": "Get a random inspirational quote",
+    "category": "quotes",
+    "source": "ported_quotes.js"
+  },
+  {
+    "command": "quoted",
+    "usage": ".quote <text> or reply to a message",
+    "description": "Generate a quote sticker from text",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "quran",
+    "usage": ".quran 1:1\\n.quran 2:255\\n.quran mercy",
+    "description": "Search Quran verses by surah:ayah or keyword",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "rank",
+    "usage": ".rank",
+    "description": "Show top 5 most active members based on message count",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "readmore",
+    "usage": ".readmore text\\n.readmore text1|text2",
+    "description": "Hide text using read more",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "readqr",
+    "usage": "Reply to an image with .readqr",
+    "description": "Read QR code from an image",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "referral",
+    "usage": ".referral — show your referral code/link + earnings",
+    "description": "referral command",
+    "category": "wallet",
+    "source": "wallet.js"
+  },
+  {
+    "command": "register",
+    "usage": ".register",
+    "description": "register command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "reload",
+    "usage": ".reload",
+    "description": "reload command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "removeadmin",
+    "usage": ".removeadmin",
+    "description": ".removeadmin 254XXXXXXXXX",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "removebg",
+    "usage": ".removebg (reply to image or send image with caption)",
+    "description": "Remove background from an image",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "resetlink",
+    "usage": ".resetlink",
+    "description": "Reset group invite link",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "reverse",
+    "usage": ".reverse <text>",
+    "description": "Reverse any text",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "revoke",
+    "usage": ".revoke",
+    "description": ".antispam on/off",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "ringtone",
+    "usage": ".ringtone <search term>",
+    "description": "Search and download ringtones",
+    "category": "music",
+    "source": "ported_music.js"
+  },
+  {
+    "command": "rle",
+    "usage": ".rle compress <text or reply to media>\\n.rle decompress <encoded or reply to compressed file>",
+    "description": "Compress or decompress text/files using Run-Length Encoding (C++ powered)",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "roll",
+    "usage": ".roll [dice] e.g .roll 3d6+2",
+    "description": ".roll 3d6+2\\nFormat: [count]d[sides][+/-modifier]",
+    "category": "cypher",
+    "source": "cypher.js"
+  },
+  {
+    "command": "roseday",
+    "usage": ".roseday",
+    "description": "Get a random Rose Day message/quote",
+    "category": "quotes",
+    "source": "ported_quotes.js"
+  },
+  {
+    "command": "runtime",
+    "usage": ".runtime",
+    "description": "runtime command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "s2img",
+    "usage": ".s2img (reply to a sticker)",
+    "description": "Convert a sticker to an image",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "schedule",
+    "usage": ".schedule add",
+    "description": "*\\n.schedule add <time> <to> <message>\\n\\n*Time formats:*\\n• \\",
+    "category": "scheduler",
+    "source": "scheduler.js"
+  },
+  {
+    "command": "schedulecancel",
+    "usage": ".schedulecancel <ID>",
+    "description": "Cancel a scheduled message by its ID",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "schedulelist",
+    "usage": ".schedulelist",
+    "description": "View all scheduled messages for this chat",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "scloud",
+    "usage": ".scloud <song name>",
+    "description": "Search for tracks on SoundCloud",
+    "category": "music",
+    "source": "ported_music.js"
+  },
+  {
+    "command": "screenshot",
+    "usage": ".screenshot <url>",
+    "description": "Get a screenshot of a website",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "script",
+    "usage": ".script",
+    "description": "Get information about this bot's GitHub repository",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "sepia",
+    "usage": "Reply to an image with .sepia",
+    "description": "Convert an image to sepia",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "setbio",
+    "usage": ".setbio <on|off|set|reset>",
+    "description": "Set custom WhatsApp bio with random quotes",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "setcmd",
+    "usage": ".setcmd <text>",
+    "description": "Set a sticker command",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "setgdesc",
+    "usage": ".setgdesc <new description>",
+    "description": "Change group description",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "setgname",
+    "usage": ".setgname <new name>",
+    "description": "Change group name",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "setgpp",
+    "usage": ".setgpp (reply to image)",
+    "description": "Change group profile picture",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "setpp",
+    "usage": ".setpp (reply to an image)",
+    "description": "Set or update the bot profile picture (owner only)",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "setprice",
+    "usage": ".setprice <text> — owner-only, updates what .pricing shows",
+    "description": ".setprice <text>\\ne.g. *.setprice Airtel Premium - 50 kesh/30 days\\\\nAirtel 24H",
+    "category": "wallet",
+    "source": "wallet.js"
+  },
+  {
+    "command": "settier",
+    "usage": ".settier — owner-only, assign ANY number to ANY permission tier",
+    "description": ".settier 254XXXXXXXXX [subadmin|coowner]   // Unlike .addadmin (sub-admin only),",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "settings",
+    "usage": ".settings",
+    "description": "Show bot settings and per-group configurations",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "share",
+    "usage": ".share — forward a replied-to message (text/image/video/audio/doc)",
+    "description": "reply to any message with .share <number>   // Forwards the exact quoted message",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "sharechat",
+    "usage": ".sharechat <ShareChat URL>",
+    "description": "Download video from ShareChat",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "sharpen",
+    "usage": "Reply to an image with .sharpen",
+    "description": "Convert an image to sharpen",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "shayari",
+    "usage": ".shayari",
+    "description": "Get a random shayari",
+    "category": "quotes",
+    "source": "ported_quotes.js"
+  },
+  {
+    "command": "shazam",
+    "usage": ".shazam (reply to audio or video)",
+    "description": "Identify a song from audio or video",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "ship",
+    "usage": ".ship",
+    "description": "Randomly ship two members in the group",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "shortener",
+    "usage": ".shortener <url> / .tinyurl <url>",
+    "description": ".shortener <url>",
+    "category": "urltools",
+    "source": "urltools.js"
+  },
+  {
+    "command": "siminfo",
+    "usage": ".siminfo <phone number with country code>\\nExample: .siminfo +923001234567",
+    "description": "Lookup phone number country, carrier and type",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "simp",
+    "usage": ".simp (reply to user or mention someone)",
+    "description": "Generate a simp card for a user",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "smallcaps",
+    "usage": ".smallcaps <text> OR reply to a message",
+    "description": "Convert text to small-capital style",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "smenu",
+    "usage": ".smenu",
+    "description": "Now just an alias for the unified .loadmenu / .menu ──────",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "snack",
+    "usage": ".snack <SnackVideo URL>",
+    "description": "Download media (video or image) from SnackVideo URL",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "snapchat",
+    "usage": ".snapchat <Snapchat URL>",
+    "description": "Download media (video or image) from Snapchat Spotlight URL",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "song",
+    "usage": ".song — ✅ FIX: use execFile to prevent shell injection",
+    "description": ".song [YouTube URL or song name]",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "sora",
+    "usage": ".sora <prompt>",
+    "description": "Generate AI video from text prompt",
+    "category": "ai",
+    "source": "ported_ai.js"
+  },
+  {
+    "command": "speedtest",
+    "usage": ".speedtest",
+    "description": "Test internet speed of the server",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "spotify",
+    "usage": ".spotify <spotify-url>",
+    "description": "Download music from Spotify",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "staff",
+    "usage": ".staff",
+    "description": "Display list of group admins",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "star",
+    "usage": ".star — reply to a message | .unstar — reply to a message",
+    "description": "Star or unstar a replied message",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "status",
+    "usage": ".status",
+    "description": "status command",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "stealth",
+    "usage": ".stealth <on|off>",
+    "description": "Toggle online status - bot will not send presence updates if off",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "stext",
+    "usage": ".stext <text>",
+    "description": "Style text in different fancy formats",
+    "category": "menu",
+    "source": "ported_menu.js"
+  },
+  {
+    "command": "sticker",
+    "usage": ".sticker",
+    "description": "sticker command",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "sticker2",
+    "usage": ".sticker2 (reply to image/video or send with caption)",
+    "description": "Convert image/video to sticker",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "stickers",
+    "usage": ".stickers <search term>",
+    "description": "Search for stickers using Tenor",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "string",
+    "usage": ".string <text>",
+    "description": "Get detailed info about a text string",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "stupid",
+    "usage": ".stupid (reply to user, mention someone, or add text)",
+    "description": "Generate a stupid card for a user",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "sudo",
+    "usage": ".sudo add|del|list <@user|number>",
+    "description": "Add or remove sudo users or list them",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "sudoku",
+    "usage": ".sudoku generate [easy|medium|hard]\\n.sudoku solve <81 digits, 0 for empty>",
+    "description": "Generate Sudoku puzzles or solve them",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "summarize",
+    "usage": ".summarize",
+    "description": ".summarize [text] or reply to a message",
+    "category": "cypher",
+    "source": "cypher.js"
+  },
+  {
+    "command": "sysinfo",
+    "usage": ".sysinfo",
+    "description": "Show detailed server system information",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "tag",
+    "usage": ".tag [message] or reply to a message",
+    "description": "Tag all group members",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "tagall",
+    "usage": ".tagall",
+    "description": "tagall command",
+    "category": "group",
+    "source": "group.js"
+  },
+  {
+    "command": "tagnotadmin",
+    "usage": ".tagnotadmin",
+    "description": "Tag all non-admin members in the group",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "take",
+    "usage": ".take <packname> (reply to sticker)",
+    "description": "Change sticker pack name",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "tech",
+    "usage": ".tech",
+    "description": "Get a random tech image",
+    "category": "images",
+    "source": "ported_images.js"
+  },
+  {
+    "command": "teddy",
+    "usage": ".teddy",
+    "description": "Send an animated teddy with cute emojis",
+    "category": "fun",
+    "source": "ported_fun.js"
+  },
+  {
+    "command": "terabox",
+    "usage": ".terabox <terabox link>",
+    "description": "Download files from TeraBox",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "tgstalk",
+    "usage": ".tgstalk <username>",
+    "description": "Lookup Telegram channel or user",
+    "category": "stalk",
+    "source": "ported_stalk.js"
+  },
+  {
+    "command": "tgstk",
+    "usage": ".tgstk <telegram sticker URL>",
+    "description": "Download stickers from Telegram",
+    "category": "stickers",
+    "source": "ported_stickers.js"
+  },
+  {
+    "command": "thrstalk",
+    "usage": ".thrstalk <username>",
+    "description": "Lookup Threads user profile",
+    "category": "stalk",
+    "source": "ported_stalk.js"
+  },
+  {
+    "command": "tictactoe",
+    "usage": ".tictactoe [room name]",
+    "description": "Play TicTacToe game with another user",
+    "category": "games",
+    "source": "ported_games.js"
+  },
+  {
+    "command": "tiktok",
+    "usage": ".tiktok <TikTok URL>",
+    "description": "Download TikTok video without watermark (HD if available)",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "tmpfiles",
+    "usage": ".tmpfiles (reply to media or caption on media)",
+    "description": "Upload to Tmpfiles.org (temporary)",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "tourl",
+    "usage": ".tourl (reply to media or send media with caption)",
+    "description": "Upload media and get a URL.",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "trends",
+    "usage": ".trends <country-name>",
+    "description": "Get trending topics from a country.",
+    "category": "info",
+    "source": "ported_info.js"
+  },
+  {
+    "command": "trivia",
+    "usage": ".trivia",
+    "description": "trivia command",
+    "category": "games",
+    "source": "games.js"
+  },
+  {
+    "command": "truth",
+    "usage": ".truth",
+    "description": "truth command",
+    "category": "games",
+    "source": "games.js"
+  },
+  {
+    "command": "tts",
+    "usage": ".tts — free text-to-speech via Google Translate's TTS endpoint",
+    "description": ".tts [text]\\n(or reply to a text message with .tts)",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "ttstalk",
+    "usage": ".ttstalk <username>",
+    "description": "Lookup TikTok user profile",
+    "category": "stalk",
+    "source": "ported_stalk.js"
+  },
+  {
+    "command": "twitter",
+    "usage": ".twitter <Tweet URL>",
+    "description": "Download media (video or image) from X/Twitter post",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "uguu",
+    "usage": ".uguu (reply to media or caption on media)",
+    "description": "Upload to Uguu.se (temporary)",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "unban",
+    "usage": ".unban [@user] or reply to message",
+    "description": "Unban a user from using the bot",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "units",
+    "usage": ".units <value> <from> to <to>\\nExample: .units 100 km to miles",
+    "description": "Convert between 100+ units — length, weight, speed, data, temperature and more",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "update",
+    "usage": ".update [zip_url]",
+    "description": "Update bot from git or zip without stopping",
+    "category": "owner",
+    "source": "ported_owner.js"
+  },
+  {
+    "command": "uptime",
+    "usage": ".uptime",
+    "description": "Show bot status information",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "url",
+    "usage": ".url (send or reply to media)",
+    "description": "Get a URL for media (image, video, audio, sticker, document).",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "urldecode",
+    "usage": ".urldecode <url>\\n.urlencode <text>\\n.extractlinks <text or reply to file>",
+    "description": "Encode/decode URLs or extract all links from text/files",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "validate",
+    "usage": ".validate <number>",
+    "description": "*.validate 2547XXXXXXXX*",
+    "category": "osint",
+    "source": "osint.js"
+  },
+  {
+    "command": "video",
+    "usage": ".video <youtube link | search query>",
+    "description": "Download YouTube videos by link or search",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "vidsplay",
+    "usage": ".vidsplay <Vidsplay URL>",
+    "description": "Download video and thumbnail from Vidsplay",
+    "category": "download",
+    "source": "ported_download.js"
+  },
+  {
+    "command": "viewonce",
+    "usage": ".viewonce (reply to a view-once media)",
+    "description": "Re-send a view-once image or video.",
+    "category": "general",
+    "source": "ported_general.js"
+  },
+  {
+    "command": "vnote",
+    "usage": "Reply to an audio file with .vnote",
+    "description": "Convert any audio message into a voice note",
+    "category": "tools",
+    "source": "ported_tools.js"
+  },
+  {
+    "command": "vv",
+    "usage": ".vv",
+    "description": "vv command",
+    "category": "media",
+    "source": "media.js"
+  },
+  {
+    "command": "warnings",
+    "usage": ".warnings [@user]",
+    "description": "Check warning count of a user",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "wasted",
+    "usage": ".wasted @user",
+    "description": "Waste someone in style!",
+    "category": "group",
+    "source": "ported_group.js"
+  },
+  {
+    "command": "wattpad",
+    "usage": ".wattpad <query>",
+    "description": "Search for stories on Wattpad!",
+    "category": "search",
+    "source": "ported_search.js"
+  },
+  {
+    "command": "weather",
+    "usage": ".weather [city]",
+    "description": ".weather [city name]",
+    "category": "atassa",
+    "source": "atassa.js"
+  },
+  {
+    "command": "welcome",
+    "usage": ".welcome",
+    "description": ".welcome 254XXXXXXXXX",
+    "category": "general",
+    "source": "general.js"
+  },
+  {
+    "command": "welcomecfg",
+    "usage": ".welcomecfg <on|off|set message>",
+    "description": "Configure welcome messages for new members",
+    "category": "admin",
+    "source": "ported_admin.js"
+  },
+  {
+    "command": "whois",
+    "usage": ".whois <domain>",
+    "description": "*.whois example.com*",
+    "category": "osint",
+    "source": "osint.js"
+  },
+  {
+    "command": "whoisip",
+    "usage": ".ip <address/domain>",
+    "description": "Get location info from an IP or Domain",
+    "category": "search",
+    "source": "ported_search.js"
+  },
+  {
+    "command": "why",
+    "usage": ".why",
+    "description": "Get a random “why” question from the API",
+    "category": "fun",
+    "source": "ported_fun.js"
+  },
+  {
+    "command": "wiki",
+    "usage": ".wiki <query>",
+    "description": "Search Wikipedia for a topic!",
+    "category": "search",
+    "source": "ported_search.js"
+  },
+  {
+    "command": "wordcloud",
+    "usage": ".wordcloud <text or reply to any message/file>",
+    "description": "Analyze text and show top 20 most used words with stats",
+    "category": "utility",
+    "source": "ported_utility.js"
+  },
+  {
+    "command": "wyr",
+    "usage": ".wyr (would you rather)",
+    "description": "wyr command",
+    "category": "games",
+    "source": "games.js"
+  },
+  {
+    "command": "xoat",
+    "usage": ".xoat (reply to media or caption on media)",
+    "description": "Upload to X0.at (anonymous)",
+    "category": "upload",
+    "source": "ported_upload.js"
+  },
+  {
+    "command": "xstalk",
+    "usage": ".xstalk <username>",
+    "description": "Lookup Twitter user profile",
+    "category": "stalk",
+    "source": "ported_stalk.js"
+  },
+  {
+    "command": "ytsearch",
+    "usage": ".yts [query]",
+    "description": "Search YouTube",
+    "category": "music",
+    "source": "ported_music.js"
+  }
+]

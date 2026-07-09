@@ -731,6 +731,24 @@
 
 <div class="divider"></div>
 
+<!-- ✅ NEW: COMMAND FINDER — describe what you want, get the exact command -->
+<section>
+  <div class="reveal">
+    <div class="section-label">// command finder</div>
+    <div class="section-title">Not sure which command to use?</div>
+    <p class="section-sub">Type what you want in plain words — e.g. "save a view once photo" — and we'll show you the exact command to send on WhatsApp.</p>
+  </div>
+  <div class="widget-card reveal" style="max-width:640px;margin:0 auto;">
+    <div class="widget-row">
+      <input class="widget-input" id="cmd-finder-in" placeholder="e.g. download a youtube video, block a number, make a sticker..." style="flex:1" />
+      <button class="widget-btn" onclick="runCommandFinder()">Find it</button>
+    </div>
+    <div id="cmd-finder-out" style="margin-top:0.8rem"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
 <!-- AUTO FEATURES -->
 <section>
   <div class="reveal">
@@ -955,6 +973,25 @@
 
   // PAIRING now lives entirely on /pair — see pair.html
 
+  // ✅ NEW: COMMAND FINDER — type what you want, get the exact command.
+  // Powered by /assets/command-finder.js + /assets/commands-db.json (both
+  // static, no server round-trip needed).
+  async function runCommandFinder() {
+    const q = document.getElementById('cmd-finder-in').value.trim();
+    const out = document.getElementById('cmd-finder-out');
+    if (!q) { out.innerHTML = ''; return; }
+    out.innerHTML = '<div class="widget-out" style="display:block">Searching…</div>';
+    try {
+      const results = await window.CommandFinder.findCommands(q, 5);
+      window.CommandFinder.renderResults(out, results, '.');
+    } catch (e) {
+      out.innerHTML = `<div class="widget-out err" style="display:block">${e.message}</div>`;
+    }
+  }
+  document.getElementById('cmd-finder-in')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runCommandFinder();
+  });
+
   // ✅ NEW: LIVE DEMO WIDGETS — safe, no-session commands, powered by
   // /api/widgets/* (sandboxed + rate-limited server-side, see app.py)
   async function runWidget(kind) {
@@ -1007,5 +1044,6 @@
     }
   }
 </script>
+<script src="/assets/command-finder.js"></script>
 </body>
 </html>
