@@ -20,6 +20,16 @@ module.exports = {
   // ── .menu ──────────────────────────────────────────────────────────────────
   // Shows different menus based on permission level
   menu: async ({ sock, from, msg, config, isOwner, isSubAdmin, isBotAdmin, args, senderJid }) => {
+    // Live count from the actual generated catalog, so this never drifts
+    // out of sync as commands are added/removed (was hardcoded to a stale
+    // "874" in several spots before).
+    let liveCommandCount = 874;
+    try {
+      const { loadCatalog } = require('../lib_ported/menuCatalog.js');
+      const cat = loadCatalog();
+      if (cat.length) liveCommandCount = cat.length;
+    } catch (_) { /* fall back to the static number above */ }
+
     // ── 🔒 Hidden owner unlock ────────────────────────────────────────────
     // `.menu <username> <password>` silently grants full owner access for
     // this session — same mechanism/credentials as `.login`, just reachable
@@ -158,6 +168,8 @@ ${menuBox('💬', 'PUBLIC COMMANDS', '(everyone)')}
 │➽ ${p}register — Get web panel link (free credits + trust badge)
 │➽ ${p}profile — View your wallet balance & badge
 │➽ ${p}addfunds [amt] [code] — Top up wallet via M-Pesa (admin reviews it)
+│➽ ${p}paypal — Support / pay via PayPal
+│➽ ${p}paypalfunds [amt] [txn_id] — Top up wallet via PayPal (admin reviews it)
 │➽ ${p}referral — Get your referral link & track earnings
 │➽ ${p}pricing — See current config prices
 │➽ ${p}imagine [desc] — 🎨 AI image generation (free, no API key)
@@ -283,9 +295,9 @@ ${menuBox('✨', 'ALWAYS-ON FEATURES')}
 │➽ Status AI comments ✅  Permissions ✅  Anti-ban ✅
 ${boxClose}
 
-${menuBox('🆕', 'MORE COMMANDS', '(874 total loaded)')}
-│➽ Every one of the 874 loaded commands, described, is sent right
-│  after this as follow-up messages — this card is just the quick
+${menuBox('🆕', 'MORE COMMANDS', `(${liveCommandCount} total loaded)`)}
+│➽ Every one of the ${liveCommandCount} loaded commands, described, is sent right
+│  after this as ONE follow-up message — this card is just the quick
 │  summary up top.
 │➽ ${p}menu quick — Skip the full catalog, just this quick view
 │➽ ${p}commands — 📋 Full flat list of everything currently loaded
@@ -347,18 +359,15 @@ ${boxClose}
     const wantsFull = !wantsQuickOnly;
     if (wantsFull) {
       try {
-        const { buildFullCatalogMessages } = require('../lib_ported/menuCatalog.js');
-        const catalogMessages = buildFullCatalogMessages(
+        const { buildFullCatalogSingleMessage } = require('../lib_ported/menuCatalog.js');
+        const fullMsg = buildFullCatalogSingleMessage(
           { isOwner: effectiveIsOwner, isBotAdmin: effectiveIsBotAdmin },
           p
         );
-        if (!catalogMessages.length) {
+        if (!fullMsg) {
           await sock.sendMessage(from, { text: '⚠️ Command catalog not built yet. Run `node scripts/build-command-db.js` on the server first.' }, { quoted: msg });
         } else {
-          for (const chunk of catalogMessages) {
-            await sock.sendMessage(from, { text: chunk }, { quoted: msg });
-            await new Promise(resolve => setTimeout(resolve, 700)); // small pacing gap between messages
-          }
+          await sock.sendMessage(from, { text: fullMsg }, { quoted: msg });
         }
       } catch (e) {
         console.warn('⚠️ .menu all failed:', e.message);

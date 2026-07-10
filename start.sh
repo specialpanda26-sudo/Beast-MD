@@ -11,6 +11,29 @@ else
   PYTHON_BIN="python3"
 fi
 
+# ── PO Token provider (YouTube bot-detection hardening) ────────────────────
+# ✅ NEW: started before everything else since app.py/media.js's yt-dlp
+# calls both talk to it. Purely optional/best-effort — if it's disabled, not
+# built (e.g. a non-Docker/local dev run that skipped the Dockerfile's git
+# clone step), or fails to come up, the bot still boots normally and yt-dlp
+# just falls back to its existing client-order + cookies mitigation.
+POT_PROVIDER_PORT="${POT_PROVIDER_PORT:-4416}"
+POT_PID=""
+if [ "${POT_PROVIDER_ENABLED:-true}" != "false" ] && [ -f "/opt/bgutil-pot-provider/server/build/main.js" ]; then
+  echo "🔑 Starting PO Token provider on port $POT_PROVIDER_PORT..."
+  node /opt/bgutil-pot-provider/server/build/main.js --port "$POT_PROVIDER_PORT" &
+  POT_PID=$!
+  for i in $(seq 1 10); do
+    if curl -sf "http://127.0.0.1:${POT_PROVIDER_PORT}/ping" > /dev/null 2>&1; then
+      echo "✅ PO Token provider ready!"
+      break
+    fi
+    sleep 1
+  done
+else
+  echo "⏭️  PO Token provider disabled or not built here — downloads will fall back to cookies-only mitigation."
+fi
+
 echo "🐍 Starting Python backend..."
 "$PYTHON_BIN" app.py &
 PYTHON_PID=$!
@@ -40,5 +63,6 @@ fi
 
 node client_bridge.js
 
-# If node exits, kill python too
+# If node exits, kill python and the PO Token provider too
 kill $PYTHON_PID 2>/dev/null || true
+[ -n "$POT_PID" ] && kill $POT_PID 2>/dev/null || true

@@ -196,7 +196,7 @@ const getGroupAdmins = (participants) => {
     }
     return admins;
 };
-const smsg = (QasimDev, m, store) => {
+const smsg = (sock, m, store) => {
     if (!m)
         return m;
     const M = proto.WebMessageInfo;
@@ -206,9 +206,9 @@ const smsg = (QasimDev, m, store) => {
         m.chat = m.key.remoteJid;
         m.fromMe = m.key.fromMe;
         m.isGroup = m.chat.endsWith('@g.us');
-        m.sender = QasimDev.decodeJid(m.fromMe && QasimDev.user.id || m.participant || m.key.participant || m.chat || '');
+        m.sender = sock.decodeJid(m.fromMe && sock.user.id || m.participant || m.key.participant || m.chat || '');
         if (m.isGroup)
-            m.participant = QasimDev.decodeJid(m.key.participant) || '';
+            m.participant = sock.decodeJid(m.key.participant) || '';
     }
     if (m.message) {
         m.mtype = getContentType(m.message);
@@ -237,15 +237,15 @@ const smsg = (QasimDev, m, store) => {
             m.quoted.id = m.msg.contextInfo.stanzaId;
             m.quoted.chat = m.msg.contextInfo.remoteJid || m.chat;
             m.quoted.isBaileys = m.quoted.id ? m.quoted.id.startsWith('BAE5') && m.quoted.id.length === 16 : false;
-            m.quoted.sender = QasimDev.decodeJid(m.msg.contextInfo.participant);
-            m.quoted.fromMe = m.quoted.sender === (QasimDev.user && QasimDev.user.id);
+            m.quoted.sender = sock.decodeJid(m.msg.contextInfo.participant);
+            m.quoted.fromMe = m.quoted.sender === (sock.user && sock.user.id);
             m.quoted.text = m.quoted.text || m.quoted.caption || m.quoted.conversation || m.quoted.contentText || m.quoted.selectedDisplayText || m.quoted.title || '';
             m.quoted.mentionedJid = m.msg.contextInfo ? m.msg.contextInfo.mentionedJid : [];
             m.getQuotedObj = m.getQuotedMessage = async () => {
                 if (!m.quoted.id)
                     return false;
-                const q = await store.loadMessage(m.chat, m.quoted.id, QasimDev);
-                return smsg(QasimDev, q, store);
+                const q = await store.loadMessage(m.chat, m.quoted.id, sock);
+                return smsg(sock, q, store);
             };
             const vM = m.quoted.fakeObj = M.fromObject({
                 key: {
@@ -256,19 +256,19 @@ const smsg = (QasimDev, m, store) => {
                 message: quoted,
                 ...(m.isGroup ? { participant: m.quoted.sender } : {})
             });
-            m.quoted.delete = () => QasimDev.sendMessage(m.quoted.chat, { delete: vM.key });
-            m.quoted.copyNForward = (jid, forceForward = false, options = {}) => QasimDev.copyNForward(jid, vM, forceForward, options);
-            m.quoted.download = () => QasimDev.downloadMediaMessage(m.quoted);
+            m.quoted.delete = () => sock.sendMessage(m.quoted.chat, { delete: vM.key });
+            m.quoted.copyNForward = (jid, forceForward = false, options = {}) => sock.copyNForward(jid, vM, forceForward, options);
+            m.quoted.download = () => sock.downloadMediaMessage(m.quoted);
         }
     }
     if (m.msg?.url)
-        m.download = () => QasimDev.downloadMediaMessage(m.msg);
+        m.download = () => sock.downloadMediaMessage(m.msg);
     m.text = m.msg?.text || m.msg?.caption || m.message?.conversation || m.msg?.contentText || m.msg?.selectedDisplayText || m.msg?.title || '';
     m.reply = (text, chatId = m.chat, options = {}) => Buffer.isBuffer(text)
-        ? QasimDev.sendMedia(chatId, text, 'file', '', m, { ...options })
-        : QasimDev.sendText(chatId, text, m, { ...options });
-    m.copy = () => smsg(QasimDev, M.fromObject(M.toObject(m)), store);
-    m.copyNForward = (jid = m.chat, forceForward = false, options = {}) => QasimDev.copyNForward(jid, m, forceForward, options);
+        ? sock.sendMedia(chatId, text, 'file', '', m, { ...options })
+        : sock.sendText(chatId, text, m, { ...options });
+    m.copy = () => smsg(sock, M.fromObject(M.toObject(m)), store);
+    m.copyNForward = (jid = m.chat, forceForward = false, options = {}) => sock.copyNForward(jid, m, forceForward, options);
     return m;
 };
 

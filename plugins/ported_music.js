@@ -108,7 +108,7 @@ Object.assign(module.exports, (() => {
   const axios = require('axios');
   // --- helper code from play.js ---
   const DL_API = 'https://api.qasimdev.dpdns.org/api/loaderto/download';
-  const API_KEY = 'xbps-install-Syu';
+  const API_KEY = process.env.MUSIC_DL_API_KEY || 'xbps-install-Syu';
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const downloadWithRetry = async (url, retries = 3) => {
       for (let i = 0; i < retries; i++) {

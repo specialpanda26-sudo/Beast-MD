@@ -27,7 +27,7 @@ const config = {
     tempCleanupInterval: Number(process.env.CLEANUP_INTERVAL) || 1 * 60 * 60 * 1000,
     storeWriteInterval: Number(process.env.STORE_WRITE_INTERVAL) || 10000,
     // API Keys
-    giphyApiKey: process.env.GIPHY_API_KEY || 'qnl7ssQChTdPjsKta2Ax2LMaGXz303tq',
+    giphyApiKey: process.env.GIPHY_API_KEY || 'qnl7ssQChTdPjsKta2Ax2LMaGXz303tq', // public Giphy beta key (rate-limited, shared across many apps) — set your own in .env for production
     removeBgKey: process.env.REMOVEBG_KEY || '',
     // Warn system
     warnCount: 3,
@@ -45,12 +45,12 @@ const config = {
         fgmods: 'https://api-fgmods.ddns.net'
     },
     APIKeys: {
-        'https://api.xteam.xyz': 'd90a9e986e18778b',
-        'https://api.lolhuman.xyz': '85faf717d0545d14074659ad',
+        'https://api.xteam.xyz': process.env.XTEAM_KEY || 'd90a9e986e18778b',
+        'https://api.lolhuman.xyz': process.env.LOLHUMAN_KEY || '85faf717d0545d14074659ad',
         'https://api.neoxr.my.id': process.env.NEOXR_KEY || 'yourkey',
-        'https://violetics.pw': 'beta',
+        'https://violetics.pw': process.env.VIOLETICS_KEY || 'beta',
         'https://zenzapis.xyz': process.env.ZENZAPIS_KEY || 'yourkey',
-        'https://api-fgmods.ddns.net': 'fg-dylux'
+        'https://api-fgmods.ddns.net': process.env.FGMODS_KEY || 'fg-dylux'
     }
 };
 module.exports = config;

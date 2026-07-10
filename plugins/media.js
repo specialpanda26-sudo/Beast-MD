@@ -41,9 +41,28 @@ function denoIsAvailable() {
   return _denoAvailable;
 }
 const YTDLP_JS_RUNTIME_ARGS = denoIsAvailable() ? [] : ['--js-runtimes', `node:${process.execPath}`];
-const YTDLP_COOKIES_FILE = (process.env.YTDLP_COOKIES_FILE || '').trim();
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const YTDLP_COOKIES_FILE = (process.env.YTDLP_COOKIES_FILE || '').trim() || path.join(DATA_DIR, 'cookies.txt');
+// ✅ NEW: PO (Proof-of-Origin) Token provider — cookies alone don't always
+// survive the jump from a phone's residential IP to Render's datacenter IP;
+// YouTube can still challenge datacenter traffic even with fresh, valid
+// cookies, since IP reputation is a separate signal from login state. A PO
+// Token proves the request came from a real client and is what yt-dlp's own
+// maintainers now recommend as the durable fix, on top of (not instead of)
+// cookies. bgutil-ytdlp-pot-provider runs a small local HTTP server
+// (started by start.sh, built during the Docker build — see Dockerfile)
+// that generates these on demand; this just tells yt-dlp where to find it.
+// Safe to leave enabled even if the server isn't running/reachable — the
+// bgutil provider is an "external" POT provider, so yt-dlp just logs that
+// it's unavailable and falls through to whatever mitigation already exists
+// (client-order + cookies) instead of failing the whole command.
+const POT_PROVIDER_ENABLED = (process.env.POT_PROVIDER_ENABLED || 'true').trim().toLowerCase() !== 'false';
+const POT_PROVIDER_PORT = (process.env.POT_PROVIDER_PORT || '4416').trim();
+const YTDLP_POT_ARGS = POT_PROVIDER_ENABLED
+  ? ['--extractor-args', `youtubepot-bgutilhttp:base_url=http://127.0.0.1:${POT_PROVIDER_PORT}`]
+  : [];
 function buildYtdlpArgs(extraArgs) {
-  const args = [...YTDLP_EXTRACTOR_ARGS, ...YTDLP_JS_RUNTIME_ARGS, ...extraArgs];
+  const args = [...YTDLP_EXTRACTOR_ARGS, ...YTDLP_JS_RUNTIME_ARGS, ...YTDLP_POT_ARGS, ...extraArgs];
   if (YTDLP_COOKIES_FILE && fs.existsSync(YTDLP_COOKIES_FILE)) {
     args.push('--cookies', YTDLP_COOKIES_FILE);
   }
@@ -73,7 +92,7 @@ function runYtdlpWithRetry(args, execOpts, callback) {
 function diagnoseYtdlpError(stderr, fallbackMsg) {
   const s = (stderr || fallbackMsg || '').toString();
   if (/sign in to confirm|not a bot|confirm you.?re not a bot/i.test(s)) {
-    return { userMsg: '❌ YouTube is showing a bot-detection challenge on this server right now — this is a known yt-dlp/YouTube issue, not a problem with your link. Needs authenticated cookies or a yt-dlp update on the server side.', raw: s };
+    return { userMsg: '❌ YouTube is showing a bot-detection challenge on this server right now — this is a known yt-dlp/YouTube issue, not a problem with your link. Cookies + PO Token provider are both already active; if this keeps happening, cookies have likely expired — send a fresh cookies.txt with .setcookies.', raw: s };
   }
   if (/private video|this video is private|login required to view/i.test(s)) {
     return { userMsg: '❌ That content really is private/login-restricted — the bot can\'t access it without an account that has permission.', raw: s };

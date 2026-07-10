@@ -109,6 +109,56 @@ module.exports = {
     }
   },
 
+  // ── .paypal — show PayPal.me link + manual top-up instructions ──────────
+  // Same trust model as M-Pesa .addfunds: no PayPal API wired up (yet), so
+  // this is a manual claim a human admin reviews, not an auto-verified
+  // payment. Keeps the same "human in the loop" rule as the M-Pesa flow.
+  paypal: async ({ sock, from, msg }) => {
+    const link = process.env.PAYPAL_ME_LINK || 'https://paypal.me/henryochieng';
+    await sock.sendMessage(from, {
+      text:
+        `☕ *Support / Pay via PayPal*\n\n` +
+        `${link}\n\n` +
+        `After sending, submit your top-up here:\n` +
+        `👉 *.paypalfunds <amount_kesh> <paypal_transaction_id>*\n\n` +
+        `⚠️ Reviewed by a human admin, not auto-approved — same as M-Pesa top-ups.`
+    }, { quoted: msg });
+  },
+
+  // ── .paypalfunds <amount> <paypal_txn_id> ────────────────────────────────
+  // Mirrors .addfunds but tagged as a PayPal submission so admins can tell
+  // the payment method apart in /admin → Payments.
+  paypalfunds: async ({ sock, from, msg, sender, args }) => {
+    const phone = cleanNumber(sender || from);
+    const amount = parseInt(args[0], 10);
+    const txnId = (args[1] || '').trim();
+
+    if (!amount || amount <= 0 || !txnId) {
+      return sock.sendMessage(from, {
+        text:
+          `📋 *Usage:* .paypalfunds <amount> <paypal_transaction_id>\n` +
+          `e.g. *.paypalfunds 200 8HN12345AB6789012*\n\n` +
+          `Send via PayPal first (*.paypal* for the link), then submit the transaction ID from your PayPal receipt/email here.\n\n` +
+          `⚠️ This is reviewed by a human admin, not auto-approved.`
+      }, { quoted: msg });
+    }
+
+    try {
+      const { data } = await api.post('/api/payment/submit', {
+        phone, amount, mpesa_code: `PAYPAL-${txnId}`, screenshot_base64: null
+      });
+      if (!data.success) {
+        return sock.sendMessage(from, { text: `❌ ${data.error}` }, { quoted: msg });
+      }
+      await sock.sendMessage(from, {
+        text: `✅ Request REF-${String(data.id).padStart(4, '0')} submitted!\n💰 ${amount} kesh · PayPal txn: ${txnId}\n\n${data.message}\n\nKeep this reference number handy if you need to follow up.`
+      }, { quoted: msg });
+    } catch (e) {
+      const apiErr = e.response?.data?.error;
+      await sock.sendMessage(from, { text: `❌ ${apiErr || 'Could not submit your request right now. Try again shortly.'}` }, { quoted: msg });
+    }
+  },
+
   // ── .checkblocked <number> (owner/sub-admin) ────────────────────────────
   // Best-effort heuristic only — WhatsApp gives no official "they blocked
   // you" signal. We check: (1) is the number even on WhatsApp, (2) can we

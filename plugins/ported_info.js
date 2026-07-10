@@ -717,7 +717,7 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const apiKey = 'dcd720a6f1914e2d9dba9790c188c08c';
+            const apiKey = process.env.NEWSAPI_KEY || 'dcd720a6f1914e2d9dba9790c188c08c';
             const response = await axios.get(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}`);
             if (!response.data || !response.data.articles)
                 throw new Error('Invalid API response');
@@ -1035,8 +1035,8 @@ Object.assign(module.exports, (() => {
   
   const acr = new acrcloud({
       host: 'identify-eu-west-1.acrcloud.com',
-      access_key: 'c33c767d683f78bd17d4bd4991955d81',
-      access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
+      access_key: process.env.ACRCLOUD_ACCESS_KEY || 'c33c767d683f78bd17d4bd4991955d81',
+      access_secret: process.env.ACRCLOUD_ACCESS_SECRET || 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu',
   });
   /* ================= MEDIA HELPERS ================= */
   function getAudioOrVideo(message) {

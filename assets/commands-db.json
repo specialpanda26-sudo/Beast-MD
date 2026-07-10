@@ -3688,6 +3688,22 @@
     "quality": "alias"
   },
   {
+    "command": "paypal",
+    "usage": ".paypal — show PayPal.me link + manual top-up instructions",
+    "description": "Paypal command",
+    "category": "wallet",
+    "source": "wallet.js",
+    "quality": "weak"
+  },
+  {
+    "command": "paypalfunds",
+    "usage": ".paypalfunds <amount> <paypal_txn_id>",
+    "description": ".paypalfunds <amount> <paypal_transaction_id>",
+    "category": "wallet",
+    "source": "wallet.js",
+    "quality": "source"
+  },
+  {
     "command": "pbp",
     "usage": ".pbp [action] - Play by Post RPG tracker",
     "description": "Play-by-play RPG session tracker",
@@ -4966,6 +4982,14 @@
     "category": "owner",
     "source": "ported_owner.js",
     "quality": "source"
+  },
+  {
+    "command": "setcookies",
+    "usage": ".setcookies — upload a YouTube cookies.txt from your phone",
+    "description": "Setcookies command",
+    "category": "setcookies",
+    "source": "setcookies.js",
+    "quality": "weak"
   },
   {
     "command": "setdesc",

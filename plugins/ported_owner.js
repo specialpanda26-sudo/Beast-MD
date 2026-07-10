@@ -1968,20 +1968,6 @@ Object.assign(module.exports, (() => {
           return await h.sock.sendMessage(h.from, { text: '🔒 This command is restricted to the bot owner/admins.' }, { quoted: h.msg });
         }
 
-            const projectRoot = process.cwd();
-            const SENSITIVE_FILE_PATTERN = /(^|[\\/])(\.env(\..*)?|creds\.json|session[\\/].*|\.git[\\/]config)$/i;
-            if (SENSITIVE_FILE_PATTERN.test(filename)) {
-                return await sock.sendMessage(chatId, {
-                    text: `🔒 *Blocked*\n\nReading credential/session files via *.getfile* is disabled for security.`
-                }, { quoted: message });
-            }
-            let filePath = path.join(projectRoot, filename);
-            if (!filePath.startsWith(projectRoot + path.sep) && filePath !== projectRoot) {
-                return await sock.sendMessage(chatId, {
-                    text: `🔒 *Blocked*\n\nPath traversal outside the bot's project folder is not allowed.`
-                }, { quoted: message });
-            }
-                const distPath = path.join(projectRoot, 'dist', filename);
         const chatId = context.chatId || message.key.remoteJid;
         const filename = args.join(' ').trim();
         try {
@@ -2105,19 +2091,27 @@ Object.assign(module.exports, (() => {
         }
         try {
             const base = pluginName.replace(/\.(ts|js)$/, '');
+            const pluginsDir = path.join(process.cwd(), 'plugins');
             let filePath;
             let fileName;
             if (pluginName.endsWith('.js')) {
-                filePath = path.join(process.cwd(), 'plugins', `${base }.js`);
+                filePath = path.join(pluginsDir, `${base }.js`);
                 fileName = `${base }.js`;
             }
             else {
-                filePath = path.join(process.cwd(), 'plugins', `${base }.ts`);
+                filePath = path.join(pluginsDir, `${base }.ts`);
                 fileName = `${base }.ts`;
                 if (!fs.existsSync(filePath)) {
-                    filePath = path.join(process.cwd(), 'plugins', `${base }.js`);
+                    filePath = path.join(pluginsDir, `${base }.js`);
                     fileName = `${base }.js`;
                 }
+            }
+            // 🔒 Block path traversal — .inspect must never resolve outside
+            // plugins/ (e.g. ".inspect ../.env" leaking root secrets).
+            if (!filePath.startsWith(pluginsDir + path.sep)) {
+                return await sock.sendMessage(chatId, {
+                    text: `🔒 *Blocked*\n\nPath traversal outside the plugins folder is not allowed.`
+                }, { quoted: message });
             }
             if (!fs.existsSync(filePath)) {
                 return await sock.sendMessage(chatId, { text: `❌ Plugin "${base}" not found.` }, { quoted: message });

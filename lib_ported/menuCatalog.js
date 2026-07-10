@@ -139,4 +139,77 @@ function buildFullCatalogMessages(perms, prefix = '.') {
   });
 }
 
-module.exports = { buildFullCatalogMessages, loadCatalog };
+// ── Single-message full catalog (Henry wants ONE message, not chunks) ────
+// Same data as buildFullCatalogMessages above, but packed into exactly one
+// string. To make ~415 standalone commands (876 including aliases) fit
+// safely under WhatsApp's observed ~22-24k silent-truncation ceiling:
+//   1. Aliases are collapsed into their base command (not listed at all —
+//      no room for "(aka: ...)" notes in single-message mode).
+//   2. Descriptions are truncated to a character cap that's picked
+//      adaptively: starts generous (35 chars) and automatically shrinks
+//      (25 → 15 → name-only) if the real catalog ever grows enough to
+//      threaten the safe limit. This means it keeps working correctly
+//      even after commands are added later — never silently truncates.
+const SAFE_MESSAGE_LIMIT = 20000; // hard ceiling, well under the observed ~22-24k cutoff
+const DESC_CAP_LADDER = [35, 25, 15, 0]; // 0 = name-only, no description at all
+
+function truncDesc(s, cap) {
+  if (cap <= 0) return '';
+  return s.length <= cap ? s : s.slice(0, cap - 1) + '…';
+}
+
+function renderSingleCatalog(categories, byCategory, prefix, descCap) {
+  const blocks = categories.map(cat => {
+    const cmds = byCategory.get(cat).sort((a, b) => a.command.localeCompare(b.command));
+    const lines = cmds.map(c => {
+      const d = truncDesc(c.description, descCap);
+      return d ? `${prefix}${c.command} — ${d}` : `${prefix}${c.command}`;
+    });
+    return `*${label(cat).toUpperCase()}*\n${lines.join('\n')}`;
+  });
+  return blocks.join('\n\n');
+}
+
+/**
+ * Returns ONE message string covering every live command the caller can
+ * see, grouped by category, aliases collapsed. Auto-shrinks description
+ * length as needed to guarantee it stays under WhatsApp's real truncation
+ * ceiling no matter how large the catalog grows.
+ * @param {{isOwner: boolean, isBotAdmin: boolean}} perms
+ * @param {string} prefix - command prefix, e.g. "."
+ */
+function buildFullCatalogSingleMessage(perms, prefix = '.') {
+  const all = loadCatalog();
+  if (!all.length) return null;
+
+  const visible = all.filter(c => {
+    if (OWNER_ONLY_CATEGORIES.has(c.category)) return perms.isOwner;
+    if (BOT_ADMIN_CATEGORIES.has(c.category)) return perms.isBotAdmin || perms.isOwner;
+    return true;
+  });
+
+  const grouped = groupAliases(visible);
+  const byCategory = new Map();
+  for (const c of grouped) {
+    if (!byCategory.has(c.category)) byCategory.set(c.category, []);
+    byCategory.get(c.category).push(c);
+  }
+  const categories = Array.from(byCategory.keys()).sort((a, b) => label(a).localeCompare(label(b)));
+
+  let body = '';
+  let usedCap = DESC_CAP_LADDER[0];
+  for (const cap of DESC_CAP_LADDER) {
+    body = renderSingleCatalog(categories, byCategory, prefix, cap);
+    usedCap = cap;
+    const header = `📚 *FULL COMMAND CATALOG* — ${grouped.length} commands (all in one message)\n\n`;
+    const footer = `\n\n> 🔥 Henry Ochibots v19™ | ${prefix}menu quick for the short curated view`;
+    if ((header + body + footer).length <= SAFE_MESSAGE_LIMIT) break;
+    // else loop continues with a shorter cap
+  }
+
+  const header = `📚 *FULL COMMAND CATALOG* — ${grouped.length} commands (all in one message)\n\n`;
+  const footer = `\n\n> 🔥 Henry Ochibots v19™ | ${prefix}menu quick for the short curated view`;
+  return header + body + footer;
+}
+
+module.exports = { buildFullCatalogMessages, buildFullCatalogSingleMessage, loadCatalog };

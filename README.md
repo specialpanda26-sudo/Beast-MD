@@ -48,7 +48,7 @@ state, see [`CHANGES.md`](./CHANGES.md) and [`REMEDY.md`](./REMEDY.md).
 | 👑 Owner + Co-Owner | Primary owner can add co-owners with full access |
 | 🛡️ Sub-Admins | Grant limited bot admin powers to trusted people |
 | 🌐 Web Pairing | Pair via QR code or pairing code in browser |
-| 💰 Wallet & Top-Ups | `.profile` shows balance/badge; `.addfunds` submits an M-Pesa top-up for admin approval (manual review, not auto-verified) |
+| 💰 Wallet & Top-Ups | `.profile` shows balance/badge; `.addfunds` submits an M-Pesa top-up, `.paypalfunds` a PayPal one, for admin approval (manual review, not auto-verified) |
 | 🛡️💳 Panel Bot Health + Buy Subscription | `/panel` shows your own linked session's live ban-risk/warm-up/expiry, and lets you buy extra activation days straight from your kesh wallet — instant, no admin approval needed. Separate from `.pricing`/config-reselling |
 | 🤝 Referral Program | `.referral` gets your link; earn 15 kesh per verified signup, they get 30 kesh — paid instantly |
 | 📣 Mass Announcement | `.announce [message]` — owner-only broadcast to every bot contact, rate-limited |
@@ -131,6 +131,8 @@ The admin panel's Sessions list shows a live risk badge (🛡️ LOW/MEDIUM/HIGH
 | `.register` | Get the web panel registration link (free credits + trust badge) |
 | `.profile` | View your wallet balance, trust badge & recent top-up requests |
 | `.addfunds [amount] [mpesa_code]` | Submit an M-Pesa top-up for admin review (attach a screenshot for faster approval) |
+| `.paypal` | Show the PayPal.me support/payment link |
+| `.paypalfunds [amount] [txn_id]` | Submit a PayPal top-up for admin review |
 | `.referral` | Get your referral link, track signups & kesh earned |
 | `.imagine [prompt]` | 🎨 AI image generation via Pollinations.ai — free, no API key needed (e.g. `.imagine a lion in cyberpunk style`) |
 | `.tts [text]` | 🔊 Text-to-speech — converts text to a WhatsApp voice note (max 200 chars) |
@@ -243,6 +245,7 @@ The admin panel's Sessions list shows a live risk badge (🛡️ LOW/MEDIUM/HIGH
 | `.antibanstats` | Health/rate-limit/warm-up/session status for this number |
 | `.credssnapshot` | Manually back up `creds.json` right now |
 | `.credsrestore` | Restore `creds.json` from the latest backup (needs a bot restart to take effect) |
+| `.setcookies` | Upload a fresh yt-dlp `cookies.txt` (send as WhatsApp document, or reply to one) — no desktop/shell access needed, works entirely from your phone |
 
 ### 🆕 Delta Feature Pack (~130 commands)
 
@@ -399,6 +402,18 @@ Users can check their balance and submission history anytime with `.profile`.
 
 ---
 
+## ☕ PayPal (manual top-ups + support link)
+
+Same trust model as M-Pesa above — no live PayPal API integration yet, so top-ups are submitted for human admin review, not auto-verified:
+
+1. `.paypal` shows the bot's PayPal.me link (`PAYPAL_ME_LINK` env var, defaults to `paypal.me/henryochieng`).
+2. After sending, the user submits `.paypalfunds [amount] [paypal_txn_id]` — queued as **pending**, reviewed the same way as M-Pesa top-ups in `/admin → 💰 Payments`.
+3. The public landing page also shows a "☕ Buy Me a Coffee" button linking to the same PayPal.me link, for one-off support (no wallet/top-up involved).
+
+Real PayPal REST API integration (auto-verified checkout instead of manual review) isn't built — `PAYPAL_CLIENT_ID`/`PAYPAL_CLIENT_SECRET` are documented in `.env.example` as a starting point if you want that built later.
+
+---
+
 ## 🤝 Referral Program
 
 Verified users can earn kesh by inviting people who go on to verify their own number:
@@ -501,6 +516,11 @@ Every **new customer session** that pairs (via `/pair` in the browser or scannin
 - `.share` only forwards content the requester can already see (something in a chat the bot is in) — it doesn't grant access to anything the requester couldn't otherwise reach
 - `session-detail`, `register-session`, `update-session`, `check-terminate`, and `broadcast/pending` now all require `ADMIN_PASSWORD` too — these were previously missing it while every other `/admin/*` route had it. `session-detail` also had its message content HTML-escaped to close a stored-XSS hole. The bridge sends the password itself now, so this doesn't affect your own bot's session tracking or broadcasts.
 - `.getpp` on an arbitrary typed-in number (not a reply/@mention/self-lookup) now requires owner/co-owner/sub-admin — arbitrary phone-number-to-photo lookups by any random user were previously wide open.
+- `.getfile`/`.readfile`/`.cat`/`.readcode` were completely broken (leftover duplicate code threw an error on every call) — fixed, and still blocks reading `.env`/`creds.json`/session files plus path traversal outside the project folder.
+- `.inspect`/`.cat`/`.readcode`/`.getplugin` had a path-traversal hole (`.inspect ../.env` could read the bot's real `.env` file) — now locked to the `plugins/` directory only.
+- Third-party API keys that were hardcoded in source (`config_ported.js`, `ported_music.js`, `ported_download.js`, `ported_info.js`) are now env-var driven — see `.env.example`. Old values kept as fallback so nothing breaks before you set your own.
+- The AI chatbot (`/natural-chat` in `app.py`) has a secrecy guard on all 4 personas — won't disclose secrets, config, or its own system prompt even under prompt-injection attempts ("ignore previous instructions" etc.)
+- `cookies.txt` (yt-dlp YouTube session cookies, set via `.setcookies`) is gitignored — it's a live login session, equivalent to a password, and should never be committed.
 
 ---
 

@@ -107,7 +107,7 @@ global.subAdmins = global.subAdmins || new Set(
 // .ipinfo/.whois all resolved to "Unknown command" even though fully coded.
 const PLUGIN_NAMES = [
   'general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet',
-  'games', 'osint', 'extended',
+  'games', 'osint', 'extended', 'setcookies',
   // Delta feature pack:
   'notes', 'groupguard', 'games2', 'texteffects', 'urltools', 'tempmail',
   'sudo', 'settings-ext', 'aichat2', 'sports', 'megabackup', 'overlap-rewrites',

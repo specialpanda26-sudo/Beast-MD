@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     curl \
     unzip \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -44,6 +45,31 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
 RUN curl -L https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip \
     -o /tmp/deno.zip && unzip -o /tmp/deno.zip -d /usr/local/bin && \
     chmod a+rx /usr/local/bin/deno && rm /tmp/deno.zip
+
+# ── PO Token provider (YouTube bot-detection hardening) ────────────────────
+# ✅ NEW: cookies alone don't always survive the jump from a phone's
+# residential IP to Render's datacenter IP — YouTube can still challenge
+# datacenter traffic even with fresh, valid cookies, since IP reputation is
+# a separate signal from login state. A PO (Proof-of-Origin) Token proves
+# the request came from a real client and is what yt-dlp's own maintainers
+# now recommend on top of (not instead of) cookies. This clones and builds
+# the small local HTTP server that generates those tokens on demand;
+# start.sh runs it, and app.py/media.js already know how to talk to it on
+# 127.0.0.1:4416 (see POT_PROVIDER_ENABLED/POT_PROVIDER_PORT in .env.example).
+# Pinned to a known-good release tag on purpose — bump it deliberately when
+# upgrading, so an unrelated breaking release upstream can't silently break
+# a deploy here.
+ARG POT_PROVIDER_VERSION=1.3.1
+RUN git clone --single-branch --branch ${POT_PROVIDER_VERSION} --depth 1 \
+      https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git \
+      /opt/bgutil-pot-provider \
+    && cd /opt/bgutil-pot-provider/server \
+    && npm ci \
+    && npx tsc
+
+# The matching Python side is a yt-dlp plugin discovered automatically at
+# runtime (yt_dlp_plugins namespace package) — installed via requirements.txt
+# alongside the other pip deps, no extra step needed here.
 
 # Now copy the rest of the project
 COPY . .
