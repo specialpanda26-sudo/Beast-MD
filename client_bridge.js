@@ -2730,6 +2730,15 @@ async function startSession(sessionId, opts = {}) {
       console.log(`\n✅ [${sessionId}] HENRY OCHIBOTS v19™ IS ONLINE AND READY! 🔥\n`);
       botOnline = true;
       fatalRetryCounts[sessionId] = 0;  // ✅ FIX: reset fatal-retry count on a clean connect
+      // ✅ FIX: capture BEFORE clearing — this is the only reliable signal
+      // that this "open" event followed an actual NEW pairing (QR/code
+      // just issued), vs. an ordinary reconnect of an already-authenticated
+      // session (WiFi drop, phone coming back online, Render restart,
+      // Baileys' own auto-reconnect, etc). Without this, the "Pairing
+      // Successful!" notification below fired on EVERY reconnect, not just
+      // real pairings — which is what made it look like an unwanted menu
+      // popping up on its own.
+      const wasFreshPairing = Boolean(lastPairingCode);
       // ✅ Only now is the socket actually safe to use for OTP delivery.
       activeSockets.set(sessionId, socket);
       if (lastPairingCode) lastPairingCode = null;
@@ -2767,8 +2776,11 @@ async function startSession(sessionId, opts = {}) {
           getActivation(sessionId).activated = true;
         });
 
-      // 🔔 Send startup notification with full system stats
-      try {
+      // 🔔 Send startup notification with full system stats — ONLY right
+      // after a genuinely new pairing. A plain reconnect of an existing
+      // session (going back online, WiFi flapping, Render restart) must
+      // NOT re-trigger this — that was the bug.
+      if (wasFreshPairing) try {
         const selfJid = socket.user?.id?.replace(/:.*@/, "@");
         if (selfJid) {
           const os = require('os');

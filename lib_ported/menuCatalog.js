@@ -67,12 +67,15 @@ function groupAliases(commands) {
 }
 
 // Splits an array of pre-rendered category blocks into as FEW messages as
-// possible. WhatsApp's real ceiling for a single text message is ~65,536
-// characters, so 60,000 is used as a safety margin — at the current ~874
-// commands (owner view ≈ 30k chars, public view ≈ 24k chars) everything
-// fits in ONE message. This only splits further if the catalog grows large
-// enough in the future to genuinely need it, never as a default behavior.
-function chunkBlocks(blocks, maxLen = 60000) {
+// possible WITHOUT hitting WhatsApp's real-world truncation point. The
+// protocol technically allows up to ~65,536 chars, but live testing showed
+// WhatsApp silently cuts single text messages off well before that —
+// observed truncation around ~22-24k characters, with everything past that
+// point just vanishing (no error, no warning). 8,000 is used as a safe
+// margin under that observed ceiling. At ~874 commands this means owner
+// view becomes ~4 messages and public view ~3, instead of either 11 tiny
+// ones or 1 that silently loses the back half.
+function chunkBlocks(blocks, maxLen = 8000) {
   const chunks = [];
   let current = '';
   for (const block of blocks) {
