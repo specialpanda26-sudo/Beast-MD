@@ -66,10 +66,13 @@ function groupAliases(commands) {
   }));
 }
 
-// Splits an array of pre-rendered category blocks into WhatsApp-friendly
-// chunks (~3500 chars each) without splitting a category block apart when
-// avoidable.
-function chunkBlocks(blocks, maxLen = 3500) {
+// Splits an array of pre-rendered category blocks into as FEW messages as
+// possible. WhatsApp's real ceiling for a single text message is ~65,536
+// characters, so 60,000 is used as a safety margin — at the current ~874
+// commands (owner view ≈ 30k chars, public view ≈ 24k chars) everything
+// fits in ONE message. This only splits further if the catalog grows large
+// enough in the future to genuinely need it, never as a default behavior.
+function chunkBlocks(blocks, maxLen = 60000) {
   const chunks = [];
   let current = '';
   for (const block of blocks) {
@@ -127,9 +130,10 @@ function buildFullCatalogMessages(perms, prefix = '.') {
 
   const chunks = chunkBlocks(blocks);
   const total = chunks.length;
-  return chunks.map((chunk, i) =>
-    `📚 *FULL COMMAND CATALOG* (${i + 1}/${total})\n_${totalShown} commands, every one described — this is the complete list behind ${prefix}menu._\n\n${chunk}`
-  );
+  return chunks.map((chunk, i) => {
+    const part = total > 1 ? ` (${i + 1}/${total})` : '';
+    return `📚 *FULL COMMAND CATALOG*${part}\n_${totalShown} commands, every one described — this is the complete list behind ${prefix}menu._\n\n${chunk}`;
+  });
 }
 
 module.exports = { buildFullCatalogMessages, loadCatalog };
