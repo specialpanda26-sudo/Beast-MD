@@ -9,6 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { smallCaps, menuBox, boxClose, categoryEmoji } = require('./menuStyle.js');
 
 const DB_PATH = path.join(__dirname, '..', 'assets', 'commands-db.json');
 
@@ -126,16 +127,16 @@ function buildFullCatalogMessages(perms, prefix = '.') {
     totalShown += cmds.length;
     const lines = cmds.map(c => {
       const aliasNote = c.aliases.length ? ` _(aka: ${c.aliases.map(a => prefix + a).join(', ')})_` : '';
-      return `▫️ ${prefix}${c.command} — ${c.description}${aliasNote}`;
+      return `│➽ ${prefix}${c.command} — ${c.description}${aliasNote}`;
     });
-    blocks.push(`*── ${label(cat).toUpperCase()} ──*\n${lines.join('\n')}`);
+    blocks.push(`${menuBox(categoryEmoji(cat), label(cat))}\n${lines.join('\n')}\n${boxClose}`);
   }
 
   const chunks = chunkBlocks(blocks);
   const total = chunks.length;
   return chunks.map((chunk, i) => {
     const part = total > 1 ? ` (${i + 1}/${total})` : '';
-    return `📚 *FULL COMMAND CATALOG*${part}\n_${totalShown} commands, every one described — this is the complete list behind ${prefix}menu._\n\n${chunk}`;
+    return `📚 *${smallCaps('FULL COMMAND CATALOG')}*${part}\n_${totalShown} commands, every one described — this is the complete list behind ${prefix}menu._\n\n${chunk}`;
   });
 }
 
@@ -163,9 +164,9 @@ function renderSingleCatalog(categories, byCategory, prefix, descCap) {
     const cmds = byCategory.get(cat).sort((a, b) => a.command.localeCompare(b.command));
     const lines = cmds.map(c => {
       const d = truncDesc(c.description, descCap);
-      return d ? `${prefix}${c.command} — ${d}` : `${prefix}${c.command}`;
+      return d ? `│➽ ${prefix}${c.command} — ${d}` : `│➽ ${prefix}${c.command}`;
     });
-    return `*${label(cat).toUpperCase()}*\n${lines.join('\n')}`;
+    return `${menuBox(categoryEmoji(cat), label(cat))}\n${lines.join('\n')}\n${boxClose}`;
   });
   return blocks.join('\n\n');
 }
@@ -201,13 +202,13 @@ function buildFullCatalogSingleMessage(perms, prefix = '.') {
   for (const cap of DESC_CAP_LADDER) {
     body = renderSingleCatalog(categories, byCategory, prefix, cap);
     usedCap = cap;
-    const header = `📚 *FULL COMMAND CATALOG* — ${grouped.length} commands (all in one message)\n\n`;
+    const header = `📚 *${smallCaps('FULL COMMAND CATALOG')}* — ${grouped.length} commands (all in one message)\n\n`;
     const footer = `\n\n> 🔥 Henry Ochibots v19™ | ${prefix}menu quick for the short curated view`;
     if ((header + body + footer).length <= SAFE_MESSAGE_LIMIT) break;
     // else loop continues with a shorter cap
   }
 
-  const header = `📚 *FULL COMMAND CATALOG* — ${grouped.length} commands (all in one message)\n\n`;
+  const header = `📚 *${smallCaps('FULL COMMAND CATALOG')}* — ${grouped.length} commands (all in one message)\n\n`;
   const footer = `\n\n> 🔥 Henry Ochibots v19™ | ${prefix}menu quick for the short curated view`;
   return header + body + footer;
 }

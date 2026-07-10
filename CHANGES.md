@@ -2,6 +2,20 @@
 
 > 📜 Looking for older history? See [CHANGES-ARCHIVE.md](./CHANGES-ARCHIVE.md) (Updates 3–14).
 
+## Update 22 — Quick menu and full catalog now share one styling source
+
+**The root cause, not just the symptom:** the quick `.menu` view's `┏▣ ◈ ᴘᴜʙʟɪᴄ ᴄᴏᴍᴍᴀɴᴅs ◈` boxes were built by `smallCaps()`/`menuBox()` helpers defined as private, unexported local functions inside `plugins/general.js`. `lib_ported/menuCatalog.js` (the full 877-command catalog) had no way to reach them even if someone had tried — so it was written as plain `*CATEGORY*` text instead, which is why the two menus looked like they came from different bots.
+
+**Fix — new `lib_ported/menuStyle.js`:** pulls `smallCaps`, `menuBox`, `boxClose` out of `general.js` into one shared module, plus a new `categoryEmoji()` map (37 categories, one icon each, falls back to 📁 for anything new) so the auto-generated catalog gets the same per-section icon treatment the hand-curated quick menu already had.
+
+- `plugins/general.js` now imports these from `menuStyle.js` instead of defining its own copy — **zero visible change** to the quick `.menu` view, same output as before, just one source of truth now instead of a private copy.
+- `lib_ported/menuCatalog.js`'s two catalog builders (`buildFullCatalogMessages`, the chunked version, and `buildFullCatalogSingleMessage`, the one-message version) both now render each category as a `┏▣ ◈ [emoji] *SECTION* ◈ ... ┗▣` box with `│➽` bullets, matching the quick menu exactly. Both catalog headers small-caps'd too (`ғᴜʟʟ ᴄᴏᴍᴍᴀɴᴅ ᴄᴀᴛᴀʟᴏɢ`).
+- The existing adaptive description-length shrinking (35 → 25 → 15 → name-only, from Update 20) needed no changes — it measures the final rendered string on every pass, so the extra box/bullet characters are automatically absorbed into that same budget. Verified: full single-message catalog at 416 commands (owner+admin view) renders at 17,381 characters — comfortably under the 20,000 safety ceiling, still at the most generous 35-char description length, no forced shrink needed.
+
+**Deliberately NOT merged — explained, not just left alone:** the quick menu and full catalog still show different *content* on purpose. The quick view is a hand-curated subset with its own custom wording (confirmed intentional back in Update 18's audit — `.menu` deliberately isn't meant to list everything). The full catalog is exhaustively auto-generated from `assets/commands-db.json`. Actually merging the two into one command/one message would either blow past WhatsApp's single-message character ceiling or strip the quick view of its hand-picked framing — this update only unifies *how* both are drawn, which is what was actually causing them to drift apart, not what they list.
+
+**Verification:** `node -c` on every `.js` file in the repo — clean. Rendered both catalog builders directly in Node against the real `assets/commands-db.json` to confirm actual output and length, not just syntax — box formatting renders correctly, and the character-budget math checked out as described above.
+
 ## Update 21 — PO Token provider for YouTube (second layer on top of cookies)
 
 **Why:** cookies alone don't always survive the jump from a phone's residential IP (where `.setcookies` was exported) to Render's datacenter IP — YouTube can still challenge datacenter traffic even with fresh, valid cookies, since IP reputation is a separate signal from login state. A PO (Proof-of-Origin) Token proves the request came from a real client and is what yt-dlp's own maintainers now recommend as the durable fix, on top of (not instead of) cookies.

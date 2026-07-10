@@ -1,19 +1,12 @@
 const os = require('os');
 
-// ── Small-caps text helper (for fancy menu section headers) ─────────────────
-const SMALL_CAPS_MAP = {
-  a: 'ᴀ', b: 'ʙ', c: 'ᴄ', d: 'ᴅ', e: 'ᴇ', f: 'ғ', g: 'ɢ', h: 'ʜ',
-  i: 'ɪ', j: 'ᴊ', k: 'ᴋ', l: 'ʟ', m: 'ᴍ', n: 'ɴ', o: 'ᴏ', p: 'ᴘ',
-  q: 'ǫ', r: 'ʀ', s: 's', t: 'ᴛ', u: 'ᴜ', v: 'ᴠ', w: 'ᴡ', x: 'x',
-  y: 'ʏ', z: 'ᴢ'
-};
-function smallCaps(str) {
-  return String(str).split('').map(ch => SMALL_CAPS_MAP[ch.toLowerCase()] || ch).join('');
-}
-function menuBox(emoji, label, trail = '') {
-  return `┏▣ ◈ ${emoji} *${smallCaps(label)}*${trail ? ' ' + trail : ''} ◈`;
-}
-const boxClose = '┗▣';
+// ── Menu styling now lives in one shared place ───────────────────────────
+// Was previously defined right here as private, unexported local functions
+// — which is exactly why lib_ported/menuCatalog.js's full catalog couldn't
+// reuse them and ended up looking different. See lib_ported/menuStyle.js
+// for the full explanation; behavior/output here is unchanged.
+const { smallCaps, menuBox, boxClose } = require('../lib_ported/menuStyle.js');
+
 
 module.exports = {
 
