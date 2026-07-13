@@ -1,6 +1,6 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════╗
-# ║   Henry v19™ Beast Bot — Deploy Script  ║
+# ║   Halloween MD v19™ — Deploy Script        ║
 # ║   Pushes to GitHub + Triggers Render    ║
 # ╚══════════════════════════════════════════╝
 
@@ -17,7 +17,7 @@ NC='\033[0m'
 
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════════╗"
-echo "║   🔥 Henry Beast Bot — Auto Deploy 🔥   ║"
+echo "║   🎃 Halloween MD — Auto Deploy 🎃          ║"
 echo "╚══════════════════════════════════════════╝"
 echo -e "${NC}"
 

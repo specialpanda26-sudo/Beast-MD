@@ -45,8 +45,8 @@ const {
 // owner themself via the hidden `.ownerrecovery` WhatsApp command. See
 // getOwnerNumber() below for the resolution order.
 const OWNER_NUMBER_ENV = (process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
-const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Henry Ochibots';
-const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Henry Ochibots v19™';
+const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Halloween MD';
+const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Halloween MD™';
 const CMD_PREFIX_DEFAULT = '.';
 
 // ✅ NEW (Update 15): .setbotname/.setprefix (plugins/settings-ext.js) used to
@@ -69,9 +69,9 @@ function getPrefix() {
 // explaining why that was removed: it fired on "I saw a robot", "chatbot",
 // anyone named Henry in the group, etc.). This only matches full name
 // phrases, on word boundaries, so "robot"/"chatbot" still won't trigger it —
-// customize via BOT_NAME_ALIASES (comma-separated) if "Henry Ochibots" ever
+// customize via BOT_NAME_ALIASES (comma-separated) if "Halloween MD" ever
 // changes for a reseller/white-label deployment.
-const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'ochibots,henry ochibots,beast bot,beastbot')
+const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'halloween,halloween md,hmd')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 function isBotAddressedByName(text) {
   if (!text) return false;
@@ -138,6 +138,7 @@ const NON_COMMAND_KEYS = [
   '_handleGameReply', 'canUseCommand', 'startSchedulerLoop', '__SETTING_KEYS', '__memKey',
   '_handleTTTReply', '_handleWCGReply', '_enforceGroupGuard', '__getSetting',
   '_handleJoinEvent', '_handleLeaveEvent',
+  '__isPmApproved', '__bumpPmStrike', '__hasBeenGreeted', '__markGreeted', '__buildFirstContactMessage',
 ];
 NON_COMMAND_KEYS.forEach(k => delete allCommands[k]);
 
@@ -499,7 +500,7 @@ function getOwnerSessionSocket() {
           }
         }
         await socket.sendMessage(`${cleanPhone}@s.whatsapp.net`, {
-          text: `🔐 *Henry Ochibots v19™ — Verification Code*\n\n` +
+          text: `🔐 *Halloween MD™ — Verification Code*\n\n` +
                 `Hi ${name || "there"}, your code is: *${otp}*\n\n` +
                 `This code expires in 10 minutes. Enter it on the registration page to verify your number and unlock your trust badge + free credit.`
         });
@@ -992,7 +993,7 @@ function prompt(question) {
 
 function printBanner() {
   console.log("\n╔══════════════════════════════════════╗");
-  console.log("   🔥 HENRY OCHIBOTS v19™ 🔥   ");
+  console.log("   🔥 HALLOWEEN MD v19™ 🔥   ");
   console.log("╚══════════════════════════════════════╝\n");
 }
 
@@ -1660,10 +1661,23 @@ async function startSession(sessionId, opts = {}) {
 
       // ── Sender & role detection ──────────────────────────────────────────────
       const isGroup     = sender.endsWith('@g.us');
-      const senderJid   = isGroup
-        ? (msg.key.participant || sender)
-        : msg.key.fromMe
-          ? (socket.user?.id || sender)
+      // 🐛 FIX (🌝 react-to-recover bug): fromMe must win regardless of
+      // isGroup. Previously, isGroup was checked FIRST, so when the owner
+      // reacted with 🌝 to a message *inside a group* (using their phone —
+      // this bot is a linked device on the owner's own account, so that's
+      // a fromMe=true event), the code fell through to
+      // `msg.key.participant || sender` instead. Baileys frequently leaves
+      // `participant` empty on the bot's own fromMe events in groups, so it
+      // fell all the way back to `sender` — the GROUP's jid, not the
+      // owner's. senderNumber then never matched the owner's number,
+      // isBotAdmin came out false, and the reaction was silently ignored
+      // (see the `if (!isBotAdmin) return;` a few lines below). This only
+      // ever worked reliably in DMs before. Checking fromMe first fixes
+      // recovery reactions in groups too.
+      const senderJid   = msg.key.fromMe
+        ? (socket.user?.id || sender)
+        : isGroup
+          ? (msg.key.participant || sender)
           : sender;
       const senderNumber = senderJid.split('@')[0].replace(/:\d+$/, '');
       const currentOwnerNumber = getOwnerNumber();
@@ -1685,6 +1699,35 @@ async function startSession(sessionId, opts = {}) {
       // (no AI reply, no commands) until a bot admin approves them with
       // `.pmpermitapprove <number>`. Bot admins are always exempt. Groups
       // and status broadcasts are unaffected — this is DMs only.
+      // 🐛 FIX (🌝 react-to-recover bug, part 2): this message must be
+      // cached BEFORE the pmpermit gate below has a chance to `return`
+      // early. Previously the cache write lived after this block, so any
+      // DM from a sender who isn't pmpermit-approved never got cached at
+      // all — reacting 🌝 on it later always failed with "couldn't find
+      // that message," even for the owner. Caching is harmless/side-effect
+      // free, so it's safe to do unconditionally right here.
+      if (!msg.message?.reactionMessage && !msg.message?.protocolMessage) {
+        cacheRecentMessage(msgId, { msg, sender, name, senderJid });
+      }
+
+      // ── First-contact "save my number" greeting ────────────────────────
+      // Fires once, automatically, the first time a brand-new DM sender
+      // messages this session — asks them to save the contact (helps
+      // avoid this WhatsApp number getting flagged/banned for messaging
+      // strangers who never saved it) and sets expectations that the bot
+      // may answer for the owner. Editable per-session via .setownername
+      // and .setfirstcontactmessage; turn off with .setfirstcontactgreeting off.
+      if (!isGroup && !isBotAdmin && !isStatus && !msg.message?.reactionMessage && !msg.message?.protocolMessage) {
+        try {
+          const settingsExtFc = require('./plugins/settings-ext.js');
+          if (settingsExtFc.__getSetting('firstcontactgreeting') && !settingsExtFc.__hasBeenGreeted(senderNumber)) {
+            settingsExtFc.__markGreeted(senderNumber);
+            const greetingText = settingsExtFc.__buildFirstContactMessage(getBotName());
+            await socket.sendMessage(sender, { text: greetingText }, { quoted: msg });
+          }
+        } catch (_) {}
+      }
+
       if (!isGroup && !isBotAdmin) {
         try {
           const settingsExtPm = require('./plugins/settings-ext.js');
@@ -1712,12 +1755,6 @@ async function startSession(sessionId, opts = {}) {
             return;
           }
         } catch (_) {}
-      }
-
-      // ── 🌝 Cache this message in case it's reacted to later (view-once
-      // recovery, or recovering a message after it gets deleted) ───────────
-      if (!msg.message?.reactionMessage && !msg.message?.protocolMessage) {
-        cacheRecentMessage(msgId, { msg, sender, name, senderJid });
       }
 
       // ✅ NEW (extended-commands update): passive group-intel logging.
@@ -1952,13 +1989,13 @@ async function startSession(sessionId, opts = {}) {
           if (!isPrimaryOwner) {
             try {
               const fs = require("fs");
-              const guidePath = path.join(__dirname, "assets", "BeastBot-User-Guide.pdf");
+              const guidePath = path.join(__dirname, "assets", "HalloweenMD-User-Guide.pdf");
               const guideBuffer = fs.readFileSync(guidePath);
               await socket.sendMessage(sender, {
                 document: guideBuffer,
-                fileName: "BeastBot-User-Guide.pdf",
+                fileName: "HalloweenMD-User-Guide.pdf",
                 mimetype: "application/pdf",
-                caption: "📄 *Beast Bot User Guide* — everything you need to know to use the bot, in one PDF."
+                caption: "📄 *Halloween MD User Guide* — everything you need to know to use the bot, in one PDF."
               });
             } catch (e) {
               console.log(`⚠️ Couldn't send user guide PDF to ${sender}: ${e.message}`);
@@ -1971,11 +2008,11 @@ async function startSession(sessionId, opts = {}) {
           // Same PDFs are downloadable from the /pair web page too.
           try {
             const fs = require("fs");
-            const fixedPath = path.join(__dirname, "assets", "BeastBot-Whats-Fixed.pdf");
+            const fixedPath = path.join(__dirname, "assets", "HalloweenMD-Whats-Fixed.pdf");
             const fixedBuffer = fs.readFileSync(fixedPath);
             await socket.sendMessage(sender, {
               document: fixedBuffer,
-              fileName: "BeastBot-Whats-Fixed.pdf",
+              fileName: "HalloweenMD-Whats-Fixed.pdf",
               mimetype: "application/pdf",
               caption: "🛠️ *What Was Fixed* — a plain-language rundown of recent bot fixes and what changed."
             });
@@ -2727,7 +2764,7 @@ async function startSession(sessionId, opts = {}) {
     }
 
     if (connection === "open") {
-      console.log(`\n✅ [${sessionId}] HENRY OCHIBOTS v19™ IS ONLINE AND READY! 🔥\n`);
+      console.log(`\n✅ [${sessionId}] HALLOWEEN MD v19™ IS ONLINE AND READY! 🔥\n`);
       botOnline = true;
       fatalRetryCounts[sessionId] = 0;  // ✅ FIX: reset fatal-retry count on a clean connect
       // ✅ FIX: capture BEFORE clearing — this is the only reliable signal
@@ -2799,7 +2836,7 @@ async function startSession(sessionId, opts = {}) {
 
           const welcomeText =
 `╔════════════════════════════════════╗
-║  🔥 *HENRY OCHIBOTS V19™* 🔥        ║
+║  🔥 *HALLOWEEN MD™* 🔥        ║
 ║       _by @henrytech254_            ║
 ╚════════════════════════════════════╝
 
@@ -2843,7 +2880,7 @@ Your bot is now live and connected. 🌐
 Type *.menu* to see all commands.
 Use *.addadmin 254XXXXXXXXX* to give friends access.
 
-_Henry Ochibots v19™ — @henrytech254_ 🔥`;
+_Halloween MD™ — @henrytech254_ 🔥`;
 
           await delay(3000);
           await socket.sendMessage(selfJid, { text: welcomeText });

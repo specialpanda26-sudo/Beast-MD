@@ -43,8 +43,8 @@ def print_banner():
 ║   \033[1;35m██████╔╝╚██████╔╝   ██║   ███████║\033[1;36m                    ║
 ║   \033[1;35m╚═════╝  ╚═════╝    ╚═╝   ╚══════╝\033[1;36m                   ║
 ║                                                              ║
-║      \033[1;33m✦ Henry Ochibots v19™ — created by Henry ✦\033[1;36m              ║
-║      \033[1;32m⚡ HENRY OCHIBOTS v19™  |  PYTHON BACKEND\033[1;36m              ║
+║      \033[1;33m✦ Halloween MD™ — created by Henry ✦\033[1;36m              ║
+║      \033[1;32m⚡ HALLOWEEN MD v19™  |  PYTHON BACKEND\033[1;36m              ║
 ║      \033[1;33m⚡ AI  |  DATABASE  |  COMMANDS  |  API\033[1;36m            ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -838,13 +838,13 @@ async def init_db():
         """)
 
         await db.commit()
-        logger.info("\033[1;32m⚡ Henry Ochibots v19™ — Master Database Synchronized — All tables ready.\033[0m")
+        logger.info("\033[1;32m⚡ Halloween MD™ — Master Database Synchronized — All tables ready.\033[0m")
 
 
 @app.before_serving
 async def startup():
     await init_db()
-    logger.info("\033[1;36m🔥 Henry Ochibots v19™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
+    logger.info("\033[1;36m🔥 Halloween MD™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
     logger.info("\033[1;33m📡 Waiting for WhatsApp bot session (Node.js) to connect...\033[0m")
     if not ADMIN_PASSWORD:
         logger.warning("\033[1;31m⚠️  ADMIN_PASSWORD is not set — /admin has FULL OPEN ACCESS to anyone with the URL. Set ADMIN_PASSWORD in your environment before going live.\033[0m")
@@ -3466,7 +3466,7 @@ async def natural_chat():
 
     if context == "status":
         system_prompt = (
-            "You are Henry Ochibots, a friendly Kenyan WhatsApp bot. "
+            "You are Halloween MD, a friendly Kenyan WhatsApp bot. "
             "Someone posted a WhatsApp status and you want to leave a short, warm comment. "
             "Rules:\n"
             "1. Keep it under 2 sentences — like a real friend commenting on a status.\n"
@@ -3481,7 +3481,7 @@ async def natural_chat():
         ) + SECRECY_GUARD
     elif context == "group":
         system_prompt = (
-            f"You are Henry Ochibots, a Kenyan WhatsApp bot in a group chat. "
+            f"You are Halloween MD, a Kenyan WhatsApp bot in a group chat. "
             f"You are talking to {name}. "
             "Someone mentioned you or called your name in the group. Reply naturally.\n"
             "Rules:\n"
@@ -3512,7 +3512,7 @@ async def natural_chat():
         ) + SECRECY_GUARD
     else:
         system_prompt = (
-            f"You are Henry Ochibots, a friendly WhatsApp bot assistant. "
+            f"You are Halloween MD, a friendly WhatsApp bot assistant. "
             f"You are talking to {name}. "
             "You are Kenyan and understand Swahili, Sheng (Kenyan street slang), and English. "
             "IMPORTANT RULES:\n"
@@ -3526,7 +3526,7 @@ async def natural_chat():
             "4. Be warm, friendly, sometimes funny — very human-like.\n"
             "5. Do NOT start every reply with 'Hello' or 'Hi'. Be natural.\n"
             "6. Use emoji occasionally but not excessively.\n"
-            "7. Your creator is Henry Ochibots (@henrytech254)."
+            "7. Your creator is Henry (@henrytech254)."
         ) + SECRECY_GUARD
 
     try:
@@ -3671,10 +3671,10 @@ async def pair_proxy_post():
 @app.route("/get-bio", methods=["GET"])
 async def generate_auto_bio():
     bios = [
-        f"🤖 Henry Ochibots v19™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
-        f"⚡ Powered by Henry Ochibots | Always Active | {time.strftime('%H:%M')}",
-        f"🔥 Henry Ochibots v19™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
-        f"🔥 Henry Ochibots Automation | {time.strftime('%H:%M')} | All systems go",
+        f"🤖 Halloween MD™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
+        f"⚡ Powered by Halloween MD | Always Active | {time.strftime('%H:%M')}",
+        f"🔥 Halloween MD™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
+        f"🔥 Halloween MD Automation | {time.strftime('%H:%M')} | All systems go",
     ]
     return jsonify({"bio": random.choice(bios)})
 
@@ -4886,6 +4886,159 @@ def _widget_rate_ok(req) -> bool:
         return False
     log.append(now)
     return True
+
+
+@app.route("/admin/menu-settings", methods=["GET"])
+async def admin_get_menu_settings():
+    """Current .menu caption + media (image/video) settings, for the admin
+    panel's Menu tab. mediaFile is relative to /assets — falls back to the
+    original menu-bg.jpg baked into the repo until an admin uploads
+    something new."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    settings_path = DATA_DIR / "menu-settings.json"
+    settings = {"mediaType": "image", "mediaFile": "menu-bg.jpg", "caption": ""}
+    if settings_path.exists():
+        try:
+            settings.update(json.loads(settings_path.read_text()))
+        except Exception:
+            pass
+    return jsonify(settings)
+
+
+@app.route("/admin/menu-settings", methods=["POST"])
+async def admin_set_menu_settings():
+    """Update the custom caption text only (media is handled by the upload
+    route below, since it needs multipart/form-data). caption: "" clears
+    the override and falls back to the bot's normal auto-generated menu
+    text, unchanged."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    settings_path = DATA_DIR / "menu-settings.json"
+    settings = {"mediaType": "image", "mediaFile": "menu-bg.jpg", "caption": ""}
+    if settings_path.exists():
+        try:
+            settings.update(json.loads(settings_path.read_text()))
+        except Exception:
+            pass
+    if "caption" in data:
+        settings["caption"] = (data.get("caption") or "").strip()
+    settings_path.write_text(json.dumps(settings, indent=2))
+    return jsonify({"success": True, "settings": settings})
+
+
+@app.route("/admin/menu-media/upload", methods=["POST"])
+async def admin_upload_menu_media():
+    """Multipart upload (field name "media") of the image or video that
+    accompanies .menu. Accepts common image/video types, stores it as
+    assets/menu-media.<ext> (fixed name so old uploads get cleanly
+    replaced), and records mediaType so client_bridge.js/general.js know
+    whether to send it as `image:` or `video:`."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    files = await request.files
+    media = files.get("media")
+    if not media or not media.filename:
+        return jsonify({"success": False, "error": "media file is required"}), 400
+
+    ext = (media.filename.rsplit(".", 1)[-1] if "." in media.filename else "").lower()
+    IMAGE_EXTS = {"jpg", "jpeg", "png", "webp"}
+    VIDEO_EXTS = {"mp4", "3gp", "mov", "mkv"}
+    if ext not in IMAGE_EXTS and ext not in VIDEO_EXTS:
+        return jsonify({"success": False, "error": "Unsupported file type. Use jpg/png/webp for images or mp4/3gp/mov for videos."}), 400
+
+    raw = media.read()
+    if len(raw) > 16 * 1024 * 1024:
+        return jsonify({"success": False, "error": "File too large — 16MB max."}), 400
+
+    media_type = "image" if ext in IMAGE_EXTS else "video"
+    assets_dir = Path(__file__).parent / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    # Remove any previous menu-media.* file (different extension) before
+    # writing the new one, so stale files don't pile up in assets/.
+    for old in assets_dir.glob("menu-media.*"):
+        try:
+            old.unlink()
+        except Exception:
+            pass
+
+    filename = f"menu-media.{ext}"
+    (assets_dir / filename).write_bytes(raw)
+
+    settings_path = DATA_DIR / "menu-settings.json"
+    settings = {"mediaType": "image", "mediaFile": "menu-bg.jpg", "caption": ""}
+    if settings_path.exists():
+        try:
+            settings.update(json.loads(settings_path.read_text()))
+        except Exception:
+            pass
+    settings["mediaType"] = media_type
+    settings["mediaFile"] = filename
+    settings_path.write_text(json.dumps(settings, indent=2))
+
+    return jsonify({"success": True, "mediaType": media_type, "mediaFile": filename})
+
+
+async def search_songs(query: str, limit: int = 5) -> list:
+    """ytsearchN: pseudo-URL — yt-dlp treats this as a real search and
+    returns one JSON object per line for each result, using the same
+    hardened client/cookie/PO-token setup as the rest of the pipeline."""
+    base_args = _ytdlp_base_args()
+    proc = await asyncio.create_subprocess_exec(
+        "yt-dlp", "--dump-json", "--flat-playlist", "--no-warnings",
+        *base_args, f"ytsearch{limit}:{query}",
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+    results = []
+    for line in stdout.decode(errors="ignore").splitlines():
+        try:
+            entry = json.loads(line)
+            results.append({
+                "title": entry.get("title", "Unknown"),
+                "url": entry.get("url") or f"https://www.youtube.com/watch?v={entry.get('id','')}",
+                "duration": entry.get("duration"),
+                "uploader": entry.get("uploader", ""),
+            })
+        except Exception:
+            continue
+    return results
+
+
+@app.route("/api/widgets/song-search", methods=["POST"])
+async def widget_song_search():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()[:150]
+    if not query:
+        return jsonify({"success": False, "error": "Enter a song name to search."}), 400
+    try:
+        results = await search_songs(query, limit=5)
+        if not results:
+            return jsonify({"success": False, "error": f"No results found for \"{query}\"."}), 404
+        return jsonify({"success": True, "results": results})
+    except Exception:
+        return jsonify({"success": False, "error": "Search failed — try again."}), 502
+
+
+@app.route("/api/widgets/song-download", methods=["POST"])
+async def widget_song_download():
+    """Given a picked result's YouTube url, return a direct audio stream
+    link so the customer can upload/save the exact track they selected."""
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url or "youtube.com" not in url and "youtu.be" not in url:
+        return jsonify({"success": False, "error": "Pick a song from the search results first."}), 400
+    try:
+        result = await get_audio_url(url)
+        return jsonify(result), (200 if result.get("success") else 502)
+    except Exception:
+        return jsonify({"success": False, "error": "Couldn't fetch that track right now."}), 502
 
 
 @app.route("/api/widgets/shorten", methods=["POST"])

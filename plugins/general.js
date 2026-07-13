@@ -141,7 +141,7 @@ ${boxClose}` : '';
 
     const menu =
 `╔══════════════════════════════╗
-║  🔥 *HENRY OCHIBOTS V19™* 🔥  ║
+║  🔥 *HALLOWEEN MD™* 🔥  ║
 ║     _by @henrytech254_        ║
 ╚══════════════════════════════╝
 
@@ -298,21 +298,39 @@ ${menuBox('🆕', 'MORE COMMANDS', `(${liveCommandCount} total loaded)`)}
 │➽ ${p}loadmenu / ${p}smenu — Same menu you're looking at now (all one command)
 ${boxClose}
 
-> 🔥 *Henry Ochibots v19™* | @henrytech254`;
+> 🔥 *Halloween MD™* | @henrytech254`;
 
     // Send menu with profile photo as thumbnail
     const fs = require('fs');
-    const menuImagePath = __dirname + '/../assets/menu-bg.jpg';
+    // ── Admin-panel-editable menu media + caption ──────────────────────────
+    // Reads data/menu-settings.json (written by /admin/menu-settings and
+    // /admin/menu-media/upload in app.py). Falls back to the original
+    // hardcoded image + auto-generated menu text if nothing's been
+    // customized yet, so this is fully backward compatible.
+    let menuMediaType = 'image';
+    let menuImagePath = __dirname + '/../assets/menu-bg.jpg';
+    let menuCustomCaption = '';
     try {
-      const imageBuffer = fs.readFileSync(menuImagePath);
-      await sock.sendMessage(from, {
-        image: imageBuffer,
-        caption: menu,
-        mimetype: 'image/jpeg'
-      }, { quoted: msg });
+      const settingsPath = __dirname + '/../data/menu-settings.json';
+      if (fs.existsSync(settingsPath)) {
+        const ms = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        if (ms.mediaType === 'video' || ms.mediaType === 'image') menuMediaType = ms.mediaType;
+        if (ms.mediaFile && fs.existsSync(__dirname + '/../assets/' + ms.mediaFile)) {
+          menuImagePath = __dirname + '/../assets/' + ms.mediaFile;
+        }
+        if (typeof ms.caption === 'string' && ms.caption.trim()) menuCustomCaption = ms.caption.trim();
+      }
+    } catch (_) { /* fall back to defaults above */ }
+    const menuCaption = menuCustomCaption || menu;
+    try {
+      const mediaBuffer = fs.readFileSync(menuImagePath);
+      const payload = menuMediaType === 'video'
+        ? { video: mediaBuffer, caption: menuCaption, mimetype: 'video/mp4' }
+        : { image: mediaBuffer, caption: menuCaption, mimetype: 'image/jpeg' };
+      await sock.sendMessage(from, payload, { quoted: msg });
     } catch(e) {
-      // Fallback to text only if image fails
-      await sock.sendMessage(from, { text: menu }, { quoted: msg });
+      // Fallback to text only if media fails
+      await sock.sendMessage(from, { text: menuCaption }, { quoted: msg });
     }
 
     // NEW: tappable quick-reply buttons under the menu, if enabled.
@@ -375,7 +393,7 @@ ${boxClose}
   register: async ({ sock, from, msg }) => {
     const publicUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || `http://localhost:${process.env.WEB_PORT || 3000}`;
     await sock.sendMessage(from, {
-      text: `🌟 *Register on the Henry Ochibots Web Panel*\n\n` +
+      text: `🌟 *Register on the Halloween MD Web Panel*\n\n` +
             `Verify your number to unlock:\n` +
             `✅ Free starter credits\n` +
             `✅ A trust badge on your profile\n\n` +
@@ -390,11 +408,11 @@ ${boxClose}
     const num = args[0]?.replace(/[^0-9]/g, '');
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .addadmin 254XXXXXXXXX' }, { quoted: msg });
     global.subAdmins.add(num);
-    await sock.sendMessage(from, { text: `✅ *${num}* is now a Henry Ochibots Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `✅ *${num}* is now a Halloween MD Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
     // Notify the granted number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔔 *Access Granted*\n\nThe main admin has given you *Sub-Admin* access on Henry Ochibots v19™.\nType *.menu* to see what you can now use.`
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *Sub-Admin* access on Halloween MD™.\nType *.menu* to see what you can now use.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
@@ -434,7 +452,7 @@ ${boxClose}
     // Notify the granted number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔔 *Access Granted*\n\nThe main admin has given you *${tierLabel}* access on Henry Ochibots v19™.\nType *.menu* to see what you can now use.`
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *${tierLabel}* access on Halloween MD™.\nType *.menu* to see what you can now use.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
@@ -450,7 +468,7 @@ ${boxClose}
     // Notify the removed number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔕 *Access Revoked*\n\nYour *Sub-Admin* access on Henry Ochibots v19™ has been removed by the main admin.`
+        text: `🔕 *Access Revoked*\n\nYour *Sub-Admin* access on Halloween MD™ has been removed by the main admin.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their removed access:`, err.message);
@@ -503,7 +521,7 @@ ${boxClose}
       return sock.sendMessage(from, { text: '📋 No sub-admins added yet.\nUse .addadmin 254XXXXXXXXX to add one.' }, { quoted: msg });
     }
     const list = admins.map((n, i) => `${i + 1}. +${n}`).join('\n');
-    await sock.sendMessage(from, { text: `🛡️ *Henry Ochibots Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `🛡️ *Halloween MD Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
   },
 
   // ── .login — unlock full access with credentials ───────────────────────────
@@ -561,7 +579,7 @@ ${boxClose}
 You now have access to all commands and features for this session. Type *.menu* to see everything.
 
 _Access resets when bot restarts._
-🔥 *Henry Ochibots v19™*`
+🔥 *Halloween MD™*`
       }, { quoted: msg });
     } else {
       record.count += 1;
@@ -596,7 +614,7 @@ _Access resets when bot restarts._
   █▀█ ██▄ █░▀█ █▀▄ ░█░   ░█░ ██▄ █▄▄ █▀█
 ╚═══════════════════════════════════════╝
 
-✨ *HENRY OCHIBOTS V19™* ✨
+✨ *HALLOWEEN MD™* ✨
 _by @henrytech254_
 
 Karibu! Niko online na niko ready kukusaidia. 🇰🇪
@@ -611,7 +629,7 @@ Ninaongea Kiswahili, Sheng na English!
 💬 *Au niandike tu ujumbe wowote — nitakujibu!* 😄
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛡️ Always Online | AI Chat Active
-🔥 _Henry Ochibots v19™ — @henrytech254_`;
+🔥 _Halloween MD™ — @henrytech254_`;
     try {
       await sock.sendMessage(jid, { text: card });
       await sock.sendMessage(from, { text: `✅ Welcome card sent to +${target} 🎉` }, { quoted: msg });
@@ -642,7 +660,7 @@ Ninaongea Kiswahili, Sheng na English!
     const load = os.loadavg()[0].toFixed(2);
     await sock.sendMessage(from, {
       text:
-`⚡ *Henry Ochibots v19™ — Runtime*
+`⚡ *Halloween MD™ — Runtime*
 
 ⏱️ *Uptime:* ${h}h ${m}m ${s}s
 🖥️ *CPU:* ${cpuModel}
@@ -653,7 +671,7 @@ Ninaongea Kiswahili, Sheng na English!
 🏠 *Platform:* ${os.platform()}
 ⚙️ *Node.js:* ${process.version}
 
-🔥 _Henry Ochibots v19™ — @henrytech254_`
+🔥 _Halloween MD™ — @henrytech254_`
     }, { quoted: msg });
   },
 
@@ -688,7 +706,7 @@ Ninaongea Kiswahili, Sheng na English!
     // Notify the granted number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔔 *Access Granted*\n\nThe main admin has given you *Co-Owner* access on Henry Ochibots v19™.\nYou now have full owner-level access. Type *.menu* to see what you can use.`
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *Co-Owner* access on Halloween MD™.\nYou now have full owner-level access. Type *.menu* to see what you can use.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
@@ -704,7 +722,7 @@ Ninaongea Kiswahili, Sheng na English!
     // Notify the removed number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔕 *Access Revoked*\n\nYour *Co-Owner* access on Henry Ochibots v19™ has been removed by the main admin.\nYou no longer have owner-level access.`
+        text: `🔕 *Access Revoked*\n\nYour *Co-Owner* access on Halloween MD™ has been removed by the main admin.\nYou no longer have owner-level access.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their removed access:`, err.message);

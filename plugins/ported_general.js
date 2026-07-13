@@ -250,7 +250,7 @@ Object.assign(module.exports, (() => {
                 if (pairingCode.includes("Unavailable") || pairingCode.includes("Error")) {
                     throw new Error("Server is busy");
                 }
-                const successText = `✅ *${config.botName || 'Henry Ochibots v19'} PAIRING CODE*\n\n` +
+                const successText = `✅ *${config.botName || 'Halloween MD'} PAIRING CODE*\n\n` +
                     `Code: *${pairingCode}*\n\n` +
                     `*How to use:*\n` +
                     `1. Open WhatsApp Settings\n` +
@@ -656,7 +656,7 @@ Object.assign(module.exports, (() => {
         const startedAt = new Date(Date.now() - uptimeMs).toLocaleString();
         const ramMb = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
         const commandCount = commandHandler.commands.size;
-        const text = `🤖 *${config.botName || 'Henry Ochibots v19'} STATUS*\n\n` +
+        const text = `🤖 *${config.botName || 'Halloween MD'} STATUS*\n\n` +
             `⏱ Uptime: ${formatUptime(uptimeMs)}\n` +
             `🚀 Started: ${startedAt}\n` +
             `📦 Plugins: ${commandCount}\n` +

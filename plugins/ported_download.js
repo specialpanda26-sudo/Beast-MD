@@ -260,7 +260,7 @@ Object.assign(module.exports, (() => {
             const caption = `📘 *Facebook Downloader*
 🎞 Quality: *${selected.resolution || 'Unknown'}*
 
-> *_Downloaded by Henry Ochibots_*`;
+> *_Downloaded by Halloween MD_*`;
             await sock.sendMessage(chatId, { video: { url: videoUrl }, mimetype: 'video/mp4', caption }, { quoted: message });
         }
         catch (err) {
@@ -434,7 +434,7 @@ Object.assign(module.exports, (() => {
         const chatId = message.key.remoteJid;
         if (!args || args.length === 0) {
             return sock.sendMessage(chatId, {
-                text: '*🌟 Please provide a GitHub URL or username and repository name.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Beast-bot-ogolla\n\n.clone specialpanda26-sudo Beast-bot-ogolla'
+                text: '*🌟 Please provide a GitHub URL or username and repository name.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Halloween-MD\n\n.clone specialpanda26-sudo Halloween-MD'
             });
         }
         let url = '';
@@ -456,7 +456,7 @@ Object.assign(module.exports, (() => {
         }
         else {
             return sock.sendMessage(chatId, {
-                text: '*Missing repository info.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Beast-bot-ogolla\n\n.clone specialpanda26-sudo Beast-bot-ogolla'
+                text: '*Missing repository info.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Halloween-MD\n\n.clone specialpanda26-sudo Halloween-MD'
             });
         }
         await sock.sendMessage(chatId, { text: '⏱️ Preparing repository zip...' });
@@ -515,7 +515,7 @@ Object.assign(module.exports, (() => {
             const link = args[0];
             if (!link) {
                 return await sock.sendMessage(chatId, {
-                    text: `❌ *Missing Link!*\n\nExample: .gitclone2 https://github.com/specialpanda26-sudo/Beast-bot-ogolla`
+                    text: `❌ *Missing Link!*\n\nExample: .gitclone2 https://github.com/specialpanda26-sudo/Halloween-MD`
                 }, { quoted: message });
             }
             if (!regex.test(link)) {
@@ -540,7 +540,7 @@ Object.assign(module.exports, (() => {
                 document: { url },
                 fileName: filename,
                 mimetype: 'application/zip',
-                caption: `📦 *Repository:* ${user}/${repo}\n✨ *Cloned by Henry Ochibots*`
+                caption: `📦 *Repository:* ${user}/${repo}\n✨ *Cloned by Halloween MD*`
             }, { quoted: message });
         }
         catch (err) {
@@ -631,13 +631,13 @@ Object.assign(module.exports, (() => {
                     await sock.sendMessage(chatId, {
                         video: { url },
                         mimetype: 'video/mp4',
-                        caption: '📥 *Downloaded by Henry Ochibots*'
+                        caption: '📥 *Downloaded by Halloween MD*'
                     }, { quoted: message });
                 }
                 else {
                     await sock.sendMessage(chatId, {
                         image: { url },
-                        caption: '📥 *Downloaded by Henry Ochibots*'
+                        caption: '📥 *Downloaded by Halloween MD*'
                     }, { quoted: message });
                 }
                 if (i < mediaList.length - 1) {
@@ -1821,7 +1821,7 @@ Object.assign(module.exports, (() => {
                 video: { url: videoData.downloadUrl },
                 mimetype: 'video/mp4',
                 fileName: `${videoData.title || videoTitle || 'video'}.mp4`,
-                caption: `🎬 *${videoData.title || videoTitle || 'Video'}*\n\n> *_Downloaded by Henry Ochibots_*`
+                caption: `🎬 *${videoData.title || videoTitle || 'Video'}*\n\n> *_Downloaded by Halloween MD_*`
             }, { quoted: message });
         }
         catch (err) {

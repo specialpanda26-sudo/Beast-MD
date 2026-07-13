@@ -1,4 +1,4 @@
-# 🔥 Henry Ochibots v19™
+# 🔥 Halloween MD™
 
 > **WhatsApp automation bot built by [@henrytech254](https://github.com/henrytech254)**  
 > Baileys (Node.js) + Python backend | Deployed on Render / Railway
@@ -7,7 +7,7 @@
 
 ## ✅ Current Status
 
-Henry Ochibots v19™ is a Baileys (Node.js) WhatsApp bot with a Python
+Halloween MD™ is a Baileys (Node.js) WhatsApp bot with a Python
 (Quart) backend, deployed on Render/Railway, with a full web panel suite
 (landing page, registration, admin panel, per-user bot panel, chat viewer,
 pairing UI).
@@ -27,6 +27,12 @@ are all live and wired end-to-end.
 
 For the detailed history of fixes and audits that got the bot to this
 state, see [`CHANGES.md`](./CHANGES.md) and [`REMEDY.md`](./REMEDY.md).
+
+**🎃 Branding:** all 7 web panels (landing page, admin, bot panel, pairing,
+console, register, chat) run a Halloween theme — pumpkin/purple palette,
+spooky display font, and a synthesized howl sound effect (plays on first
+click/tap, replayable via the 🐺 button). See Update 23 in
+[`CHANGES.md`](./CHANGES.md) for the full rebrand rundown.
 
 ## ✨ Features
 
@@ -475,8 +481,8 @@ Every **new customer session** that pairs (via `/pair` in the browser or scannin
 |---|---|
 | `GROQ_API_KEY` | Your Groq API key |
 | `OWNER_NUMBER` | Your WhatsApp number e.g. `254712345678` |
-| `OWNER_NAME` | `Henry Ochibots` |
-| `BOT_NAME` | `Henry Ochibots v19™` |
+| `OWNER_NAME` | `Halloween MD` |
+| `BOT_NAME` | `Halloween MD™` |
 | `BOT_LOGIN_USER` | Login username (default: `Henry`) |
 | `BOT_LOGIN_PASS` | Login password (default: `7lq4mv00`) |
 | `ADMIN_PASSWORD` | Password to protect the `/admin` panel |
@@ -574,12 +580,12 @@ the same time, both now firing automatically on real joins/leaves.
 
 Full technical write-up of every change in this pass (and all prior passes) is in
 [`CHANGES.md`](./CHANGES.md). A plain-language version — **what was broken, what was fixed, and
-how it behaves now** — is in [`assets/BeastBot-Whats-Fixed.pdf`](./assets/BeastBot-Whats-Fixed.pdf),
+how it behaves now** — is in [`assets/HalloweenMD-Whats-Fixed.pdf`](./assets/HalloweenMD-Whats-Fixed.pdf),
 downloadable from the pairing page alongside the existing
-[`assets/BeastBot-User-Guide.pdf`](./assets/BeastBot-User-Guide.pdf) (day-to-day usage, not
+[`assets/HalloweenMD-User-Guide.pdf`](./assets/HalloweenMD-User-Guide.pdf) (day-to-day usage, not
 technical). Both are automatically linked from `/pair` and from the bot's own `.pair` reply in
 WhatsApp chat.
 
 ---
 
-**Made with ❤️ by Henry Ochibots | @henrytech254**
+**Made with ❤️ by Halloween MD | @henrytech254**

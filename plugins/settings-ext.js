@@ -19,9 +19,10 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const PMPERMIT_FILE = path.join(DATA_DIR, 'pmpermit.json');
+const GREETED_FILE = path.join(DATA_DIR, 'first-contact-greeted.json');
 
 const DEFAULTS = {
-  botname: process.env.BOT_NAME || 'Henry Ochibots v19',
+  botname: process.env.BOT_NAME || 'Halloween MD',
   prefix: (process.env.PREFIXES ? process.env.PREFIXES.split(',')[0] : '.'),
   pmpermit: false,          // opt-in: strangers DMing need approval first
   chatbot: true,            // matches existing always-on DM AI chat
@@ -37,6 +38,23 @@ const DEFAULTS = {
   gcpresence: 'available',  // same, for groups
   welcomemessage: '',       // '' = use the built-in default text
   goodbyemessage: '',       // '' = use the built-in default text
+
+  // ── First-contact "save my number" greeting ────────────────────────────
+  // Sent once, automatically, the first time a brand-new DM sender messages
+  // this session — asks them to save the contact so the account doesn't
+  // get flagged/banned for messaging "unknown numbers," and sets
+  // expectations that the bot may reply on the owner's behalf. `ownerName`
+  // is whatever this session's owner wants shown; `{name}` in the message
+  // template gets replaced with it. Editable per-session via
+  // .setownername / .setfirstcontactmessage, and can be turned off
+  // entirely with .setfirstcontactgreeting off.
+  firstcontactgreeting: true,
+  ownername: '',            // '' = falls back to the live bot name
+  firstcontactmessage:
+    '👋 Hey! This is {name}\'s bot-assisted number — save this contact so '
+    + 'future messages don\'t land as "unknown number" (and to keep it from '
+    + 'getting flagged/banned). {name} will get back to you personally, or '
+    + 'the bot may step in if {name} is away for a bit.',
 };
 
 function loadSettings() {
@@ -46,8 +64,8 @@ function loadSettings() {
 function saveSettings(s) { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(s, null, 2)); }
 function getSetting(key) { return loadSettings()[key]; }
 
-const BOOL_KEYS = ['pmpermit','chatbot','autoreact','autoread','autoreadstatus','autobio','autoreply','autoreplystatus','autoblock','autolikestatus'];
-const TEXT_KEYS = ['botname','prefix','dmpresence','gcpresence','welcomemessage','goodbyemessage'];
+const BOOL_KEYS = ['pmpermit','chatbot','autoreact','autoread','autoreadstatus','autobio','autoreply','autoreplystatus','autoblock','autolikestatus','firstcontactgreeting'];
+const TEXT_KEYS = ['botname','prefix','dmpresence','gcpresence','welcomemessage','goodbyemessage','ownername','firstcontactmessage'];
 
 function makeBoolSetter(key) {
   return async ({ sock, from, msg, args, isOwner }) => {
@@ -98,6 +116,26 @@ function bumpPmStrike(number) {
   return d.strikes[number];
 }
 
+// ── First-contact greeting: has this number already been sent the
+// "save my number" message? Persisted to disk so it survives restarts and
+// only ever fires once per number, per session. ─────────────────────────
+function loadGreeted() {
+  try { return JSON.parse(fs.readFileSync(GREETED_FILE, 'utf8')); }
+  catch (_) { return []; }
+}
+function hasBeenGreeted(number) { return loadGreeted().includes(number); }
+function markGreeted(number) {
+  const g = loadGreeted();
+  if (!g.includes(number)) { g.push(number); fs.writeFileSync(GREETED_FILE, JSON.stringify(g, null, 2)); }
+}
+// Builds the actual text to send, substituting {name} with the session's
+// configured owner name (falls back to the live bot name if unset).
+function buildFirstContactMessage(fallbackName) {
+  const s = loadSettings();
+  const name = (s.ownername || '').trim() || fallbackName || 'the owner';
+  return (s.firstcontactmessage || DEFAULTS.firstcontactmessage).split('{name}').join(name);
+}
+
 const exportsObj = {
   getsetting: async ({ sock, from, msg, args }) => {
     const key = args[0];
@@ -123,6 +161,45 @@ const exportsObj = {
     if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
     saveSettings({ ...DEFAULTS });
     await sock.sendMessage(from, { text: '✅ All settings reset to defaults.' }, { quoted: msg });
+  },
+
+  // ── .removerestrictions / .openbot ──────────────────────────────────────
+  // Owner only. One command that clears every owner-set restriction that
+  // gates general bot usage:
+  //   • settings.json toggles (pmpermit, autoblock, etc.) → back to open defaults
+  //   • .private / .setmode / .maintenance runtime state → public, active, off
+  //   • .setperm 'restricted'/'blocked' entries on group members → cleared
+  // Deliberately does NOT touch (out of scope, per explicit instructions):
+  //   • the Admin Panel (blacklist, keyword auto-replies, Features tab toggles)
+  //   • the anti-ban system
+  //   • session termination / expiry / activation / subscription system
+  removerestrictions: async ({ sock, from, msg, isOwner }) => {
+    if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
+
+    // 1) settings.json → open defaults (pmpermit off, autoblock off, etc.)
+    saveSettings({ ...DEFAULTS });
+
+    // 2) runtime mode globals → fully open
+    global.botMode = 'public';
+    global.botActive = true;
+    global.botMaintenance = false;
+
+    // 3) clear any .setperm 'restricted'/'blocked' assignments on group members
+    let clearedMembers = 0;
+    if (global.memberPerms) {
+      for (const groupId of Object.keys(global.memberPerms)) {
+        clearedMembers += Object.keys(global.memberPerms[groupId] || {}).length;
+      }
+      global.memberPerms = {};
+    }
+
+    await sock.sendMessage(from, {
+      text: `✅ *All owner-set restrictions removed.*\n\n`
+        + `• PM Permit, auto-block & related settings → reset to open\n`
+        + `• Bot mode → *public*, active → *on*, maintenance → *off*\n`
+        + `• Per-member restricted/blocked permissions cleared (${clearedMembers} entr${clearedMembers === 1 ? 'y' : 'ies'})\n\n`
+        + `Not touched (as requested): Admin Panel (blacklist/keywords/features), anti-ban, and session termination/expiry/subscription.`
+    }, { quoted: msg });
   },
 
   // ── New: PM Permit management (only matters while .setpmpermit is ON) ──
@@ -153,6 +230,9 @@ const exportsObj = {
   __getSetting: getSetting,
   __isPmApproved: isPmApproved,
   __bumpPmStrike: bumpPmStrike,
+  __hasBeenGreeted: hasBeenGreeted,
+  __markGreeted: markGreeted,
+  __buildFirstContactMessage: buildFirstContactMessage,
 };
 
 BOOL_KEYS.forEach(k => { exportsObj[`set${k}`] = makeBoolSetter(k); });

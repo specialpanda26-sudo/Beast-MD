@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generates assets/BeastBot-User-Guide.pdf — the customer-facing "how to use
+Generates assets/HalloweenMD-User-Guide.pdf — the customer-facing "how to use
 the bot day to day" guide. Re-run this after any change to public-facing
 commands/wallet/pairing flow so the PDF stays accurate:
 
@@ -18,7 +18,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, ListFlowable, ListItem
 )
 
-OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'BeastBot-User-Guide.pdf')
+OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'HalloweenMD-User-Guide.pdf')
 
 styles = getSampleStyleSheet()
 title_style = ParagraphStyle('TitleX', parent=styles['Title'], fontSize=18, spaceAfter=2)
@@ -50,10 +50,10 @@ def bullets(items):
     )
 
 story = []
-story.append(Paragraph('HENRY OCHIBOTS V19™', title_style))
-story.append(Paragraph('Beast Bot — User Guide', subtitle_style))
+story.append(Paragraph('HALLOWEEN MD™', title_style))
+story.append(Paragraph('Halloween MD — User Guide', subtitle_style))
 story.append(Paragraph(
-    "This guide is for people using Henry Ochibots (Beast Bot) day to day — customers and group "
+    "This guide is for people using Halloween MD (Halloween MD) day to day — customers and group "
     "members, not the bot owner. It covers linking your number, everyday commands, your wallet and "
     "access, and where to get help.", intro_style
 ))
@@ -183,12 +183,12 @@ story.append(Paragraph(
 ))
 
 story.append(Spacer(1, 16))
-story.append(Paragraph('Henry Ochibots V19™ — Multimedia WhatsApp Bot — created by @henrytech254', footer_style))
+story.append(Paragraph('Halloween MD™ — Multimedia WhatsApp Bot — created by @henrytech254', footer_style))
 
 doc = SimpleDocTemplate(
     OUT_PATH, pagesize=letter,
     topMargin=0.6 * inch, bottomMargin=0.6 * inch, leftMargin=0.6 * inch, rightMargin=0.6 * inch,
-    title='Beast Bot User Guide', author='Henry Ochibots'
+    title='Halloween MD User Guide', author='Halloween MD'
 )
 doc.build(story)
 print(f"✅ Wrote {OUT_PATH}")

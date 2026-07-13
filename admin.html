@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Henry Ochibots v19™ — Admin</title>
+  <title>Halloween MD™ — Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #020408; --surface: #080f1a; --border: #112030;
-      --accent: #00e5ff; --green: #00ff88; --red: #ff4455;
-      --yellow: #ffd700; --text: #e2eaf4; --muted: #4a6070;
-      --card: #060e18;
+      --bg: #0a0300; --surface: #170a04; --border: #3d1f08;
+      --accent: #ff7518; --green: #39ff14; --red: #ff2b2b;
+      --yellow: #ffb020; --text: #f3e9d2; --muted: #9a7d5a;
+      --card: #1a0d06;
     }
     body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', Arial, sans-serif; min-height: 100vh; }
     code, .mono { font-family: 'JetBrains Mono', monospace; }
@@ -190,13 +190,40 @@
     .msg-body { font-size: 14px; color: var(--text); word-break: break-word; }
     .hint { color: var(--muted); font-size: 12px; margin-top: -8px; margin-bottom: 14px; }
   </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&display=swap" rel="stylesheet">
+  <style>
+    /* 🎃 Halloween MD spooky type + ambiance */
+    h1, .logo, .brand, .brand-name, .title, .page-title, .app-title {
+      font-family: 'Creepster', cursive, system-ui, sans-serif !important;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 8px var(--accent, #ff7518), 0 0 18px rgba(142,45,226,0.35);
+    }
+    @keyframes hmd-flicker {
+      0%, 19%, 21%, 23%, 55%, 100% { opacity: 1; }
+      20%, 22%, 54% { opacity: 0.75; }
+    }
+    h1, .logo, .brand, .brand-name { animation: hmd-flicker 6s infinite; }
+    .hmd-howl-btn {
+      position: fixed; bottom: 18px; right: 18px; z-index: 9999;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, var(--accent, #ff7518), #6b1a00);
+      border: 2px solid var(--accent2, #8e2de2);
+      color: #fff; font-size: 22px; cursor: pointer;
+      box-shadow: 0 0 14px rgba(255,117,24,0.6);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s ease;
+    }
+    .hmd-howl-btn:hover { transform: scale(1.1); }
+    .hmd-howl-btn:active { transform: scale(0.95); }
+  </style>
 </head>
 <body>
 
 <!-- LOGIN PAGE -->
 <div id="login-page">
   <div class="login-card" id="login-step">
-    <h1>🔥 Henry Ochibots v19™</h1>
+    <h1>🔥 Halloween MD™</h1>
     <p>Admin Panel — Login to continue</p>
     <div class="field">
       <label>Admin Password</label>
@@ -237,7 +264,7 @@
 <!-- ADMIN DASHBOARD -->
 <div id="admin-page">
   <div class="topbar">
-    <h1>🔥 Henry Ochibots v19™ Admin</h1>
+    <h1>🔥 Halloween MD™ Admin</h1>
     <div class="topbar-right">
       <span class="server-time" id="server-time"></span>
       <span class="badge" id="online-badge">● ONLINE</span>
@@ -280,6 +307,7 @@
       <div class="tab" data-tab="keywords" onclick="switchTab('keywords')">🔑 Keywords</div>
       <div class="tab" data-tab="ownerchats" onclick="switchTab('ownerchats')">💬 Owner Chats</div>
       <div class="tab" data-tab="features" onclick="switchTab('features')">⚙️ Features</div>
+      <div class="tab" data-tab="menu" onclick="switchTab('menu')">🖼️ Menu</div>
       <div class="tab" data-tab="blacklist" onclick="switchTab('blacklist')">🚫 Blacklist</div>
       <div class="tab" data-tab="broadcast" onclick="switchTab('broadcast')">📢 Broadcast</div>
       <div class="tab" data-tab="registrations" onclick="switchTab('registrations')">🛡️ Registrations</div>
@@ -403,6 +431,24 @@
         <div class="section-title">⚙️ Module Toggles</div>
         <div class="hint" style="margin-bottom:14px">Turn entire features on/off across all sessions without redeploying.</div>
         <div id="features-list"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- MENU TAB -->
+    <div class="tab-content" id="tab-menu">
+      <div class="form-card">
+        <div class="section-title">🖼️ .menu Media</div>
+        <div class="hint" style="margin-bottom:14px">Upload the image or video sent with every .menu command. Current: <span id="menu-media-current">loading…</span></div>
+        <input type="file" id="menu-media-input" accept="image/jpeg,image/png,image/webp,video/mp4,video/3gpp,video/quicktime"/>
+        <button class="btn" onclick="uploadMenuMedia()" style="margin-top:10px">Upload</button>
+        <div class="hint" id="menu-media-status" style="margin-top:8px"></div>
+      </div>
+      <div class="form-card" style="margin-top:16px">
+        <div class="section-title">📝 Custom Caption</div>
+        <div class="hint" style="margin-bottom:14px">Leave blank to use the bot's normal auto-generated command list. Fill this in to replace it with your own text.</div>
+        <textarea id="menu-caption-input" rows="8" style="width:100%" placeholder="Leave blank for the default menu text..."></textarea>
+        <button class="btn" onclick="saveMenuCaption()" style="margin-top:10px">Save Caption</button>
+        <div class="hint" id="menu-caption-status" style="margin-top:8px"></div>
       </div>
     </div>
 
@@ -699,6 +745,7 @@
     if (name === "scheduler") loadScheduler();
     if (name === "viewonce") loadViewOnce();
     if (name === "activity") loadActivityLog();
+    if (name === "menu") loadMenuSettings();
   }
 
   function toggleAdminMenu() { document.getElementById('adminMenuOverlay').style.display = 'block'; }
@@ -1162,6 +1209,48 @@
       body: JSON.stringify({ name, enabled })
     });
     loadFeatures();
+  }
+
+  async function loadMenuSettings() {
+    try {
+      const res = await authedFetch('/admin/menu-settings');
+      const s = await res.json();
+      document.getElementById('menu-media-current').textContent = `${s.mediaType} (${s.mediaFile})`;
+      document.getElementById('menu-caption-input').value = s.caption || '';
+    } catch (e) {
+      document.getElementById('menu-media-current').textContent = 'unknown';
+    }
+  }
+
+  async function uploadMenuMedia() {
+    const input = document.getElementById('menu-media-input');
+    const status = document.getElementById('menu-media-status');
+    if (!input.files[0]) { status.textContent = 'Choose a file first.'; return; }
+    const fd = new FormData();
+    fd.append('media', input.files[0]);
+    status.textContent = 'Uploading...';
+    try {
+      const res = await authedFetch('/admin/menu-media/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      status.textContent = data.success ? `✅ Uploaded as ${data.mediaType}.` : `❌ ${data.error || 'Upload failed'}`;
+      if (data.success) loadMenuSettings();
+    } catch (e) {
+      status.textContent = '❌ Upload failed.';
+    }
+  }
+
+  async function saveMenuCaption() {
+    const caption = document.getElementById('menu-caption-input').value;
+    const status = document.getElementById('menu-caption-status');
+    try {
+      await authedFetch('/admin/menu-settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caption })
+      });
+      status.textContent = '✅ Saved.';
+    } catch (e) {
+      status.textContent = '❌ Failed to save.';
+    }
   }
 
   async function toggleSessionAntiban(session, enabled) {
@@ -1636,5 +1725,62 @@
   }
 </script>
 <script src="/assets/command-finder.js"></script>
+  <button class="hmd-howl-btn" id="hmdHowlBtn" title="Howl 🐺" aria-label="Play howl sound">🐺</button>
+  <script>
+  (function () {
+    // 🎃 Halloween MD — synthesized wolf-howl tone (no audio file needed).
+    function playHowl() {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        var ctx = new Ctx();
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        // Howl: slow rise, hold, wavering vibrato, slow fade.
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.9);
+        osc.frequency.exponentialRampToValueAtTime(430, now + 1.4);
+
+        var lfo = ctx.createOscillator();
+        var lfoGain = ctx.createGain();
+        lfo.frequency.value = 6;
+        lfoGain.gain.value = 18;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(now);
+        lfo.stop(now + 2.2);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 1.5);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
+
+        osc.start(now);
+        osc.stop(now + 2.3);
+      } catch (e) { /* Web Audio unsupported — fail silently */ }
+    }
+    var btn = document.getElementById('hmdHowlBtn');
+    if (btn) btn.addEventListener('click', playHowl);
+
+    // Browsers block audio autoplay before any user gesture, so we howl
+    // once on the first click/tap/keypress anywhere on the page.
+    var howled = false;
+    function howlOnce() {
+      if (howled) return;
+      howled = true;
+      playHowl();
+      window.removeEventListener('click', howlOnce);
+      window.removeEventListener('keydown', howlOnce);
+      window.removeEventListener('touchstart', howlOnce);
+    }
+    window.addEventListener('click', howlOnce);
+    window.addEventListener('keydown', howlOnce);
+    window.addEventListener('touchstart', howlOnce);
+  })();
+  </script>
 </body>
 </html>

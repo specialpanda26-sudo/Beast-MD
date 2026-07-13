@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generates assets/BeastBot-Whats-Fixed.pdf — the plain-language "what was
+Generates assets/HalloweenMD-Whats-Fixed.pdf — the plain-language "what was
 broken / what was fixed / what it means for you" report, one entry per
 CHANGES.md update. Re-run after adding a new entry to CHANGES.md:
 
@@ -17,7 +17,7 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 
-OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'BeastBot-Whats-Fixed.pdf')
+OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'HalloweenMD-Whats-Fixed.pdf')
 
 styles = getSampleStyleSheet()
 title_style = ParagraphStyle('TitleX', parent=styles['Title'], fontSize=17, spaceAfter=2)
@@ -47,7 +47,7 @@ UPDATES = [
          fixed="The update was rebuilt from the real, current version of the bot, so nothing was lost.",
          means="No visible change for you — this was a behind-the-scenes safety fix to avoid losing features."),
     dict(n=4, title="Bot name recognition in groups",
-         broken="In groups, the bot only replied when @mentioned or replied to directly — calling it by name (\u201cochibots, can you help\u201d) did nothing.",
+         broken="In groups, the bot only replied when @mentioned or replied to directly — calling it by name (\u201challoween md, can you help\u201d) did nothing.",
          fixed="The bot now also responds when called by name, matched carefully so it doesn't misfire on unrelated words like \u201crobot\u201d or \u201cchatbot\u201d.",
          means="You can talk to the bot more naturally in group chats, just by saying its name."),
     dict(n=5, title="Community chat, owner auto-reply, media search, antiban toggle",
@@ -117,7 +117,7 @@ UPDATES = [
 ]
 
 story = []
-story.append(Paragraph('Henry Ochibots v19™', title_style))
+story.append(Paragraph('Halloween MD™', title_style))
 story.append(Paragraph('What Was Fixed — Plain-Language Report', subtitle_style))
 story.append(Paragraph(
     "This document explains, in plain language, what was broken in the bot, what was fixed, and what "
@@ -144,14 +144,14 @@ for i, u in enumerate(UPDATES):
 story.append(Spacer(1, 14))
 story.append(Paragraph(
     "Looking for how to use the bot day to day instead of what changed under the hood? See "
-    "BeastBot-User-Guide.pdf — both are available for download from the pairing page and are sent "
+    "HalloweenMD-User-Guide.pdf — both are available for download from the pairing page and are sent "
     "automatically when you message the bot with \u201cpair\u201d.", footer_style
 ))
 
 doc = SimpleDocTemplate(
     OUT_PATH, pagesize=letter,
     topMargin=0.6 * inch, bottomMargin=0.6 * inch, leftMargin=0.6 * inch, rightMargin=0.6 * inch,
-    title="Beast Bot - What Was Fixed", author='Henry Ochibots'
+    title="Halloween MD - What Was Fixed", author='Halloween MD'
 )
 doc.build(story)
 print(f"✅ Wrote {OUT_PATH}")

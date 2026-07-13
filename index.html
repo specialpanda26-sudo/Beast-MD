@@ -3,27 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Henry Ochibots v19™</title>
+  <title>Halloween MD™</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      /* ✅ Professional dev-SaaS palette — indigo-blue is the primary brand
-         accent (trust, action); green is reserved ONLY for live/success
-         states (mirrors WhatsApp's own meaning of green — "connected",
-         not decoration). Softer glow, crisper borders, less neon. */
-      --bg: #0a0d12;
-      --surface: #0f131a;
-      --border: #1c232d;
-      --accent: #4f7cff;
-      --accent2: #22c55e;
-      --green: #22c55e;
-      --text: #e8ecf2;
-      --muted: #7c8797;
-      --card: #10151c;
-      --glow-cyan: rgba(79,124,255,0.10);
-      --glow-purple: rgba(34,197,94,0.08);
+      /* 🎃 Halloween MD palette — pumpkin orange is the primary brand
+         accent, witch purple for secondary actions, toxic green kept
+         ONLY for live/success states. Dark, moody, spooky. */
+      --bg: #0d0500;
+      --surface: #170b04;
+      --border: #3d1f08;
+      --accent: #ff7518;
+      --accent2: #8e2de2;
+      --green: #39ff14;
+      --text: #f3e9d2;
+      --muted: #9a7d5a;
+      --card: #1a0d06;
+      --glow-cyan: rgba(255,117,24,0.14);
+      --glow-purple: rgba(142,45,226,0.12);
     }
 
     html { scroll-behavior: smooth; }
@@ -110,7 +109,7 @@
       display: block; padding: 12px; border-radius: 10px; color: #ccc;
       text-decoration: none; font-size: 14px; background: rgba(255,255,255,.05);
     }
-    #mobileMenuPanel a.nav-pair-btn { color: #22c55e; }
+    #mobileMenuPanel a.nav-pair-btn { color: var(--green); }
 
     .nav-status {
       display: flex; align-items: center; gap: 0.5rem;
@@ -585,6 +584,33 @@
       .code-val { font-size: 1.5rem; letter-spacing: 4px; }
     }
   </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&display=swap" rel="stylesheet">
+  <style>
+    /* 🎃 Halloween MD spooky type + ambiance */
+    h1, .logo, .brand, .brand-name, .title, .page-title, .app-title {
+      font-family: 'Creepster', cursive, system-ui, sans-serif !important;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 8px var(--accent, #ff7518), 0 0 18px rgba(142,45,226,0.35);
+    }
+    @keyframes hmd-flicker {
+      0%, 19%, 21%, 23%, 55%, 100% { opacity: 1; }
+      20%, 22%, 54% { opacity: 0.75; }
+    }
+    h1, .logo, .brand, .brand-name { animation: hmd-flicker 6s infinite; }
+    .hmd-howl-btn {
+      position: fixed; bottom: 18px; right: 18px; z-index: 9999;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, var(--accent, #ff7518), #6b1a00);
+      border: 2px solid var(--accent2, #8e2de2);
+      color: #fff; font-size: 22px; cursor: pointer;
+      box-shadow: 0 0 14px rgba(255,117,24,0.6);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s ease;
+    }
+    .hmd-howl-btn:hover { transform: scale(1.1); }
+    .hmd-howl-btn:active { transform: scale(0.95); }
+  </style>
 </head>
 <body>
 
@@ -594,14 +620,14 @@
 <div class="radial-glow bottom"></div>
 
 <nav>
-  <div class="nav-logo"><span>HENRY OCHIBOTS</span> <span class="v">V19™</span></div>
+  <div class="nav-logo"><span>HALLOWEEN MD</span> <span class="v">V19™</span></div>
   <div class="nav-links">
     <a href="#commands">Commands</a>
     <a href="#how-it-works">How It Works</a>
     <a href="#deploy">Deploy</a>
-    <a href="/register" class="nav-pair-btn" style="background:linear-gradient(90deg,#4f7cff,#8b9eff)">🪪 Register</a>
+    <a href="/register" class="nav-pair-btn" style="background:linear-gradient(90deg,var(--accent),#8b9eff)">🪪 Register</a>
     <a href="/pair" class="nav-pair-btn">Pair Now</a>
-    <a href="/console" class="nav-pair-btn" style="background:linear-gradient(90deg,#22c55e,#4f7cff)">💬 Console</a>
+    <a href="/console" class="nav-pair-btn" style="background:linear-gradient(90deg,var(--green),var(--accent))">💬 Console</a>
   </div>
   <div class="nav-status">
     <div class="pulse"></div>
@@ -634,7 +660,7 @@
 <!-- HERO -->
 <div class="hero">
   <div class="hero-bg-image"></div>
-  <div class="hero-badge">⚡ BUILT &amp; MAINTAINED BY HENRY OCHIBOTS — V19™ PRODUCTION BUILD</div>
+  <div class="hero-badge">⚡ BUILT &amp; MAINTAINED BY HALLOWEEN MD — V19™ PRODUCTION BUILD</div>
   <h1>
     <span class="line1">WhatsApp Automation</span>
     <span class="line2">Unleashed.</span>
@@ -652,7 +678,7 @@
       <div class="dot r"></div>
       <div class="dot y"></div>
       <div class="dot g"></div>
-      <div class="terminal-label">ochibots-v19 — node</div>
+      <div class="terminal-label">halloween-md — node</div>
     </div>
     <div class="terminal-body">
       <div class="t-line"><span class="t-muted">$</span> <span class="t-cyan">node</span> client_bridge.js</div>
@@ -661,7 +687,7 @@
       <div class="t-line"><span class="t-green">✔</span> Groq LLaMA-3 AI engine loaded</div>
       <div class="t-line"><span class="t-green">✔</span> SQLite database synchronized</div>
       <div class="t-line"><span class="t-green">✔</span> Pairing web UI active at /pair</div>
-      <div class="t-line"><span class="t-purple">⚡</span> Henry Ochibots v19™ — ALL SYSTEMS GO 🔥</div>
+      <div class="t-line"><span class="t-purple">⚡</span> Halloween MD™ — ALL SYSTEMS GO 🔥</div>
     </div>
   </div>
 </div>
@@ -831,6 +857,15 @@
       </div>
       <div class="widget-out" id="w-base64-out" style="display:none"></div>
     </div>
+    <div class="widget-card">
+      <h3>🎵 Song Search</h3>
+      <div class="cmd-tag">.song [name]</div>
+      <div class="widget-row">
+        <input class="widget-input" id="w-song-in" placeholder="e.g. shape of you" />
+        <button class="widget-btn" onclick="runSongSearch()">Search</button>
+      </div>
+      <div class="widget-out" id="w-song-out" style="display:none"></div>
+    </div>
   </div>
   <p class="widget-note">These run through a sandboxed, rate-limited endpoint — not your WhatsApp session. On WhatsApp, the same commands work exactly like this, plus hundreds more.</p>
 </section>
@@ -849,7 +884,7 @@
   <div class="pair-card reveal" id="howCard">
     <div class="pair-logo">
       <div class="pair-logo-icon">🔐</div>
-      <div class="pair-logo-title">HENRY OCHIBOTS V19™</div>
+      <div class="pair-logo-title">HALLOWEEN MD™</div>
       <div class="pair-logo-sub">HOW IT WORKS</div>
     </div>
 
@@ -911,9 +946,9 @@
 
 <section style="text-align:center;padding-top:4rem;padding-bottom:4rem;">
   <div class="reveal">
-    <div class="section-label" style="justify-content:center;display:flex;">// work with ochibots</div>
+    <div class="section-label" style="justify-content:center;display:flex;">// work with Halloween MD</div>
     <div class="section-title">Want a bot like this for your number?</div>
-    <p class="section-sub" style="margin:0 auto 2rem;">Henry Ochibots builds and deploys custom WhatsApp bots, HTTP configs, and web tools for clients across Kenya. Reach out to get set up.</p>
+    <p class="section-sub" style="margin:0 auto 2rem;">Halloween MD builds and deploys custom WhatsApp bots, HTTP configs, and web tools for clients across Kenya. Reach out to get set up.</p>
     <div class="hero-cta" style="justify-content:center;">
       <!-- 📞 Contact number comes from PUBLIC_CONTACT_NUMBER env var, injected server-side -->
       <a href="https://wa.me/{{PUBLIC_CONTACT_NUMBER}}" target="_blank" class="btn-pair-hero" id="contact-whatsapp-btn">💬 Chat on WhatsApp</a>
@@ -925,7 +960,7 @@
 </section>
 
 <footer>
-  Built by <span>@henrytech254</span> · Henry Ochibots v19™ · <span>All systems online 🟢</span>
+  Built by <span>@henrytech254</span> · Halloween MD™ · <span>All systems online 🟢</span>
 </footer>
 
 <script>
@@ -1045,7 +1080,109 @@
       outEl.textContent = "Network error — try again.";
     }
   }
+
+  // ✅ NEW: song search widget — search by name, tap a result to fetch a
+  // direct download link for that exact track (customer picks their own).
+  async function runSongSearch() {
+    const q = document.getElementById("w-song-in").value.trim();
+    const outEl = document.getElementById("w-song-out");
+    outEl.style.display = "block";
+    outEl.classList.remove("err");
+    if (!q) { outEl.textContent = "Enter a song name first."; return; }
+    outEl.textContent = "Searching…";
+    try {
+      const res = await fetch("/api/widgets/song-search", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q })
+      });
+      const data = await res.json();
+      if (!data.success) { outEl.classList.add("err"); outEl.textContent = data.error || "Search failed."; return; }
+      outEl.innerHTML = data.results.map((r, i) =>
+        `<div style="margin-bottom:6px;cursor:pointer" onclick="pickSong(${i})">🎵 ${r.title.replace(/[<>&]/g, "")} ${r.uploader ? "— " + r.uploader.replace(/[<>&]/g, "") : ""}</div>`
+      ).join("");
+      window.__songResults = data.results;
+    } catch (e) {
+      outEl.classList.add("err");
+      outEl.textContent = "Network error — try again.";
+    }
+  }
+
+  async function pickSong(i) {
+    const outEl = document.getElementById("w-song-out");
+    const song = window.__songResults?.[i];
+    if (!song) return;
+    outEl.textContent = `Fetching "${song.title}"…`;
+    try {
+      const res = await fetch("/api/widgets/song-download", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: song.url })
+      });
+      const data = await res.json();
+      if (!data.success) { outEl.classList.add("err"); outEl.textContent = data.error || "Couldn't fetch that track."; return; }
+      outEl.innerHTML = `🎵 <strong>${(data.title || song.title).replace(/[<>&]/g, "")}</strong><br/><a href="${data.url}" target="_blank" rel="noopener">⬇️ Download / Play</a>`;
+    } catch (e) {
+      outEl.classList.add("err");
+      outEl.textContent = "Network error — try again.";
+    }
+  }
 </script>
 <script src="/assets/command-finder.js"></script>
+  <button class="hmd-howl-btn" id="hmdHowlBtn" title="Howl 🐺" aria-label="Play howl sound">🐺</button>
+  <script>
+  (function () {
+    // 🎃 Halloween MD — synthesized wolf-howl tone (no audio file needed).
+    function playHowl() {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        var ctx = new Ctx();
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        // Howl: slow rise, hold, wavering vibrato, slow fade.
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.9);
+        osc.frequency.exponentialRampToValueAtTime(430, now + 1.4);
+
+        var lfo = ctx.createOscillator();
+        var lfoGain = ctx.createGain();
+        lfo.frequency.value = 6;
+        lfoGain.gain.value = 18;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(now);
+        lfo.stop(now + 2.2);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 1.5);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
+
+        osc.start(now);
+        osc.stop(now + 2.3);
+      } catch (e) { /* Web Audio unsupported — fail silently */ }
+    }
+    var btn = document.getElementById('hmdHowlBtn');
+    if (btn) btn.addEventListener('click', playHowl);
+
+    // Browsers block audio autoplay before any user gesture, so we howl
+    // once on the first click/tap/keypress anywhere on the page.
+    var howled = false;
+    function howlOnce() {
+      if (howled) return;
+      howled = true;
+      playHowl();
+      window.removeEventListener('click', howlOnce);
+      window.removeEventListener('keydown', howlOnce);
+      window.removeEventListener('touchstart', howlOnce);
+    }
+    window.addEventListener('click', howlOnce);
+    window.addEventListener('keydown', howlOnce);
+    window.addEventListener('touchstart', howlOnce);
+  })();
+  </script>
 </body>
 </html>

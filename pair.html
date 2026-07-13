@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Henry Ochibots v19™ — Pair WhatsApp</title>
+  <title>Halloween MD™ — Pair WhatsApp</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
     /* ✅ FIX: this page previously loaded no shared fonts (fell back to Segoe
@@ -12,10 +12,10 @@
        moment a visitor clicked through to /pair. Brought in line with the
        same brand tokens used everywhere else. */
     :root{
-      --accent:#4f7cff;
-      --accent2:#22c55e;
-      --bg:#0a0d12;
-      --card:#10151c;
+      --accent:#ff7518;
+      --accent2:#8e2de2;
+      --bg:#0d0500;
+      --card:#1a0d06;
     }
     *{margin:0;padding:0;box-sizing:border-box}
     html{scroll-behavior:smooth}
@@ -84,16 +84,16 @@
     .nav-links a { color: #4a6070; text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--accent); }
     .nav-links .nav-pair-btn {
-      color: #000; background: #22c55e; padding: 0.4rem 0.9rem;
+      color: #000; background: var(--green); padding: 0.4rem 0.9rem;
       border-radius: 6px; font-weight: 700; box-shadow: 0 0 14px rgba(34,197,94,0.25);
     }
     .nav-links .nav-pair-btn:hover { color: #000; box-shadow: 0 0 20px rgba(34,197,94,0.4); }
     .nav-status {
       display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem;
-      color: #22c55e; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
+      color: var(--green); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
       text-shadow: 0 0 10px rgba(34,197,94,0.4);
     }
-    .pulse { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e; animation: pulse 2s infinite; }
+    .pulse { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.8); } }
     @media (max-width: 760px) { .nav-links { display: none; } .nav-hamburger { display: flex !important; } }
     .nav-hamburger {
@@ -119,7 +119,7 @@
       display: block; padding: 12px; border-radius: 10px; color: #ccc;
       text-decoration: none; font-size: 14px; background: rgba(255,255,255,.05);
     }
-    #mobileMenuPanel a.nav-pair-btn { color: #22c55e; }
+    #mobileMenuPanel a.nav-pair-btn { color: var(--green); }
 
     /* ── PAGE TOOLBAR (page-specific controls: live status + bg image) ── */
     .page-toolbar{
@@ -129,13 +129,13 @@
     }
     .topbar-status{
       display:flex;align-items:center;gap:6px;margin-right:auto;
-      font-size:11px;color:#22c55e;
+      font-size:11px;color:var(--green);
       font-family:'JetBrains Mono',monospace;letter-spacing:.08em;
     }
     .pulse-dot{
       width:7px;height:7px;border-radius:50%;
-      background:#22c55e;
-      box-shadow:0 0 8px #22c55e,0 0 16px rgba(34,197,94,0.4);
+      background:var(--green);
+      box-shadow:0 0 8px var(--green),0 0 16px rgba(34,197,94,0.4);
       animation:pulse-anim 2s infinite;
     }
     @keyframes pulse-anim{
@@ -261,7 +261,7 @@
     /* ── BTN ── */
     .btn-generate{
       width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
-      background:linear-gradient(135deg,#22c55e,var(--accent2));
+      background:linear-gradient(135deg,var(--green),var(--accent2));
       color:#fff;font-size:15px;font-weight:700;letter-spacing:.5px;
       transition:opacity .2s,transform .1s,box-shadow .2s;
       box-shadow:0 4px 24px rgba(34,197,94,.35);
@@ -274,7 +274,7 @@
        next to the phone-input button. Smaller, centered, auto-width. */
     .btn-qr{
       width:auto;padding:10px 22px;border-radius:10px;border:none;cursor:pointer;
-      background:linear-gradient(135deg,#22c55e,var(--accent2));
+      background:linear-gradient(135deg,var(--green),var(--accent2));
       color:#fff;font-size:13px;font-weight:700;letter-spacing:.3px;
       transition:opacity .2s,transform .1s,box-shadow .2s;
       box-shadow:0 4px 20px rgba(34,197,94,.3);
@@ -296,7 +296,7 @@
     .progress-wrap{width:100%;height:4px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
     .progress-bar{
       height:100%;
-      background:linear-gradient(90deg,#22c55e,var(--accent));
+      background:linear-gradient(90deg,var(--green),var(--accent));
       border-radius:4px;
       width:5%;
       transition:width .3s ease;
@@ -306,7 +306,7 @@
     .code-state{display:none;flex-direction:column;align-items:center;gap:16px;width:100%}
     .check-icon{
       width:52px;height:52px;border-radius:50%;
-      background:rgba(34,197,94,.1);border:2px solid #22c55e;
+      background:rgba(34,197,94,.1);border:2px solid var(--green);
       display:flex;align-items:center;justify-content:center;font-size:24px;
       animation:pop .3s ease;
     }
@@ -335,7 +335,7 @@
     .code-actions{display:flex;gap:10px;width:100%}
     .btn-copy{
       flex:1;padding:13px;border-radius:12px;border:none;cursor:pointer;
-      background:linear-gradient(135deg,#22c55e,var(--accent2));
+      background:linear-gradient(135deg,var(--green),var(--accent2));
       color:#fff;font-size:14px;font-weight:700;
       display:flex;align-items:center;justify-content:center;gap:7px;
       transition:opacity .2s,transform .1s;
@@ -421,6 +421,33 @@
       .heading{font-size:24px}
     }
   </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&display=swap" rel="stylesheet">
+  <style>
+    /* 🎃 Halloween MD spooky type + ambiance */
+    h1, .logo, .brand, .brand-name, .title, .page-title, .app-title {
+      font-family: 'Creepster', cursive, system-ui, sans-serif !important;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 8px var(--accent, #ff7518), 0 0 18px rgba(142,45,226,0.35);
+    }
+    @keyframes hmd-flicker {
+      0%, 19%, 21%, 23%, 55%, 100% { opacity: 1; }
+      20%, 22%, 54% { opacity: 0.75; }
+    }
+    h1, .logo, .brand, .brand-name { animation: hmd-flicker 6s infinite; }
+    .hmd-howl-btn {
+      position: fixed; bottom: 18px; right: 18px; z-index: 9999;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, var(--accent, #ff7518), #6b1a00);
+      border: 2px solid var(--accent2, #8e2de2);
+      color: #fff; font-size: 22px; cursor: pointer;
+      box-shadow: 0 0 14px rgba(255,117,24,0.6);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s ease;
+    }
+    .hmd-howl-btn:hover { transform: scale(1.1); }
+    .hmd-howl-btn:active { transform: scale(0.95); }
+  </style>
 </head>
 <body>
 <div class="bg-image-layer" id="bgImageLayer"></div>
@@ -429,12 +456,12 @@
 
 <!-- NAV (shared across all pages) -->
 <nav>
-  <a href="/" class="nav-logo"><span>HENRY OCHIBOTS</span> <span class="v">V19™</span></a>
+  <a href="/" class="nav-logo"><span>HALLOWEEN MD</span> <span class="v">V19™</span></a>
   <div class="nav-links">
     <a href="/#commands">Commands</a>
     <a href="/#how-it-works">How It Works</a>
     <a href="/#deploy">Deploy</a>
-    <a href="/register" class="nav-pair-btn" style="background:linear-gradient(90deg,#4f7cff,#8b9eff)">🪪 Register</a>
+    <a href="/register" class="nav-pair-btn" style="background:linear-gradient(90deg,var(--accent),#8b9eff)">🪪 Register</a>
     <a href="/admin">Admin</a>
   </div>
   <button class="nav-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
@@ -543,13 +570,13 @@
           then <code>.key XXXXXX</code> once the admin sends you a key.
         </div>
 
-        <a href="/assets/BeastBot-User-Guide.pdf" download
+        <a href="/assets/HalloweenMD-User-Guide.pdf" download
            style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;
                   padding:12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;
-                  color:#4f7cff;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);">
+                  color:var(--accent);background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);">
           📄 Download the User Guide (PDF)</a>
 
-        <a href="/assets/BeastBot-Whats-Fixed.pdf" download
+        <a href="/assets/HalloweenMD-Whats-Fixed.pdf" download
            style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;
                   padding:12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;
                   color:#8b9eff;background:rgba(139,158,255,.08);border:1px solid rgba(139,158,255,.25);">
@@ -576,7 +603,7 @@
         </div>
         <a href="/panel" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;
                   padding:12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;
-                  color:#fff;background:linear-gradient(135deg,#22c55e,var(--accent2,#4f7cff));width:100%">
+                  color:#fff;background:linear-gradient(135deg,var(--green),var(--accent2,var(--accent)));width:100%">
           Open Control Panel →</a>
       </div>
     </div>
@@ -909,7 +936,7 @@
       const dot  = document.getElementById('botStatus');
       if (data.online !== false) {
         dot.innerHTML = '<div class="pulse-dot"></div><span>ONLINE</span>';
-        dot.style.color = '#22c55e';
+        dot.style.color = 'var(--green)';
       } else {
         dot.innerHTML = '<div class="pulse-dot" style="background:#f59e0b;box-shadow:0 0 8px #f59e0b"></div><span style="color:#f59e0b">STARTING</span>';
         dot.style.color = '#f59e0b';
@@ -1027,5 +1054,62 @@
     setInterval(checkBotStatus, 15000);
   })();
 </script>
+  <button class="hmd-howl-btn" id="hmdHowlBtn" title="Howl 🐺" aria-label="Play howl sound">🐺</button>
+  <script>
+  (function () {
+    // 🎃 Halloween MD — synthesized wolf-howl tone (no audio file needed).
+    function playHowl() {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        var ctx = new Ctx();
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        // Howl: slow rise, hold, wavering vibrato, slow fade.
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.9);
+        osc.frequency.exponentialRampToValueAtTime(430, now + 1.4);
+
+        var lfo = ctx.createOscillator();
+        var lfoGain = ctx.createGain();
+        lfo.frequency.value = 6;
+        lfoGain.gain.value = 18;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(now);
+        lfo.stop(now + 2.2);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 1.5);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
+
+        osc.start(now);
+        osc.stop(now + 2.3);
+      } catch (e) { /* Web Audio unsupported — fail silently */ }
+    }
+    var btn = document.getElementById('hmdHowlBtn');
+    if (btn) btn.addEventListener('click', playHowl);
+
+    // Browsers block audio autoplay before any user gesture, so we howl
+    // once on the first click/tap/keypress anywhere on the page.
+    var howled = false;
+    function howlOnce() {
+      if (howled) return;
+      howled = true;
+      playHowl();
+      window.removeEventListener('click', howlOnce);
+      window.removeEventListener('keydown', howlOnce);
+      window.removeEventListener('touchstart', howlOnce);
+    }
+    window.addEventListener('click', howlOnce);
+    window.addEventListener('keydown', howlOnce);
+    window.addEventListener('touchstart', howlOnce);
+  })();
+  </script>
 </body>
 </html>

@@ -2,6 +2,27 @@
 
 > 📜 Looking for older history? See [CHANGES-ARCHIVE.md](./CHANGES-ARCHIVE.md) (Updates 3–14).
 
+## Update 23 — Full rebrand: "Halloween MD" 🎃
+
+**What changed:** every visible mention of the old bot name (`Henry Ochibots v19`, `Beast Bot`, and all casing variants) has been renamed to **Halloween MD** across the entire codebase — page titles, `<title>` tags, console/log banners, sticker pack name, `.env.example`/`render.yaml` defaults, `package.json`, the AI chatbot's own self-description, group name-detection aliases (`BOT_NAME_ALIASES`), and all Markdown docs. Henry's own creator credit (`created by Henry`, `@henrytech254`) was deliberately left untouched everywhere — this was a name change for the bot's identity, not its owner's.
+
+**Bug fixed along the way:** `app.py`'s AI chat persona had a line reading *"Your creator is Henry Ochibots (@henrytech254)"* — a leftover naming collision where the bot referred to itself as its own creator. Corrected to *"Your creator is Henry (@henrytech254)"* so the bot credits the right person.
+
+**Visual theme — all 7 web panels** (`index.html`, `admin.html`, `panel.html`, `pair.html`, `console.html`, `register.html`, `chat.html`):
+- Every panel's `:root` CSS variables were swapped from the old blue/teal/cyan palette to a Halloween palette — pumpkin orange (`--accent`), witch purple (`--accent2`), toxic green (kept for live/success states), blood red, near-black backgrounds, parchment-white text. No structural CSS changed — just the variable values, so the palette applies everywhere those variables are already used.
+- Added the **Creepster**/**Nosifer** display fonts (Google Fonts) for headings/logos/titles, with a subtle flicker animation.
+- Added a synthesized **howl sound effect** (built with the Web Audio API — no audio file needed, works offline) that plays once on the first click/tap/keypress on any panel (browsers block audio autoplay before a user gesture), plus a 🐺 button in the corner of every panel to replay it on demand.
+
+**Left untouched — flagging, not silently changed:** the `client_bridge.js` default session ID (`"beastbot"`) was left as-is — renaming it could change where the bot looks for already-saved session files on an existing deployment. See Update 24 below for the repo/Render renames.
+
+**Verification:** `py_compile` on `app.py` — clean. `node --check` on every renamed `.js` file — clean. `package.json` re-validated as parseable JSON. Full repo grep confirms no remaining old-brand strings outside the intentionally-preserved infra identifiers above.
+
+## Update 24 — GitHub repo & Render service renamed to match the brand
+
+**What changed:** `config_ported.js`'s update URL, `plugins/ported_info.js`'s repo-info API call, and `plugins/ported_download.js`'s `.clone`/`.gitclone2` example text were all switched from `specialpanda26-sudo/Beast-bot-ogolla` to `specialpanda26-sudo/Halloween-MD` — GitHub **username unchanged**, only the repo name. `render.yaml`'s service name (`beast-bot-ogolla` → `halloween-md`) and disk name (`beast-bot-data` → `halloween-md-data`) were updated to match.
+
+**Important — this file alone does not rename anything live:** `render.yaml` is only read when Render first creates a service from a Blueprint. Editing the names in this file does **not** rename your already-deployed Render service or its disk — you still need to do that by hand in the Render dashboard (Settings → Name), or Render may treat the new names as a request for a *new* service/disk instead of renaming the existing ones, which could mean losing track of your existing saved sessions or, worse, an extra billed disk. Do the dashboard rename first, then this file will match. Same idea for GitHub: renaming the repo (Settings → repository name) is free and GitHub auto-redirects the old name, but do it in GitHub's UI — this file doesn't do that part either.
+
 ## Update 22 — Quick menu and full catalog now share one styling source
 
 **The root cause, not just the symptom:** the quick `.menu` view's `┏▣ ◈ ᴘᴜʙʟɪᴄ ᴄᴏᴍᴍᴀɴᴅs ◈` boxes were built by `smallCaps()`/`menuBox()` helpers defined as private, unexported local functions inside `plugins/general.js`. `lib_ported/menuCatalog.js` (the full 877-command catalog) had no way to reach them even if someone had tried — so it was written as plain `*CATEGORY*` text instead, which is why the two menus looked like they came from different bots.
@@ -80,7 +101,7 @@ non-overlapping work — this merges both into one file with nothing dropped fro
   "forwarded via a newsletter channel" to look more legitimate/viral; stripped from all 9 places
   it appeared, replaced with a plain `contextInfo: {}`.
 - **Full branding sweep completed** — remaining bare "Ochibots™"/"OCHIBOTS" strings (missed by
-  the Update 16 pass) now consistently read "Henry Ochibots v19™"; the "Developed By Qasim Ali /
+  the Update 16 pass) now consistently read "Halloween MD™"; the "Developed By Qasim Ali /
   GlobalTechInfo" block-comment headers in 8 files replaced with a Henry Bots header (per your
   explicit call to finish the sweep — this supersedes Update 16's note to leave them, since you'd
   since said you want them gone too).
@@ -136,7 +157,7 @@ own internal cross-references (e.g. "flagged in Update 4" → "flagged in Update
 table, and a summary section for the welcome/goodbye automation fix.
 
 **New: plain-language "what was fixed" PDF.** Technical changelogs (this file) aren't the easiest
-read for a non-technical bot owner. Added `assets/BeastBot-Whats-Fixed.pdf` — a short, plain-English
+read for a non-technical bot owner. Added `assets/HalloweenMD-Whats-Fixed.pdf` — a short, plain-English
 walkthrough of what was broken, what's fixed, and what it means day to day, generated from this
 file's content. Linked from `/pair` (next to the existing user guide) and from the bot's own
 `.pair` reply in chat, so anyone going through pairing sees both documents.
@@ -224,7 +245,7 @@ start with no exceptions; confirmed the live 920-command table contains `welcome
 `bye`, `leave`, and the untouched `welcome`, with no `_handleJoinEvent`/`_handleLeaveEvent` leaking
 into it and no collisions anywhere.
 
-## Update 16 — Dead rentbot subsystem removed, live branding fixed to Henry Ochibots v19
+## Update 16 — Dead rentbot subsystem removed, live branding fixed to Halloween MD
 
 **Removed (per your call in Update 15's audit — never actually wired, imported a file that
 doesn't exist anywhere in the repo):**
@@ -236,10 +257,10 @@ All three were self-contained blocks in `ported_owner.js`; removed cleanly with 
 referencing them (confirmed by grep across the whole repo). If you ever want real bot-cloning/
 rental, that's new code to write (a message router for cloned sessions), not a restore of this.
 
-**Branding — the bot was correctly named "Henry Ochibots v19" almost everywhere, but several
+**Branding — the bot was correctly named "Halloween MD" almost everywhere, but several
 user-facing messages had "MEGA-MD" hardcoded regardless of that** (sticker pack names, bio/quote
 captions, `.pair` success text, `.status`, download/image-tool captions, `.clone` usage examples,
-`.script`'s GitHub-repo lookup). All of those now say **Henry Ochibots v19** — either dynamically
+`.script`'s GitHub-repo lookup). All of those now say **Halloween MD** — either dynamically
 via `config.botName` where `config` was already in scope, or as a plain literal where it wasn't
 (to avoid introducing an undefined-variable crash).
 

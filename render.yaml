@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: beast-bot-ogolla
+    name: halloween-md
     env: docker
     envVars:
       - key: GROQ_API_KEY
@@ -10,7 +10,7 @@ services:
       - key: OWNER_NAME
         value: "Henry Ogolla"
       - key: BOT_NAME
-        value: "Henry v19™ Beast Bot"
+        value: "Halloween MD v19™"
       - key: OWNER_RECOVERY_SECRET
         sync: false                  # set this in Render dashboard — keep it private
       - key: ADMIN_PASSWORD
@@ -60,6 +60,6 @@ services:
         value: /app/data
     healthCheckPath: /status
     disk:
-      name: beast-bot-data
+      name: halloween-md-data
       mountPath: /app/data
       sizeGB: 1

@@ -21,7 +21,7 @@ function megaClient() {
   const email = process.env.MEGA_EMAIL;
   const password = process.env.MEGA_PASSWORD;
   if (!email || !password) return null;
-  return new Storage({ email, password, userAgent: 'BeastBot/1.0' });
+  return new Storage({ email, password, userAgent: 'HalloweenMD/1.0' });
 }
 
 module.exports = {

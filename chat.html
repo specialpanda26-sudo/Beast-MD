@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Community Chat — Henry Ochibots v19™</title>
+<title>Community Chat — Halloween MD™</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #020408; --surface: #080f1a; --border: #112030;
-    --accent: #00e5ff; --accent2: #7c3aed; --green: #00ff88;
-    --text: #e2eaf4; --muted: #4a6070; --card: #060e18;
-    --red: #ff3b5c; --yellow: #ffb020;
+    --bg: #0a0300; --surface: #170a04; --border: #3d1f08;
+    --accent: #ff7518; --accent2: #8e2de2; --green: #39ff14;
+    --text: #f3e9d2; --muted: #9a7d5a; --card: #1a0d06;
+    --red: #ff2b2b; --yellow: #ffb020;
   }
   html { scroll-behavior: smooth; }
   body {
@@ -121,12 +121,39 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&display=swap" rel="stylesheet">
+  <style>
+    /* 🎃 Halloween MD spooky type + ambiance */
+    h1, .logo, .brand, .brand-name, .title, .page-title, .app-title {
+      font-family: 'Creepster', cursive, system-ui, sans-serif !important;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 8px var(--accent, #ff7518), 0 0 18px rgba(142,45,226,0.35);
+    }
+    @keyframes hmd-flicker {
+      0%, 19%, 21%, 23%, 55%, 100% { opacity: 1; }
+      20%, 22%, 54% { opacity: 0.75; }
+    }
+    h1, .logo, .brand, .brand-name { animation: hmd-flicker 6s infinite; }
+    .hmd-howl-btn {
+      position: fixed; bottom: 18px; right: 18px; z-index: 9999;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, var(--accent, #ff7518), #6b1a00);
+      border: 2px solid var(--accent2, #8e2de2);
+      color: #fff; font-size: 22px; cursor: pointer;
+      box-shadow: 0 0 14px rgba(255,117,24,0.6);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s ease;
+    }
+    .hmd-howl-btn:hover { transform: scale(1.1); }
+    .hmd-howl-btn:active { transform: scale(0.95); }
+  </style>
 </head>
 <body>
 <div class="grid-bg"></div>
 
 <nav>
-  <a href="/panel" class="nav-logo">HENRY<span>HENRY OCHIBOTS</span> · CHAT</a>
+  <a href="/panel" class="nav-logo">HENRY<span>HALLOWEEN MD</span> · CHAT</a>
   <div class="identity">
     <span id="me-name">connecting…</span>
     <input id="nickname-input" placeholder="set a nickname" maxlength="24"/>
@@ -310,5 +337,62 @@ identify().then(() => {
   pollTimer = setInterval(pollMessages, 2500);
 });
 </script>
+  <button class="hmd-howl-btn" id="hmdHowlBtn" title="Howl 🐺" aria-label="Play howl sound">🐺</button>
+  <script>
+  (function () {
+    // 🎃 Halloween MD — synthesized wolf-howl tone (no audio file needed).
+    function playHowl() {
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        var ctx = new Ctx();
+        var now = ctx.currentTime;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        // Howl: slow rise, hold, wavering vibrato, slow fade.
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.9);
+        osc.frequency.exponentialRampToValueAtTime(430, now + 1.4);
+
+        var lfo = ctx.createOscillator();
+        var lfoGain = ctx.createGain();
+        lfo.frequency.value = 6;
+        lfoGain.gain.value = 18;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start(now);
+        lfo.stop(now + 2.2);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 1.5);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
+
+        osc.start(now);
+        osc.stop(now + 2.3);
+      } catch (e) { /* Web Audio unsupported — fail silently */ }
+    }
+    var btn = document.getElementById('hmdHowlBtn');
+    if (btn) btn.addEventListener('click', playHowl);
+
+    // Browsers block audio autoplay before any user gesture, so we howl
+    // once on the first click/tap/keypress anywhere on the page.
+    var howled = false;
+    function howlOnce() {
+      if (howled) return;
+      howled = true;
+      playHowl();
+      window.removeEventListener('click', howlOnce);
+      window.removeEventListener('keydown', howlOnce);
+      window.removeEventListener('touchstart', howlOnce);
+    }
+    window.addEventListener('click', howlOnce);
+    window.addEventListener('keydown', howlOnce);
+    window.addEventListener('touchstart', howlOnce);
+  })();
+  </script>
 </body>
 </html>

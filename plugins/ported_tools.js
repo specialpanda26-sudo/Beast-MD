@@ -282,7 +282,7 @@ Object.assign(module.exports, (() => {
             contextInfo: {
                 externalAdReply: {
                     title,
-                    body: 'Shared via Henry Ochibots v19',
+                    body: 'Shared via Halloween MD',
                     thumbnailUrl: url || 'https://i.ibb.co/3S6f0mS/default.jpg',
                     mediaType: 1,
                     renderLargerThumbnail: true,
@@ -552,7 +552,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🖤 *Grayscale Image*\n\nProcessed by: Henry Ochibots v19`
+                caption: `🖤 *Grayscale Image*\n\nProcessed by: Halloween MD`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }
@@ -701,7 +701,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🤍 *Inverted Image*\n\nProcessed by: Henry Ochibots v19`
+                caption: `🤍 *Inverted Image*\n\nProcessed by: Halloween MD`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }
@@ -1268,7 +1268,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🧡 *Sepia Image*\n\nProcessed by: Henry Ochibots v19`
+                caption: `🧡 *Sepia Image*\n\nProcessed by: Halloween MD`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }
