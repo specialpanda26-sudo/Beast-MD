@@ -611,6 +611,7 @@
     .hmd-howl-btn:hover { transform: scale(1.1); }
     .hmd-howl-btn:active { transform: scale(0.95); }
   </style>
+  <link rel="stylesheet" href="/assets/spooky-fx.css">
 </head>
 <body>
 
@@ -623,6 +624,9 @@
   <div class="nav-logo"><span>HALLOWEEN MD</span> <span class="v">V19™</span></div>
   <div class="nav-links">
     <a href="#commands">Commands</a>
+    <a href="#command-finder">Finder</a>
+    <a href="#auto-features">Auto Features</a>
+    <a href="#live-demo">Try It</a>
     <a href="#how-it-works">How It Works</a>
     <a href="#deploy">Deploy</a>
     <a href="/register" class="nav-pair-btn" style="background:linear-gradient(90deg,var(--accent),#8b9eff)">🪪 Register</a>
@@ -643,6 +647,9 @@
       <button onclick="closeMobileMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
     </div>
     <a href="#commands" onclick="closeMobileMenu()">📋 Commands</a>
+    <a href="#command-finder" onclick="closeMobileMenu()">🔎 Command Finder</a>
+    <a href="#auto-features" onclick="closeMobileMenu()">⚡ Auto Features</a>
+    <a href="#live-demo" onclick="closeMobileMenu()">🧪 Try It Now</a>
     <a href="#how-it-works" onclick="closeMobileMenu()">⚙️ How It Works</a>
     <a href="#deploy" onclick="closeMobileMenu()">🚀 Deploy</a>
     <a href="/register" onclick="closeMobileMenu()">🪪 Register</a>
@@ -758,7 +765,7 @@
 <div class="divider"></div>
 
 <!-- ✅ NEW: COMMAND FINDER — describe what you want, get the exact command -->
-<section>
+<section id="command-finder">
   <div class="reveal">
     <div class="section-label">// command finder</div>
     <div class="section-title">Not sure which command to use?</div>
@@ -776,7 +783,7 @@
 <div class="divider"></div>
 
 <!-- AUTO FEATURES -->
-<section>
+<section id="auto-features">
   <div class="reveal">
     <div class="section-label">// auto features</div>
     <div class="section-title">Always running in the background</div>
@@ -806,7 +813,7 @@
 <div class="divider"></div>
 
 <!-- ✅ NEW: LIVE DEMO WIDGETS -->
-<section>
+<section id="live-demo">
   <div class="reveal">
     <div class="section-label">// try it now</div>
     <div class="section-title">No WhatsApp needed for these</div>
@@ -1184,5 +1191,6 @@
     window.addEventListener('touchstart', howlOnce);
   })();
   </script>
+  <script src="/assets/spooky-fx.js" defer></script>
 </body>
 </html>
