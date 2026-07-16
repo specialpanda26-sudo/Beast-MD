@@ -1,0 +1,62 @@
+services:
+  - type: web
+    name: md-bot
+    env: docker
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OWNER_NUMBER
+        sync: false                  # set your WhatsApp number in the Render dashboard, e.g. 254712345678
+      - key: OWNER_NAME
+        value: "Henry Ochieng"
+      - key: BOT_NAME
+        value: "Beast MD"
+      - key: OWNER_RECOVERY_SECRET
+        sync: false                  # set this in Render dashboard — keep it private
+      - key: ADMIN_PASSWORD
+        sync: false                  # protects /admin — set in Render dashboard
+      - key: BOT_LOGIN_PASS
+        sync: false                  # protects .login command — set in Render dashboard
+      - key: PORT
+        value: 5000
+      - key: WEB_PORT
+        value: 3000
+      # ── Email OTP (optional fallback delivery method on /register) ──────
+      # ⚠️ Render blocks outbound SMTP ports — set RESEND_API_KEY (free at
+      # resend.com) to actually get email OTPs working here. SMTP_* below
+      # is kept only as a no-op fallback for non-Render hosts; it will NOT
+      # work on this Render service no matter what you set it to.
+      - key: RESEND_API_KEY
+        sync: false                  # https://resend.com/signup → API Keys
+      - key: RESEND_FROM_EMAIL
+        value: "onboarding@resend.dev"
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_EMAIL
+        sync: false                  # the Gmail/SMTP address OTP emails are sent FROM
+      - key: SMTP_PASSWORD
+        sync: false                  # Gmail: must be a 16-char App Password, not your real password
+      - key: SMTP_FROM_NAME
+        value: "Bot Panel"
+      # ── Optional: send OTPs from a SEPARATE WhatsApp number/session,
+      # so codes don't come from the same chat as the main bot. Pair a
+      # second number via /pair and put its session name here.
+      - key: OTP_SENDER_SESSION_ID
+        sync: false
+      # ── Optional: WhatsApp number shown on the public landing page's
+      # "Chat on WhatsApp" button. Leave unset to hide that button.
+      - key: PUBLIC_CONTACT_NUMBER
+        sync: false
+      # ✅ FIX: without a mounted disk, the SQLite DB, WhatsApp auth sessions,
+      # and saved view-once media all lived on Render's ephemeral filesystem
+      # and were wiped on every redeploy. DATA_DIR now points at the disk
+      # mounted below — both app.py and client_bridge.js read this same var.
+      - key: DATA_DIR
+        value: /app/data
+    healthCheckPath: /status
+    disk:
+      name: md-bot-data
+      mountPath: /app/data
+      sizeGB: 1

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Generates assets/HalloweenMD-User-Guide.pdf — the customer-facing "how to use
+Generates assets/BeastMD-User-Guide.pdf — the customer-facing "how to use
 the bot day to day" guide. Re-run this after any change to public-facing
-commands/wallet/pairing flow so the PDF stays accurate:
+commands/pairing flow so the PDF stays accurate:
 
     python3 scripts/generate-user-guide-pdf.py
 
@@ -18,7 +18,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, ListFlowable, ListItem
 )
 
-OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'HalloweenMD-User-Guide.pdf')
+OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'BeastMD-User-Guide.pdf')
 
 styles = getSampleStyleSheet()
 title_style = ParagraphStyle('TitleX', parent=styles['Title'], fontSize=18, spaceAfter=2)
@@ -50,11 +50,11 @@ def bullets(items):
     )
 
 story = []
-story.append(Paragraph('HALLOWEEN MD™', title_style))
-story.append(Paragraph('Halloween MD — User Guide', subtitle_style))
+story.append(Paragraph('BEAST MD™', title_style))
+story.append(Paragraph('Beast MD — User Guide', subtitle_style))
 story.append(Paragraph(
-    "This guide is for people using Halloween MD (Halloween MD) day to day — customers and group "
-    "members, not the bot owner. It covers linking your number, everyday commands, your wallet and "
+    "This guide is for people using Beast MD day to day — customers and group "
+    "members, not the bot owner. It covers linking your number, everyday commands, and "
     "access, and where to get help.", intro_style
 ))
 
@@ -71,13 +71,11 @@ story.append(Paragraph(
     "instead\", and enter the code you were given.", body_style
 ))
 
-story.append(Paragraph('2. Activating Your Session', h_style))
-story.append(Paragraph('A freshly linked session starts locked. To unlock it:', body_style))
-story.append(bullets([
-    "Send <font face='Courier'>.pair key</font> to request access — this notifies the admin.",
-    "Once approved, you'll receive a one-time activation key (valid 10 minutes).",
-    "Send it back as <font face='Courier'>.key XXXXXX</font> to unlock your session.",
-]))
+story.append(Paragraph('2. Getting Started', h_style))
+story.append(Paragraph(
+    "Once linked, your session is ready to use immediately — free, with no approval step and no key to "
+    "redeem.", body_style
+))
 story.append(Paragraph(
     "<b>Tip:</b> save the bot's number to your contacts — this helps avoid your number getting flagged or "
     "banned by WhatsApp.", body_style
@@ -94,13 +92,7 @@ story.append(cmd_table([
     ('.convert [amt] [from] [to]', 'Currency converter, e.g. .convert 100 USD KES'),
     ('.roll [sides]', 'Roll a dice'),
     ('.myperm', 'Check your permission level'),
-    ('.register', 'Get your web panel link (free credits + trust badge)'),
-    ('.profile', 'View your wallet balance & badge'),
-    ('.addfunds [amt] [code]', 'Top up your wallet via M-Pesa (admin reviews it)'),
-    ('.paypal', 'Show the PayPal.me support/payment link'),
-    ('.paypalfunds [amt] [txn_id]', 'Top up your wallet via PayPal (admin reviews it)'),
-    ('.referral', 'Get your referral link and track earnings'),
-    ('.pricing', 'See current prices/config'),
+    ('.register', 'Get your web panel link (free)'),
     ('.imagine [desc]', 'AI image generation — free, no API key needed'),
     ('.tts [text]', 'Convert text to a spoken voice note'),
     ('.model [name]', 'Switch AI model: llama / llama8 / mixtral / gemma'),
@@ -144,20 +136,16 @@ story.append(Paragraph(
     body_style
 ))
 
-story.append(Paragraph('8. Your Wallet & Access', h_style))
+story.append(Paragraph('8. Access & Support', h_style))
 story.append(Paragraph(
-    "Every user has a kesh wallet shown via <font face='Courier'>.profile</font>. Top it up two ways: "
-    "<font face='Courier'>.addfunds [amount] [code]</font> after paying via M-Pesa, or "
-    "<font face='Courier'>.paypalfunds [amount] [txn_id]</font> after paying via the link from "
-    "<font face='Courier'>.paypal</font> — either way, the admin reviews and confirms top-ups before the "
-    "kesh lands in your wallet. You can also earn wallet credit by inviting people with your "
-    "<font face='Courier'>.referral</font> link.",
+    "The bot is free to use — no wallet, no top-ups, no paid access gate. If you'd like to support "
+    "development, a voluntary \"Buy Me a Coffee\" donate link is on the website; it's entirely optional "
+    "and never required to use any command.",
     body_style
 ))
 story.append(Paragraph(
     "Open your Bot Panel (get the link via <font face='Courier'>.register</font>) to see your session's "
-    "live ban-risk health and buy extra subscription days directly from your wallet — no admin approval "
-    "needed for that part. Forgot your panel password? Open the panel and tap \"Forgot password?\" — a "
+    "live ban-risk health. Forgot your panel password? Open the panel and tap \"Forgot password?\" — a "
     "reset code is sent to you on WhatsApp.", body_style
 ))
 
@@ -169,7 +157,7 @@ story.append(cmd_table([
 
 story.append(Paragraph('10. Safety & Good Practice', h_style))
 story.append(bullets([
-    "Never share your pairing code, activation key, or panel password with anyone.",
+    "Never share your pairing code or panel password with anyone.",
     "Use <font face='Courier'>.checklink</font> before opening a suspicious link someone sends you.",
     "Save the bot's number to your contacts to reduce the chance of it getting flagged.",
     "If your session shows unusual behaviour, use the Bot Panel to check its ban-risk health.",
@@ -183,12 +171,12 @@ story.append(Paragraph(
 ))
 
 story.append(Spacer(1, 16))
-story.append(Paragraph('Halloween MD™ — Multimedia WhatsApp Bot — created by @henrytech254', footer_style))
+story.append(Paragraph('Beast MD™ — Multimedia WhatsApp Bot — created by @henrytech254', footer_style))
 
 doc = SimpleDocTemplate(
     OUT_PATH, pagesize=letter,
     topMargin=0.6 * inch, bottomMargin=0.6 * inch, leftMargin=0.6 * inch, rightMargin=0.6 * inch,
-    title='Halloween MD User Guide', author='Halloween MD'
+    title='Beast MD User Guide', author='Beast MD'
 )
 doc.build(story)
 print(f"✅ Wrote {OUT_PATH}")

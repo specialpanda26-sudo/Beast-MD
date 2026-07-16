@@ -40,7 +40,7 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await fetch('https://api.github.com/repos/specialpanda26-sudo/Halloween-MD');
+            const res = await fetch('https://api.github.com/repos/specialpanda26-sudo/Beast-MD');
             if (!res.ok)
                 throw new Error('Error fetching repository data');
             const json = await res.json();

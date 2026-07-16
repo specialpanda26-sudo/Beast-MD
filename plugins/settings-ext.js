@@ -172,7 +172,7 @@ const exportsObj = {
   // Deliberately does NOT touch (out of scope, per explicit instructions):
   //   • the Admin Panel (blacklist, keyword auto-replies, Features tab toggles)
   //   • the anti-ban system
-  //   • session termination / expiry / activation / subscription system
+  //   • session termination / manual expiry (owner-set, optional)
   removerestrictions: async ({ sock, from, msg, isOwner }) => {
     if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
 

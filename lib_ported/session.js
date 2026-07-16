@@ -7,7 +7,7 @@ const axios = require('axios');
 // ⚠️ NOT WIRED IN / NOT USED anywhere in this codebase (verified: no other
 // file requires session.js). Leftover from the original ported "MEGA-MD"
 // template. It hardcoded a third-party GitHub username ('stormfiber') as the
-// gist owner for ALL restored sessions, which is not how Halloween-MD's
+// gist owner for ALL restored sessions, which is not how the bot's
 // actual pairing/session system works and would never resolve to the real
 // owner's own credentials. Left in place per Henry's "don't remove features"
 // rule, but disabled below so it can't be accidentally wired in later and

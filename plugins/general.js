@@ -159,12 +159,7 @@ ${menuBox('💬', 'PUBLIC COMMANDS', '(everyone)')}
 │➽ ${p}roll [sides] — Roll a dice 🎲
 │➽ ${p}myperm — Check your permissions
 │➽ ${p}register — Get web panel link (free credits + trust badge)
-│➽ ${p}profile — View your wallet balance & badge
-│➽ ${p}addfunds [amt] [code] — Top up wallet via M-Pesa (admin reviews it)
-│➽ ${p}paypal — Support / pay via PayPal
-│➽ ${p}paypalfunds [amt] [txn_id] — Top up wallet via PayPal (admin reviews it)
-│➽ ${p}referral — Get your referral link & track earnings
-│➽ ${p}pricing — See current config prices
+│➽ ${p}donate — Support the creator via PayPal (optional, no strings attached)
 │➽ ${p}imagine [desc] — 🎨 AI image generation (free, no API key)
 │➽ ${p}tts [text] — 🔊 Text-to-speech voice note
 │➽ ${p}model [name] — 🤖 Switch AI model (llama/llama8/mixtral/gemma)
@@ -172,7 +167,7 @@ ${menuBox('💬', 'PUBLIC COMMANDS', '(everyone)')}
 │➽ ${p}pair — 🔗 Link your OWN WhatsApp number as a new bot session (get a pairing code, right here in chat)
 ${boxClose}
 
-🛡️ Open the Bot Panel (${p}register for the link) to see your session's live ban-risk health and buy extra subscription days straight from your kesh wallet — no admin approval needed for that part.
+🛡️ Open the Bot Panel (${p}register for the link) to see your session's live ban-risk health.
 
 🔑 Forgot your panel password? Open the panel and tap "Forgot password?" — a reset code is sent right here on WhatsApp.
 
@@ -476,43 +471,6 @@ ${boxClose}
     await sock.sendMessage(from, { text: `✅ *${num}* has been removed as Sub-Admin.` }, { quoted: msg });
   },
 
-  // ── .extend — bot-admin command run RIGHT IN A CUSTOMER'S OWN CHAT to
-  // add days to *that* customer's subscription (no admin panel needed).
-  // Owner and co-owners can upgrade ANY customer's session. Sub-admins can
-  // only upgrade sessions they personally handle — either because they
-  // approved that customer's original .pair key request, or because the
-  // session is still unclaimed (handled_by empty), in which case extending
-  // it claims it for them. This mirrors what .pair key's yes/no approval
-  // already allows sub-admins to do (generate an activation key) — this
-  // is the "renew/upgrade" counterpart for customers who are already active.
-  extend: async ({ sock, from, msg, isOwner, isSubAdmin, isBotAdmin, senderNumber, sessionId, apiClient, args }) => {
-    if (!isBotAdmin) return; // silent to non-admins — don't hint this exists
-    const days = parseInt(args[0], 10);
-    if (!days || days < 1) {
-      return sock.sendMessage(from, {
-        text: `📋 Usage: *.extend <days>* — send this in the customer's own chat to add that many days to their subscription.`
-      }, { quoted: msg });
-    }
-    try {
-      const res = await apiClient.post('/admin/activation-extend', {
-        session: sessionId,
-        days,
-        handled_by: senderNumber,
-        actor_is_subadmin: !isOwner, // isOwner already covers primary owner + co-owners
-      });
-      const { expiry_ts } = res.data || {};
-      const expiryText = expiry_ts
-        ? new Date(expiry_ts * 1000).toLocaleDateString()
-        : 'no expiry';
-      await sock.sendMessage(from, {
-        text: `✅ *Upgraded!* This session now has *${days}* more day(s) — new expiry: *${expiryText}*.`
-      }, { quoted: msg });
-    } catch (e) {
-      const reason = e.response?.data?.error || e.message;
-      await sock.sendMessage(from, { text: `❌ Couldn't upgrade this session: ${reason}` }, { quoted: msg });
-    }
-  },
-
   // ── .listadmins ────────────────────────────────────────────────────────────
   listadmins: async ({ sock, from, msg, isOwner }) => {
     if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
@@ -755,7 +713,7 @@ Ninaongea Kiswahili, Sheng na English!
     // right away, without waiting on the next 30s /bot/owner-number poll.
     global.ownerOverride = newNumber;
     // ✅ FIX: this used to ONLY set the line above — invisible to the Python
-    // backend (which handles admin-password-reset OTP delivery, activation
+    // backend (which handles admin-password-reset OTP delivery
     // auto-exemption, etc.) and wiped by the next restart. Now it also
     // persists to the DB via /admin/owner-number, authenticated with this
     // same OWNER_RECOVERY_SECRET (not the admin password — this command
@@ -889,7 +847,7 @@ module.exports.imagine = async ({ sock, from, msg, args }) => {
 // WhatsApp instead. Bot-admin only: this hits a real paid API per call,
 // and file uploads could be abused for spam if opened to everyone.
 module.exports.claude = async ({ sock, from, msg, args, isBotAdmin, apiClient, logActivity, senderJid }) => {
-  if (!isBotAdmin) return; // silent to non-admins, same convention as .extend
+  if (!isBotAdmin) return; // silent to non-admins, silent to non-admins
   const prompt = args.join(' ').trim();
   if (!prompt) return sock.sendMessage(from, { text: '🤖 Usage: .claude [your question or request]\ne.g. .claude write me a Python script that renames files in a folder' }, { quoted: msg });
 
@@ -1223,6 +1181,20 @@ module.exports.maintenance = async ({ sock, from, msg, isOwner, args }) => {
 // Owner only. Hot-reloads all plugin files from disk without restarting the
 // whole process — handy after editing a plugin.js file directly on the
 // server (e.g. via Termux/SSH) without wanting a full redeploy.
+// ── .donate ───────────────────────────────────────────────────────────────
+// Plain tip-jar link, same as the "Buy Me a Coffee" button on the web
+// panel. No wallet, no balance tracking, no admin review queue — this is
+// purely "if you feel like supporting the creator, here's the link."
+module.exports.donate = async ({ sock, from, msg }) => {
+  const link = process.env.PAYPAL_ME_LINK || 'https://paypal.me/henryochieng';
+  await sock.sendMessage(from, {
+    text:
+      `☕ *Support the Creator*\n\n` +
+      `If you're enjoying the bot and feel like buying a coffee, totally optional:\n${link}\n\n` +
+      `No subscriptions, no top-ups, no strings attached — just a thank-you if you want to send one.`
+  }, { quoted: msg });
+};
+
 module.exports.reload = async ({ sock, from, msg, isOwner }) => {
   if (!isOwner) return sock.sendMessage(from, { text: '❌ Owner only!' }, { quoted: msg });
   try {
@@ -1230,7 +1202,7 @@ module.exports.reload = async ({ sock, from, msg, isOwner }) => {
     // 'extended' plus every Delta/Henry plugin, so .reload silently dropped
     // them back to their pre-reload state instead of actually refreshing them.
     const pluginNames = [
-      'general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet',
+      'general', 'group', 'media', 'cypher', 'atassa', 'scheduler',
       'games', 'osint', 'extended',
       'notes', 'groupguard', 'games2', 'texteffects', 'urltools', 'tempmail',
       'sudo', 'settings-ext', 'aichat2', 'sports', 'megabackup', 'overlap-rewrites',

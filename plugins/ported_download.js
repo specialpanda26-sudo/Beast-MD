@@ -434,7 +434,7 @@ Object.assign(module.exports, (() => {
         const chatId = message.key.remoteJid;
         if (!args || args.length === 0) {
             return sock.sendMessage(chatId, {
-                text: '*🌟 Please provide a GitHub URL or username and repository name.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Halloween-MD\n\n.clone specialpanda26-sudo Halloween-MD'
+                text: '*🌟 Please provide a GitHub URL or username and repository name.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Beast-MD\n\n.clone specialpanda26-sudo Beast-MD'
             });
         }
         let url = '';
@@ -456,7 +456,7 @@ Object.assign(module.exports, (() => {
         }
         else {
             return sock.sendMessage(chatId, {
-                text: '*Missing repository info.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Halloween-MD\n\n.clone specialpanda26-sudo Halloween-MD'
+                text: '*Missing repository info.*\n\n*Example usage:*\n\n.clone https://github.com/specialpanda26-sudo/Beast-MD\n\n.clone specialpanda26-sudo Beast-MD'
             });
         }
         await sock.sendMessage(chatId, { text: '⏱️ Preparing repository zip...' });
@@ -515,7 +515,7 @@ Object.assign(module.exports, (() => {
             const link = args[0];
             if (!link) {
                 return await sock.sendMessage(chatId, {
-                    text: `❌ *Missing Link!*\n\nExample: .gitclone2 https://github.com/specialpanda26-sudo/Halloween-MD`
+                    text: `❌ *Missing Link!*\n\nExample: .gitclone2 https://github.com/specialpanda26-sudo/Beast-MD`
                 }, { quoted: message });
             }
             if (!regex.test(link)) {

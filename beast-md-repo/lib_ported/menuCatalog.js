@@ -1,0 +1,216 @@
+// ── menuCatalog.js ───────────────────────────────────────────────────────
+// Builds the FULL command catalog (all ~874 live commands, described) for
+// `.menu` to send as a series of readable follow-up messages, grouped by
+// category with aliases collapsed under their base command. Reads
+// assets/commands-db.json, which scripts/build-command-db.js regenerates
+// from the actual plugin source — so this list never goes stale as long as
+// that script is re-run after adding/removing commands
+// (`node scripts/build-command-db.js`).
+
+const fs = require('fs');
+const path = require('path');
+const { smallCaps, menuBox, boxClose, categoryEmoji } = require('./menuStyle.js');
+
+const DB_PATH = path.join(__dirname, '..', 'assets', 'commands-db.json');
+
+// Categories that should only ever be shown to the relevant permission tier.
+// Everything not listed here is shown to everyone.
+const OWNER_ONLY_CATEGORIES = new Set(['owner', 'sudo', 'megabackup']);
+const BOT_ADMIN_CATEGORIES = new Set(['admin', 'groupguard']);
+
+// Friendlier display names for a few category keys derived from filenames.
+const CATEGORY_LABELS = {
+  ai: 'AI & Chat',
+  aichat2: 'AI & Chat (extra models)',
+  urltools: 'URL / Encode-Decode Tools',
+  'settings ext': 'Settings',
+  games2: 'Games (extra)',
+  osint: 'Lookup / OSINT-lite',
+  groupguard: 'Group Guard',
+  megabackup: 'Session Backup (Mega.nz)',
+};
+
+function label(cat) {
+  return CATEGORY_LABELS[cat] || cat.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function loadCatalog() {
+  if (!fs.existsSync(DB_PATH)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+  } catch (e) {
+    return [];
+  }
+}
+
+// Groups aliases under their base command: {baseCmd: {entry, aliases: [name,...]}}
+function groupAliases(commands) {
+  const byName = new Map(commands.map(c => [c.command, c]));
+  const aliasesOf = new Map(); // base -> [alias names]
+  const standalone = [];
+
+  for (const c of commands) {
+    if (c.quality === 'alias') {
+      const target = c.description.replace(/^Alias for \./, '');
+      if (byName.has(target)) {
+        if (!aliasesOf.has(target)) aliasesOf.set(target, []);
+        aliasesOf.get(target).push(c.command);
+        continue;
+      }
+    }
+    standalone.push(c);
+  }
+
+  return standalone.map(c => ({
+    ...c,
+    aliases: aliasesOf.get(c.command) || [],
+  }));
+}
+
+// Splits an array of pre-rendered category blocks into as FEW messages as
+// possible WITHOUT hitting WhatsApp's real-world truncation point. The
+// protocol technically allows up to ~65,536 chars, but live testing showed
+// WhatsApp silently cuts single text messages off well before that —
+// observed truncation around ~22-24k characters, with everything past that
+// point just vanishing (no error, no warning). 8,000 is used as a safe
+// margin under that observed ceiling. At ~874 commands this means owner
+// view becomes ~4 messages and public view ~3, instead of either 11 tiny
+// ones or 1 that silently loses the back half.
+function chunkBlocks(blocks, maxLen = 8000) {
+  const chunks = [];
+  let current = '';
+  for (const block of blocks) {
+    if (current && (current.length + block.length) > maxLen) {
+      chunks.push(current);
+      current = '';
+    }
+    current += (current ? '\n\n' : '') + block;
+    // A single oversized category block still gets flushed on its own.
+    if (current.length > maxLen) {
+      chunks.push(current);
+      current = '';
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
+
+/**
+ * Returns an array of message strings covering every live command,
+ * filtered to what `perms` allows to see.
+ * @param {{isOwner: boolean, isBotAdmin: boolean}} perms
+ * @param {string} prefix - command prefix, e.g. "."
+ */
+function buildFullCatalogMessages(perms, prefix = '.') {
+  const all = loadCatalog();
+  if (!all.length) return [];
+
+  const visible = all.filter(c => {
+    if (OWNER_ONLY_CATEGORIES.has(c.category)) return perms.isOwner;
+    if (BOT_ADMIN_CATEGORIES.has(c.category)) return perms.isBotAdmin || perms.isOwner;
+    return true;
+  });
+
+  const grouped = groupAliases(visible);
+  const byCategory = new Map();
+  for (const c of grouped) {
+    if (!byCategory.has(c.category)) byCategory.set(c.category, []);
+    byCategory.get(c.category).push(c);
+  }
+
+  const categories = Array.from(byCategory.keys()).sort((a, b) => label(a).localeCompare(label(b)));
+  const blocks = [];
+  let totalShown = 0;
+
+  for (const cat of categories) {
+    const cmds = byCategory.get(cat).sort((a, b) => a.command.localeCompare(b.command));
+    totalShown += cmds.length;
+    const lines = cmds.map(c => {
+      const aliasNote = c.aliases.length ? ` _(aka: ${c.aliases.map(a => prefix + a).join(', ')})_` : '';
+      return `│➽ ${prefix}${c.command} — ${c.description}${aliasNote}`;
+    });
+    blocks.push(`${menuBox(categoryEmoji(cat), label(cat))}\n${lines.join('\n')}\n${boxClose}`);
+  }
+
+  const chunks = chunkBlocks(blocks);
+  const total = chunks.length;
+  return chunks.map((chunk, i) => {
+    const part = total > 1 ? ` (${i + 1}/${total})` : '';
+    return `📚 *${smallCaps('FULL COMMAND CATALOG')}*${part}\n_${totalShown} commands, every one described — this is the complete list behind ${prefix}menu._\n\n${chunk}`;
+  });
+}
+
+// ── Single-message full catalog (Henry wants ONE message, not chunks) ────
+// Same data as buildFullCatalogMessages above, but packed into exactly one
+// string. To make ~415 standalone commands (876 including aliases) fit
+// safely under WhatsApp's observed ~22-24k silent-truncation ceiling:
+//   1. Aliases are collapsed into their base command (not listed at all —
+//      no room for "(aka: ...)" notes in single-message mode).
+//   2. Descriptions are truncated to a character cap that's picked
+//      adaptively: starts generous (35 chars) and automatically shrinks
+//      (25 → 15 → name-only) if the real catalog ever grows enough to
+//      threaten the safe limit. This means it keeps working correctly
+//      even after commands are added later — never silently truncates.
+const SAFE_MESSAGE_LIMIT = 20000; // hard ceiling, well under the observed ~22-24k cutoff
+const DESC_CAP_LADDER = [35, 25, 15, 0]; // 0 = name-only, no description at all
+
+function truncDesc(s, cap) {
+  if (cap <= 0) return '';
+  return s.length <= cap ? s : s.slice(0, cap - 1) + '…';
+}
+
+function renderSingleCatalog(categories, byCategory, prefix, descCap) {
+  const blocks = categories.map(cat => {
+    const cmds = byCategory.get(cat).sort((a, b) => a.command.localeCompare(b.command));
+    const lines = cmds.map(c => {
+      const d = truncDesc(c.description, descCap);
+      return d ? `│➽ ${prefix}${c.command} — ${d}` : `│➽ ${prefix}${c.command}`;
+    });
+    return `${menuBox(categoryEmoji(cat), label(cat))}\n${lines.join('\n')}\n${boxClose}`;
+  });
+  return blocks.join('\n\n');
+}
+
+/**
+ * Returns ONE message string covering every live command the caller can
+ * see, grouped by category, aliases collapsed. Auto-shrinks description
+ * length as needed to guarantee it stays under WhatsApp's real truncation
+ * ceiling no matter how large the catalog grows.
+ * @param {{isOwner: boolean, isBotAdmin: boolean}} perms
+ * @param {string} prefix - command prefix, e.g. "."
+ */
+function buildFullCatalogSingleMessage(perms, prefix = '.') {
+  const all = loadCatalog();
+  if (!all.length) return null;
+
+  const visible = all.filter(c => {
+    if (OWNER_ONLY_CATEGORIES.has(c.category)) return perms.isOwner;
+    if (BOT_ADMIN_CATEGORIES.has(c.category)) return perms.isBotAdmin || perms.isOwner;
+    return true;
+  });
+
+  const grouped = groupAliases(visible);
+  const byCategory = new Map();
+  for (const c of grouped) {
+    if (!byCategory.has(c.category)) byCategory.set(c.category, []);
+    byCategory.get(c.category).push(c);
+  }
+  const categories = Array.from(byCategory.keys()).sort((a, b) => label(a).localeCompare(label(b)));
+
+  let body = '';
+  let usedCap = DESC_CAP_LADDER[0];
+  for (const cap of DESC_CAP_LADDER) {
+    body = renderSingleCatalog(categories, byCategory, prefix, cap);
+    usedCap = cap;
+    const header = `📚 *${smallCaps('FULL COMMAND CATALOG')}* — ${grouped.length} commands (all in one message)\n\n`;
+    const footer = `\n\n> 🔥 Beast MD | ${prefix}menu quick for the short curated view`;
+    if ((header + body + footer).length <= SAFE_MESSAGE_LIMIT) break;
+    // else loop continues with a shorter cap
+  }
+
+  const header = `📚 *${smallCaps('FULL COMMAND CATALOG')}* — ${grouped.length} commands (all in one message)\n\n`;
+  const footer = `\n\n> 🔥 Beast MD | ${prefix}menu quick for the short curated view`;
+  return header + body + footer;
+}
+
+module.exports = { buildFullCatalogMessages, buildFullCatalogSingleMessage, loadCatalog };

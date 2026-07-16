@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generates assets/HalloweenMD-Whats-Fixed.pdf — the plain-language "what was
+Generates assets/BeastMD-Whats-Fixed.pdf — the plain-language "what was
 broken / what was fixed / what it means for you" report, one entry per
 CHANGES.md update. Re-run after adding a new entry to CHANGES.md:
 
@@ -17,7 +17,7 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 
-OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'HalloweenMD-Whats-Fixed.pdf')
+OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'assets', 'BeastMD-Whats-Fixed.pdf')
 
 styles = getSampleStyleSheet()
 title_style = ParagraphStyle('TitleX', parent=styles['Title'], fontSize=17, spaceAfter=2)
@@ -47,7 +47,7 @@ UPDATES = [
          fixed="The update was rebuilt from the real, current version of the bot, so nothing was lost.",
          means="No visible change for you — this was a behind-the-scenes safety fix to avoid losing features."),
     dict(n=4, title="Bot name recognition in groups",
-         broken="In groups, the bot only replied when @mentioned or replied to directly — calling it by name (\u201challoween md, can you help\u201d) did nothing.",
+         broken="In groups, the bot only replied when @mentioned or replied to directly — calling it by name (\u201cbeast md, can you help\u201d) did nothing.",
          fixed="The bot now also responds when called by name, matched carefully so it doesn't misfire on unrelated words like \u201crobot\u201d or \u201cchatbot\u201d.",
          means="You can talk to the bot more naturally in group chats, just by saying its name."),
     dict(n=5, title="Community chat, owner auto-reply, media search, antiban toggle",
@@ -112,12 +112,12 @@ UPDATES = [
          means="The bot is meaningfully safer than before this merge — commands that should have been restricted now actually are, and a few real security holes are closed."),
     dict(n=20, title="Production hardening: secrets, PayPal, more security fixes, phone-friendly cookie uploads, one-message full menu",
          broken="Several third-party API keys were hardcoded directly in the bot's source code instead of kept private. The AI chatbot had no defense against someone tricking it into revealing its setup or secrets. Two admin commands (.getfile and .inspect) had real bugs — one was completely broken and threw an error every time it ran, the other could be tricked into reading the bot's private .env file (which holds every password and API key) and posting it into the chat. There was no way to pay via PayPal. Setting up YouTube downloads required desktop/server access Henry doesn't have on his phone. The full command list (.menu all) arrived as 3-4 separate messages instead of one.",
-         fixed="All hardcoded keys moved to private configuration. The AI chatbot now refuses to reveal secrets, configuration, or its own instructions, even under trick prompts. Both admin command bugs fixed — .getfile works again, and .inspect can no longer read anything outside the plugins folder. PayPal support added: a .paypal command for the payment link, .paypalfunds for wallet top-ups (admin-reviewed, same as M-Pesa), and a \u201cBuy Me a Coffee\u201d button on the website. A new .setcookies command lets the owner upload YouTube login cookies by simply sending the file on WhatsApp — no computer needed. The full command menu was rebuilt to always fit in exactly one message, however large the command list grows.",
+         fixed="All hardcoded keys moved to private configuration. The AI chatbot now refuses to reveal secrets, configuration, or its own instructions, even under trick prompts. Both admin command bugs fixed — .getfile works again, and .inspect can no longer read anything outside the plugins folder. A \u201cBuy Me a Coffee\u201d donate button was added to the website (no wallet, no paid commands — purely optional). A new .setcookies command lets the owner upload YouTube login cookies by simply sending the file on WhatsApp — no computer needed. The full command menu was rebuilt to always fit in exactly one message, however large the command list grows.",
          means="Your data and the bot owner's credentials are meaningfully safer. Customers now have a second, PayPal-based way to pay. YouTube downloads can be kept working entirely from a phone. And .menu all now shows everything in one message instead of several."),
 ]
 
 story = []
-story.append(Paragraph('Halloween MD™', title_style))
+story.append(Paragraph('Beast MD™', title_style))
 story.append(Paragraph('What Was Fixed — Plain-Language Report', subtitle_style))
 story.append(Paragraph(
     "This document explains, in plain language, what was broken in the bot, what was fixed, and what "
@@ -144,14 +144,14 @@ for i, u in enumerate(UPDATES):
 story.append(Spacer(1, 14))
 story.append(Paragraph(
     "Looking for how to use the bot day to day instead of what changed under the hood? See "
-    "HalloweenMD-User-Guide.pdf — both are available for download from the pairing page and are sent "
+    "BeastMD-User-Guide.pdf — both are available for download from the pairing page and are sent "
     "automatically when you message the bot with \u201cpair\u201d.", footer_style
 ))
 
 doc = SimpleDocTemplate(
     OUT_PATH, pagesize=letter,
     topMargin=0.6 * inch, bottomMargin=0.6 * inch, leftMargin=0.6 * inch, rightMargin=0.6 * inch,
-    title="Halloween MD - What Was Fixed", author='Halloween MD'
+    title="Beast MD - What Was Fixed", author='Beast MD'
 )
 doc.build(story)
 print(f"✅ Wrote {OUT_PATH}")
