@@ -88,7 +88,6 @@ ${menuBox('👑', 'OWNER ONLY', '(you only, Henry)')}
 │➽ ${p}removecoowner [n] — Remove co-owner
 │➽ ${p}listcoowners — List co-owners
 │➽ ${p}settier [num] [subadmin|coowner] — Assign any number to any tier (auto-notifies them)
-│➽ ${p}setprice <text> — Update what .pricing shows customers
 │➽ ${p}announce [message] — Broadcast a message to every bot contact
 │➽ ${p}checkblocked [num] — Heuristic check if a number has blocked the bot
 │➽ ${p}welcome [num] — Send welcome card
@@ -384,16 +383,14 @@ ${boxClose}
 
   // ── .register ─────────────────────────────────────────────────────────────
   // Sends the user a link to the web registration panel where they verify
-  // their WhatsApp number via OTP and unlock starter credits + a trust badge.
+  // their WhatsApp number via OTP and unlock a trust badge.
   register: async ({ sock, from, msg }) => {
     const publicUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || `http://localhost:${process.env.WEB_PORT || 3000}`;
     await sock.sendMessage(from, {
       text: `🌟 *Register on the Beast MD Web Panel*\n\n` +
             `Verify your number to unlock:\n` +
-            `✅ Free starter credits\n` +
             `✅ A trust badge on your profile\n\n` +
-            `👉 ${publicUrl}/register\n\n` +
-            `💡 Already verified? Send *.referral* to get your own invite link and earn kesh for every friend who signs up.`
+            `👉 ${publicUrl}/register`
     }, { quoted: msg });
   },
 

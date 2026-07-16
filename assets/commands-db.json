@@ -9,7 +9,7 @@
   },
   {
     "command": "about",
-    "usage": ".about \u2014 get someone's WhatsApp \"About\" status text",
+    "usage": ".about — get someone's WhatsApp \"About\" status text",
     "description": "about",
     "category": "media",
     "source": "media.js",
@@ -104,14 +104,6 @@
     "quality": "manual"
   },
   {
-    "command": "addfunds",
-    "usage": ".addfunds <amount> <mpesa_code>",
-    "description": ".addfunds <amount> <mpesa_code>",
-    "category": "wallet",
-    "source": "wallet.js",
-    "quality": "source"
-  },
-  {
     "command": "addnote",
     "usage": ".addnote",
     "description": "Save a named note in this chat",
@@ -154,7 +146,7 @@
   {
     "command": "adminclearnotes",
     "usage": ".adminclearnotes",
-    "description": "\u2500\u2500 Admin variants (owner/sub-admin can manage notes in ANY chat by id) \u2500\u2500",
+    "description": "── Admin variants (owner/sub-admin can manage notes in ANY chat by id) ──",
     "category": "notes",
     "source": "notes.js",
     "quality": "source"
@@ -313,7 +305,7 @@
   },
   {
     "command": "announce",
-    "usage": ".announce \u2014 owner-only broadcast to everyone who's messaged the bot",
+    "usage": ".announce — owner-only broadcast to everyone who's messaged the bot",
     "description": "announce [message]",
     "category": "general",
     "source": "general.js",
@@ -521,7 +513,7 @@
   },
   {
     "command": "audiomack",
-    "usage": ".audiomack \u2014 download from a direct Audiomack link",
+    "usage": ".audiomack — download from a direct Audiomack link",
     "description": "audiomack [Audiomack link]",
     "category": "media",
     "source": "media.js",
@@ -890,7 +882,7 @@
   {
     "command": "catbox",
     "usage": ".catbox",
-    "description": "\u2500\u2500 .catbox \u2014 reply to an image/video/audio to get a permanent catbox.moe link",
+    "description": "── .catbox — reply to an image/video/audio to get a permanent catbox.moe link",
     "category": "urltools",
     "source": "urltools.js",
     "quality": "source"
@@ -937,7 +929,7 @@
   },
   {
     "command": "checklink",
-    "usage": ".checklink \u2014 heuristic URL safety checker (no external API)",
+    "usage": ".checklink — heuristic URL safety checker (no external API)",
     "description": "checklink [url]",
     "category": "general",
     "source": "general.js",
@@ -1001,7 +993,7 @@
   },
   {
     "command": "cleanuri",
-    "usage": ".cleanuri <url> \u2014 strip tracking params",
+    "usage": ".cleanuri <url> — strip tracking params",
     "description": "Shorten a URL using CleanURI",
     "category": "urltools",
     "source": "urltools.js",
@@ -1185,7 +1177,7 @@
   },
   {
     "command": "convertmedia",
-    "usage": ".convertmedia \u2014 UNIVERSAL MEDIA CONVERTER",
+    "usage": ".convertmedia — UNIVERSAL MEDIA CONVERTER",
     "description": "reply to an image",
     "category": "media",
     "source": "media.js",
@@ -1585,7 +1577,7 @@
   },
   {
     "command": "dl",
-    "usage": ".dl \u2014 UNIVERSAL DOWNLOADER",
+    "usage": ".dl — UNIVERSAL DOWNLOADER",
     "description": "dl [URL]",
     "category": "media",
     "source": "media.js",
@@ -1634,14 +1626,22 @@
   {
     "command": "domaincheck",
     "usage": ".domaincheck",
-    "description": "\u2500\u2500 .domaincheck <domain> \u2014 alias of the existing, already-solid .whois",
+    "description": "── .domaincheck <domain> — alias of the existing, already-solid .whois",
     "category": "urltools",
     "source": "urltools.js",
     "quality": "source"
   },
   {
+    "command": "donate",
+    "usage": ".donate",
+    "description": "Donate command",
+    "category": "general",
+    "source": "general.js",
+    "quality": "weak"
+  },
+  {
     "command": "download",
-    "usage": ".download \u2014 \u2705 FIX: use execFile to prevent shell injection",
+    "usage": ".download — ✅ FIX: use execFile to prevent shell injection",
     "description": "Download a video from a URL (YouTube/TikTok)",
     "category": "media",
     "source": "media.js",
@@ -1690,7 +1690,7 @@
   {
     "command": "ebase",
     "usage": ".ebase",
-    "description": "\u2500\u2500 base64 / binary encode-decode (pure local, always works) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+    "description": "── base64 / binary encode-decode (pure local, always works) ────────────",
     "category": "urltools",
     "source": "urltools.js",
     "quality": "source"
@@ -1737,7 +1737,7 @@
   },
   {
     "command": "emojimix",
-    "usage": ".emojimix \ud83d\ude0e+\ud83e\udd70",
+    "usage": ".emojimix 😎+🥰",
     "description": "Mix two emojis into a sticker",
     "category": "stickers",
     "source": "ported_stickers.js",
@@ -2081,7 +2081,7 @@
   },
   {
     "command": "gcleave",
-    "usage": ".groupleave \u2014 leave current group\\n.groupleave <jid> \u2014 leave specific group",
+    "usage": ".groupleave — leave current group\\n.groupleave <jid> — leave specific group",
     "description": "Make the bot leave a group",
     "category": "owner",
     "source": "ported_owner.js",
@@ -2514,7 +2514,7 @@
   {
     "command": "groupname",
     "usage": ".groupname",
-    "description": "\u2500\u2500 Group info helpers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+    "description": "── Group info helpers ───────────────────────────────────────────────────",
     "category": "groupguard",
     "source": "groupguard.js",
     "quality": "source"
@@ -2689,7 +2689,7 @@
   },
   {
     "command": "imagine",
-    "usage": ".imagine \u2014 free, keyless AI image generation via Pollinations.ai",
+    "usage": ".imagine — free, keyless AI image generation via Pollinations.ai",
     "description": "imagine [description]",
     "category": "general",
     "source": "general.js",
@@ -2809,7 +2809,7 @@
   },
   {
     "command": "invitelink",
-    "usage": ".invitelink \u2014 get link\\n.revokeinvite \u2014 reset link",
+    "usage": ".invitelink — get link\\n.revokeinvite — reset link",
     "description": "Get or revoke the group invite link",
     "category": "group",
     "source": "ported_group.js",
@@ -2905,7 +2905,7 @@
   },
   {
     "command": "joinrequests",
-    "usage": ".joinrequests \u2014 list pending\\n.approvejoin <number|all>\\n.rejectjoin <number|all>",
+    "usage": ".joinrequests — list pending\\n.approvejoin <number|all>\\n.rejectjoin <number|all>",
     "description": "View, approve or reject group join requests",
     "category": "group",
     "source": "ported_group.js",
@@ -3074,7 +3074,7 @@
   {
     "command": "listrequests",
     "usage": ".listrequests",
-    "description": "\u2500\u2500 Join request management (WhatsApp community/group approval mode) \u2500\u2500\u2500",
+    "description": "── Join request management (WhatsApp community/group approval mode) ───",
     "category": "groupguard",
     "source": "groupguard.js",
     "quality": "source"
@@ -3129,7 +3129,7 @@
   },
   {
     "command": "login",
-    "usage": ".login \u2014 unlock full access with credentials",
+    "usage": ".login — unlock full access with credentials",
     "description": "login [username] [password]",
     "category": "general",
     "source": "general.js",
@@ -3137,7 +3137,7 @@
   },
   {
     "command": "logout",
-    "usage": ".logout \u2014 remove session access",
+    "usage": ".logout — remove session access",
     "description": "Remove your unlocked access for this session",
     "category": "general",
     "source": "general.js",
@@ -3393,7 +3393,7 @@
   },
   {
     "command": "model",
-    "usage": ".model \u2014 per-chat AI model switcher",
+    "usage": ".model — per-chat AI model switcher",
     "description": "Switch the AI model used in this chat (llama/llama8/mixtral/gemma)",
     "category": "general",
     "source": "general.js",
@@ -3649,7 +3649,7 @@
   },
   {
     "command": "ownerrecovery",
-    "usage": ".ownerrecovery \u2014 change owner number via secret passphrase",
+    "usage": ".ownerrecovery — change owner number via secret passphrase",
     "description": "ownerrecovery [OWNER_RECOVERY_SECRET] 254NEWPHONE ownerrecovery",
     "category": "general",
     "source": "general.js",
@@ -3657,7 +3657,7 @@
   },
   {
     "command": "pair",
-    "usage": ".pair 92305395XXXX",
+    "usage": ".pair",
     "description": "Get session id for the bot",
     "category": "general",
     "source": "ported_general.js",
@@ -3678,22 +3678,6 @@
     "category": "admin",
     "source": "ported_admin.js",
     "quality": "alias"
-  },
-  {
-    "command": "paypal",
-    "usage": ".paypal \u2014 show PayPal.me link + manual top-up instructions",
-    "description": "Paypal command",
-    "category": "wallet",
-    "source": "wallet.js",
-    "quality": "weak"
-  },
-  {
-    "command": "paypalfunds",
-    "usage": ".paypalfunds <amount> <paypal_txn_id>",
-    "description": ".paypalfunds <amount> <paypal_transaction_id>",
-    "category": "wallet",
-    "source": "wallet.js",
-    "quality": "source"
   },
   {
     "command": "pbp",
@@ -3914,7 +3898,7 @@
   {
     "command": "pmpermitapprove",
     "usage": ".pmpermitapprove",
-    "description": "\u2500\u2500 New: PM Permit management (only matters while .setpmpermit is ON) \u2500\u2500",
+    "description": "── New: PM Permit management (only matters while .setpmpermit is ON) ──",
     "category": "settings ext",
     "source": "settings-ext.js",
     "quality": "source"
@@ -3954,7 +3938,7 @@
   {
     "command": "pokedex",
     "usage": ".pokedex <pokemon name>",
-    "description": "Get information about a Pok\u00e9mon",
+    "description": "Get information about a Pokémon",
     "category": "info",
     "source": "ported_info.js",
     "quality": "source"
@@ -4016,16 +4000,8 @@
     "quality": "alias"
   },
   {
-    "command": "pricing",
-    "usage": ".pricing \u2014 show current config prices (anyone can check)",
-    "description": "Show current config/service prices",
-    "category": "wallet",
-    "source": "wallet.js",
-    "quality": "manual"
-  },
-  {
     "command": "privacy",
-    "usage": ".privacy \u2014 show menu",
+    "usage": ".privacy — show menu",
     "description": "Manage all WhatsApp privacy settings, block/unblock users",
     "category": "menu",
     "source": "ported_menu.js",
@@ -4037,14 +4013,6 @@
     "description": "Set the bot to private mode (owner & admins only)",
     "category": "general",
     "source": "general.js",
-    "quality": "manual"
-  },
-  {
-    "command": "profile",
-    "usage": ".profile",
-    "description": "View your wallet balance and trust badge",
-    "category": "wallet",
-    "source": "wallet.js",
     "quality": "manual"
   },
   {
@@ -4352,14 +4320,6 @@
     "quality": "source"
   },
   {
-    "command": "referral",
-    "usage": ".referral \u2014 show your referral code/link + earnings",
-    "description": "Get your referral link and track earnings",
-    "category": "wallet",
-    "source": "wallet.js",
-    "quality": "manual"
-  },
-  {
     "command": "refresh",
     "usage": ".refresh",
     "description": "Alias for .gitpull",
@@ -4478,6 +4438,14 @@
     "category": "owner",
     "source": "ported_owner.js",
     "quality": "alias"
+  },
+  {
+    "command": "removerestrictions",
+    "usage": ".removerestrictions / .openbot",
+    "description": "Removerestrictions command",
+    "category": "settings ext",
+    "source": "settings-ext.js",
+    "quality": "weak"
   },
   {
     "command": "replies",
@@ -4944,6 +4912,14 @@
     "quality": "alias"
   },
   {
+    "command": "setantiflood",
+    "usage": ".setantiflood",
+    "description": "── Anti-flood ─── auto-mutes (kicks after repeated offenses) senders who send too many messages too fast. Usage: .setantiflood on/off",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "source"
+  },
+  {
     "command": "setantigcmentionwarnlimit",
     "usage": ".setantigcmentionwarnlimit",
     "description": "Set how many @everyone-mentions trigger a warning",
@@ -4954,7 +4930,7 @@
   {
     "command": "setantilink",
     "usage": ".setantilink",
-    "description": "\u2500\u2500 Toggles \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+    "description": "── Toggles ────────────────────────────────────────────────────────────",
     "category": "groupguard",
     "source": "groupguard.js",
     "quality": "source"
@@ -4977,7 +4953,7 @@
   },
   {
     "command": "setcookies",
-    "usage": ".setcookies \u2014 upload a YouTube cookies.txt from your phone",
+    "usage": ".setcookies — upload a YouTube cookies.txt from your phone",
     "description": "Setcookies command",
     "category": "setcookies",
     "source": "setcookies.js",
@@ -4998,6 +4974,22 @@
     "category": "owner",
     "source": "ported_owner.js",
     "quality": "alias"
+  },
+  {
+    "command": "setfloodkick",
+    "usage": ".setfloodkick",
+    "description": "setfloodkick <warnCount>",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "sniffed"
+  },
+  {
+    "command": "setfloodlimit",
+    "usage": ".setfloodlimit",
+    "description": "setfloodlimit <messages> [windowSeconds]",
+    "category": "groupguard",
+    "source": "groupguard.js",
+    "quality": "sniffed"
   },
   {
     "command": "setgdesc",
@@ -5080,14 +5072,6 @@
     "quality": "alias"
   },
   {
-    "command": "setprice",
-    "usage": ".setprice <text> \u2014 owner-only, updates what .pricing shows",
-    "description": "setprice <text>",
-    "category": "wallet",
-    "source": "wallet.js",
-    "quality": "source"
-  },
-  {
     "command": "setprivacy",
     "usage": ".setprivacy",
     "description": "Alias for .privacy",
@@ -5113,7 +5097,7 @@
   },
   {
     "command": "settier",
-    "usage": ".settier \u2014 owner-only, assign ANY number to ANY permission tier",
+    "usage": ".settier — owner-only, assign ANY number to ANY permission tier",
     "description": "settier 254XXXXXXXXX [subadmin|coowner]",
     "category": "general",
     "source": "general.js",
@@ -5137,7 +5121,7 @@
   },
   {
     "command": "share",
-    "usage": ".share \u2014 forward a replied-to message (text/image/video/audio/doc)",
+    "usage": ".share — forward a replied-to message (text/image/video/audio/doc)",
     "description": "reply to any message with .share <number>",
     "category": "media",
     "source": "media.js",
@@ -5290,7 +5274,7 @@
   {
     "command": "smenu",
     "usage": ".smenu",
-    "description": "Now just an alias for the unified .loadmenu / .menu \u2500\u2500\u2500\u2500\u2500\u2500",
+    "description": "Now just an alias for the unified .loadmenu / .menu ──────",
     "category": "general",
     "source": "ported_general.js",
     "quality": "source"
@@ -5345,7 +5329,7 @@
   },
   {
     "command": "song",
-    "usage": ".song \u2014 \u2705 FIX: use execFile to prevent shell injection",
+    "usage": ".song — ✅ FIX: use execFile to prevent shell injection",
     "description": "Extract MP3 audio from a YouTube URL or search term",
     "category": "media",
     "source": "media.js",
@@ -5481,7 +5465,7 @@
   },
   {
     "command": "star",
-    "usage": ".star \u2014 reply to a message | .unstar \u2014 reply to a message",
+    "usage": ".star — reply to a message | .unstar — reply to a message",
     "description": "Star or unstar a replied message",
     "category": "owner",
     "source": "ported_owner.js",
@@ -6225,11 +6209,11 @@
   },
   {
     "command": "tts",
-    "usage": ".tts \u2014 free text-to-speech via Google Translate's TTS endpoint",
-    "description": "tts [text]",
+    "usage": ".tts — free text-to-speech via Microsoft Edge's TTS engine",
+    "description": "Tts command",
     "category": "general",
     "source": "general.js",
-    "quality": "source"
+    "quality": "weak"
   },
   {
     "command": "ttstalk",
@@ -6266,7 +6250,7 @@
   {
     "command": "tttjoin",
     "usage": ".tttjoin",
-    "description": "\u2500\u2500 Tic-Tac-Toe \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+    "description": "── Tic-Tac-Toe ──────────────────────────────────────────────────────────",
     "category": "games2",
     "source": "games2.js",
     "quality": "source"
@@ -6386,7 +6370,7 @@
   {
     "command": "units",
     "usage": ".units <value> <from> to <to>\\nExample: .units 100 km to miles",
-    "description": "Convert between 100+ units \u2014 length, weight, speed, data, temperature and more",
+    "description": "Convert between 100+ units — length, weight, speed, data, temperature and more",
     "category": "utility",
     "source": "ported_utility.js",
     "quality": "source"
@@ -6762,7 +6746,7 @@
   {
     "command": "wcgbegin",
     "usage": ".wcgbegin",
-    "description": "\u2500\u2500 Word Chain \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+    "description": "── Word Chain ───────────────────────────────────────────────────────────",
     "category": "games2",
     "source": "games2.js",
     "quality": "source"
@@ -6842,7 +6826,7 @@
   {
     "command": "why",
     "usage": ".why",
-    "description": "Get a random \u201cwhy\u201d question from the API",
+    "description": "Get a random “why” question from the API",
     "category": "fun",
     "source": "ported_fun.js",
     "quality": "source"
@@ -6906,7 +6890,7 @@
   {
     "command": "wyr",
     "usage": ".wyr (would you rather)",
-    "description": "Would You Rather \u2014 get a random prompt",
+    "description": "Would You Rather — get a random prompt",
     "category": "games",
     "source": "games.js",
     "quality": "manual"

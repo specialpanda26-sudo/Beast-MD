@@ -873,17 +873,6 @@ async def landing_page():
                 r'<a href="https://wa\.me/\{\{PUBLIC_CONTACT_NUMBER\}\}"[^>]*id="contact-whatsapp-btn"[^>]*>.*?</a>',
                 "", html_text, flags=_re.DOTALL
             )
-        # ☕ Buy Me a Coffee — defaults to Henry's own paypal.me, override via
-        # PAYPAL_ME_LINK if you ever want a different link (e.g. a real
-        # PayPal.Me business page, or swap to Buy Me a Coffee / Ko-fi later).
-        paypal_link = os.environ.get("PAYPAL_ME_LINK", "https://paypal.me/henryochieng")
-        if paypal_link:
-            html_text = html_text.replace("{{PAYPAL_ME_LINK}}", paypal_link)
-        else:
-            html_text = _re.sub(
-                r'<a href="\{\{PAYPAL_ME_LINK\}\}"[^>]*id="buy-coffee-btn"[^>]*>.*?</a>',
-                "", html_text, flags=_re.DOTALL
-            )
         return Response(html_text, mimetype="text/html", headers=NO_CACHE_HEADERS)
     return jsonify({"status": "ok"})
 
