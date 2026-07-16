@@ -313,7 +313,16 @@
     <!-- SITE MUSIC -->
     <div class="pane" id="pane-sitemusic">
       <h1>Site Music</h1>
-      <div class="head-sub">Upload as many tracks as you like — visitors get a playlist on the public website. Browsers block autoplay with sound, so it starts muted and turns on with the visitor's first tap.</div>
+      <div class="head-sub">Upload tracks, or search YouTube and add one straight to the playlist — visitors get a playlist on the public website. Browsers block autoplay with sound, so it starts muted and turns on with the visitor's first tap.</div>
+
+      <div class="toolbar">
+        <input type="text" id="sitemusic-search-q" placeholder="Search a song or artist..." style="flex:1;min-width:160px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--bone);font-size:14px;">
+        <button class="btn" id="sitemusic-search-btn">Search</button>
+      </div>
+      <div id="sitemusic-search-status" style="color:var(--ash);font-size:13px;margin-bottom:8px;"></div>
+      <div id="sitemusic-search-results" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+
+      <div class="head-sub" style="margin-top:6px;">Or upload a file directly:</div>
       <div class="toolbar">
         <input type="file" id="sitemusic-file" accept="audio/mpeg,audio/ogg,audio/wav,audio/mp4,.mp3,.ogg,.wav,.m4a">
         <input type="text" id="sitemusic-title" placeholder="Track title (optional)" style="flex:1;min-width:160px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--bone);font-size:14px;">
@@ -697,6 +706,10 @@
   };
 
   // ===== FEATURES =====
+  function prettyFeatureName(name){
+    if(name.startsWith('cat_')) return name.slice(4).split('_').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ') + ' (module)';
+    return name.split('_').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  }
   async function loadFeatures(){
     const res = await fetch('/admin/features', { headers: authHeaders() });
     const data = await res.json();
@@ -706,7 +719,7 @@
       body.innerHTML = '<tr class="empty-row"><td colspan="2">No features configured yet.</td></tr>'; return;
     }
     data.features.forEach(f => {
-      body.innerHTML += `<tr><td>${esc(f.name)}</td><td><input type="checkbox" ${f.enabled?'checked':''} onchange="toggleFeature('${esc(f.name)}', this.checked)"></td></tr>`;
+      body.innerHTML += `<tr><td>${esc(prettyFeatureName(f.name))}</td><td><input type="checkbox" ${f.enabled?'checked':''} onchange="toggleFeature('${esc(f.name)}', this.checked)"></td></tr>`;
     });
   }
   window.toggleFeature = async function(name, enabled){
@@ -839,6 +852,46 @@
     const data = await res.json();
     if(data.success){ toast('Track added to playlist.', true); fileInput.value = ''; titleInput.value = ''; loadSiteMusic(); }
     else toast(data.error || 'Upload failed.', false);
+  });
+
+  // ── Search YouTube and add a result straight to the playlist ──────────
+  // Downloads server-side (via /admin/site-music/add-from-search) so the
+  // track plays reliably for every visitor with no expiring stream links.
+  document.getElementById('sitemusic-search-btn').addEventListener('click', async () => {
+    const q = document.getElementById('sitemusic-search-q').value.trim();
+    const status = document.getElementById('sitemusic-search-status');
+    const results = document.getElementById('sitemusic-search-results');
+    results.innerHTML = '';
+    if(!q) return toast('Type a song name first.', false);
+    status.textContent = 'Searching…';
+    try {
+      const res = await fetch('/admin/site-music/search', { method:'POST', headers: authHeaders(), body: JSON.stringify({ query: q }) });
+      const data = await res.json();
+      if(!data.success){ status.textContent = data.error || 'No results.'; return; }
+      status.textContent = `${data.results.length} result(s):`;
+      results.innerHTML = data.results.map((r, i) => {
+        const mins = r.duration ? Math.floor(r.duration/60) + ':' + String(Math.floor(r.duration%60)).padStart(2,'0') : '';
+        return `<div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;">
+          <span style="flex:1;font-size:14px;">${escapeHtml(r.title)}<br><span style="color:var(--ash);font-size:12px;">${escapeHtml(r.uploader||'')}${mins?' • '+mins:''}</span></span>
+          <button class="btn btn-ghost btn-sm add-search-result-btn" data-idx="${i}">Add to Playlist</button>
+        </div>`;
+      }).join('');
+      results.querySelectorAll('.add-search-result-btn').forEach(btn => btn.addEventListener('click', async () => {
+        const r = data.results[+btn.dataset.idx];
+        btn.disabled = true; btn.textContent = 'Downloading…';
+        try {
+          const addRes = await fetch('/admin/site-music/add-from-search', {
+            method:'POST', headers: authHeaders(),
+            body: JSON.stringify({ url: r.url, title: r.title })
+          });
+          const addData = await addRes.json();
+          if(addData.success){ toast('Added to homepage playlist.', true); btn.textContent = '✔ Added'; loadSiteMusic(); }
+          else { toast(addData.error || 'Failed to add.', false); btn.disabled = false; btn.textContent = 'Add to Playlist'; }
+        } catch(e) { toast('Network error.', false); btn.disabled = false; btn.textContent = 'Add to Playlist'; }
+      }));
+    } catch(e) {
+      status.textContent = 'Network error — try again.';
+    }
   });
   document.getElementById('sitemusic-toggle-btn').addEventListener('click', async () => {
     const res = await fetch('/admin/site-music', { method:'POST', headers: authHeaders(), body: JSON.stringify({ enabled: !siteMusicEnabled }) });

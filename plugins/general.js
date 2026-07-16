@@ -206,6 +206,7 @@ ${menuBox('📥', 'MEDIA COMMANDS')}
 │➽ ${p}song [url] — Extract MP3 audio
 │➽ ${p}dl [url] (audio) — 🌐 Universal downloader (YT/TikTok/IG/FB/X/SoundCloud+)
 │➽ ${p}convertmedia [fmt] — 🔄 Universal media converter (reply to img/video/audio)
+│➽ ${p}toaudio — 🎧 Extract audio from a video (reply, or send with caption)
 ${boxClose}
 ${effectiveIsBotAdmin ? `
 ${menuBox('🛡️', 'ADMIN COMMANDS')}
@@ -296,6 +297,15 @@ ${boxClose}
 
     // Send menu with profile photo as thumbnail
     const fs = require('fs');
+    // ── .menu quick / .menu fast / .menu all / .menu full ──────────────────
+    // ✅ FIX (per request): plain .menu was sending the curated command list
+    // as the image caption AND the full 900-command catalog as a follow-up
+    // — same commands listed twice in two different formats. Now the
+    // default (.menu) sends the media with a short caption + the full
+    // catalog ONCE, right after. ".menu quick" is unchanged: the original
+    // curated caption, full catalog skipped.
+    const wantsQuickOnly = args && args[0] && ['quick', 'fast', 'short'].includes(args[0].toLowerCase());
+    const wantsFull = !wantsQuickOnly;
     // ── Admin-panel-editable menu media + caption ──────────────────────────
     // Reads data/menu-settings.json (written by /admin/menu-settings and
     // /admin/menu-media/upload in app.py). Falls back to the original
@@ -315,7 +325,11 @@ ${boxClose}
         if (typeof ms.caption === 'string' && ms.caption.trim()) menuCustomCaption = ms.caption.trim();
       }
     } catch (_) { /* fall back to defaults above */ }
-    const menuCaption = menuCustomCaption || menu;
+    // ✅ FIX: only use the long curated command list as the caption when the
+    // full catalog ISN'T also being sent (.menu quick) — otherwise use a
+    // short header so the ${liveCommandCount} commands appear exactly once.
+    const shortCaption = `> 🔥 *Beast MD* — ${liveCommandCount} commands loaded\nSending the full list now… 👇`;
+    const menuCaption = menuCustomCaption || (wantsFull ? shortCaption : menu);
     try {
       const mediaBuffer = fs.readFileSync(menuImagePath);
       const payload = menuMediaType === 'video'
@@ -351,17 +365,8 @@ ${boxClose}
     // catalog of every live command (874+, auto-generated + hand-described,
     // see assets/commands-db.json + scripts/build-command-db.js) as a
     // series of readable follow-up messages, grouped by category, aliases
-    // collapsed under their base command. Left off by default so a plain
-    // .menu stays the fast, curated view above; ".menu all" is the
-    // comprehensive one, gated to what the caller's permission tier can see.
-    // ── .menu quick / .menu fast ─────────────────────────────────────────
-    // Plain ".menu" now sends the FULL catalog by default (every one of the
-    // 874 live commands, described — see assets/commands-db.json +
-    // scripts/build-command-db.js). ".menu quick" skips that and gives you
-    // just the fast curated view above, same as the old default — kept
-    // rather than removed, per the "never remove, only add" rule.
-    const wantsQuickOnly = args && args[0] && ['quick', 'fast', 'short'].includes(args[0].toLowerCase());
-    const wantsFull = !wantsQuickOnly;
+    // collapsed under their base command. ".menu quick" gives the fast
+    // curated view only, above, and skips this.
     if (wantsFull) {
       try {
         const { buildFullCatalogSingleMessage } = require('../lib_ported/menuCatalog.js');

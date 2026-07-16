@@ -595,6 +595,28 @@ async def init_db():
                 "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
                 (default_feature,)
             )
+        # ✅ NEW: one toggle per plugin category (Games, Music, Stickers,
+        # Downloader, etc.) so the Admin Panel → Features tab reflects the
+        # bot's real ~40-plugin surface instead of just the 6 generic
+        # switches above. Enforced in client_bridge.js's dispatcher via
+        # CATEGORY_FEATURE_SLUG + isFeatureOn(). All default ON so nothing
+        # changes for anyone until the owner deliberately flips one off.
+        # Admin/Owner/Sudo commands are intentionally NOT included here —
+        # they stay always-on to avoid an accidental self-lockout.
+        for category_feature in (
+            "cat_general", "cat_group", "cat_group_guard", "cat_media",
+            "cat_ai_fun", "cat_utility", "cat_games", "cat_osint",
+            "cat_group_intel", "cat_notes", "cat_text_effects", "cat_url_tools",
+            "cat_temp_mail", "cat_settings", "cat_aichat_persona", "cat_sports",
+            "cat_backup", "cat_scheduling", "cat_ai_images_video", "cat_downloader",
+            "cat_fun", "cat_images", "cat_info", "cat_audio_text_tools",
+            "cat_music", "cat_quotes", "cat_search", "cat_stalk_lookup",
+            "cat_stickers", "cat_tools", "cat_upload", "cat_misc",
+        ):
+            await db.execute(
+                "INSERT OR IGNORE INTO features (name, enabled) VALUES (?, 1)",
+                (category_feature,)
+            )
         # ✅ NEW: owner-controllable switch for ban-recovery behavior (was a
         # hardcoded env var, ANTIBAN_NOTIFY_ONLY, that silently let sends
         # through during a WA ban-recovery pause). Defaults OFF — i.e. the
@@ -4343,6 +4365,84 @@ async def public_site_music():
             for t in tracks
         ],
     })
+
+
+@app.route("/admin/site-music/search", methods=["POST"])
+async def admin_site_music_search():
+    """Admin-only: search YouTube for a track (same engine as the public
+    .song command / song-search widget) so a track can be added to the
+    homepage playlist without needing an mp3 file on hand first."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    query = (data.get("query") or "").strip()[:150]
+    if not query:
+        return jsonify({"success": False, "error": "Enter a song name to search."}), 400
+    try:
+        results = await search_songs(query, limit=6)
+        if not results:
+            return jsonify({"success": False, "error": f"No results found for \"{query}\"."}), 404
+        return jsonify({"success": True, "results": results})
+    except Exception:
+        return jsonify({"success": False, "error": "Search failed — try again."}), 502
+
+
+async def _download_audio_to_file(url: str, dest: Path) -> dict:
+    """Downloads and transcodes a track to mp3 at `dest`, sharing the same
+    hardened client/cookie/PO-token yt-dlp setup as the rest of the audio
+    pipeline (see _ytdlp_base_args / _ytdlp_extract's bot-check retry)."""
+    base_args = _ytdlp_base_args()
+
+    async def _attempt(extra_args):
+        proc = await asyncio.create_subprocess_exec(
+            "yt-dlp", "-x", "--audio-format", "mp3", "--no-playlist", "-o", str(dest),
+            *extra_args, "--no-warnings", url,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=90)
+        return proc.returncode, stderr.decode(errors="ignore")[:300]
+
+    returncode, err = await _attempt(base_args)
+    if returncode != 0 and ("Sign in to confirm" in err or "not a bot" in err):
+        retry_args = ["--extractor-args", "youtube:player_client=ios"]
+        if _POT_PROVIDER_ENABLED:
+            retry_args += ["--extractor-args", f"youtubepot-bgutilhttp:base_url=http://127.0.0.1:{_POT_PROVIDER_PORT}"]
+        if _YTDLP_COOKIES_FILE and os.path.isfile(_YTDLP_COOKIES_FILE):
+            retry_args += ["--cookies", _YTDLP_COOKIES_FILE]
+        returncode, err = await _attempt(retry_args)
+
+    if returncode != 0 or not dest.exists():
+        return {"success": False, "error": err or "Download failed."}
+    return {"success": True}
+
+
+@app.route("/admin/site-music/add-from-search", methods=["POST"])
+async def admin_site_music_add_from_search():
+    """Admin-only: takes a chosen search result's YouTube url + title,
+    downloads the full track server-side (so it plays reliably for every
+    visitor with no expiring links), and adds it to the homepage playlist —
+    same track-list format/behavior as a manual file upload."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    title = (data.get("title") or "").strip()[:120]
+    if not url or ("youtube.com" not in url and "youtu.be" not in url):
+        return jsonify({"success": False, "error": "Pick a track from the search results first."}), 400
+
+    SITE_MUSIC_DIR.mkdir(parents=True, exist_ok=True)
+    track_id = uuid.uuid4().hex[:12]
+    dest = SITE_MUSIC_DIR / f"{track_id}.mp3"
+
+    result = await _download_audio_to_file(url, dest)
+    if not result.get("success"):
+        return jsonify({"success": False, "error": "Couldn't fetch that track right now — try another result."}), 502
+
+    settings = _load_site_music_settings()
+    settings["tracks"].append({"id": track_id, "filename": dest.name, "title": title or "Untitled"})
+    settings["enabled"] = True
+    _save_site_music_settings(settings)
+    return jsonify({"success": True, "settings": settings})
 
 
 async def search_songs(query: str, limit: int = 5) -> list:

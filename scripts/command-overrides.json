@@ -121,5 +121,6 @@
   "wcgend": "End the active Word Chain game",
   "wcgjoin": "Join the running Word Chain game",
   "wcgscores": "Show current Word Chain leaderboard for this chat",
-  "wyr": "Would You Rather — get a random prompt"
+  "wyr": "Would You Rather — get a random prompt",
+  "toaudio": "Reply to a video (or send one with this as the caption) to extract just its audio track as an MP3"
 }

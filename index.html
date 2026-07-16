@@ -296,6 +296,10 @@
     <a href="#features">Features</a>
     <a href="#trust">Reliability</a>
     <a href="pair.html">Pairing</a>
+    <a href="register.html">Register</a>
+    <a href="panel.html">My Panel</a>
+    <a href="console.html">Console</a>
+    <a href="chat.html">Community Chat</a>
   </nav>
   <a href="pair.html" class="btn btn-primary btn-sm">Pair Now</a>
   <div class="scroll-progress" id="scrollProgress"></div>
@@ -608,6 +612,7 @@
     <div class="tool-card tilt-3d" data-tool="slug"><div class="tool-icon">-</div><div class="tool-label">Slug Gen</div></div>
     <div class="tool-card tilt-3d" data-tool="diff"><div class="tool-icon">Δ</div><div class="tool-label">Text Diff</div></div>
     <div class="tool-card tilt-3d" data-tool="ascii"><div class="tool-icon">Aa</div><div class="tool-label">ASCII Table</div></div>
+    <div class="tool-card tilt-3d" data-tool="devicescan"><div class="tool-icon">◈</div><div class="tool-label">Device Scan</div></div>
   </div>
 
   <div class="reveal tilt-3d" style="max-width:640px;margin:24px auto 0;background:var(--bg-raised);border:1px solid var(--line);border-radius:16px;padding:28px;">
@@ -1056,6 +1061,15 @@
       <div id="as-status" class="tool-status"></div>
     </div>
 
+    <div class="tool-panel" id="panel-devicescan" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// DEVICE & NETWORK INFO</span>
+      <h4 style="margin:0 0 8px;font-size:20px;">What your browser can see.</h4>
+      <p style="color:var(--ash);font-size:13px;margin:0 0 16px;">Everything below comes straight from your own browser — nothing is read off your phone's storage or apps. Location, if you allow it, only appears after you tap the button.</p>
+      <button class="btn btn-ghost btn-sm" data-action="runDeviceScan" style="animation:none;">Scan This Device</button>
+      <div id="ds-status" class="tool-status"></div>
+      <div id="ds-result" style="margin-top:14px;display:none;font-size:14px;line-height:1.9;"></div>
+    </div>
+
   </div>
 
 </section>
@@ -1072,6 +1086,18 @@
   .music-result .mr-info{flex:1;min-width:0;}
   .music-result .mr-title{font-size:14px;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .music-result .mr-meta{font-size:12px;color:var(--ash);}
+  /* ── Generic "it's working" feedback for every Free Tools button.
+     Applied automatically by the delegated click handler below, so every
+     tool button gets this even though most of their functions only ever
+     touch a separate status line — before this, tapping "Generate" gave
+     no visible change on the button itself. ── */
+  [data-action].is-loading{position:relative;color:transparent!important;pointer-events:none;opacity:.75;}
+  [data-action].is-loading::after{
+    content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;
+    border:2px solid rgba(255,255,255,0.35);border-top-color:var(--bone);border-radius:50%;
+    animation:toolSpin .6s linear infinite;
+  }
+  @keyframes toolSpin{to{transform:rotate(360deg);}}
 </style>
 
 <section class="final-cta">
@@ -1798,6 +1824,113 @@
     status.textContent = `'${ch}' → decimal ${code} · hex 0x${code.toString(16)} · binary ${code.toString(2).padStart(8,'0')}`;
   }
 
+  // ── Device & Network Info ────────────────────────────────────────────
+  // Everything here is read from the visitor's OWN browser via standard,
+  // permission-respecting Web APIs — nothing is pulled from the device's
+  // filesystem, apps, or storage (browsers don't allow that, by design,
+  // and this doesn't attempt to work around it). Location is only ever
+  // requested — and only shown — after the visitor explicitly allows it
+  // via the browser's native permission prompt.
+  function guessDeviceName() {
+    const ua = navigator.userAgent || '';
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (/iPad/.test(ua)) return 'iPad';
+    if (/Android/.test(ua)) {
+      const m = ua.match(/Android[^;]*;\s*([^)]+)\)/);
+      return m ? m[1].split('Build')[0].trim() : 'Android device';
+    }
+    if (/Windows/.test(ua)) return 'Windows PC';
+    if (/Macintosh/.test(ua)) return 'Mac';
+    if (/Linux/.test(ua)) return 'Linux device';
+    return 'Unknown device';
+  }
+  async function measureDownlink() {
+    // Real, lightweight speed sample: time a fetch of an asset already on
+    // this page (menu-bg.jpg) with cache-busting, convert to Mbps. Falls
+    // back to the browser's own estimate if the fetch fails.
+    try {
+      const t0 = performance.now();
+      const res = await fetch('/assets/menu-bg.jpg?t=' + Date.now(), { cache: 'no-store' });
+      const blob = await res.blob();
+      const seconds = (performance.now() - t0) / 1000;
+      const mbps = (blob.size * 8 / 1_000_000) / Math.max(seconds, 0.05);
+      return `${mbps.toFixed(1)} Mbps (measured just now)`;
+    } catch (e) {
+      return null;
+    }
+  }
+  async function runDeviceScan() {
+    const status = document.getElementById('ds-status');
+    const result = document.getElementById('ds-result');
+    result.style.display = 'none';
+    status.textContent = 'Scanning…';
+
+    const lines = [];
+    lines.push(`<strong>Device:</strong> ${guessDeviceName()}`);
+
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+      const type = conn.type && conn.type !== 'unknown' ? conn.type : (conn.effectiveType || 'unknown');
+      lines.push(`<strong>Connection:</strong> ${type}${conn.effectiveType ? ' (' + conn.effectiveType + ')' : ''}`);
+      if (typeof conn.downlink === 'number') lines.push(`<strong>Estimated speed:</strong> ~${conn.downlink} Mbps (browser estimate)`);
+      if (typeof conn.rtt === 'number') lines.push(`<strong>Latency:</strong> ~${conn.rtt} ms`);
+    } else {
+      lines.push(`<strong>Connection:</strong> ${navigator.onLine ? 'Online' : 'Offline'} (this browser doesn't expose WiFi/data detail — Chrome on Android supports it, most others don't)`);
+    }
+
+    if (typeof navigator.deviceMemory === 'number') {
+      lines.push(`<strong>RAM:</strong> ~${navigator.deviceMemory} GB (approximate — Chrome-based browsers only)`);
+    } else {
+      lines.push(`<strong>RAM:</strong> not exposed by this browser`);
+    }
+    if (typeof navigator.hardwareConcurrency === 'number') {
+      lines.push(`<strong>CPU cores:</strong> ${navigator.hardwareConcurrency}`);
+    }
+
+    result.innerHTML = lines.join('<br>');
+    result.style.display = 'block';
+    status.textContent = '';
+
+    // Real measured throughput — runs after the instant fields render.
+    measureDownlink().then(m => {
+      if (m) { result.innerHTML += `<br><strong>Measured speed:</strong> ${m}`; }
+    });
+
+    // Carrier/ISP — best-effort, IP-based, from a public lookup. Not
+    // requested until this point, and clearly labeled either way.
+    try {
+      const r = await fetch('https://ipapi.co/json/');
+      if (r.ok) {
+        const d = await r.json();
+        if (d && (d.org || d.city)) {
+          result.innerHTML += `<br><strong>Network provider:</strong> ${d.org || 'Unknown'}${d.city ? ' · ' + d.city + ', ' + (d.country_name||'') : ''}`;
+        }
+      }
+    } catch (e) { /* ISP lookup optional — silently skip if blocked/offline */ }
+
+    // Location — ONLY added if the visitor explicitly taps this and
+    // grants the browser's native permission prompt. Never auto-requested.
+    if (!document.getElementById('ds-loc-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'ds-loc-btn';
+      btn.className = 'btn btn-ghost btn-sm';
+      btn.style.cssText = 'animation:none;margin-top:12px;display:block;';
+      btn.textContent = 'Also share my location (optional)';
+      btn.onclick = () => {
+        btn.textContent = 'Requesting permission…';
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            result.innerHTML += `<br><strong>Location:</strong> ${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)} (± ${Math.round(pos.coords.accuracy)}m)`;
+            btn.remove();
+          },
+          () => { btn.textContent = 'Permission denied.'; },
+          { timeout: 8000 }
+        );
+      };
+      result.after(btn);
+    }
+  }
+
   // ── Robust delegated click binding — survives any single handler error,
   // and doesn't rely on inline onclick attributes at all. ──────────────
   document.addEventListener('click', function(e) {
@@ -1809,6 +1942,17 @@
     const btn = e.target.closest('[data-action]');
     if (btn && btn.dataset.action) {
       const [fn, arg] = btn.dataset.action.split('-');
+      // ✅ FIX: previously only 3 of ~30 tool functions (fetchYoutube,
+      // searchMusic, downloadMusic) ever changed the button itself while
+      // working — everything else only updated a small gray status line,
+      // so tapping "Generate" looked like nothing happened. This wraps
+      // EVERY dispatched action in a spinner on the actual button that
+      // was tapped, restored automatically once the handler settles.
+      // Buttons that already manage their own disabled/text state are
+      // unaffected — both mechanisms just restore on the same finally.
+      btn.classList.add('is-loading');
+      const restore = () => btn.classList.remove('is-loading');
+      let result;
       try {
         const handlers = {
           fetchYoutube, searchMusic, fetchQr, fetchShorten, fetchDefine, fetchTextTool,
@@ -1816,16 +1960,25 @@
           fetchQrDecode, fetchWordFreq, fetchDistance, fetchImageFilter, fetchGithub, fetchNpm,
           fetchLorem, fetchExtractLinks, fetchBrainfuck, genUuid, convertTimestamp, convertRoman,
           checkPalindrome, calcBmi, calcAge, calcPercent, convertNum2Words, convertColor,
-          formatJson, testRegex, genSlug, diffText, lookupAscii
+          formatJson, testRegex, genSlug, diffText, lookupAscii, runDeviceScan
         };
-        if (fn === 'fetchBase64') fetchBase64(arg);
-        else if (fn === 'fetchRandom') fetchRandom(arg);
-        else if (fn === 'fetchDna') runDna(arg);
-        else if (fn === 'fetchRle') runRle(arg);
-        else if (fn === 'fetchUrlenc') runUrlenc(arg);
-        else if (handlers[fn]) handlers[fn]();
-        else console.warn('No handler for action:', btn.dataset.action);
-      } catch (err) { console.error('Tool action failed:', btn.dataset.action, err); }
+        if (fn === 'fetchBase64') result = fetchBase64(arg);
+        else if (fn === 'fetchRandom') result = fetchRandom(arg);
+        else if (fn === 'fetchDna') result = runDna(arg);
+        else if (fn === 'fetchRle') result = runRle(arg);
+        else if (fn === 'fetchUrlenc') result = runUrlenc(arg);
+        else if (handlers[fn]) result = handlers[fn]();
+        else { console.warn('No handler for action:', btn.dataset.action); restore(); return; }
+      } catch (err) {
+        console.error('Tool action failed:', btn.dataset.action, err);
+        restore();
+        return;
+      }
+      // Async handlers return a Promise — wait for it, then clear the
+      // spinner. Sync/instant handlers (genUuid, calcBmi, etc.) return
+      // nothing, so just clear the spinner right away.
+      if (result && typeof result.finally === 'function') result.finally(restore);
+      else restore();
     }
   });
 
@@ -1834,7 +1987,14 @@
 <footer>
   <div class="fbrand"><span class="serif" style="font-weight:600;">BEAST</span><span class="serif-i">MD</span></div>
   <div>Free forever · No hidden fees</div>
-
+  <div class="fmap" style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:18px;font-size:13px;">
+    <a href="pair.html">Pair</a>
+    <a href="register.html">Register</a>
+    <a href="panel.html">My Panel</a>
+    <a href="console.html">Console</a>
+    <a href="chat.html">Community Chat</a>
+    <a href="admin.html" style="opacity:.6;">Admin</a>
+  </div>
 </footer>
 
 <script>

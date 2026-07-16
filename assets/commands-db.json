@@ -1808,6 +1808,14 @@
     "quality": "source"
   },
   {
+    "command": "extractaudio",
+    "usage": ".extractaudio",
+    "description": "Alias for .toaudio",
+    "category": "media",
+    "source": "media.js",
+    "quality": "alias"
+  },
+  {
     "command": "extractlinks",
     "usage": ".extractlinks",
     "description": "Alias for .urldecode",
@@ -6064,6 +6072,22 @@
     "quality": "alias"
   },
   {
+    "command": "toaudio",
+    "usage": ".toaudio — extract the audio track from any video",
+    "description": "Reply to a video (or send one with this as the caption) to extract just its audio track as an MP3",
+    "category": "media",
+    "source": "media.js",
+    "quality": "manual"
+  },
+  {
+    "command": "tomp3",
+    "usage": ".tomp3",
+    "description": "Alias for .toaudio",
+    "category": "media",
+    "source": "media.js",
+    "quality": "alias"
+  },
+  {
     "command": "tone",
     "usage": ".tone",
     "description": "Alias for .ringtone",
@@ -6550,6 +6574,14 @@
     "category": "download",
     "source": "ported_download.js",
     "quality": "source"
+  },
+  {
+    "command": "video2audio",
+    "usage": ".video2audio",
+    "description": "Alias for .toaudio",
+    "category": "media",
+    "source": "media.js",
+    "quality": "alias"
   },
   {
     "command": "videosearch",

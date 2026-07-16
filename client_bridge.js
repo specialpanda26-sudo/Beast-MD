@@ -190,6 +190,28 @@ loadedCmds.forEach(cmdKey => {
 });
 console.log(`✅ CommandHandler registry backfilled — ${CommandHandler.commands.size} commands across ${CommandHandler.categories.size} categories`);
 
+// ── Per-module toggles (Admin Panel → Features) ─────────────────────────────
+// Maps each command category to a feature-flag slug so the owner can flip
+// whole modules on/off (games, music, stickers, etc.) instead of the old
+// fixed set of 6 generic switches. Deliberately excludes Admin/Owner/Sudo —
+// toggling those off from the panel could disable the very commands (like
+// .adminreset/.ownerrecovery) needed to recover, so they stay always-on,
+// same reasoning as the existing owner-exemption in the antiban _gate().
+const CATEGORY_FEATURE_SLUG = {
+  general: 'cat_general', group: 'cat_group', 'group guard': 'cat_group_guard',
+  media: 'cat_media', 'ai & fun': 'cat_ai_fun', utility: 'cat_utility',
+  games: 'cat_games', osint: 'cat_osint', 'group intelligence': 'cat_group_intel',
+  notes: 'cat_notes', 'text effects': 'cat_text_effects', 'url tools': 'cat_url_tools',
+  'temp mail': 'cat_temp_mail', settings: 'cat_settings', 'ai chat': 'cat_aichat_persona',
+  sports: 'cat_sports', backup: 'cat_backup', scheduling: 'cat_scheduling',
+  'ai images & video': 'cat_ai_images_video', downloader: 'cat_downloader', fun: 'cat_fun',
+  images: 'cat_images', info: 'cat_info', 'audio & text tools': 'cat_audio_text_tools',
+  music: 'cat_music', quotes: 'cat_quotes', search: 'cat_search',
+  'stalk & lookup': 'cat_stalk_lookup', stickers: 'cat_stickers', tools: 'cat_tools',
+  upload: 'cat_upload', misc: 'cat_misc',
+  // admin / owner / sudo intentionally omitted — always on
+};
+
 // ── Pairing Web Server ──────────────────────────────────────
 // Open /pair in browser to link any WhatsApp number without touching .env
 // Multi-session: each session slot gets its own resolve queue entry
@@ -197,6 +219,7 @@ const pendingPairResolves = {};   // sessionId → resolve fn (replaces single g
 let pendingPairResolve = null;    // kept for legacy single-call compat (points to active slot)
 let lastPairingCode = null;
 let lastPairingNumber = null;
+let lastPairingName = null;
 let botOnline = false;
 let pairingPending = false;  // true while a new session is starting up
 let currentSessionId = "mdbot";
@@ -567,6 +590,7 @@ function getOwnerSessionSocket() {
       if (!botOnline) {
         lastPairingCode = null;
         lastPairingNumber = null;
+        lastPairingName = null;
         lastQRDataUrl = null;
         pairingPending = false;
         // Kill any pending resolve so the slot is freed for the next visitor
@@ -584,6 +608,7 @@ function getOwnerSessionSocket() {
     // ✅ FIX: clear code + number immediately so /pair-status never returns stale data
     lastPairingCode = null;
     lastPairingNumber = null;
+    lastPairingName = null;
     lastQRDataUrl = null;  // ✅ FIX: clear old QR so new one is generated fresh
     pendingPairResolve = null;
     pairingPending = true;  // flag: new session is starting, code not yet ready
@@ -606,6 +631,7 @@ function getOwnerSessionSocket() {
   if (req.method === "POST" && url.pathname === "/qr-reset") {
     lastPairingCode = null;
     lastPairingNumber = null;
+    lastPairingName = null;
     lastQRDataUrl = null;
     pendingPairResolve = null;
     pairingPending = true;
@@ -659,6 +685,7 @@ function getOwnerSessionSocket() {
 
       lastPairingCode = null;
       lastPairingNumber = null;
+      lastPairingName = null;
       lastQRDataUrl = null;
       pendingPairResolve = null;
       pairingPending = true;
@@ -687,6 +714,7 @@ function getOwnerSessionSocket() {
     res.end(JSON.stringify({
       code: lastPairingCode || null,
       number: lastPairingNumber || null,
+      name: lastPairingName || null,
       online: botOnline,
       sessions: activeSessions.size,
       pending: pairingPending,   // true = session started but code not yet generated
@@ -703,6 +731,8 @@ function getOwnerSessionSocket() {
     req.on("end", () => {
       const params = new URLSearchParams(body);
       const number = params.get("number")?.replace(/[\s\-\+]/g, "") || "";
+      const pairName = (params.get("name") || "").trim().slice(0, 40);
+      if (pairName) lastPairingName = pairName;
       if (number) {
         lastPairingNumber = number;
         // Find the first waiting session slot (FIFO order)
@@ -2286,6 +2316,18 @@ async function startSession(sessionId, opts = {}) {
             await socket.sendMessage(sender, { text: `🚫 The command *.${cmd}* is currently disabled.` }, { quoted: msg });
             return;
           }
+          // ── Module toggle check (Admin Panel → Features) ────────────────
+          // Owner/co-owner/sub-admin bypass this, same as every other
+          // feature gate in this dispatcher — a module being off shouldn't
+          // block the people who'd need to turn it back on.
+          if (!isOwner && !isCoOwner && !isSubAdmin) {
+            const meta = CommandHandler.commands.get(cmd);
+            const slug = meta && CATEGORY_FEATURE_SLUG[meta.category];
+            if (slug && !isFeatureOn(slug)) {
+              await socket.sendMessage(sender, { text: `🚫 This feature is currently disabled by the admin.` }, { quoted: msg });
+              return;
+            }
+          }
           // ── Permission check (skip for owner/admins) ──────────────────────
           if (!isOwner && !isSubAdmin && isGroup) {
             const { canUseCommand } = require('./plugins/group');
@@ -2730,13 +2772,14 @@ async function startSession(sessionId, opts = {}) {
           const nodeVer = process.version;
           const loadAvg = os.loadavg()[0].toFixed(2);
 
+          const greetName = lastPairingName ? lastPairingName : null;
           const welcomeText =
 `╔════════════════════════════════════╗
 ║  🔥 *BEAST MD* 🔥        ║
 ║       _by _            ║
 ╚════════════════════════════════════╝
 
-✅ *Pairing Successful!*
+✅ *Pairing Successful${greetName ? `, ${greetName}` : ""}!*
 Your bot is now live and connected. 🌐
 
 📋 *Session:* ${sessionId}
@@ -2838,6 +2881,7 @@ _Beast MD — _ 🔥`;
         botOnline = false;
         lastPairingCode = null;
         lastPairingNumber = "";
+        lastPairingName = "";
         activeSessions.delete(sessionId);
         activeSockets.delete(sessionId);
         delete pendingPairResolves[sessionId];
@@ -2879,6 +2923,7 @@ _Beast MD — _ 🔥`;
             botOnline = false;
             lastPairingCode = null;
             lastPairingNumber = "";
+            lastPairingName = "";
             activeSessions.delete(sessionId);
             delete pendingPairResolves[sessionId];
             fatalRetryCounts[sessionId] = 0;  // reset so a manual re-pair starts clean

@@ -668,4 +668,54 @@ module.exports = {
       }
     });
   },
+
+  // ── .toaudio — extract the audio track from any video ─────────────────
+  // ✅ NEW: dedicated shortcut for "video → audio" (same ffmpeg engine as
+  // .convertmedia mp3, just one command with no format to remember). Works
+  // two ways: reply .toaudio to an existing video, OR send a video with
+  // .toaudio as the caption. Aliases: .tomp3, .extractaudio, .video2audio.
+  toaudio: async ({ sock, from, msg }) => {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo;
+    const quotedMsg = quoted?.quotedMessage;
+    const vidMsg = quotedMsg?.videoMessage || msg.message?.videoMessage;
+
+    if (!vidMsg) {
+      return sock.sendMessage(from, {
+        text: '🎬 Usage: reply *.toaudio* to a video, or send a video with *.toaudio* as the caption — I\'ll pull the audio out of it.'
+      }, { quoted: msg });
+    }
+
+    const stamp = Date.now();
+    const tmpIn = `/tmp/toaudio_in_${stamp}.mp4`;
+    const tmpOut = `/tmp/toaudio_out_${stamp}.mp3`;
+
+    try {
+      await sock.sendMessage(from, { text: '⏳ Extracting audio…' }, { quoted: msg });
+
+      const dlMsg = quotedMsg
+        ? { key: { remoteJid: from, id: quoted.stanzaId, participant: quoted.participant }, message: quotedMsg }
+        : msg;
+      const media = await downloadMediaMessage(dlMsg, 'buffer', {});
+      fs.writeFileSync(tmpIn, media);
+
+      // -vn drops the video stream entirely; -q:a 2 keeps decent quality
+      // at a much smaller file size than a raw copy would produce.
+      await new Promise((resolve, reject) => {
+        execFile('ffmpeg', ['-i', tmpIn, '-vn', '-q:a', '2', tmpOut, '-y'], (err, _stdout, stderr) => {
+          err ? reject(new Error(stderr?.toString().slice(0, 300) || err.message)) : resolve();
+        });
+      });
+
+      const outBuffer = fs.readFileSync(tmpOut);
+      await sock.sendMessage(from, { audio: outBuffer, mimetype: 'audio/mpeg' }, { quoted: msg });
+    } catch (e) {
+      await sock.sendMessage(from, { text: `❌ Couldn't extract audio: ${e.message}` }, { quoted: msg });
+    } finally {
+      try { fs.unlinkSync(tmpIn); } catch (_) {}
+      try { fs.unlinkSync(tmpOut); } catch (_) {}
+    }
+  },
+  tomp3: async (h) => module.exports.toaudio(h),
+  extractaudio: async (h) => module.exports.toaudio(h),
+  video2audio: async (h) => module.exports.toaudio(h),
 };

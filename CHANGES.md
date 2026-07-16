@@ -365,3 +365,39 @@ every command-listing/search/stats feature end to end. Found and fixed:
     bot behavior — they save successfully and report success, but don't yet do anything. Needs a
     decision on wiring each one into the real message pipeline before it's touched.
 
+## Update 16 — pairing name field, .toaudio, duplicate .menu fix, homepage playlist search
+
+- `pair.html` now asks for the pairer's name (required, above the phone field) and sends it
+  along with the number. `client_bridge.js` stores it for the session and the post-pairing
+  welcome DM now greets by name instead of being generic.
+- **New command:** `.toaudio` (aliases `.tomp3`, `.extractaudio`, `.video2audio`) — reply to a
+  video, or send one with this as the caption, and get just the audio track back as an MP3.
+  Same ffmpeg engine as `.convertmedia`, just a dedicated one-word shortcut. Added to both the
+  quick `.menu` view and the full command catalog.
+- **Fixed:** plain `.menu` was sending the curated command list as the image caption AND the
+  full ~900-command catalog as a separate follow-up — the same commands effectively listed
+  twice. Default `.menu` now sends the media with a short header caption + the full catalog
+  once. `.menu quick` is unchanged (short curated view only, no follow-up).
+- **New (admin panel → Site Music):** you can now search YouTube by song name right from the
+  admin panel and add a result straight to the homepage playlist — it downloads the track
+  server-side (same hardened yt-dlp pipeline as `.song`/`.dl`) so it plays reliably for every
+  visitor with no expiring links, instead of requiring a manual file upload every time.
+- **New (homepage → Free Tools → Device Scan):** an honest "what your browser can see" panel —
+  device name, connection type (WiFi/cellular where the browser exposes it), an estimated *and*
+  a real measured connection speed, approximate RAM/CPU core count, and a best-effort ISP/city
+  lookup, all clearly labeled. Location is never auto-requested — it only appears if the visitor
+  taps an explicit "share my location" button and grants the browser's own permission prompt.
+  Nothing here reads photos, messages, or app data off the visitor's phone — browsers don't
+  allow that, and this doesn't attempt to work around it.
+- Verified `.tts` — already using Microsoft Edge's TTS engine via the `edge-tts` CLI (in
+  `requirements.txt`), not Google's endpoint that was getting silently blocked on cloud IPs.
+  Logic checks out; do a live `.tts hello` smoke test on Render to confirm the binary resolves
+  on PATH there.
+- Verified the 🌙 (🌝 full-moon-face) reaction-recovery feature — react 🌝 on any message or
+  view-once media to have it privately forwarded to the bot's own number. Bot-admin gated,
+  multiple prior bug fixes already applied, logic looks sound.
+- Confirmed already working, no changes needed: the homepage's "paste a YouTube link, get the
+  video" tool and the visitor-facing music search+download tool both already use the same
+  hardened bot-detection mitigation (client fallback + retry + optional cookies/PO-token) as
+  the WhatsApp `.dl`/`.song` commands.
+

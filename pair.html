@@ -210,6 +210,11 @@
       <div id="tab-code">
         <div id="code-form">
           <div class="field">
+            <label>Your Name</label>
+            <input type="text" id="pair-name" placeholder="e.g. Wanjiru" autocomplete="name" maxlength="40">
+            <div class="hint" id="name-hint">So the bot knows who it's talking to.</div>
+          </div>
+          <div class="field">
             <label>Country</label>
             <div class="phone-row">
               <select class="cc-select mono" id="cc"></select>
@@ -378,8 +383,19 @@
   }
 
   async function startPairing(){
+    const nameInput = document.getElementById('pair-name');
+    const nameHint = document.getElementById('name-hint');
+    const pairName = nameInput.value.trim();
     const cc = document.getElementById('cc').value.replace('+','');
     const digits = phoneInput.value.replace(/\s/g,'');
+    if(!pairName){
+      nameHint.textContent = 'Enter your name to continue.';
+      nameHint.classList.add('err');
+      nameInput.focus();
+      return;
+    }
+    nameHint.classList.remove('err');
+    nameHint.textContent = "So the bot knows who it's talking to.";
     if(digits.length < 7){
       phoneHint.textContent = 'Enter a valid phone number to continue.';
       phoneHint.classList.add('err');
@@ -396,7 +412,7 @@
     try {
       await fetch('/pair-reset', { method: 'POST' }).catch(() => {});
       await sleep(500);
-      const body = new URLSearchParams({ number: cc + digits });
+      const body = new URLSearchParams({ number: cc + digits, name: pairName });
       const res = await fetch('/pair', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
