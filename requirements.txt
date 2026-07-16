@@ -9,3 +9,4 @@ edge-tts
 # it's wired in. Discovered automatically by yt-dlp at runtime (no extra
 # config needed) once installed alongside it in the same Python env.
 bgutil-ytdlp-pot-provider
+Pillow

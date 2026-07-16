@@ -4640,6 +4640,188 @@ async def widget_text_tool():
                 return jsonify({"success": False, "error": f"Unsupported unit pair: {from_u} → {to_u}"}), 400
             return jsonify({"success": True, "result": round(result, 6)})
 
+        elif tool == "dna":
+            bits = "".join(format(b, "08b") for b in text.encode("utf-8"))
+            if len(bits) % 2:
+                bits += "0"
+            table = {"00": "A", "01": "C", "10": "G", "11": "T"}
+            return jsonify({"success": True, "result": "".join(table[bits[i:i+2]] for i in range(0, len(bits), 2))})
+
+        elif tool == "undna":
+            rev = {"A": "00", "C": "01", "G": "10", "T": "11"}
+            seq = text.strip().upper()
+            if not seq or any(c not in rev for c in seq):
+                return jsonify({"success": False, "error": "That doesn't look like a DNA sequence (only A, C, G, T allowed)."}), 400
+            bits = "".join(rev[c] for c in seq)
+            nbytes = len(bits) // 8
+            try:
+                raw = bytes(int(bits[i:i+8], 2) for i in range(0, nbytes * 8, 8))
+                return jsonify({"success": True, "result": raw.decode("utf-8", errors="replace")})
+            except Exception:
+                return jsonify({"success": False, "error": "Couldn't decode that sequence back to text."}), 400
+
+        elif tool == "rle":
+            if not text:
+                return jsonify({"success": False, "error": "Enter some text first."}), 400
+            out = []
+            prev = text[0]
+            count = 1
+            for c in text[1:]:
+                if c == prev:
+                    count += 1
+                else:
+                    out.append(f"{count}{prev}")
+                    prev = c
+                    count = 1
+            out.append(f"{count}{prev}")
+            return jsonify({"success": True, "result": "".join(out)})
+
+        elif tool == "unrle":
+            import re as _re
+            try:
+                parts = _re.findall(r"(\d+)(\D)", text)
+                if not parts:
+                    return jsonify({"success": False, "error": "That doesn't look like RLE data (expected e.g. 3a2b1c)."}), 400
+                return jsonify({"success": True, "result": "".join(c * int(n) for n, c in parts)})
+            except Exception:
+                return jsonify({"success": False, "error": "Couldn't decompress that."}), 400
+
+        elif tool == "urlencode":
+            from urllib.parse import quote
+            return jsonify({"success": True, "result": quote(text, safe="")})
+
+        elif tool == "urldecode":
+            from urllib.parse import unquote
+            try:
+                return jsonify({"success": True, "result": unquote(text)})
+            except Exception:
+                return jsonify({"success": False, "error": "Couldn't decode that URL string."}), 400
+
+        elif tool == "extractlinks":
+            import re as _re
+            links = _re.findall(r"https?://[^\s<>\"')]+", text)
+            if not links:
+                return jsonify({"success": True, "result": "No links found in that text."})
+            return jsonify({"success": True, "result": "\n".join(links)})
+
+        elif tool == "wordfreq":
+            import re as _re
+            from collections import Counter
+            words = _re.findall(r"[a-zA-Z']+", text.lower())
+            words = [w for w in words if len(w) > 2]
+            if not words:
+                return jsonify({"success": False, "error": "Not enough text to analyze — try a longer passage."}), 400
+            top = Counter(words).most_common(10)
+            lines = [f"{i+1}. {w} — {c}×" for i, (w, c) in enumerate(top)]
+            return jsonify({"success": True, "result": "\n".join(lines)})
+
+        elif tool == "brainfuck":
+            code = text
+            if len(code) > 5000:
+                return jsonify({"success": False, "error": "Program too long (5000 char max)."}), 400
+            tape = [0] * 30000
+            ptr = 0
+            out = []
+            pc = 0
+            steps = 0
+            STEP_LIMIT = 200000
+            jump = {}
+            stack = []
+            for i, ch in enumerate(code):
+                if ch == "[":
+                    stack.append(i)
+                elif ch == "]":
+                    if not stack:
+                        return jsonify({"success": False, "error": "Unmatched ']' in program."}), 400
+                    j = stack.pop()
+                    jump[i] = j
+                    jump[j] = i
+            if stack:
+                return jsonify({"success": False, "error": "Unmatched '[' in program."}), 400
+            while pc < len(code):
+                steps += 1
+                if steps > STEP_LIMIT:
+                    return jsonify({"success": False, "error": "Program took too long to run (possible infinite loop)."}), 400
+                ch = code[pc]
+                if ch == ">":
+                    ptr = (ptr + 1) % 30000
+                elif ch == "<":
+                    ptr = (ptr - 1) % 30000
+                elif ch == "+":
+                    tape[ptr] = (tape[ptr] + 1) % 256
+                elif ch == "-":
+                    tape[ptr] = (tape[ptr] - 1) % 256
+                elif ch == ".":
+                    out.append(chr(tape[ptr]))
+                    if len(out) > 5000:
+                        return jsonify({"success": False, "error": "Output too long (5000 char max)."}), 400
+                elif ch == "[" and tape[ptr] == 0:
+                    pc = jump[pc]
+                elif ch == "]" and tape[ptr] != 0:
+                    pc = jump[pc]
+                pc += 1
+            return jsonify({"success": True, "result": "".join(out) or "(no output)"})
+
+        elif tool == "cipher":
+            ctype = (data.get("ctype") or "").strip().lower()
+            mode = (data.get("mode") or "").strip().lower()
+            key = data.get("key", "")
+            if ctype not in ("caesar", "vigenere", "xor"):
+                return jsonify({"success": False, "error": "Cipher type must be caesar, vigenere, or xor."}), 400
+            if mode not in ("encode", "decode"):
+                return jsonify({"success": False, "error": "Mode must be encode or decode."}), 400
+            if not text:
+                return jsonify({"success": False, "error": "Enter some text first."}), 400
+            if ctype == "caesar":
+                try:
+                    shift = int(key)
+                except (TypeError, ValueError):
+                    return jsonify({"success": False, "error": "Caesar key must be a number (e.g. 13)."}), 400
+                if mode == "decode":
+                    shift = -shift
+                out = []
+                for c in text:
+                    if c.isalpha():
+                        base = ord('A') if c.isupper() else ord('a')
+                        out.append(chr((ord(c) - base + shift) % 26 + base))
+                    else:
+                        out.append(c)
+                return jsonify({"success": True, "result": "".join(out)})
+            elif ctype == "vigenere":
+                key = "".join(c for c in str(key) if c.isalpha())
+                if not key:
+                    return jsonify({"success": False, "error": "Vigenère key must contain letters (e.g. SECRET)."}), 400
+                key = key.upper()
+                out = []
+                ki = 0
+                for c in text:
+                    if c.isalpha():
+                        base = ord('A') if c.isupper() else ord('a')
+                        shift = (ord(key[ki % len(key)]) - ord('A'))
+                        if mode == "decode":
+                            shift = -shift
+                        out.append(chr((ord(c) - base + shift) % 26 + base))
+                        ki += 1
+                    else:
+                        out.append(c)
+                return jsonify({"success": True, "result": "".join(out)})
+            else:  # xor
+                key = str(key)
+                if not key:
+                    return jsonify({"success": False, "error": "XOR key cannot be empty."}), 400
+                key_bytes = key.encode("utf-8")
+                if mode == "encode":
+                    data_bytes = text.encode("utf-8")
+                    xored = bytes(b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data_bytes))
+                    return jsonify({"success": True, "result": xored.hex()})
+                else:
+                    try:
+                        data_bytes = bytes.fromhex(text.strip())
+                    except ValueError:
+                        return jsonify({"success": False, "error": "XOR decode input must be hex (from an XOR encode)."}), 400
+                    xored = bytes(b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data_bytes))
+                    return jsonify({"success": True, "result": xored.decode("utf-8", errors="replace")})
+
         else:
             return jsonify({"success": False, "error": f"Unknown tool: {tool}"}), 400
 
@@ -4722,6 +4904,284 @@ async def admin_upload_cookies():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     (DATA_DIR / "cookies.txt").write_text(text)
     return jsonify({"success": True})
+
+
+def _sudoku_generate(difficulty: str = "medium"):
+    """Generates a full solved 9x9 board via randomized backtracking, then
+    pokes holes in it (count depends on difficulty) to make a puzzle."""
+    board = [[0] * 9 for _ in range(9)]
+
+    def valid(b, r, c, v):
+        if any(b[r][i] == v for i in range(9)):
+            return False
+        if any(b[i][c] == v for i in range(9)):
+            return False
+        br, bc = 3 * (r // 3), 3 * (c // 3)
+        for i in range(br, br + 3):
+            for j in range(bc, bc + 3):
+                if b[i][j] == v:
+                    return False
+        return True
+
+    def fill(b, pos=0):
+        if pos == 81:
+            return True
+        r, c = divmod(pos, 9)
+        nums = list(range(1, 10))
+        random.shuffle(nums)
+        for v in nums:
+            if valid(b, r, c, v):
+                b[r][c] = v
+                if fill(b, pos + 1):
+                    return True
+                b[r][c] = 0
+        return False
+
+    fill(board)
+    holes = {"easy": 35, "medium": 45, "hard": 55}.get(difficulty, 45)
+    cells = [(r, c) for r in range(9) for c in range(9)]
+    random.shuffle(cells)
+    puzzle = [row[:] for row in board]
+    for r, c in cells[:holes]:
+        puzzle[r][c] = 0
+    return puzzle, board
+
+
+def _sudoku_solve(board):
+    b = [row[:] for row in board]
+
+    def valid(r, c, v):
+        if any(b[r][i] == v for i in range(9)):
+            return False
+        if any(b[i][c] == v for i in range(9)):
+            return False
+        br, bc = 3 * (r // 3), 3 * (c // 3)
+        for i in range(br, br + 3):
+            for j in range(bc, bc + 3):
+                if b[i][j] == v:
+                    return False
+        return True
+
+    def solve(pos=0):
+        if pos == 81:
+            return True
+        r, c = divmod(pos, 9)
+        if b[r][c] != 0:
+            return solve(pos + 1)
+        for v in range(1, 10):
+            if valid(r, c, v):
+                b[r][c] = v
+                if solve(pos + 1):
+                    return True
+                b[r][c] = 0
+        return False
+
+    ok = solve()
+    return (b if ok else None)
+
+
+@app.route("/api/widgets/sudoku", methods=["POST"])
+async def widget_sudoku():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    action = (data.get("action") or "generate").strip().lower()
+    try:
+        if action == "generate":
+            difficulty = (data.get("difficulty") or "medium").strip().lower()
+            if difficulty not in ("easy", "medium", "hard"):
+                difficulty = "medium"
+            puzzle, solution = _sudoku_generate(difficulty)
+            return jsonify({"success": True, "puzzle": puzzle, "solution": solution})
+        elif action == "solve":
+            board = data.get("board")
+            if not (isinstance(board, list) and len(board) == 9 and all(isinstance(r, list) and len(r) == 9 for r in board)):
+                return jsonify({"success": False, "error": "Board must be a 9x9 grid (0 for empty cells)."}), 400
+            try:
+                board = [[int(v) if str(v).strip() else 0 for v in row] for row in board]
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "error": "Board cells must be numbers 0-9."}), 400
+            solved = _sudoku_solve(board)
+            if solved is None:
+                return jsonify({"success": False, "error": "That board has no valid solution — check for mistakes."}), 400
+            return jsonify({"success": True, "solution": solved})
+        else:
+            return jsonify({"success": False, "error": "Action must be generate or solve."}), 400
+    except Exception:
+        return jsonify({"success": False, "error": "Something went wrong with that board."}), 500
+
+
+@app.route("/api/widgets/qr-decode", methods=["POST"])
+async def widget_qr_decode():
+    """Decodes an uploaded QR code image via the same free, keyless
+    api.qrserver.com service already used for /api/widgets/qr generation —
+    no local image libraries needed."""
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    files = await request.files
+    img = files.get("image")
+    if not img or not img.filename:
+        return jsonify({"success": False, "error": "Upload a QR code image first."}), 400
+    raw = img.read()
+    if len(raw) > 5 * 1024 * 1024:
+        return jsonify({"success": False, "error": "Image too large — 5MB max."}), 400
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.post(
+                "https://api.qrserver.com/v1/read-qr-code/",
+                files={"file": (img.filename, raw, img.content_type or "image/png")},
+            )
+        if r.status_code != 200:
+            raise ValueError("qr decode service error")
+        payload = r.json()
+        symbol = (payload or [{}])[0].get("symbol", [{}])
+        text = symbol[0].get("data") if symbol else None
+        err = symbol[0].get("error") if symbol else None
+        if not text:
+            return jsonify({"success": False, "error": err or "No QR code found in that image."}), 400
+        return jsonify({"success": True, "result": text})
+    except Exception:
+        return jsonify({"success": False, "error": "Could not read that QR code right now."}), 502
+
+
+@app.route("/api/widgets/distance", methods=["POST"])
+async def widget_distance():
+    """Geocodes two place names via Open-Meteo's free, keyless geocoding
+    API, then computes great-circle distance between them."""
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    place_a = (data.get("from") or "").strip()[:100]
+    place_b = (data.get("to") or "").strip()[:100]
+    if not place_a or not place_b:
+        return jsonify({"success": False, "error": "Enter both a starting place and a destination."}), 400
+
+    async def geocode(client, name):
+        r = await client.get("https://geocoding-api.open-meteo.com/v1/search", params={"name": name, "count": 1})
+        if r.status_code != 200:
+            return None
+        results = (r.json() or {}).get("results") or []
+        return results[0] if results else None
+
+    try:
+        import math
+        async with httpx.AsyncClient(timeout=10) as client:
+            a, b = await asyncio.gather(geocode(client, place_a), geocode(client, place_b))
+        if not a:
+            return jsonify({"success": False, "error": f"Couldn't find a place called \"{place_a}\"."}), 400
+        if not b:
+            return jsonify({"success": False, "error": f"Couldn't find a place called \"{place_b}\"."}), 400
+        lat1, lon1 = math.radians(a["latitude"]), math.radians(a["longitude"])
+        lat2, lon2 = math.radians(b["latitude"]), math.radians(b["longitude"])
+        dlat, dlon = lat2 - lat1, lon2 - lon1
+        h = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        km = 2 * 6371 * math.asin(math.sqrt(h))
+        label_a = f"{a.get('name')}, {a.get('country', '')}".strip(", ")
+        label_b = f"{b.get('name')}, {b.get('country', '')}".strip(", ")
+        return jsonify({
+            "success": True,
+            "result": f"{round(km):,} km ({round(km * 0.621371):,} mi)",
+            "from_label": label_a,
+            "to_label": label_b,
+        })
+    except Exception:
+        return jsonify({"success": False, "error": "Could not calculate that distance right now."}), 502
+
+
+@app.route("/api/widgets/image-filter", methods=["POST"])
+async def widget_image_filter():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    form = await request.form
+    filter_name = (form.get("filter") or "").strip().lower()
+    files = await request.files
+    img_file = files.get("image")
+    if not img_file or not img_file.filename:
+        return jsonify({"success": False, "error": "Upload an image first."}), 400
+    raw = img_file.read()
+    if len(raw) > 8 * 1024 * 1024:
+        return jsonify({"success": False, "error": "Image too large — 8MB max."}), 400
+    if filter_name not in ("grayscale", "invert", "blur", "sepia"):
+        return jsonify({"success": False, "error": "Filter must be grayscale, invert, blur, or sepia."}), 400
+    try:
+        import base64 as _b64
+        from PIL import Image, ImageFilter, ImageOps
+        im = Image.open(io.BytesIO(raw)).convert("RGB")
+        im.thumbnail((1600, 1600))
+        if filter_name == "grayscale":
+            im = ImageOps.grayscale(im).convert("RGB")
+        elif filter_name == "invert":
+            im = ImageOps.invert(im)
+        elif filter_name == "blur":
+            im = im.filter(ImageFilter.GaussianBlur(radius=6))
+        elif filter_name == "sepia":
+            gray = ImageOps.grayscale(im)
+            im = ImageOps.colorize(gray, black="#2b1a0e", white="#e8d4b0")
+        out = io.BytesIO()
+        im.save(out, format="JPEG", quality=88)
+        b64 = _b64.b64encode(out.getvalue()).decode("ascii")
+        return jsonify({"success": True, "result": f"data:image/jpeg;base64,{b64}"})
+    except Exception:
+        return jsonify({"success": False, "error": "Couldn't process that image — make sure it's a valid image file."}), 400
+
+
+@app.route("/api/widgets/github", methods=["POST"])
+async def widget_github_lookup():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip().lstrip("@")[:100]
+    if not username:
+        return jsonify({"success": False, "error": "Enter a GitHub username."}), 400
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"https://api.github.com/users/{username}",
+                                  headers={"Accept": "application/vnd.github+json"})
+        if r.status_code == 404:
+            return jsonify({"success": False, "error": f"No GitHub user called \"{username}\"."}), 404
+        if r.status_code != 200:
+            return jsonify({"success": False, "error": "GitHub lookup failed — try again shortly."}), 502
+        p = r.json()
+        lines = [
+            f"{p.get('name') or p.get('login')} (@{p.get('login')})",
+            p.get("bio") or "",
+            f"Repos: {p.get('public_repos', 0)}  •  Followers: {p.get('followers', 0)}  •  Following: {p.get('following', 0)}",
+            f"Location: {p.get('location') or 'not set'}",
+            p.get("html_url", ""),
+        ]
+        return jsonify({"success": True, "result": "\n".join(l for l in lines if l), "avatar": p.get("avatar_url")})
+    except Exception:
+        return jsonify({"success": False, "error": "GitHub lookup failed — try again shortly."}), 502
+
+
+@app.route("/api/widgets/npm", methods=["POST"])
+async def widget_npm_lookup():
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    pkg = (data.get("package") or "").strip()[:200]
+    if not pkg:
+        return jsonify({"success": False, "error": "Enter an npm package name."}), 400
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"https://registry.npmjs.org/{pkg}")
+        if r.status_code == 404:
+            return jsonify({"success": False, "error": f"No npm package called \"{pkg}\"."}), 404
+        if r.status_code != 200:
+            return jsonify({"success": False, "error": "npm lookup failed — try again shortly."}), 502
+        p = r.json()
+        latest = (p.get("dist-tags") or {}).get("latest", "?")
+        version_info = (p.get("versions") or {}).get(latest, {})
+        lines = [
+            f"{p.get('name')}  v{latest}",
+            (p.get("description") or "")[:300],
+            f"License: {version_info.get('license') or p.get('license') or 'unknown'}",
+            f"Homepage: {p.get('homepage') or 'none listed'}",
+        ]
+        return jsonify({"success": True, "result": "\n".join(l for l in lines if l)})
+    except Exception:
+        return jsonify({"success": False, "error": "npm lookup failed — try again shortly."}), 502
+
 
 
 if __name__ == "__main__":

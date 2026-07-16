@@ -544,42 +544,70 @@
   </div>
 
   <div class="tool-grid reveal" style="max-width:820px;margin:40px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;">
-    <div class="tool-card tilt-3d active" data-tool="youtube" onclick="selectTool('youtube')">
+    <div class="tool-card tilt-3d active" data-tool="youtube">
       <div class="tool-icon">▶</div><div class="tool-label">YouTube</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="music" onclick="selectTool('music')">
+    <div class="tool-card tilt-3d" data-tool="music">
       <div class="tool-icon">♫</div><div class="tool-label">Music Search</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="qr" onclick="selectTool('qr')">
+    <div class="tool-card tilt-3d" data-tool="qr">
       <div class="tool-icon">▦</div><div class="tool-label">QR Code</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="shorten" onclick="selectTool('shorten')">
+    <div class="tool-card tilt-3d" data-tool="shorten">
       <div class="tool-icon">🔗</div><div class="tool-label">Link Shortener</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="base64" onclick="selectTool('base64')">
+    <div class="tool-card tilt-3d" data-tool="base64">
       <div class="tool-icon">⛭</div><div class="tool-label">Base64</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="define" onclick="selectTool('define')">
+    <div class="tool-card tilt-3d" data-tool="define">
       <div class="tool-icon">A</div><div class="tool-label">Dictionary</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="texttools" onclick="selectTool('texttools')">
+    <div class="tool-card tilt-3d" data-tool="texttools">
       <div class="tool-icon">✎</div><div class="tool-label">Text Tools</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="password" onclick="selectTool('password')">
+    <div class="tool-card tilt-3d" data-tool="password">
       <div class="tool-icon">🔒</div><div class="tool-label">Password Gen</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="calc" onclick="selectTool('calc')">
+    <div class="tool-card tilt-3d" data-tool="calc">
       <div class="tool-icon">=</div><div class="tool-label">Calculator</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="unit" onclick="selectTool('unit')">
+    <div class="tool-card tilt-3d" data-tool="unit">
       <div class="tool-icon">⇌</div><div class="tool-label">Unit Convert</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="random" onclick="selectTool('random')">
+    <div class="tool-card tilt-3d" data-tool="random">
       <div class="tool-icon">🎲</div><div class="tool-label">Random</div>
     </div>
-    <div class="tool-card tilt-3d" data-tool="wordcount" onclick="selectTool('wordcount')">
+    <div class="tool-card tilt-3d" data-tool="wordcount">
       <div class="tool-icon">#</div><div class="tool-label">Word Count</div>
     </div>
+    <div class="tool-card tilt-3d" data-tool="cipher"><div class="tool-icon">✦</div><div class="tool-label">Cipher</div></div>
+    <div class="tool-card tilt-3d" data-tool="sudoku"><div class="tool-icon">▥</div><div class="tool-label">Sudoku</div></div>
+    <div class="tool-card tilt-3d" data-tool="qrreader"><div class="tool-icon">▤</div><div class="tool-label">QR Reader</div></div>
+    <div class="tool-card tilt-3d" data-tool="wordfreq"><div class="tool-icon">%</div><div class="tool-label">Word Freq</div></div>
+    <div class="tool-card tilt-3d" data-tool="distance"><div class="tool-icon">◎</div><div class="tool-label">Distance</div></div>
+    <div class="tool-card tilt-3d" data-tool="imgfilter"><div class="tool-icon">◐</div><div class="tool-label">Image Filter</div></div>
+    <div class="tool-card tilt-3d" data-tool="github"><div class="tool-icon">⌥</div><div class="tool-label">GitHub Lookup</div></div>
+    <div class="tool-card tilt-3d" data-tool="npm"><div class="tool-icon">⬢</div><div class="tool-label">npm Lookup</div></div>
+    <div class="tool-card tilt-3d" data-tool="lorem"><div class="tool-icon">¶</div><div class="tool-label">Lorem Ipsum</div></div>
+    <div class="tool-card tilt-3d" data-tool="dna"><div class="tool-icon">⋈</div><div class="tool-label">DNA Encoder</div></div>
+    <div class="tool-card tilt-3d" data-tool="rle"><div class="tool-icon">≈</div><div class="tool-label">RLE Compress</div></div>
+    <div class="tool-card tilt-3d" data-tool="urlenc"><div class="tool-icon">/</div><div class="tool-label">URL Encode</div></div>
+    <div class="tool-card tilt-3d" data-tool="extractlinks"><div class="tool-icon">⛓</div><div class="tool-label">Extract Links</div></div>
+    <div class="tool-card tilt-3d" data-tool="brainfuck"><div class="tool-icon">∴</div><div class="tool-label">Brainfuck Run</div></div>
+    <div class="tool-card tilt-3d" data-tool="uuid"><div class="tool-icon">◆</div><div class="tool-label">UUID Gen</div></div>
+    <div class="tool-card tilt-3d" data-tool="timestamp"><div class="tool-icon">⏱</div><div class="tool-label">Timestamp</div></div>
+    <div class="tool-card tilt-3d" data-tool="roman"><div class="tool-icon">Ⅻ</div><div class="tool-label">Roman Numeral</div></div>
+    <div class="tool-card tilt-3d" data-tool="palindrome"><div class="tool-icon">↔</div><div class="tool-label">Palindrome</div></div>
+    <div class="tool-card tilt-3d" data-tool="bmi"><div class="tool-icon">⚖</div><div class="tool-label">BMI Calc</div></div>
+    <div class="tool-card tilt-3d" data-tool="age"><div class="tool-icon">🎂</div><div class="tool-label">Age Calc</div></div>
+    <div class="tool-card tilt-3d" data-tool="percent"><div class="tool-icon">%</div><div class="tool-label">Percentage</div></div>
+    <div class="tool-card tilt-3d" data-tool="num2words"><div class="tool-icon">Ⓝ</div><div class="tool-label">Num → Words</div></div>
+    <div class="tool-card tilt-3d" data-tool="color"><div class="tool-icon">◉</div><div class="tool-label">Color Convert</div></div>
+    <div class="tool-card tilt-3d" data-tool="json"><div class="tool-icon">{}</div><div class="tool-label">JSON Format</div></div>
+    <div class="tool-card tilt-3d" data-tool="regex"><div class="tool-icon">.*</div><div class="tool-label">Regex Test</div></div>
+    <div class="tool-card tilt-3d" data-tool="slug"><div class="tool-icon">-</div><div class="tool-label">Slug Gen</div></div>
+    <div class="tool-card tilt-3d" data-tool="diff"><div class="tool-icon">Δ</div><div class="tool-label">Text Diff</div></div>
+    <div class="tool-card tilt-3d" data-tool="ascii"><div class="tool-icon">Aa</div><div class="tool-label">ASCII Table</div></div>
   </div>
 
   <div class="reveal tilt-3d" style="max-width:640px;margin:24px auto 0;background:var(--bg-raised);border:1px solid var(--line);border-radius:16px;padding:28px;">
@@ -590,7 +618,7 @@
       <h4 style="margin:0 0 16px;font-size:20px;">Paste a link, get the video.</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <input id="yt-url" type="text" placeholder="https://youtube.com/watch?v=..." class="tool-input">
-        <button id="yt-btn" class="btn btn-ghost btn-sm" onclick="fetchYoutube()" style="animation:none;">Download</button>
+        <button id="yt-btn" class="btn btn-ghost btn-sm" data-action="fetchYoutube" style="animation:none;">Download</button>
       </div>
       <div id="yt-status" class="tool-status"></div>
       <div id="yt-result" style="margin-top:14px;display:none;">
@@ -605,7 +633,7 @@
       <h4 style="margin:0 0 16px;font-size:20px;">Search a song, pick it, download.</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <input id="music-q" type="text" placeholder="Song name or artist..." class="tool-input">
-        <button id="music-btn" class="btn btn-ghost btn-sm" onclick="searchMusic()" style="animation:none;">Search</button>
+        <button id="music-btn" class="btn btn-ghost btn-sm" data-action="searchMusic" style="animation:none;">Search</button>
       </div>
       <div id="music-status" class="tool-status"></div>
       <div id="music-results" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;"></div>
@@ -617,7 +645,7 @@
       <h4 style="margin:0 0 16px;font-size:20px;">Turn text or a link into a QR code.</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <input id="qr-text" type="text" placeholder="Text or URL..." class="tool-input">
-        <button class="btn btn-ghost btn-sm" onclick="fetchQr()" style="animation:none;">Generate</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchQr" style="animation:none;">Generate</button>
       </div>
       <div id="qr-status" class="tool-status"></div>
       <div id="qr-result" style="margin-top:14px;display:none;text-align:center;">
@@ -631,7 +659,7 @@
       <h4 style="margin:0 0 16px;font-size:20px;">Shrink a long link.</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <input id="short-url" type="text" placeholder="https://..." class="tool-input">
-        <button class="btn btn-ghost btn-sm" onclick="fetchShorten()" style="animation:none;">Shorten</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchShorten" style="animation:none;">Shorten</button>
       </div>
       <div id="short-status" class="tool-status"></div>
     </div>
@@ -642,8 +670,8 @@
       <h4 style="margin:0 0 16px;font-size:20px;">Encode or decode text.</h4>
       <textarea id="b64-text" placeholder="Text here..." class="tool-input" style="width:100%;min-height:80px;resize:vertical;"></textarea>
       <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="fetchBase64('encode')" style="animation:none;">Encode</button>
-        <button class="btn btn-ghost btn-sm" onclick="fetchBase64('decode')" style="animation:none;">Decode</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchBase64-encode" style="animation:none;">Encode</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchBase64-decode" style="animation:none;">Decode</button>
       </div>
       <div id="b64-status" class="tool-status"></div>
     </div>
@@ -654,7 +682,7 @@
       <h4 style="margin:0 0 16px;font-size:20px;">Look up a word.</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <input id="define-word" type="text" placeholder="Word..." class="tool-input">
-        <button class="btn btn-ghost btn-sm" onclick="fetchDefine()" style="animation:none;">Define</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchDefine" style="animation:none;">Define</button>
       </div>
       <div id="define-status" class="tool-status"></div>
     </div>
@@ -680,7 +708,7 @@
         <option value="unhex">Hex → Text</option>
       </select>
       <textarea id="tt-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
-      <button class="btn btn-ghost btn-sm" onclick="fetchTextTool()" style="animation:none;margin-top:10px;">Convert</button>
+      <button class="btn btn-ghost btn-sm" data-action="fetchTextTool" style="animation:none;margin-top:10px;">Convert</button>
       <div id="tt-status" class="tool-status"></div>
     </div>
 
@@ -691,7 +719,7 @@
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <input id="pw-length" type="number" value="16" min="4" max="128" class="tool-input" style="max-width:100px;">
         <label style="color:var(--ash);font-size:13px;display:flex;align-items:center;gap:6px;"><input id="pw-symbols" type="checkbox" checked> Symbols</label>
-        <button class="btn btn-ghost btn-sm" onclick="fetchPassword()" style="animation:none;">Generate</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchPassword" style="animation:none;">Generate</button>
       </div>
       <div id="pw-status" class="tool-status" style="font-family:monospace;font-size:16px;word-break:break-all;"></div>
     </div>
@@ -702,7 +730,7 @@
       <h4 style="margin:0 0 16px;font-size:20px;">Quick math.</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <input id="calc-expr" type="text" placeholder="e.g. (12 + 8) * 3" class="tool-input">
-        <button class="btn btn-ghost btn-sm" onclick="fetchCalc()" style="animation:none;">=</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchCalc" style="animation:none;">=</button>
       </div>
       <div id="calc-status" class="tool-status" style="font-size:18px;"></div>
     </div>
@@ -724,7 +752,7 @@
           <option value="kg">kg</option><option value="g">grams</option><option value="lb">pounds</option><option value="oz">ounces</option>
           <option value="c">°C</option><option value="f">°F</option><option value="k">Kelvin</option>
         </select>
-        <button class="btn btn-ghost btn-sm" onclick="fetchUnit()" style="animation:none;">Convert</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchUnit" style="animation:none;">Convert</button>
       </div>
       <div id="unit-status" class="tool-status" style="font-size:18px;"></div>
     </div>
@@ -734,9 +762,9 @@
       <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// RANDOM</span>
       <h4 style="margin:0 0 16px;font-size:20px;">Dice, coin flip, magic 8-ball.</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="fetchRandom('dice')" style="animation:none;">🎲 Roll Dice</button>
-        <button class="btn btn-ghost btn-sm" onclick="fetchRandom('coinflip')" style="animation:none;">🪙 Flip Coin</button>
-        <button class="btn btn-ghost btn-sm" onclick="fetchRandom('8ball')" style="animation:none;">🎱 8-Ball</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchRandom-dice" style="animation:none;">🎲 Roll Dice</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchRandom-coinflip" style="animation:none;">🪙 Flip Coin</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchRandom-8ball" style="animation:none;">🎱 8-Ball</button>
       </div>
       <div id="random-status" class="tool-status" style="font-size:18px;"></div>
     </div>
@@ -749,9 +777,287 @@
       <div id="wc-status" class="tool-status"></div>
     </div>
 
+    <div class="tool-panel" id="panel-cipher" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// CIPHER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Caesar, Vigenère, or XOR.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <select id="ci-type" class="tool-input" style="flex:1;min-width:120px;">
+          <option value="caesar">Caesar</option>
+          <option value="vigenere">Vigenère</option>
+          <option value="xor">XOR</option>
+        </select>
+        <select id="ci-mode" class="tool-input" style="flex:1;min-width:120px;">
+          <option value="encode">Encode</option>
+          <option value="decode">Decode</option>
+        </select>
+        <input id="ci-key" type="text" placeholder="Key (number for Caesar, word for others)" class="tool-input" style="flex:1;min-width:180px;">
+      </div>
+      <textarea id="ci-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchCipher" style="animation:none;margin-top:10px;">Run Cipher</button>
+      <div id="ci-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-sudoku" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// SUDOKU</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Generate a puzzle, or reveal the solution.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="sd-difficulty" class="tool-input" style="flex:1;min-width:120px;">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" data-action="generateSudoku" style="animation:none;">New Puzzle</button>
+        <button class="btn btn-ghost btn-sm" data-action="revealSudoku" style="animation:none;">Reveal Solution</button>
+      </div>
+      <div id="sd-grid" style="display:grid;grid-template-columns:repeat(9,1fr);gap:2px;max-width:340px;margin:0 auto;"></div>
+      <div id="sd-status" class="tool-status" style="text-align:center;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-qrreader" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// QR READER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Upload a QR code, get the text.</h4>
+      <input id="qrr-file" type="file" accept="image/*" class="tool-input" style="width:100%;">
+      <button class="btn btn-ghost btn-sm" data-action="fetchQrDecode" style="animation:none;margin-top:10px;">Decode</button>
+      <div id="qrr-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-wordfreq" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// WORD FREQUENCY</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Top 10 most-used words.</h4>
+      <textarea id="wf-text" placeholder="Paste a passage here..." class="tool-input" style="width:100%;min-height:100px;resize:vertical;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchWordFreq" style="animation:none;margin-top:10px;">Analyze</button>
+      <div id="wf-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-distance" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// DISTANCE CALCULATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">How far apart are two places?</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="ds-from" type="text" placeholder="From (e.g. Nairobi)" class="tool-input">
+        <input id="ds-to" type="text" placeholder="To (e.g. London)" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchDistance" style="animation:none;">Calculate</button>
+      </div>
+      <div id="ds-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-imgfilter" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// IMAGE FILTERS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Grayscale, invert, blur, or sepia.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="if-file" type="file" accept="image/*" class="tool-input" style="flex:1;min-width:180px;">
+        <select id="if-filter" class="tool-input" style="flex:1;min-width:140px;">
+          <option value="grayscale">Grayscale</option>
+          <option value="invert">Invert</option>
+          <option value="blur">Blur</option>
+          <option value="sepia">Sepia</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" data-action="fetchImageFilter" style="animation:none;">Apply</button>
+      </div>
+      <div id="if-status" class="tool-status"></div>
+      <img id="if-result" style="display:none;max-width:100%;border-radius:10px;margin-top:14px;">
+    </div>
+
+    <div class="tool-panel" id="panel-github" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// GITHUB LOOKUP</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Look up a GitHub profile.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="gh-user" type="text" placeholder="username" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchGithub" style="animation:none;">Look Up</button>
+      </div>
+      <div id="gh-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-npm" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// NPM LOOKUP</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Look up an npm package.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="npm-pkg" type="text" placeholder="package name" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchNpm" style="animation:none;">Look Up</button>
+      </div>
+      <div id="npm-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+    <div class="tool-panel" id="panel-lorem" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// LOREM IPSUM</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Generate placeholder text.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="lo-count" type="number" value="3" min="1" max="20" class="tool-input" style="max-width:120px;" placeholder="Paragraphs">
+        <button class="btn btn-ghost btn-sm" data-action="fetchLorem" style="animation:none;">Generate</button>
+      </div>
+      <div id="lo-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-dna" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// DNA ENCODER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Encode text as an ACGT sequence.</h4>
+      <textarea id="dna-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" data-action="fetchDna-encode" style="animation:none;">Encode</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchDna-decode" style="animation:none;">Decode</button>
+      </div>
+      <div id="dna-status" class="tool-status" style="word-break:break-all;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-rle" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// RLE COMPRESS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Run-length encode/decode text.</h4>
+      <textarea id="rle-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" data-action="fetchRle-encode" style="animation:none;">Compress</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchRle-decode" style="animation:none;">Decompress</button>
+      </div>
+      <div id="rle-status" class="tool-status" style="word-break:break-all;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-urlenc" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// URL ENCODE</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Encode or decode a URL string.</h4>
+      <textarea id="ue-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" data-action="fetchUrlenc-encode" style="animation:none;">Encode</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchUrlenc-decode" style="animation:none;">Decode</button>
+      </div>
+      <div id="ue-status" class="tool-status" style="word-break:break-all;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-extractlinks" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// EXTRACT LINKS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Pull every URL out of a block of text.</h4>
+      <textarea id="el-text" placeholder="Paste text with links..." class="tool-input" style="width:100%;min-height:100px;resize:vertical;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchExtractLinks" style="animation:none;margin-top:10px;">Extract</button>
+      <div id="el-status" class="tool-status" style="white-space:pre-line;word-break:break-all;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-brainfuck" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// BRAINFUCK</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Run a Brainfuck program.</h4>
+      <textarea id="bf-code" placeholder="++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++." class="tool-input" style="width:100%;min-height:80px;resize:vertical;font-family:monospace;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchBrainfuck" style="animation:none;margin-top:10px;">Run</button>
+      <div id="bf-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-uuid" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// UUID GENERATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Generate a random UUID v4.</h4>
+      <button class="btn btn-ghost btn-sm" data-action="genUuid" style="animation:none;">Generate</button>
+      <div id="uuid-status" class="tool-status mono"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-timestamp" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// TIMESTAMP CONVERTER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Unix timestamp ↔ readable date.</h4>
+      <input id="ts-input" type="text" placeholder="Unix seconds, or leave blank for now" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="convertTimestamp" style="animation:none;margin-top:10px;">Convert</button>
+      <div id="ts-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-roman" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// ROMAN NUMERAL</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Number ↔ Roman numeral.</h4>
+      <input id="rm-input" type="text" placeholder="e.g. 1994 or MCMXCIV" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="convertRoman" style="animation:none;margin-top:10px;">Convert</button>
+      <div id="rm-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-palindrome" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// PALINDROME CHECK</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Is it the same backwards?</h4>
+      <input id="pd-input" type="text" placeholder="Type a word or phrase" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="checkPalindrome" style="animation:none;margin-top:10px;">Check</button>
+      <div id="pd-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-bmi" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// BMI CALCULATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Body mass index.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="bmi-kg" type="number" placeholder="Weight (kg)" class="tool-input">
+        <input id="bmi-cm" type="number" placeholder="Height (cm)" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="calcBmi" style="animation:none;">Calculate</button>
+      </div>
+      <div id="bmi-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-age" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// AGE CALCULATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">How old, exactly?</h4>
+      <input id="age-dob" type="date" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="calcAge" style="animation:none;margin-top:10px;">Calculate</button>
+      <div id="age-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-percent" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// PERCENTAGE</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">What is X% of Y?</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <input id="pc-x" type="number" placeholder="X" class="tool-input" style="max-width:100px;">
+        <span>% of</span>
+        <input id="pc-y" type="number" placeholder="Y" class="tool-input" style="max-width:120px;">
+        <button class="btn btn-ghost btn-sm" data-action="calcPercent" style="animation:none;">=</button>
+      </div>
+      <div id="pc-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-num2words" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// NUMBER → WORDS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Spell out a number.</h4>
+      <input id="n2w-input" type="number" placeholder="e.g. 4820" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="convertNum2Words" style="animation:none;margin-top:10px;">Spell Out</button>
+      <div id="n2w-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-color" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// COLOR CONVERTER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">HEX ↔ RGB ↔ HSL.</h4>
+      <input id="cl-input" type="text" placeholder="#ff6600 or rgb(255,102,0)" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="convertColor" style="animation:none;margin-top:10px;">Convert</button>
+      <div id="cl-status" class="tool-status" style="white-space:pre-line;"></div>
+      <div id="cl-swatch" style="display:none;width:100%;height:36px;border-radius:8px;margin-top:10px;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-json" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// JSON FORMAT</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Validate and pretty-print JSON.</h4>
+      <textarea id="js-input" placeholder='{"key":"value"}' class="tool-input" style="width:100%;min-height:100px;resize:vertical;font-family:monospace;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="formatJson" style="animation:none;margin-top:10px;">Format</button>
+      <div id="js-status" class="tool-status" style="white-space:pre-wrap;font-family:monospace;font-size:12px;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-regex" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// REGEX TESTER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Test a pattern against text.</h4>
+      <input id="rx-pattern" type="text" placeholder="Pattern, e.g. \\d+" class="tool-input">
+      <textarea id="rx-text" placeholder="Text to test..." class="tool-input" style="width:100%;min-height:80px;resize:vertical;margin-top:10px;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="testRegex" style="animation:none;margin-top:10px;">Test</button>
+      <div id="rx-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-slug" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// SLUG GENERATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Turn a title into a URL slug.</h4>
+      <input id="sl-input" type="text" placeholder="My Blog Post Title!" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="genSlug" style="animation:none;margin-top:10px;">Generate</button>
+      <div id="sl-status" class="tool-status mono"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-diff" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// TEXT DIFF</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Compare two blocks of text line by line.</h4>
+      <textarea id="df-a" placeholder="Original text..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <textarea id="df-b" placeholder="Changed text..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;margin-top:10px;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="diffText" style="animation:none;margin-top:10px;">Compare</button>
+      <div id="df-status" class="tool-status" style="white-space:pre-line;font-family:monospace;font-size:12px;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-ascii" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// ASCII TABLE</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Look up a character's ASCII code.</h4>
+      <input id="as-input" type="text" maxlength="1" placeholder="Type one character" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="lookupAscii" style="animation:none;margin-top:10px;">Look Up</button>
+      <div id="as-status" class="tool-status"></div>
+    </div>
+
   </div>
 
-  <p class="reveal" style="text-align:center;color:var(--ash);margin-top:32px;font-size:14px;">More free tools landing here soon.</p>
 </section>
 
 <style>
@@ -1037,6 +1343,492 @@
       } catch (e) {}
     }, 400);
   }
+
+  async function fetchCipher() {
+    const ctype = document.getElementById('ci-type').value;
+    const mode = document.getElementById('ci-mode').value;
+    const key = document.getElementById('ci-key').value;
+    const text = document.getElementById('ci-text').value;
+    const status = document.getElementById('ci-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'cipher', ctype, mode, key, text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  let sudokuSolution = null;
+  function renderSudokuGrid(board, given) {
+    const grid = document.getElementById('sd-grid');
+    grid.innerHTML = '';
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const cell = document.createElement('div');
+        const v = board[r][c];
+        const thick = (r % 3 === 0 ? 'border-top:2px solid var(--ember-dim);' : '') +
+                      (c % 3 === 0 ? 'border-left:2px solid var(--ember-dim);' : '') +
+                      (r === 8 ? 'border-bottom:2px solid var(--ember-dim);' : '') +
+                      (c === 8 ? 'border-right:2px solid var(--ember-dim);' : '');
+        cell.style.cssText = `aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);font-size:15px;font-weight:${given && given[r][c] ? '700' : '400'};color:${given && given[r][c] ? 'var(--bone)' : 'var(--ember)'};${thick}`;
+        cell.textContent = v ? v : '';
+        grid.appendChild(cell);
+      }
+    }
+  }
+  async function generateSudoku() {
+    const difficulty = document.getElementById('sd-difficulty').value;
+    const status = document.getElementById('sd-status');
+    status.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/widgets/sudoku', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate', difficulty })
+      });
+      const data = await res.json();
+      if (!data.success) { status.textContent = data.error || 'Failed.'; return; }
+      sudokuSolution = data.solution;
+      renderSudokuGrid(data.puzzle, data.puzzle.map(row => row.map(v => v !== 0)));
+      status.textContent = 'New puzzle ready.';
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+  function revealSudoku() {
+    const status = document.getElementById('sd-status');
+    if (!sudokuSolution) { status.textContent = 'Generate a puzzle first.'; return; }
+    renderSudokuGrid(sudokuSolution, null);
+    status.textContent = 'Solution revealed.';
+  }
+
+  async function fetchQrDecode() {
+    const fileInput = document.getElementById('qrr-file');
+    const status = document.getElementById('qrr-status');
+    if (!fileInput.files.length) { status.textContent = 'Choose an image first.'; return; }
+    status.textContent = 'Decoding…';
+    try {
+      const fd = new FormData();
+      fd.append('image', fileInput.files[0]);
+      const res = await fetch('/api/widgets/qr-decode', { method: 'POST', body: fd });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchWordFreq() {
+    const text = document.getElementById('wf-text').value;
+    const status = document.getElementById('wf-status');
+    if (!text.trim()) { status.textContent = 'Paste some text first.'; return; }
+    status.textContent = 'Analyzing…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'wordfreq', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchDistance() {
+    const from = document.getElementById('ds-from').value;
+    const to = document.getElementById('ds-to').value;
+    const status = document.getElementById('ds-status');
+    if (!from.trim() || !to.trim()) { status.textContent = 'Enter both places.'; return; }
+    status.textContent = 'Calculating…';
+    try {
+      const res = await fetch('/api/widgets/distance', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? `${data.from_label} → ${data.to_label}: ${data.result}` : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchImageFilter() {
+    const fileInput = document.getElementById('if-file');
+    const filter = document.getElementById('if-filter').value;
+    const status = document.getElementById('if-status');
+    const resultImg = document.getElementById('if-result');
+    resultImg.style.display = 'none';
+    if (!fileInput.files.length) { status.textContent = 'Choose an image first.'; return; }
+    status.textContent = 'Processing…';
+    try {
+      const fd = new FormData();
+      fd.append('image', fileInput.files[0]);
+      fd.append('filter', filter);
+      const res = await fetch('/api/widgets/image-filter', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.success) { status.textContent = data.error || 'Failed.'; return; }
+      resultImg.src = data.result;
+      resultImg.style.display = 'block';
+      status.textContent = 'Done.';
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchGithub() {
+    const username = document.getElementById('gh-user').value;
+    const status = document.getElementById('gh-status');
+    if (!username.trim()) { status.textContent = 'Enter a username first.'; return; }
+    status.textContent = 'Looking up…';
+    try {
+      const res = await fetch('/api/widgets/github', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchNpm() {
+    const pkg = document.getElementById('npm-pkg').value;
+    const status = document.getElementById('npm-status');
+    if (!pkg.trim()) { status.textContent = 'Enter a package name first.'; return; }
+    status.textContent = 'Looking up…';
+    try {
+      const res = await fetch('/api/widgets/npm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ package: pkg })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchLorem() {
+    const count = document.getElementById('lo-count').value || 3;
+    const status = document.getElementById('lo-status');
+    status.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'lorem', text: String(count) })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function runDna(mode) {
+    const text = document.getElementById('dna-text').value;
+    const status = document.getElementById('dna-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: mode === 'encode' ? 'dna' : 'undna', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function runRle(mode) {
+    const text = document.getElementById('rle-text').value;
+    const status = document.getElementById('rle-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: mode === 'encode' ? 'rle' : 'unrle', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function runUrlenc(mode) {
+    const text = document.getElementById('ue-text').value;
+    const status = document.getElementById('ue-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: mode === 'encode' ? 'urlencode' : 'urldecode', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchExtractLinks() {
+    const text = document.getElementById('el-text').value;
+    const status = document.getElementById('el-status');
+    if (!text.trim()) { status.textContent = 'Paste some text first.'; return; }
+    status.textContent = 'Scanning…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'extractlinks', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchBrainfuck() {
+    const text = document.getElementById('bf-code').value;
+    const status = document.getElementById('bf-status');
+    if (!text.trim()) { status.textContent = 'Paste a Brainfuck program first.'; return; }
+    status.textContent = 'Running…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'brainfuck', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  // ── Pure client-side tools — no network round-trip needed ──────────────
+  function genUuid() {
+    const status = document.getElementById('uuid-status');
+    const id = (crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+    status.textContent = id;
+  }
+
+  function convertTimestamp() {
+    const input = document.getElementById('ts-input').value.trim();
+    const status = document.getElementById('ts-status');
+    try {
+      if (!input) {
+        const now = Math.floor(Date.now() / 1000);
+        status.textContent = `Now: ${now} · ${new Date().toString()}`;
+        return;
+      }
+      if (/^\d+$/.test(input)) {
+        const d = new Date(parseInt(input, 10) * 1000);
+        status.textContent = d.toString();
+      } else {
+        const d = new Date(input);
+        if (isNaN(d.getTime())) { status.textContent = 'Could not parse that date.'; return; }
+        status.textContent = `${Math.floor(d.getTime() / 1000)}`;
+      }
+    } catch (e) { status.textContent = 'Invalid input.'; }
+  }
+
+  function convertRoman() {
+    const input = document.getElementById('rm-input').value.trim();
+    const status = document.getElementById('rm-status');
+    if (!input) { status.textContent = 'Type a number or numeral first.'; return; }
+    const map = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+    if (/^\d+$/.test(input)) {
+      let n = parseInt(input, 10);
+      if (n <= 0 || n > 3999) { status.textContent = 'Number must be 1–3999.'; return; }
+      let out = '';
+      for (const [v, s] of map) { while (n >= v) { out += s; n -= v; } }
+      status.textContent = out;
+    } else {
+      const romanMap = { M:1000, CM:900, D:500, CD:400, C:100, XC:90, L:50, XL:40, X:10, IX:9, V:5, IV:4, I:1 };
+      let s = input.toUpperCase(), i = 0, total = 0;
+      while (i < s.length) {
+        if (i + 1 < s.length && romanMap[s.substr(i,2)]) { total += romanMap[s.substr(i,2)]; i += 2; }
+        else if (romanMap[s[i]]) { total += romanMap[s[i]]; i += 1; }
+        else { status.textContent = 'Not a valid Roman numeral.'; return; }
+      }
+      status.textContent = String(total);
+    }
+  }
+
+  function checkPalindrome() {
+    const input = document.getElementById('pd-input').value;
+    const status = document.getElementById('pd-status');
+    const clean = input.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!clean) { status.textContent = 'Type something first.'; return; }
+    const isPal = clean === clean.split('').reverse().join('');
+    status.textContent = isPal ? `✅ "${input}" is a palindrome.` : `❌ "${input}" is not a palindrome.`;
+  }
+
+  function calcBmi() {
+    const kg = parseFloat(document.getElementById('bmi-kg').value);
+    const cm = parseFloat(document.getElementById('bmi-cm').value);
+    const status = document.getElementById('bmi-status');
+    if (!kg || !cm) { status.textContent = 'Enter both weight and height.'; return; }
+    const m = cm / 100;
+    const bmi = kg / (m * m);
+    let cat = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
+    status.textContent = `BMI: ${bmi.toFixed(1)} — ${cat}`;
+  }
+
+  function calcAge() {
+    const dob = document.getElementById('age-dob').value;
+    const status = document.getElementById('age-status');
+    if (!dob) { status.textContent = 'Pick a date of birth first.'; return; }
+    const birth = new Date(dob), now = new Date();
+    let years = now.getFullYear() - birth.getFullYear();
+    let months = now.getMonth() - birth.getMonth();
+    let days = now.getDate() - birth.getDate();
+    if (days < 0) { months--; days += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+    if (months < 0) { years--; months += 12; }
+    status.textContent = `${years} years, ${months} months, ${days} days old`;
+  }
+
+  function calcPercent() {
+    const x = parseFloat(document.getElementById('pc-x').value);
+    const y = parseFloat(document.getElementById('pc-y').value);
+    const status = document.getElementById('pc-status');
+    if (isNaN(x) || isNaN(y)) { status.textContent = 'Enter both numbers.'; return; }
+    status.textContent = `${x}% of ${y} = ${(x / 100 * y).toFixed(4).replace(/\.?0+$/, '')}`;
+  }
+
+  function convertNum2Words() {
+    const n = parseInt(document.getElementById('n2w-input').value, 10);
+    const status = document.getElementById('n2w-status');
+    if (isNaN(n)) { status.textContent = 'Enter a number first.'; return; }
+    const ones = ['','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+    const tens = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+    function chunk(num) {
+      let s = '';
+      if (num >= 100) { s += ones[Math.floor(num/100)] + ' hundred '; num %= 100; }
+      if (num >= 20) { s += tens[Math.floor(num/10)] + ' '; num %= 10; }
+      if (num > 0) s += ones[num] + ' ';
+      return s.trim();
+    }
+    if (n === 0) { status.textContent = 'zero'; return; }
+    let num = Math.abs(n), parts = [], scales = ['', 'thousand', 'million', 'billion'];
+    let scaleIdx = 0;
+    while (num > 0) {
+      const c = num % 1000;
+      if (c) parts.unshift(chunk(c) + (scales[scaleIdx] ? ' ' + scales[scaleIdx] : ''));
+      num = Math.floor(num / 1000);
+      scaleIdx++;
+    }
+    status.textContent = (n < 0 ? 'negative ' : '') + parts.join(' ').trim();
+  }
+
+  function convertColor() {
+    const input = document.getElementById('cl-input').value.trim();
+    const status = document.getElementById('cl-status');
+    const swatch = document.getElementById('cl-swatch');
+    let r, g, b;
+    const hexMatch = input.match(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/i);
+    const rgbMatch = input.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+    if (hexMatch) {
+      let hex = hexMatch[1];
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      r = parseInt(hex.substr(0,2),16); g = parseInt(hex.substr(2,2),16); b = parseInt(hex.substr(4,2),16);
+    } else if (rgbMatch) {
+      r = +rgbMatch[1]; g = +rgbMatch[2]; b = +rgbMatch[3];
+    } else {
+      status.textContent = 'Enter a HEX (#rrggbb) or rgb(r,g,b) value.';
+      swatch.style.display = 'none';
+      return;
+    }
+    const hex = '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+    const rn = r/255, gn = g/255, bn = b/255;
+    const max = Math.max(rn,gn,bn), min = Math.min(rn,gn,bn);
+    let h, s, l = (max+min)/2;
+    if (max === min) { h = s = 0; }
+    else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === rn) h = (gn - bn) / d + (gn < bn ? 6 : 0);
+      else if (max === gn) h = (bn - rn) / d + 2;
+      else h = (rn - gn) / d + 4;
+      h *= 60;
+    }
+    status.textContent = `HEX: ${hex}\nRGB: rgb(${r}, ${g}, ${b})\nHSL: hsl(${Math.round(h)}, ${Math.round(s*100)}%, ${Math.round(l*100)}%)`;
+    swatch.style.background = hex;
+    swatch.style.display = 'block';
+  }
+
+  function formatJson() {
+    const input = document.getElementById('js-input').value;
+    const status = document.getElementById('js-status');
+    if (!input.trim()) { status.textContent = 'Paste some JSON first.'; return; }
+    try {
+      const parsed = JSON.parse(input);
+      status.textContent = JSON.stringify(parsed, null, 2);
+    } catch (e) { status.textContent = '❌ Invalid JSON: ' + e.message; }
+  }
+
+  function testRegex() {
+    const pattern = document.getElementById('rx-pattern').value;
+    const text = document.getElementById('rx-text').value;
+    const status = document.getElementById('rx-status');
+    if (!pattern) { status.textContent = 'Enter a pattern first.'; return; }
+    try {
+      const re = new RegExp(pattern, 'g');
+      const matches = [...text.matchAll(re)].map(m => m[0]);
+      status.textContent = matches.length ? `${matches.length} match(es):\n${matches.join('\n')}` : 'No matches.';
+    } catch (e) { status.textContent = '❌ Invalid pattern: ' + e.message; }
+  }
+
+  function genSlug() {
+    const input = document.getElementById('sl-input').value;
+    const status = document.getElementById('sl-status');
+    if (!input.trim()) { status.textContent = 'Type a title first.'; return; }
+    const slug = input.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
+    status.textContent = slug;
+  }
+
+  function diffText() {
+    const a = document.getElementById('df-a').value.split('\n');
+    const b = document.getElementById('df-b').value.split('\n');
+    const status = document.getElementById('df-status');
+    const max = Math.max(a.length, b.length);
+    const lines = [];
+    for (let i = 0; i < max; i++) {
+      const la = a[i] ?? '', lb = b[i] ?? '';
+      if (la === lb) lines.push('  ' + la);
+      else {
+        if (a[i] !== undefined) lines.push('- ' + la);
+        if (b[i] !== undefined) lines.push('+ ' + lb);
+      }
+    }
+    status.textContent = lines.join('\n') || 'No differences.';
+  }
+
+  function lookupAscii() {
+    const ch = document.getElementById('as-input').value;
+    const status = document.getElementById('as-status');
+    if (!ch) { status.textContent = 'Type one character first.'; return; }
+    const code = ch.charCodeAt(0);
+    status.textContent = `'${ch}' → decimal ${code} · hex 0x${code.toString(16)} · binary ${code.toString(2).padStart(8,'0')}`;
+  }
+
+  // ── Robust delegated click binding — survives any single handler error,
+  // and doesn't rely on inline onclick attributes at all. ──────────────
+  document.addEventListener('click', function(e) {
+    const card = e.target.closest('.tool-card');
+    if (card && card.dataset.tool) {
+      try { selectTool(card.dataset.tool); } catch (err) { console.error('selectTool failed:', err); }
+      return;
+    }
+    const btn = e.target.closest('[data-action]');
+    if (btn && btn.dataset.action) {
+      const [fn, arg] = btn.dataset.action.split('-');
+      try {
+        const handlers = {
+          fetchYoutube, searchMusic, fetchQr, fetchShorten, fetchDefine, fetchTextTool,
+          fetchPassword, fetchCalc, fetchUnit, fetchCipher, generateSudoku, revealSudoku,
+          fetchQrDecode, fetchWordFreq, fetchDistance, fetchImageFilter, fetchGithub, fetchNpm,
+          fetchLorem, fetchExtractLinks, fetchBrainfuck, genUuid, convertTimestamp, convertRoman,
+          checkPalindrome, calcBmi, calcAge, calcPercent, convertNum2Words, convertColor,
+          formatJson, testRegex, genSlug, diffText, lookupAscii
+        };
+        if (fn === 'fetchBase64') fetchBase64(arg);
+        else if (fn === 'fetchRandom') fetchRandom(arg);
+        else if (fn === 'fetchDna') runDna(arg);
+        else if (fn === 'fetchRle') runRle(arg);
+        else if (fn === 'fetchUrlenc') runUrlenc(arg);
+        else if (handlers[fn]) handlers[fn]();
+        else console.warn('No handler for action:', btn.dataset.action);
+      } catch (err) { console.error('Tool action failed:', btn.dataset.action, err); }
+    }
+  });
+
 </script>
 
 <footer>
