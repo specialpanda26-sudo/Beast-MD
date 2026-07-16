@@ -66,6 +66,11 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Quart(__name__, static_folder="assets", static_url_path="/assets")
 
+@app.route("/<name>.html")
+async def html_alias(name):
+    return redirect("/" if name == "index" else f"/{name}")
+
+
 # ✅ Force browsers to always fetch the latest HTML instead of using a stale
 # local cache — without this, anyone who'd visited before kept seeing old
 # landing-page/admin-page content even after a fresh deploy.
