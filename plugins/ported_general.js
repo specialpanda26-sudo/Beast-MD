@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: general)
+// Beast MD ported module (category: general)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -202,89 +202,27 @@ Object.assign(module.exports, (() => {
 
   return {
 
-    // ── .pair ─── Get session id for the bot | usage: .pair 92305395XXXX
+    // ── .pair ─── Get session id for the bot | usage: .pair
+    // ✅ FIX: this used to call an unrelated third-party server
+    // (mega-pairing.onrender.com) left over from the ported source bot —
+    // it had nothing to do with this bot's own Baileys session, so any
+    // code it returned would never actually link this account. Now it
+    // just points to the bot's real pairing page (pair.html /
+    // client_bridge.js), which has pairing-code, QR, and session-ID
+    // restore all wired to the live socket.
     "pair": async (h) => {
       const sock = h.sock;
       const message = h.msg;
-      const args = h.args;
-      const context = {
-        chatId: h.from,
-        senderId: h.senderJid,
-        isGroup: h.isGroup,
-        isBotAdmin: h.isBotAdmin,
-        senderIsOwnerOrSudo: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        isSenderAdmin: h.isBotAdmin,
-        isOwnerOrSudoCheck: h.isOwner || h.isSubAdmin || h.isCoOwner,
-        config: h.config,
-        rawText: (h.config.prefix + 'pair ' + h.args.join(' ')).trim(),
-        channelInfo: {},
-      };
       try {
-
-        const { chatId } = context;
-        const forwardInfo = {};
-        const query = args.join('').trim();
-        if (!query) {
-            return await sock.sendMessage(chatId, {
-                text: "❌ *Missing Number*\nExample: .pair 92305395XXXX",
-                contextInfo: forwardInfo
-            }, { quoted: message });
-        }
-        const number = query.replace(/[^0-9]/g, '');
-        if (number.length < 10 || number.length > 15) {
-            return await sock.sendMessage(chatId, {
-                text: "❌ *Invalid Format*\nPlease provide the number with country code but without + or spaces.",
-                contextInfo: forwardInfo
-            }, { quoted: message });
-        }
-        await sock.sendMessage(chatId, {
-            text: "⚡ *Requesting code from server...*",
-            contextInfo: forwardInfo
-        }, { quoted: message });
-        try {
-            const response = await axios.get(`https://mega-pairing.onrender.com/pair?number=${number}`, {
-                timeout: 60000
-            });
-            if (response.data && response.data.code) {
-                const pairingCode = response.data.code;
-                if (pairingCode.includes("Unavailable") || pairingCode.includes("Error")) {
-                    throw new Error("Server is busy");
-                }
-                const successText = `✅ *${config.botName || 'Halloween MD'} PAIRING CODE*\n\n` +
-                    `Code: *${pairingCode}*\n\n` +
-                    `*How to use:*\n` +
-                    `1. Open WhatsApp Settings\n` +
-                    `2. Tap 'Linked Devices'\n` +
-                    `3. Tap 'Link a Device'\n` +
-                    `4. Select 'Link with phone number instead'\n` +
-                    `5. Enter the code above.`;
-                await sock.sendMessage(chatId, {
-                    text: successText,
-                    contextInfo: forwardInfo
-                }, { quoted: message });
-            }
-            else {
-                throw new Error("Invalid response format");
-            }
-        }
-        catch (error) {
-            console.error('Pairing Plugin Error:', error.message);
-            let errorMsg = "❌ *Pairing Failed*\nReason: ";
-            if (error.code === 'ECONNABORTED') {
-                errorMsg += "Server timeout. Please try again in 1 minute.";
-            }
-            else if (error.response?.status === 400) {
-                errorMsg += "Invalid phone number format.";
-            }
-            else {
-                errorMsg += "The server is currently offline or busy. Try again later.";
-            }
-            await sock.sendMessage(chatId, {
-                text: errorMsg,
-                contextInfo: forwardInfo
-            }, { quoted: message });
-        }
-    
+        const { chatId } = { chatId: h.from };
+        const publicUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || `http://localhost:${process.env.WEB_PORT || 3000}`;
+        const text = `🔗 *Link a WhatsApp number to ${h.config.botName || 'Beast MD'}*\n\n` +
+          `Open this page to connect: ${publicUrl}/pair\n\n` +
+          `There you can choose:\n` +
+          `• *Pairing Code* — enter a phone number, get an 8-character code\n` +
+          `• *QR Code* — scan directly from Linked Devices\n` +
+          `• *Session ID* — paste an exported session to restore an already-linked account instantly`;
+        await sock.sendMessage(chatId, { text }, { quoted: message });
       } catch (portErr) {
         console.error('[ported:pair] error:', portErr.message);
         try { await h.sock.sendMessage(h.from, { text: '❌ Error in .pair: ' + portErr.message }, { quoted: h.msg }); } catch (_) {}
@@ -401,7 +339,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from searchcmd.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -549,7 +487,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from stats.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -612,7 +550,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from uptime.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -656,7 +594,7 @@ Object.assign(module.exports, (() => {
         const startedAt = new Date(Date.now() - uptimeMs).toLocaleString();
         const ramMb = (process.memoryUsage().rss / 1024 / 1024).toFixed(1);
         const commandCount = commandHandler.commands.size;
-        const text = `🤖 *${config.botName || 'Halloween MD'} STATUS*\n\n` +
+        const text = `🤖 *${config.botName || 'Beast MD'} STATUS*\n\n` +
             `⏱ Uptime: ${formatUptime(uptimeMs)}\n` +
             `🚀 Started: ${startedAt}\n` +
             `📦 Plugins: ${commandCount}\n` +

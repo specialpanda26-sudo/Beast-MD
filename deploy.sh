@@ -1,6 +1,6 @@
 #!/bin/bash
 # ╔══════════════════════════════════════════╗
-# ║   Halloween MD v19™ — Deploy Script        ║
+# ║   MD Bot — Deploy Script        ║
 # ║   Pushes to GitHub + Triggers Render    ║
 # ╚══════════════════════════════════════════╝
 
@@ -17,7 +17,7 @@ NC='\033[0m'
 
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════════╗"
-echo "║   🎃 Halloween MD — Auto Deploy 🎃          ║"
+echo "║    MD Bot — Auto Deploy           ║"
 echo "╚══════════════════════════════════════════╝"
 echo -e "${NC}"
 

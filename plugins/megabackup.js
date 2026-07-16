@@ -21,7 +21,7 @@ function megaClient() {
   const email = process.env.MEGA_EMAIL;
   const password = process.env.MEGA_PASSWORD;
   if (!email || !password) return null;
-  return new Storage({ email, password, userAgent: 'HalloweenMD/1.0' });
+  return new Storage({ email, password, userAgent: 'MDBot/1.0' });
 }
 
 module.exports = {
@@ -40,7 +40,7 @@ module.exports = {
     try {
       await new Promise((resolve, reject) => {
         storage.on('ready', () => {
-          const uploadStream = storage.upload({ name: `beastbot-creds-${Date.now()}.json`, size: fs.statSync(credsPath).size });
+          const uploadStream = storage.upload({ name: `bot-creds-${Date.now()}.json`, size: fs.statSync(credsPath).size });
           fs.createReadStream(credsPath).pipe(uploadStream);
           uploadStream.on('complete', resolve);
           uploadStream.on('error', reject);
@@ -62,7 +62,7 @@ module.exports = {
     try {
       await new Promise((resolve, reject) => {
         storage.on('ready', async () => {
-          const files = Object.values(storage.files).filter(f => f.name.startsWith('beastbot-creds-'));
+          const files = Object.values(storage.files).filter(f => f.name.startsWith('bot-creds-'));
           if (!files.length) return reject(new Error('No backups found on this Mega account.'));
           const latest = files.sort((a, b) => b.name.localeCompare(a.name))[0];
           const credsPath = path.join(SESSIONS_DIR, 'creds.json');

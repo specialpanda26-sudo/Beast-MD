@@ -45,8 +45,8 @@ const {
 // owner themself via the hidden `.ownerrecovery` WhatsApp command. See
 // getOwnerNumber() below for the resolution order.
 const OWNER_NUMBER_ENV = (process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
-const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Halloween MD';
-const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Halloween MD™';
+const OWNER_NAME_CFG = process.env.OWNER_NAME   || 'Beast MD';
+const BOT_NAME_DEFAULT   = process.env.BOT_NAME      || 'Beast MD';
 const CMD_PREFIX_DEFAULT = '.';
 
 // ✅ NEW (Update 15): .setbotname/.setprefix (plugins/settings-ext.js) used to
@@ -69,9 +69,9 @@ function getPrefix() {
 // explaining why that was removed: it fired on "I saw a robot", "chatbot",
 // anyone named Henry in the group, etc.). This only matches full name
 // phrases, on word boundaries, so "robot"/"chatbot" still won't trigger it —
-// customize via BOT_NAME_ALIASES (comma-separated) if "Halloween MD" ever
+// customize via BOT_NAME_ALIASES (comma-separated) if "Beast MD" ever
 // changes for a reseller/white-label deployment.
-const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'halloween,halloween md,hmd')
+const BOT_NAME_ALIASES = (process.env.BOT_NAME_ALIASES || 'md,md bot,mdbot')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 function isBotAddressedByName(text) {
   if (!text) return false;
@@ -106,7 +106,7 @@ global.subAdmins = global.subAdmins || new Set(
 // in this list, so .hangman/.trivia/.guess/.truth/.dare/.wyr/.validate/
 // .ipinfo/.whois all resolved to "Unknown command" even though fully coded.
 const PLUGIN_NAMES = [
-  'general', 'group', 'media', 'cypher', 'atassa', 'scheduler', 'wallet',
+  'general', 'group', 'media', 'cypher', 'atassa', 'scheduler',
   'games', 'osint', 'extended', 'setcookies',
   // Delta feature pack:
   'notes', 'groupguard', 'games2', 'texteffects', 'urltools', 'tempmail',
@@ -151,7 +151,7 @@ const loadedCmds = Object.keys(allCommands);
 console.log(`✅ Plugins loaded — ${loadedCmds.length} commands: ${loadedCmds.join(', ')}`);
 
 // ✅ FIX: lib_ported/commandHandler.js is a leftover from the original ported
-// Mega-MD bot. It expects plugins shaped like {command, handler, category},
+// bot template. It expects plugins shaped like {command, handler, category},
 // but every plugin here exports flat {cmdName: fn, ...} instead — so nothing
 // ever called registerCommand() on a real command, leaving the singleton's
 // .commands/.categories/.stats permanently empty. That silently broke
@@ -168,7 +168,7 @@ const PLUGIN_CATEGORY = {
   general: 'General', ported_general: 'General',
   group: 'Group', ported_group: 'Group', groupguard: 'Group Guard',
   media: 'Media', 'overlap-rewrites': 'Media',
-  cypher: 'AI & Fun', atassa: 'Utility', wallet: 'Wallet',
+  cypher: 'AI & Fun', atassa: 'Utility',
   games: 'Games', games2: 'Games', ported_games: 'Games',
   osint: 'OSINT', extended: 'Group Intelligence',
   notes: 'Notes', texteffects: 'Text Effects', urltools: 'URL Tools',
@@ -199,8 +199,9 @@ let lastPairingCode = null;
 let lastPairingNumber = null;
 let botOnline = false;
 let pairingPending = false;  // true while a new session is starting up
-let currentSessionId = "beastbot";
+let currentSessionId = "mdbot";
 let lastQRDataUrl = null;  // base64 data URL of the latest QR code for web display
+let sessionRestoreError = null;  // set by /session-restore when a pasted session ID is invalid
 // ✅ FIX: track consecutive *fatal* disconnects per session so we can allow
 // a few bounded retries (in case a "fatal" code is ever a rare transient
 // blip) without falling back into the old infinite-retry-forever behavior.
@@ -500,9 +501,9 @@ function getOwnerSessionSocket() {
           }
         }
         await socket.sendMessage(`${cleanPhone}@s.whatsapp.net`, {
-          text: `🔐 *Halloween MD™ — Verification Code*\n\n` +
+          text: `🔐 *Beast MD — Verification Code*\n\n` +
                 `Hi ${name || "there"}, your code is: *${otp}*\n\n` +
-                `This code expires in 10 minutes. Enter it on the registration page to verify your number and unlock your trust badge + free credit.`
+                `This code expires in 10 minutes. Enter it on the registration page to verify your number and unlock your trust badge.`
         });
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true }));
@@ -646,6 +647,66 @@ function getOwnerSessionSocket() {
     return;
   }
 
+  // POST /session-restore — paste a base64 session ID (an exported
+  // creds.json, same shape as .pair's alternative) to reconnect a
+  // WhatsApp account instantly, no QR scan or phone-number code needed.
+  // Writes it straight into a fresh session folder's creds.json — Baileys'
+  // own useMultiFileAuthState() then loads it as already-registered, so
+  // startSession()'s existing pairing-code branch (`!state.creds.registered`)
+  // is skipped automatically and it connects right away.
+  if (req.method === "POST" && url.pathname === "/session-restore") {
+    let body = "";
+    req.on("data", d => body += d);
+    req.on("end", () => {
+      sessionRestoreError = null;
+      let sidRaw = "";
+      try { sidRaw = (JSON.parse(body).sessionId || "").trim(); } catch (_) {}
+
+      if (!sidRaw) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: "No session ID provided." }));
+        return;
+      }
+
+      let decoded;
+      try {
+        const jsonStr = Buffer.from(sidRaw, "base64").toString("utf-8");
+        decoded = JSON.parse(jsonStr);
+      } catch (_) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: "Couldn't decode that — check the string was copied in full." }));
+        return;
+      }
+      if (!decoded || typeof decoded !== "object" || !decoded.noiseKey || !decoded.signedIdentityKey) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: "That doesn't look like a valid WhatsApp session ID." }));
+        return;
+      }
+
+      lastPairingCode = null;
+      lastPairingNumber = null;
+      lastQRDataUrl = null;
+      pendingPairResolve = null;
+      pairingPending = true;
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+
+      const newSid = "restore_session_" + Date.now();
+      console.log(`📥 Restoring session from pasted session ID: ${newSid}`);
+      try {
+        const newPath = path.join(SESSIONS_DIR, newSid);
+        fs.mkdirSync(newPath, { recursive: true });
+        fs.writeFileSync(path.join(newPath, "creds.json"), JSON.stringify(decoded, null, 2));
+      } catch (e) {
+        sessionRestoreError = "Couldn't save session data on the server: " + e.message;
+        pairingPending = false;
+        return;
+      }
+      setTimeout(() => startSession(newSid, { forceQR: false }), 500);
+    });
+    return;
+  }
+
   // GET /pair-status — JS polling endpoint (no page refresh needed)
   if (req.method === "GET" && url.pathname === "/pair-status") {
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -655,7 +716,8 @@ function getOwnerSessionSocket() {
       online: botOnline,
       sessions: activeSessions.size,
       pending: pairingPending,   // true = session started but code not yet generated
-      qr: lastQRDataUrl || null  // base64 data URL of QR image, or null
+      qr: lastQRDataUrl || null,  // base64 data URL of QR image, or null
+      restoreError: sessionRestoreError || null
     }));
     return;
   }
@@ -902,7 +964,7 @@ const SENSITIVE_COMMANDS = new Set([
   'addadmin', 'removeadmin', 'addcoowner', 'removecoowner', 'settier',
   'announce', 'checkblocked', 'welcome', 'status', 'pp', 'bio', 'public',
   'private', 'setmode', 'ownerrecovery', 'login', 'logout', 'maintenance',
-  'reload', 'addfunds',
+  'reload',
 ]);
 
 // Types that must never trigger a WhatsApp owner-ping. These fire *from
@@ -993,7 +1055,7 @@ function prompt(question) {
 
 function printBanner() {
   console.log("\n╔══════════════════════════════════════╗");
-  console.log("   🔥 HALLOWEEN MD v19™ 🔥   ");
+  console.log("   🔥 BEAST MD 🔥   ");
   console.log("╚══════════════════════════════════════╝\n");
 }
 
@@ -1989,13 +2051,13 @@ async function startSession(sessionId, opts = {}) {
           if (!isPrimaryOwner) {
             try {
               const fs = require("fs");
-              const guidePath = path.join(__dirname, "assets", "HalloweenMD-User-Guide.pdf");
+              const guidePath = path.join(__dirname, "assets", "MDBot-User-Guide.pdf");
               const guideBuffer = fs.readFileSync(guidePath);
               await socket.sendMessage(sender, {
                 document: guideBuffer,
-                fileName: "HalloweenMD-User-Guide.pdf",
+                fileName: "MDBot-User-Guide.pdf",
                 mimetype: "application/pdf",
-                caption: "📄 *Halloween MD User Guide* — everything you need to know to use the bot, in one PDF."
+                caption: "📄 *Beast MD User Guide* — everything you need to know to use the bot, in one PDF."
               });
             } catch (e) {
               console.log(`⚠️ Couldn't send user guide PDF to ${sender}: ${e.message}`);
@@ -2008,11 +2070,11 @@ async function startSession(sessionId, opts = {}) {
           // Same PDFs are downloadable from the /pair web page too.
           try {
             const fs = require("fs");
-            const fixedPath = path.join(__dirname, "assets", "HalloweenMD-Whats-Fixed.pdf");
+            const fixedPath = path.join(__dirname, "assets", "MDBot-Whats-Fixed.pdf");
             const fixedBuffer = fs.readFileSync(fixedPath);
             await socket.sendMessage(sender, {
               document: fixedBuffer,
-              fileName: "HalloweenMD-Whats-Fixed.pdf",
+              fileName: "MDBot-Whats-Fixed.pdf",
               mimetype: "application/pdf",
               caption: "🛠️ *What Was Fixed* — a plain-language rundown of recent bot fixes and what changed."
             });
@@ -2764,7 +2826,7 @@ async function startSession(sessionId, opts = {}) {
     }
 
     if (connection === "open") {
-      console.log(`\n✅ [${sessionId}] HALLOWEEN MD v19™ IS ONLINE AND READY! 🔥\n`);
+      console.log(`\n✅ [${sessionId}] BEAST MD IS ONLINE AND READY! 🔥\n`);
       botOnline = true;
       fatalRetryCounts[sessionId] = 0;  // ✅ FIX: reset fatal-retry count on a clean connect
       // ✅ FIX: capture BEFORE clearing — this is the only reliable signal
@@ -2836,8 +2898,8 @@ async function startSession(sessionId, opts = {}) {
 
           const welcomeText =
 `╔════════════════════════════════════╗
-║  🔥 *HALLOWEEN MD™* 🔥        ║
-║       _by @henrytech254_            ║
+║  🔥 *BEAST MD* 🔥        ║
+║       _by _            ║
 ╚════════════════════════════════════╝
 
 ✅ *Pairing Successful!*
@@ -2880,7 +2942,7 @@ Your bot is now live and connected. 🌐
 Type *.menu* to see all commands.
 Use *.addadmin 254XXXXXXXXX* to give friends access.
 
-_Halloween MD™ — @henrytech254_ 🔥`;
+_Beast MD — _ 🔥`;
 
           await delay(3000);
           await socket.sendMessage(selfJid, { text: welcomeText });

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: halloween-md
+    name: md-bot
     env: docker
     envVars:
       - key: GROQ_API_KEY
@@ -8,9 +8,9 @@ services:
       - key: OWNER_NUMBER
         sync: false                  # set your WhatsApp number in the Render dashboard, e.g. 254712345678
       - key: OWNER_NAME
-        value: "Henry Ogolla"
+        value: "Henry Ochieng"
       - key: BOT_NAME
-        value: "Halloween MD v19™"
+        value: "Beast MD"
       - key: OWNER_RECOVERY_SECRET
         sync: false                  # set this in Render dashboard — keep it private
       - key: ADMIN_PASSWORD
@@ -39,14 +39,11 @@ services:
       - key: SMTP_PASSWORD
         sync: false                  # Gmail: must be a 16-char App Password, not your real password
       - key: SMTP_FROM_NAME
-        value: "Henry Tech Bot Panel"
+        value: "Bot Panel"
       # ── Optional: send OTPs from a SEPARATE WhatsApp number/session,
       # so codes don't come from the same chat as the main bot. Pair a
       # second number via /pair and put its session name here.
       - key: OTP_SENDER_SESSION_ID
-        sync: false
-      # ── Optional: the admin's M-Pesa number shown to users for top-ups ──
-      - key: ADMIN_PAYTO_NUMBER
         sync: false
       # ── Optional: WhatsApp number shown on the public landing page's
       # "Chat on WhatsApp" button. Leave unset to hide that button.
@@ -60,6 +57,6 @@ services:
         value: /app/data
     healthCheckPath: /status
     disk:
-      name: halloween-md-data
+      name: md-bot-data
       mountPath: /app/data
       sizeGB: 1

@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: menu)
+// Beast MD ported module (category: menu)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -601,42 +601,43 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
+  const { loadArray } = require('../lib_ported/localData');
 
   // --- helper code from random-img.js ---
   const imageUrls = {
-      chinese: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/china.json',
-      hijab: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/hijab.json',
-      malaysia: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/malaysia.json',
-      japanese: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/japan.json',
-      korean: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/korea.json',
-      malay: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/malaysia.json',
-      random: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/random.json',
-      random2: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/random2.json',
-      thai: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/thailand.json',
-      vietnamese: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/vietnam.json',
-      indo: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/tiktokpics/indonesia.json',
-      boneka: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/boneka.json',
-      blackpink3: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/blackpink.json',
-      bike: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/bike.json',
-      antiwork: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/antiwork.json',
-      aesthetic: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/aesthetic.json',
-      justina: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/justina.json',
-      doggo: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/doggo.json',
-      cosplay2: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/cosplay.json',
-      cat: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/cat.json',
-      car: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/car.json',
-      profile2: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/profile.json',
-      ppcouple2: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/ppcouple.json',
-      notnot: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/notnot.json',
-      kpop: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/kpop.json',
-      kayes: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/kayes.json',
-      ulzzanggirl: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/ulzzanggirl.json',
-      ulzzangboy: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/ulzzangboy.json',
-      ryujin: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/ryujin.json',
-      rose: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/rose.json',
-      pubg: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/pubg.json',
-      wallml: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/wallml.json',
-      wallhp: 'https://raw.githubusercontent.com/GlobalTechInfo/GLOBAL-XMD/master/src/media/randompics/wallhp.json',
+      chinese: 'images/tiktokpics/china.json',
+      hijab: 'images/tiktokpics/hijab.json',
+      malaysia: 'images/tiktokpics/malaysia.json',
+      japanese: 'images/tiktokpics/japan.json',
+      korean: 'images/tiktokpics/korea.json',
+      malay: 'images/tiktokpics/malaysia.json',
+      random: 'images/tiktokpics/random.json',
+      random2: 'images/tiktokpics/random2.json',
+      thai: 'images/tiktokpics/thailand.json',
+      vietnamese: 'images/tiktokpics/vietnam.json',
+      indo: 'images/tiktokpics/indonesia.json',
+      boneka: 'images/randompics/boneka.json',
+      blackpink3: 'images/randompics/blackpink.json',
+      bike: 'images/randompics/bike.json',
+      antiwork: 'images/randompics/antiwork.json',
+      aesthetic: 'images/randompics/aesthetic.json',
+      justina: 'images/randompics/justina.json',
+      doggo: 'images/randompics/doggo.json',
+      cosplay2: 'images/randompics/cosplay.json',
+      cat: 'images/randompics/cat.json',
+      car: 'images/randompics/car.json',
+      profile2: 'images/randompics/profile.json',
+      ppcouple2: 'images/randompics/ppcouple.json',
+      notnot: 'images/randompics/notnot.json',
+      kpop: 'images/randompics/kpop.json',
+      kayes: 'images/randompics/kayes.json',
+      ulzzanggirl: 'images/randompics/ulzzanggirl.json',
+      ulzzangboy: 'images/randompics/ulzzangboy.json',
+      ryujin: 'images/randompics/ryujin.json',
+      rose: 'images/randompics/rose.json',
+      pubg: 'images/randompics/pubg.json',
+      wallml: 'images/randompics/wallml.json',
+      wallhp: 'images/randompics/wallhp.json',
   };
   function pickRandom(arr, count = 1) {
       const result = [];
@@ -688,17 +689,14 @@ ${categoriesList}
             return await sock.sendMessage(chatId, { text: menuText }, { quoted: message });
         }
         try {
-            const res = await fetch(imageUrls[category]);
-            if (!res.ok)
-                throw new Error('Failed to fetch image dataset');
-            const images = await res.json();
+            const images = loadArray(imageUrls[category]);
             if (!Array.isArray(images) || images.length === 0) {
                 throw new Error('No images found in the dataset');
             }
             const selectedImages = pickRandom(images, 3);
             for (const img of selectedImages) {
                 await sock.sendMessage(chatId, {
-                    image: { url: img.url },
+                    image: { url: img },
                     caption: `📷 Random ${category} image`
                 }, { quoted: message });
             }
@@ -724,7 +722,7 @@ ${categoriesList}
 Object.assign(module.exports, (() => {
   const pkg = require('api-qasim');
   // --- helper code from styletext.js ---
-  const QasimAny = pkg;
+  const PortedAPI = pkg;
   return {
 
     // ── .stext ─── Style text in different fancy formats | usage: .stext <text>
@@ -755,7 +753,7 @@ Object.assign(module.exports, (() => {
                 }, { quoted: message });
                 return;
             }
-            const styledResult = await QasimAny.styletext(text);
+            const styledResult = await PortedAPI.styletext(text);
             if (!Array.isArray(styledResult) || styledResult.length === 0) {
                 throw new Error('No styled text found.');
             }
@@ -877,7 +875,7 @@ Object.assign(module.exports, (() => {
             menuText +=
                 `━━━━━━━━━━━━━━━━━━━
 💡 *Tip:* Use short & clear text for best results
-🤖 Powered by *Halloween MD*`;
+🤖 Powered by *Beast MD*`;
             return await sock.sendMessage(chatId, { text: menuText }, { quoted: message });
         }
         try {
@@ -944,7 +942,7 @@ Object.assign(module.exports, (() => {
             }
             await sock.sendMessage(chatId, {
                 image: { url: result.image },
-                caption: `🔥 *GENERATED SUCCESSFULLY* 🔥\n✨ Powered by *Halloween MD*`
+                caption: `🔥 *GENERATED SUCCESSFULLY* 🔥\n✨ Powered by *Beast MD*`
             }, { quoted: message });
         }
         catch (error) {

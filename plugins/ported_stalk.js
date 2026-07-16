@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: stalk)
+// Beast MD ported module (category: stalk)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -159,7 +159,7 @@ Object.assign(module.exports, (() => {
 Object.assign(module.exports, (() => {
   const pkg = require('api-qasim');
   // --- helper code from npmstalk.js ---
-  const QasimAny = pkg;
+  const PortedAPI = pkg;
   return {
 
     // ── .npmstalk ─── Get details about an NPM package | usage: .npmstalk <package-name>
@@ -188,7 +188,7 @@ Object.assign(module.exports, (() => {
             }, { quoted: message });
         }
         try {
-            const res = await QasimAny.npmStalk(args[0]);
+            const res = await PortedAPI.npmStalk(args[0]);
             if (!res || !res.result) {
                 throw new Error('Package not found or API error.');
             }

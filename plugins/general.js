@@ -141,8 +141,8 @@ ${boxClose}` : '';
 
     const menu =
 `╔══════════════════════════════╗
-║  🔥 *HALLOWEEN MD™* 🔥  ║
-║     _by @henrytech254_        ║
+║  🔥 *BEAST MD* 🔥  ║
+║     _by _        ║
 ╚══════════════════════════════╝
 
 ${roleTag} | 📅 ${now.toLocaleDateString()} | 🕐 ${now.toLocaleTimeString()}
@@ -298,7 +298,7 @@ ${menuBox('🆕', 'MORE COMMANDS', `(${liveCommandCount} total loaded)`)}
 │➽ ${p}loadmenu / ${p}smenu — Same menu you're looking at now (all one command)
 ${boxClose}
 
-> 🔥 *Halloween MD™* | @henrytech254`;
+> 🔥 *Beast MD* | `;
 
     // Send menu with profile photo as thumbnail
     const fs = require('fs');
@@ -393,7 +393,7 @@ ${boxClose}
   register: async ({ sock, from, msg }) => {
     const publicUrl = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_STATIC_URL || `http://localhost:${process.env.WEB_PORT || 3000}`;
     await sock.sendMessage(from, {
-      text: `🌟 *Register on the Halloween MD Web Panel*\n\n` +
+      text: `🌟 *Register on the Beast MD Web Panel*\n\n` +
             `Verify your number to unlock:\n` +
             `✅ Free starter credits\n` +
             `✅ A trust badge on your profile\n\n` +
@@ -408,11 +408,11 @@ ${boxClose}
     const num = args[0]?.replace(/[^0-9]/g, '');
     if (!num) return sock.sendMessage(from, { text: '📋 Usage: .addadmin 254XXXXXXXXX' }, { quoted: msg });
     global.subAdmins.add(num);
-    await sock.sendMessage(from, { text: `✅ *${num}* is now a Halloween MD Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `✅ *${num}* is now a Beast MD Sub-Admin!\nThey can use admin commands. 🛡️` }, { quoted: msg });
     // Notify the granted number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔔 *Access Granted*\n\nThe main admin has given you *Sub-Admin* access on Halloween MD™.\nType *.menu* to see what you can now use.`
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *Sub-Admin* access on Beast MD.\nType *.menu* to see what you can now use.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
@@ -452,7 +452,7 @@ ${boxClose}
     // Notify the granted number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔔 *Access Granted*\n\nThe main admin has given you *${tierLabel}* access on Halloween MD™.\nType *.menu* to see what you can now use.`
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *${tierLabel}* access on Beast MD.\nType *.menu* to see what you can now use.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
@@ -468,7 +468,7 @@ ${boxClose}
     // Notify the removed number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔕 *Access Revoked*\n\nYour *Sub-Admin* access on Halloween MD™ has been removed by the main admin.`
+        text: `🔕 *Access Revoked*\n\nYour *Sub-Admin* access on Beast MD has been removed by the main admin.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their removed access:`, err.message);
@@ -521,7 +521,7 @@ ${boxClose}
       return sock.sendMessage(from, { text: '📋 No sub-admins added yet.\nUse .addadmin 254XXXXXXXXX to add one.' }, { quoted: msg });
     }
     const list = admins.map((n, i) => `${i + 1}. +${n}`).join('\n');
-    await sock.sendMessage(from, { text: `🛡️ *Halloween MD Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
+    await sock.sendMessage(from, { text: `🛡️ *Beast MD Sub-Admins:*\n\n${list}\n\nTotal: ${admins.length}` }, { quoted: msg });
   },
 
   // ── .login — unlock full access with credentials ───────────────────────────
@@ -579,7 +579,7 @@ ${boxClose}
 You now have access to all commands and features for this session. Type *.menu* to see everything.
 
 _Access resets when bot restarts._
-🔥 *Halloween MD™*`
+🔥 *Beast MD*`
       }, { quoted: msg });
     } else {
       record.count += 1;
@@ -614,8 +614,8 @@ _Access resets when bot restarts._
   █▀█ ██▄ █░▀█ █▀▄ ░█░   ░█░ ██▄ █▄▄ █▀█
 ╚═══════════════════════════════════════╝
 
-✨ *HALLOWEEN MD™* ✨
-_by @henrytech254_
+✨ *BEAST MD* ✨
+_by _
 
 Karibu! Niko online na niko ready kukusaidia. 🇰🇪
 Ninaongea Kiswahili, Sheng na English!
@@ -629,7 +629,7 @@ Ninaongea Kiswahili, Sheng na English!
 💬 *Au niandike tu ujumbe wowote — nitakujibu!* 😄
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛡️ Always Online | AI Chat Active
-🔥 _Halloween MD™ — @henrytech254_`;
+🔥 _Beast MD — _`;
     try {
       await sock.sendMessage(jid, { text: card });
       await sock.sendMessage(from, { text: `✅ Welcome card sent to +${target} 🎉` }, { quoted: msg });
@@ -660,7 +660,7 @@ Ninaongea Kiswahili, Sheng na English!
     const load = os.loadavg()[0].toFixed(2);
     await sock.sendMessage(from, {
       text:
-`⚡ *Halloween MD™ — Runtime*
+`⚡ *Beast MD — Runtime*
 
 ⏱️ *Uptime:* ${h}h ${m}m ${s}s
 🖥️ *CPU:* ${cpuModel}
@@ -671,7 +671,7 @@ Ninaongea Kiswahili, Sheng na English!
 🏠 *Platform:* ${os.platform()}
 ⚙️ *Node.js:* ${process.version}
 
-🔥 _Halloween MD™ — @henrytech254_`
+🔥 _Beast MD — _`
     }, { quoted: msg });
   },
 
@@ -706,7 +706,7 @@ Ninaongea Kiswahili, Sheng na English!
     // Notify the granted number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔔 *Access Granted*\n\nThe main admin has given you *Co-Owner* access on Halloween MD™.\nYou now have full owner-level access. Type *.menu* to see what you can use.`
+        text: `🔔 *Access Granted*\n\nThe main admin has given you *Co-Owner* access on Beast MD.\nYou now have full owner-level access. Type *.menu* to see what you can use.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their new access:`, err.message);
@@ -722,7 +722,7 @@ Ninaongea Kiswahili, Sheng na English!
     // Notify the removed number directly on their own chat
     try {
       await sock.sendMessage(`${num}@s.whatsapp.net`, {
-        text: `🔕 *Access Revoked*\n\nYour *Co-Owner* access on Halloween MD™ has been removed by the main admin.\nYou no longer have owner-level access.`
+        text: `🔕 *Access Revoked*\n\nYour *Co-Owner* access on Beast MD has been removed by the main admin.\nYou no longer have owner-level access.`
       });
     } catch (err) {
       console.warn(`⚠️ Could not DM +${num} about their removed access:`, err.message);
@@ -817,65 +817,45 @@ module.exports.model = async ({ sock, from, msg, args }) => {
   await sock.sendMessage(from, { text: `✅ This chat now uses *${choice}* (${resolved}) for /ask and AI replies.` }, { quoted: msg });
 };
 
-// ── .tts — free text-to-speech via Google Translate's TTS endpoint ─────────
-// ✅ NEW: same story as .model — advertised, never implemented. No API key
-// required; Google Translate's public TTS endpoint caps at ~200 characters
-// per request, so longer text is chunked into multiple voice notes.
+// ── .tts — free text-to-speech via Microsoft Edge's TTS engine ─────────────
+// ✅ FIX (was): used Google Translate's undocumented translate_tts endpoint,
+// which — same root cause as the YouTube bot-detection issue — silently
+// blocks/rate-limits requests from cloud/datacenter IPs, returning an HTML
+// challenge page instead of audio. That's why this reliably failed.
+// Switched to Microsoft's Edge Read-Aloud engine via the `edge-tts` CLI
+// (installed via requirements.txt, runs as a local subprocess — no API key,
+// no per-character billing, and not subject to the same IP-based blocking
+// as Google's endpoint since it's a different service entirely).
+const { execFile: _execFileTts } = require('child_process');
+const fsTts = require('fs');
+const osTts = require('os');
+const pathTts = require('path');
+
 module.exports.tts = async ({ sock, from, msg, args }) => {
   const text = args.join(' ').trim() ||
     msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation;
   if (!text) return sock.sendMessage(from, { text: '🔊 Usage: .tts [text]\n(or reply to a text message with .tts)' }, { quoted: msg });
-  if (text.length > 600) return sock.sendMessage(from, { text: '❌ Max 600 characters — trim it down a bit.' }, { quoted: msg });
+  if (text.length > 800) return sock.sendMessage(from, { text: '❌ Max 800 characters — trim it down a bit.' }, { quoted: msg });
 
-  const axios = require('axios');
-  // Split into <=200 char chunks on sentence/word boundaries so Google's
-  // endpoint (which silently truncates longer input) doesn't cut it off.
-  const chunks = [];
-  let remaining = text;
-  while (remaining.length > 0) {
-    if (remaining.length <= 200) { chunks.push(remaining); break; }
-    let cut = remaining.lastIndexOf(' ', 200);
-    if (cut <= 0) cut = 200;
-    chunks.push(remaining.slice(0, cut));
-    remaining = remaining.slice(cut).trim();
-  }
-
+  const outFile = pathTts.join(osTts.tmpdir(), `tts_${Date.now()}_${Math.random().toString(36).slice(2)}.mp3`);
   try {
-    for (const chunk of chunks) {
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(chunk)}`;
-      // ✅ FIX: translate_tts is an unofficial, undocumented Google endpoint
-      // (not a real public API) — it's known to silently block/rate-limit
-      // requests that don't look like a real browser, especially from
-      // cloud/datacenter IPs (same root cause as the YouTube bot-check
-      // issue). When blocked, it doesn't cleanly error — it returns 200 OK
-      // with an HTML challenge/error page instead of audio, which the old
-      // code sent straight to WhatsApp as if it were a valid MP3, producing
-      // exactly the "this audio is not available, something is wrong with
-      // the file" error you saw. Added a real browser-like Referer header
-      // (reduces how often it gets blocked) and validate the response
-      // actually looks like audio before sending it.
-      const res = await axios.get(url, {
-        responseType: 'arraybuffer',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Referer': 'https://translate.google.com/',
-        },
-        timeout: 15000,
+    await new Promise((resolve, reject) => {
+      _execFileTts('edge-tts', [
+        '--text', text,
+        '--voice', 'en-US-AriaNeural',
+        '--write-media', outFile,
+      ], { timeout: 25000 }, (err, stdout, stderr) => {
+        if (err) return reject(new Error(stderr?.toString().slice(0, 300) || err.message));
+        resolve();
       });
-      const contentType = String(res.headers?.['content-type'] || '');
-      const buf = Buffer.from(res.data);
-      // Real MP3 data starts with an ID3 tag or an MPEG frame sync byte
-      // (0xFF); an HTML error/challenge page starts with '<' — cheap,
-      // reliable way to catch a bad response without a real audio parser.
-      const looksLikeAudio = contentType.startsWith('audio')
-        || (buf.length > 3 && (buf.slice(0, 3).toString() === 'ID3' || buf[0] === 0xff));
-      if (!looksLikeAudio || buf.length < 200) {
-        throw new Error("Google's TTS endpoint blocked this request (returned a challenge page instead of audio) — this is a known issue with cloud-hosted servers, not specific to your text. Try again shortly, or keep messages short.");
-      }
-      await sock.sendMessage(from, { audio: buf, mimetype: 'audio/mpeg', ptt: true }, { quoted: msg });
-    }
+    });
+    const buf = fsTts.readFileSync(outFile);
+    if (!buf || buf.length < 200) throw new Error('Got an empty audio file back — try again.');
+    await sock.sendMessage(from, { audio: buf, mimetype: 'audio/mpeg', ptt: true }, { quoted: msg });
   } catch (e) {
     await sock.sendMessage(from, { text: `❌ TTS failed: ${e.message}` }, { quoted: msg });
+  } finally {
+    fsTts.unlink(outFile, () => {}); // best-effort cleanup, don't block on it
   }
 };
 

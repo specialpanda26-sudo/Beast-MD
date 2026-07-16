@@ -1,400 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Community Chat — Halloween MD™</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community Chat — Beast MD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0a0300; --surface: #170a04; --border: #3d1f08;
-    --accent: #ff7518; --accent2: #8e2de2; --green: #39ff14;
-    --text: #f3e9d2; --muted: #9a7d5a; --card: #1a0d06;
-    --red: #ff2b2b; --yellow: #ffb020;
+  :root{
+    --bg:#14171C; --panel:#1B1F26; --panel2:#20242C; --ember:#E8A33D; --ember-dim:#8A6224;
+    --bone:#F2EFE9; --ash:#8B93A1; --line:#2A2F38; --good:#4CA870; --bad:#C1553F;
+    --bubble-me:#3A3416; --bubble-me-line:#8A6224; --bubble-them:#20242C;
   }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg); color: var(--text);
-    font-family: 'Space Grotesk', sans-serif;
-    height: 100vh; overflow: hidden;
-    display: flex; flex-direction: column;
-  }
-  .grid-bg {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
-    background-size: 50px 50px;
-  }
-  nav {
-    position: relative; z-index: 5; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.9rem 1.5rem;
-    background: rgba(2,4,8,0.85); backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(0,229,255,0.08);
-  }
-  .nav-logo {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; font-weight: 700;
-    color: var(--accent); letter-spacing: 0.06em; text-decoration: none;
-  }
-  .nav-logo span { color: var(--text); }
-  .identity {
-    display: flex; align-items: center; gap: 0.6rem;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--muted);
-  }
-  .identity input {
-    background: var(--surface); border: 1px solid var(--border); color: var(--text);
-    border-radius: 6px; padding: 0.35rem 0.6rem; font-size: 0.75rem;
-    font-family: 'JetBrains Mono', monospace; width: 130px;
-  }
-  .identity button {
-    background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.3); color: var(--accent);
-    border-radius: 6px; padding: 0.35rem 0.7rem; font-size: 0.72rem; cursor: pointer;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .identity button:hover { background: rgba(0,229,255,0.2); }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--bone);font-family:'Space Grotesk',sans-serif;height:100vh;overflow:hidden;}
+  a{color:inherit;text-decoration:none;}
+  .serif-i{font-family:'Fraunces',serif;font-style:italic;font-weight:500;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;}
 
-  .app { flex: 1; display: flex; min-height: 0; position: relative; z-index: 5; }
+  .app{display:grid;grid-template-columns:340px 1fr;height:100vh;}
 
-  .sidebar {
-    width: 230px; flex-shrink: 0; background: var(--card);
-    border-right: 1px solid var(--border); display: flex; flex-direction: column;
-    overflow-y: auto;
+  /* ===== SIDEBAR ===== */
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;}
+  .side-top{padding:16px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);}
+  .brand{display:flex;align-items:center;gap:8px;font-size:17px;}
+  .brand .serif-i{color:var(--ember);}
+  .me-chip{display:flex;align-items:center;gap:8px;cursor:pointer;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ember),var(--ember-dim));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#1A1305;flex-shrink:0;}
+  .search-box{padding:10px 14px;}
+  .search-box input{
+    width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:20px;
+    padding:9px 16px;color:var(--bone);font-size:13px;
   }
-  .sidebar-section-title {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em;
-    color: var(--muted); text-transform: uppercase; padding: 1rem 1rem 0.5rem;
-  }
-  .room-item {
-    display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 1rem;
-    cursor: pointer; border-left: 3px solid transparent; transition: background .15s;
-    font-size: 0.85rem;
-  }
-  .room-item:hover { background: rgba(255,255,255,0.03); }
-  .room-item.active { background: rgba(0,229,255,0.06); border-left-color: var(--accent); }
-  .room-item .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-  .room-item .dot.purple { background: var(--accent2); }
-  .room-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-  .empty-dms { padding: 0.5rem 1rem 1rem; color: var(--muted); font-size: 0.75rem; }
+  .search-box input:focus{outline:none;border-color:var(--ember-dim);}
 
-  .chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .chat-header {
-    padding: 0.9rem 1.3rem; border-bottom: 1px solid var(--border);
-    font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--accent);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .chat-header .sub { color: var(--muted); font-size: 0.68rem; font-weight: 400; }
+  .thread-list{flex:1;overflow-y:auto;}
+  .thread{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid rgba(42,47,56,0.5);transition:background .15s;}
+  .thread:hover{background:var(--panel2);}
+  .thread.active{background:var(--panel2);border-left:2px solid var(--ember);}
+  .thread .avatar.public{background:linear-gradient(135deg,#4CA870,#2C6B45);}
+  .thread-body{flex:1;min-width:0;}
+  .thread-name{font-size:14px;font-weight:600;display:flex;justify-content:space-between;gap:8px;}
+  .thread-name .t{font-weight:400;font-size:11px;color:var(--ash);flex-shrink:0;}
+  .thread-preview{font-size:12.5px;color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+  .thread-empty{padding:30px 20px;text-align:center;color:var(--ash);font-size:13px;}
 
-  .messages { flex: 1; overflow-y: auto; padding: 1.2rem; display: flex; flex-direction: column; gap: 0.55rem; }
-  .msg-row { display: flex; flex-direction: column; max-width: 72%; }
-  .msg-row.me { align-self: flex-end; align-items: flex-end; }
-  .msg-name {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--accent2);
-    margin-bottom: 2px; cursor: pointer;
-  }
-  .msg-row.me .msg-name { color: var(--green); cursor: default; }
-  .msg-bubble {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 0.55rem 0.8rem; font-size: 0.88rem; line-height: 1.4; word-wrap: break-word;
-  }
-  .msg-row.me .msg-bubble { background: rgba(0,229,255,0.08); border-color: rgba(0,229,255,0.25); }
-  .msg-time { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+  /* ===== CHAT PANE ===== */
+  .chat-pane{display:flex;flex-direction:column;min-width:0;background:
+    repeating-linear-gradient(45deg, rgba(232,163,61,0.02) 0px, rgba(232,163,61,0.02) 2px, transparent 2px, transparent 40px), var(--bg);}
+  .chat-header{display:flex;align-items:center;gap:12px;padding:13px 20px;background:var(--panel);border-bottom:1px solid var(--line);}
+  .chat-header .name{font-size:15px;font-weight:600;}
+  .chat-header .sub{font-size:12px;color:var(--ash);}
 
-  .composer { display: flex; gap: 0.6rem; padding: 0.9rem 1.2rem; border-top: 1px solid var(--border); }
-  .composer input {
-    flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text);
-    border-radius: 8px; padding: 0.7rem 0.9rem; font-size: 0.9rem; font-family: 'Space Grotesk', sans-serif;
-  }
-  .composer input:focus { outline: none; border-color: var(--accent); }
-  .composer button {
-    background: linear-gradient(90deg, var(--accent), var(--accent2)); border: none; color: #000;
-    font-weight: 700; padding: 0 1.3rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;
-  }
-  .composer button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .messages{flex:1;overflow-y:auto;padding:20px 8vw;display:flex;flex-direction:column;gap:6px;}
+  .day-divider{align-self:center;background:var(--panel2);color:var(--ash);font-size:11.5px;padding:4px 12px;border-radius:10px;margin:12px 0;font-family:'JetBrains Mono',monospace;}
+  .bubble-row{display:flex;}
+  .bubble-row.me{justify-content:flex-end;}
+  .bubble{max-width:62%;padding:8px 12px;border-radius:10px;font-size:14px;line-height:1.4;position:relative;}
+  .bubble .sender{font-size:12px;font-weight:700;color:var(--ember);margin-bottom:2px;}
+  .bubble.them{background:var(--bubble-them);border:1px solid var(--line);border-top-left-radius:2px;}
+  .bubble.me{background:var(--bubble-me);border:1px solid var(--bubble-me-line);border-top-right-radius:2px;}
+  .bubble .time{display:block;text-align:right;font-size:10.5px;color:var(--ash);margin-top:3px;}
+  .empty-state{margin:auto;text-align:center;color:var(--ash);font-size:13px;max-width:280px;}
+  .empty-state .big{font-size:15px;color:var(--bone);margin-bottom:6px;font-family:'Fraunces',serif;font-style:italic;}
 
-  .disclaimer {
-    font-size: 0.65rem; color: var(--muted); text-align: center; padding: 0.4rem;
-    border-top: 1px solid var(--border); background: var(--card);
+  .composer{display:flex;align-items:center;gap:10px;padding:14px 20px;background:var(--panel);border-top:1px solid var(--line);}
+  .composer input{
+    flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:22px;
+    padding:11px 18px;color:var(--bone);font-size:14px;
   }
+  .composer input:focus{outline:none;border-color:var(--ember-dim);}
+  .send-btn{width:40px;height:40px;border-radius:50%;background:var(--ember);border:none;color:#1A1305;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:transform .2s;}
+  .send-btn:hover{transform:scale(1.08);}
+  .send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .rate-hint{font-size:11.5px;color:var(--bad);padding:0 20px 8px;display:none;}
+  .rate-hint.show{display:block;}
 
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .nick-modal{position:fixed;inset:0;background:rgba(10,12,15,0.7);display:none;align-items:center;justify-content:center;z-index:50;}
+  .nick-modal.show{display:flex;}
+  .nick-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px;width:320px;}
+  .nick-box h3{font-family:'Fraunces',serif;font-weight:600;margin-bottom:6px;font-size:18px;}
+  .nick-box p{color:var(--ash);font-size:13px;margin-bottom:16px;}
+  .nick-box input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--bone);margin-bottom:16px;}
+  .nick-box .row{display:flex;gap:10px;}
+  .nick-box button{flex:1;padding:10px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:13px;}
+  .nick-box .save{background:var(--ember);color:#1A1305;}
+  .nick-box .cancel{background:transparent;color:var(--ash);box-shadow:inset 0 0 0 1px var(--line);}
+
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+  @media(max-width:760px){
+    .app{grid-template-columns:1fr;}
+    .sidebar{position:fixed;inset:0;z-index:20;transform:translateX(0);transition:transform .25s;}
+    .sidebar.hide{transform:translateX(-100%);}
+    .chat-pane{position:fixed;inset:0;z-index:10;}
+    .back-btn{display:inline-flex!important;}
+  }
+  .back-btn{display:none;background:none;border:none;color:var(--bone);font-size:18px;cursor:pointer;margin-right:4px;}
 </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&display=swap" rel="stylesheet">
-  <style>
-    /* 🎃 Halloween MD spooky type + ambiance */
-    h1, .logo, .brand, .brand-name, .title, .page-title, .app-title {
-      font-family: 'Creepster', cursive, system-ui, sans-serif !important;
-      letter-spacing: 0.5px;
-      text-shadow: 0 0 8px var(--accent, #ff7518), 0 0 18px rgba(142,45,226,0.35);
-    }
-    @keyframes hmd-flicker {
-      0%, 19%, 21%, 23%, 55%, 100% { opacity: 1; }
-      20%, 22%, 54% { opacity: 0.75; }
-    }
-    h1, .logo, .brand, .brand-name { animation: hmd-flicker 6s infinite; }
-    .hmd-howl-btn {
-      position: fixed; bottom: 18px; right: 18px; z-index: 9999;
-      width: 52px; height: 52px; border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, var(--accent, #ff7518), #6b1a00);
-      border: 2px solid var(--accent2, #8e2de2);
-      color: #fff; font-size: 22px; cursor: pointer;
-      box-shadow: 0 0 14px rgba(255,117,24,0.6);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.15s ease;
-    }
-    .hmd-howl-btn:hover { transform: scale(1.1); }
-    .hmd-howl-btn:active { transform: scale(0.95); }
-  </style>
-  <link rel="stylesheet" href="/assets/spooky-fx.css">
 </head>
 <body>
-<div class="grid-bg"></div>
-
-<nav>
-  <a href="/panel" class="nav-logo">HENRY<span>HALLOWEEN MD</span> · CHAT</a>
-  <div class="identity">
-    <span id="me-name">connecting…</span>
-    <input id="nickname-input" placeholder="set a nickname" maxlength="24"/>
-    <button id="nickname-save">Save</button>
-  </div>
-</nav>
 
 <div class="app">
-  <div class="sidebar">
-    <div class="sidebar-section-title">Rooms</div>
-    <div class="room-item active" data-room="public" id="room-public">
-      <span class="dot"></span><span class="room-name">🌐 Public Room</span>
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="side-top">
+      <a href="index.html" class="brand"><span style="font-weight:700;">BEAST</span><span class="serif-i">MD</span></a>
+      <div class="me-chip" id="me-chip" title="Edit nickname">
+        <div class="avatar" id="my-avatar">?</div>
+      </div>
     </div>
-    <div class="sidebar-section-title">Direct Messages</div>
-    <div id="dm-list"><div class="empty-dms">No DMs yet — tap a name in Public Room to start one.</div></div>
+    <div class="search-box"><input type="text" placeholder="Search chats" id="search-input"></div>
+    <div class="thread-list" id="thread-list">
+      <div class="thread active" data-room="public" id="public-thread">
+        <div class="avatar public">#</div>
+        <div class="thread-body">
+          <div class="thread-name"><span>Public Room</span><span class="t" id="public-time">now</span></div>
+          <div class="thread-preview" id="public-preview">Say hello to everyone</div>
+        </div>
+      </div>
+      <div class="thread-empty" id="dm-empty">No direct messages yet. Tap a name in Public Room to start one.</div>
+    </div>
   </div>
 
-  <div class="chat-area">
+  <!-- CHAT PANE -->
+  <div class="chat-pane">
     <div class="chat-header">
-      <span id="chat-title">🌐 Public Room</span>
-      <span class="sub">anonymous — be kind</span>
+      <button class="back-btn" id="back-btn">←</button>
+      <div class="avatar public" id="header-avatar">#</div>
+      <div>
+        <div class="name" id="header-name">Public Room</div>
+        <div class="sub" id="header-sub">Open to everyone · be respectful</div>
+      </div>
     </div>
-    <div class="messages" id="messages"></div>
+
+    <div class="messages" id="messages">
+      <div class="empty-state" id="empty-state">
+        <div class="big">Quiet in here.</div>
+        Be the first to say something in the public room.
+      </div>
+    </div>
+
+    <div class="rate-hint" id="rate-hint">Sending too fast — slow down a little.</div>
     <div class="composer">
-      <input id="msg-input" placeholder="Type a message…" maxlength="1000"/>
-      <button id="send-btn">Send</button>
+      <input type="text" id="msg-input" placeholder="Message Public Room" maxlength="1000">
+      <button class="send-btn" id="send-btn">➤</button>
     </div>
-    <div class="disclaimer">Messages may be reviewed by admins for safety/moderation. Don't share phone numbers or payment details here.</div>
+  </div>
+</div>
+
+<div class="nick-modal" id="nick-modal">
+  <div class="nick-box">
+    <h3>Pick a display name</h3>
+    <p>This is what other people in the room will see. You stay anonymous otherwise.</p>
+    <input type="text" id="nick-input" placeholder="e.g. QuietFox" maxlength="24">
+    <div class="row">
+      <button class="cancel" id="nick-cancel">Cancel</button>
+      <button class="save" id="nick-save">Save</button>
+    </div>
   </div>
 </div>
 
 <script>
-const API = ""; // same-origin
-let anonId = localStorage.getItem("chat_anon_id") || null;
-let myName = "";
-let currentRoom = "public";     // "public" or a partner anon_id for DM
-let sinceId = {};                // per-room last-seen message id
-let pollTimer = null;
-let dmThreads = {};              // other_id -> other_name
+  const state = {
+    anonId: localStorage.getItem('beastmd_anon_id') || '',
+    nickname: localStorage.getItem('beastmd_nickname') || '',
+    room: 'public',
+    dmTarget: null,
+    dmTargetName: null,
+    sinceId: {},
+    pollTimer: null,
+    threadTimer: null,
+  };
 
-async function api(path, opts) {
-  const res = await fetch(API + path, opts);
-  return res.json();
-}
+  function initials(name){ return (name||'?').slice(0,2).toUpperCase(); }
+  function fmtTime(ts){
+    const d = new Date(ts*1000);
+    return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  }
 
-async function identify() {
-  const data = await api("/chat/identify", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ anon_id: anonId })
+  async function identify(){
+    let res, data;
+    try {
+      res = await fetch('/chat/identify', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ anon_id: state.anonId })
+      });
+      data = await res.json();
+    } catch(e) {
+      document.getElementById('messages').innerHTML =
+        '<div class="empty-state"><div class="big">Connection error</div>Could not reach the chat server. Check your connection and reload.</div>';
+      return false;
+    }
+    if(!data.success){
+      document.getElementById('messages').innerHTML =
+        '<div class="empty-state"><div class="big">Access blocked</div>'+(data.error||'This identity was banned.')+'</div>';
+      return false;
+    }
+    state.anonId = data.anon_id;
+    state.nickname = data.nickname;
+    localStorage.setItem('beastmd_anon_id', state.anonId);
+    localStorage.setItem('beastmd_nickname', state.nickname);
+    document.getElementById('my-avatar').textContent = initials(state.nickname);
+    return true;
+  }
+
+  function renderMessage(m){
+    const wrap = document.createElement('div');
+    wrap.className = 'bubble-row ' + (m.is_me ? 'me' : 'them');
+    const b = document.createElement('div');
+    b.className = 'bubble ' + (m.is_me ? 'me' : 'them');
+    let html = '';
+    if(!m.is_me && state.room === 'public') html += '<div class="sender">'+escapeHtml(m.sender_name)+'</div>';
+    html += escapeHtml(m.body) + '<span class="time">' + fmtTime(m.created_at) + '</span>';
+    b.innerHTML = html;
+    if(!m.is_me && state.room === 'public'){
+      b.style.cursor = 'pointer';
+      b.title = 'Message ' + m.sender_name + ' privately';
+      b.addEventListener('click', () => openDm(m.sender_id, m.sender_name));
+    }
+    wrap.appendChild(b);
+    return wrap;
+  }
+
+  function escapeHtml(s){
+    const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+  }
+
+  async function pollMessages(initial){
+    const key = state.dmTarget ? ('dm:'+state.dmTarget) : 'public';
+    const since = state.sinceId[key] || 0;
+    const params = new URLSearchParams({ anon_id: state.anonId, since_id: since, limit: initial ? 50 : 50 });
+    if(state.dmTarget) params.set('to', state.dmTarget);
+    const res = await fetch('/chat/messages?' + params.toString());
+    const data = await res.json();
+    if(!data.messages) return;
+    const box = document.getElementById('messages');
+    if(data.messages.length){
+      document.getElementById('empty-state')?.remove();
+      const wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 60;
+      data.messages.forEach(m => {
+        box.appendChild(renderMessage(m));
+        state.sinceId[key] = Math.max(state.sinceId[key]||0, m.id);
+      });
+      if(initial || wasAtBottom) box.scrollTop = box.scrollHeight;
+    } else if(initial && box.children.length === 0){
+      box.innerHTML = '<div class="empty-state" id="empty-state"><div class="big">Quiet in here.</div>'+
+        (state.dmTarget ? 'Send the first message.' : 'Be the first to say something in the public room.')+'</div>';
+    }
+  }
+
+  function switchToPublic(){
+    state.room = 'public'; state.dmTarget = null; state.dmTargetName = null;
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('header-name').textContent = 'Public Room';
+    document.getElementById('header-sub').textContent = 'Open to everyone · be respectful';
+    document.getElementById('header-avatar').className = 'avatar public';
+    document.getElementById('header-avatar').textContent = '#';
+    document.getElementById('msg-input').placeholder = 'Message Public Room';
+    document.querySelectorAll('.thread').forEach(t => t.classList.remove('active'));
+    document.getElementById('public-thread').classList.add('active');
+    pollMessages(true);
+    if(window.innerWidth <= 760) document.getElementById('sidebar').classList.add('hide');
+  }
+
+  function openDm(otherId, otherName){
+    state.room = 'dm'; state.dmTarget = otherId; state.dmTargetName = otherName;
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('header-name').textContent = otherName;
+    document.getElementById('header-sub').textContent = 'Direct message · anonymous';
+    document.getElementById('header-avatar').className = 'avatar';
+    document.getElementById('header-avatar').textContent = initials(otherName);
+    document.getElementById('msg-input').placeholder = 'Message ' + otherName;
+    pollMessages(true);
+    loadThreads();
+    if(window.innerWidth <= 760) document.getElementById('sidebar').classList.add('hide');
+  }
+
+  async function loadThreads(){
+    const res = await fetch('/chat/dm/threads?anon_id=' + encodeURIComponent(state.anonId));
+    const data = await res.json();
+    const list = document.getElementById('thread-list');
+    document.querySelectorAll('.thread:not(#public-thread)').forEach(el => el.remove());
+    const emptyEl = document.getElementById('dm-empty');
+    if(!data.threads || !data.threads.length){ emptyEl.style.display = 'block'; return; }
+    emptyEl.style.display = 'none';
+    data.threads.forEach(t => {
+      const el = document.createElement('div');
+      el.className = 'thread' + (state.dmTarget === t.other_id ? ' active' : '');
+      el.innerHTML = '<div class="avatar">'+initials(t.other_name)+'</div>'+
+        '<div class="thread-body"><div class="thread-name"><span>'+escapeHtml(t.other_name)+'</span>'+
+        '<span class="t">'+fmtTime(t.last_message_at)+'</span></div>'+
+        '<div class="thread-preview">Tap to open conversation</div></div>';
+      el.addEventListener('click', () => openDm(t.other_id, t.other_name));
+      list.appendChild(el);
+    });
+  }
+
+  async function sendMessage(){
+    const input = document.getElementById('msg-input');
+    const body = input.value.trim();
+    if(!body) return;
+    const btn = document.getElementById('send-btn');
+    btn.disabled = true;
+    const payload = { anon_id: state.anonId, body };
+    if(state.dmTarget) payload.to = state.dmTarget;
+    const res = await fetch('/chat/send', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    const hint = document.getElementById('rate-hint');
+    if(!data.success){
+      hint.textContent = data.error || 'Message failed to send.';
+      hint.classList.add('show');
+      setTimeout(() => hint.classList.remove('show'), 2500);
+      return;
+    }
+    hint.classList.remove('show');
+    input.value = '';
+    pollMessages(false);
+  }
+
+  document.getElementById('send-btn').addEventListener('click', sendMessage);
+  document.getElementById('msg-input').addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+  document.getElementById('public-thread').addEventListener('click', switchToPublic);
+  document.getElementById('back-btn').addEventListener('click', () => document.getElementById('sidebar').classList.remove('hide'));
+
+  // nickname modal
+  const nickModal = document.getElementById('nick-modal');
+  document.getElementById('me-chip').addEventListener('click', () => {
+    document.getElementById('nick-input').value = state.nickname || '';
+    nickModal.classList.add('show');
   });
-  if (!data.success) {
-    document.getElementById("me-name").textContent = data.error || "banned";
-    return;
-  }
-  anonId = data.anon_id;
-  myName = data.nickname;
-  localStorage.setItem("chat_anon_id", anonId);
-  document.getElementById("me-name").textContent = myName;
-  document.getElementById("nickname-input").value = "";
-  loadDmThreads();
-  switchRoom("public");
-}
-
-document.getElementById("nickname-save").onclick = async () => {
-  const nickname = document.getElementById("nickname-input").value.trim();
-  if (!nickname) return;
-  const data = await api("/chat/nickname", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ anon_id: anonId, nickname })
+  document.getElementById('nick-cancel').addEventListener('click', () => nickModal.classList.remove('show'));
+  document.getElementById('nick-save').addEventListener('click', async () => {
+    const nickname = document.getElementById('nick-input').value.trim();
+    const res = await fetch('/chat/nickname', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ anon_id: state.anonId, nickname })
+    });
+    const data = await res.json();
+    if(data.success){
+      state.nickname = data.nickname;
+      localStorage.setItem('beastmd_nickname', state.nickname);
+      document.getElementById('my-avatar').textContent = initials(state.nickname);
+    }
+    nickModal.classList.remove('show');
   });
-  if (data.success) {
-    myName = data.nickname;
-    document.getElementById("me-name").textContent = myName;
-    document.getElementById("nickname-input").value = "";
-  }
-};
 
-function renderMessage(m) {
-  const wrap = document.createElement("div");
-  wrap.className = "msg-row" + (m.is_me ? " me" : "");
-  const nameEl = document.createElement("div");
-  nameEl.className = "msg-name";
-  nameEl.textContent = m.is_me ? "You" : m.sender_name;
-  if (!m.is_me && currentRoom === "public") {
-    nameEl.onclick = () => startDm(m.sender_id, m.sender_name);
-    nameEl.title = "Click to DM " + m.sender_name;
-  }
-  const bubble = document.createElement("div");
-  bubble.className = "msg-bubble";
-  bubble.textContent = m.body;
-  const time = document.createElement("div");
-  time.className = "msg-time";
-  time.textContent = new Date(m.created_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  wrap.appendChild(nameEl); wrap.appendChild(bubble); wrap.appendChild(time);
-  document.getElementById("messages").appendChild(wrap);
-}
-
-async function pollMessages() {
-  if (!anonId) return;
-  const isDm = currentRoom !== "public";
-  const params = new URLSearchParams({ anon_id: anonId, since_id: sinceId[currentRoom] || 0 });
-  if (isDm) params.set("to", currentRoom);
-  else params.set("room", "public");
-  const data = await api("/chat/messages?" + params.toString());
-  if (data.messages && data.messages.length) {
-    const box = document.getElementById("messages");
-    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
-    data.messages.forEach(m => { renderMessage(m); sinceId[currentRoom] = m.id; });
-    if (wasAtBottom) box.scrollTop = box.scrollHeight;
-    if (isDm) loadDmThreads();
-  }
-}
-
-function switchRoom(room, title) {
-  currentRoom = room;
-  document.getElementById("messages").innerHTML = "";
-  document.getElementById("chat-title").textContent = title || "🌐 Public Room";
-  document.querySelectorAll(".room-item").forEach(el => el.classList.remove("active"));
-  const activeEl = document.querySelector(`[data-room="${room}"]`);
-  if (activeEl) activeEl.classList.add("active");
-  if (!sinceId[room]) sinceId[room] = 0;
-  pollMessages();
-}
-
-function startDm(otherId, otherName) {
-  dmThreads[otherId] = otherName;
-  renderDmList();
-  switchRoom(otherId, "💬 " + otherName);
-}
-
-async function loadDmThreads() {
-  const data = await api("/chat/dm/threads?anon_id=" + anonId);
-  (data.threads || []).forEach(t => { dmThreads[t.other_id] = t.other_name; });
-  renderDmList();
-}
-
-function renderDmList() {
-  const list = document.getElementById("dm-list");
-  const ids = Object.keys(dmThreads);
-  if (!ids.length) {
-    list.innerHTML = '<div class="empty-dms">No DMs yet — tap a name in Public Room to start one.</div>';
-    return;
-  }
-  list.innerHTML = "";
-  ids.forEach(id => {
-    const item = document.createElement("div");
-    item.className = "room-item" + (currentRoom === id ? " active" : "");
-    item.dataset.room = id;
-    item.innerHTML = `<span class="dot purple"></span><span class="room-name">${dmThreads[id]}</span>`;
-    item.onclick = () => switchRoom(id, "💬 " + dmThreads[id]);
-    list.appendChild(item);
+  // search filter (client-side, over DM thread names)
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    document.querySelectorAll('.thread:not(#public-thread)').forEach(el => {
+      const name = el.querySelector('.thread-name span').textContent.toLowerCase();
+      el.style.display = name.includes(q) ? 'flex' : 'none';
+    });
   });
-}
 
-document.getElementById("room-public").onclick = () => switchRoom("public", "🌐 Public Room");
-
-async function sendMessage() {
-  const input = document.getElementById("msg-input");
-  const body = input.value.trim();
-  if (!body || !anonId) return;
-  const btn = document.getElementById("send-btn");
-  btn.disabled = true;
-  const payload = { anon_id: anonId, body };
-  if (currentRoom !== "public") payload.to = currentRoom;
-  const data = await api("/chat/send", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+  (async function boot(){
+    const ok = await identify();
+    if(!ok) return;
+    await loadThreads();
+    await pollMessages(true);
+    state.pollTimer = setInterval(() => pollMessages(false), 2500);
+    state.threadTimer = setInterval(loadThreads, 6000);
+  })().catch(() => {
+    document.getElementById('messages').innerHTML =
+      '<div class="empty-state"><div class="big">Something went wrong</div>Reload the page to try again.</div>';
   });
-  btn.disabled = false;
-  if (data.success) {
-    input.value = "";
-    pollMessages();
-  } else if (data.error) {
-    alert(data.error);
-  }
-}
-document.getElementById("send-btn").onclick = sendMessage;
-document.getElementById("msg-input").addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
-
-identify().then(() => {
-  pollTimer = setInterval(pollMessages, 2500);
-});
 </script>
-  <button class="hmd-howl-btn" id="hmdHowlBtn" title="Howl 🐺" aria-label="Play howl sound">🐺</button>
-  <script>
-  (function () {
-    // 🎃 Halloween MD — synthesized wolf-howl tone (no audio file needed).
-    function playHowl() {
-      try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        var ctx = new Ctx();
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
 
-        // Howl: slow rise, hold, wavering vibrato, slow fade.
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(520, now + 0.9);
-        osc.frequency.exponentialRampToValueAtTime(430, now + 1.4);
-
-        var lfo = ctx.createOscillator();
-        var lfoGain = ctx.createGain();
-        lfo.frequency.value = 6;
-        lfoGain.gain.value = 18;
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        lfo.start(now);
-        lfo.stop(now + 2.2);
-
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.12, now + 1.5);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
-
-        osc.start(now);
-        osc.stop(now + 2.3);
-      } catch (e) { /* Web Audio unsupported — fail silently */ }
-    }
-    var btn = document.getElementById('hmdHowlBtn');
-    if (btn) btn.addEventListener('click', playHowl);
-
-    // Browsers block audio autoplay before any user gesture, so we howl
-    // once on the first click/tap/keypress anywhere on the page.
-    var howled = false;
-    function howlOnce() {
-      if (howled) return;
-      howled = true;
-      playHowl();
-      window.removeEventListener('click', howlOnce);
-      window.removeEventListener('keydown', howlOnce);
-      window.removeEventListener('touchstart', howlOnce);
-    }
-    window.addEventListener('click', howlOnce);
-    window.addEventListener('keydown', howlOnce);
-    window.addEventListener('touchstart', howlOnce);
-  })();
-  </script>
-  <script src="/assets/spooky-fx.js" defer></script>
 </body>
 </html>

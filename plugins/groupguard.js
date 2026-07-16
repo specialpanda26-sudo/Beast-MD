@@ -18,8 +18,27 @@ function loadGG() {
 function saveGG(db) { fs.writeFileSync(GG_FILE, JSON.stringify(db, null, 2)); }
 function getSettings(from) {
   const db = loadGG();
-  db[from] = db[from] || { antilink: false, antipromote: false, antidemote: false, antigroupmention: false, badwords: [] };
+  db[from] = db[from] || { antilink: false, antipromote: false, antidemote: false, antigroupmention: false, badwords: [], antiflood: false, floodLimit: 6, floodWindowSec: 8, floodKickAfter: 3 };
+  // Backfill flood fields for groups saved before this feature existed.
+  if (db[from].antiflood === undefined) db[from].antiflood = false;
+  if (!db[from].floodLimit) db[from].floodLimit = 6;
+  if (!db[from].floodWindowSec) db[from].floodWindowSec = 8;
+  if (!db[from].floodKickAfter) db[from].floodKickAfter = 3;
   return { db, settings: db[from] };
+}
+
+// ── Flood/spam tracking — in-memory only (resets on restart, which is
+// fine: it's a short rolling window, not a persistent record). Keyed by
+// "groupJid|senderJid" → { timestamps: [epoch ms...], warnCount }.
+const floodTracker = new Map();
+function _checkFlood(groupJid, sender, limit, windowSec) {
+  const key = `${groupJid}|${sender}`;
+  const now = Date.now();
+  const entry = floodTracker.get(key) || { timestamps: [], warnCount: 0 };
+  entry.timestamps = entry.timestamps.filter(t => now - t < windowSec * 1000);
+  entry.timestamps.push(now);
+  floodTracker.set(key, entry);
+  return entry;
 }
 
 const INVITE_LINK_RE = /chat\.whatsapp\.com\/[A-Za-z0-9]+/i;
@@ -45,6 +64,46 @@ module.exports = {
     settings.antibad = on;
     saveGG(db);
     await sock.sendMessage(from, { text: `🚫 Bad-word warnings are now *${on ? 'ON' : 'OFF'}*.` }, { quoted: msg });
+  },
+
+  // ── Anti-flood ─── auto-mutes (kicks after repeated offenses) senders
+  // who send too many messages too fast. Usage: .setantiflood on/off
+  setantiflood: async ({ sock, from, msg, args, isGroup, isBotAdmin }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' }, { quoted: msg });
+    if (!isBotAdmin) return sock.sendMessage(from, { text: '❌ Bot admin only!' }, { quoted: msg });
+    const on = (args[0] || '').toLowerCase() === 'on';
+    const { db, settings } = getSettings(from);
+    settings.antiflood = on;
+    saveGG(db);
+    await sock.sendMessage(from, {
+      text: `🌊 Anti-flood is now *${on ? 'ON' : 'OFF'}*.` + (on
+        ? `\n_Default: ${settings.floodLimit} messages in ${settings.floodWindowSec}s deletes + warns; ${settings.floodKickAfter} warns removes the sender. Tune with .setfloodlimit and .setfloodkick._`
+        : '')
+    }, { quoted: msg });
+  },
+
+  setfloodlimit: async ({ sock, from, msg, args, isGroup, isBotAdmin }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' }, { quoted: msg });
+    if (!isBotAdmin) return sock.sendMessage(from, { text: '❌ Bot admin only!' }, { quoted: msg });
+    const n = parseInt(args[0], 10);
+    const secs = parseInt(args[1], 10) || undefined;
+    if (!n || n < 2) return sock.sendMessage(from, { text: '📝 Usage: .setfloodlimit <messages> [windowSeconds]' }, { quoted: msg });
+    const { db, settings } = getSettings(from);
+    settings.floodLimit = n;
+    if (secs && secs >= 2) settings.floodWindowSec = secs;
+    saveGG(db);
+    await sock.sendMessage(from, { text: `✅ Flood limit set to ${n} messages per ${settings.floodWindowSec}s.` }, { quoted: msg });
+  },
+
+  setfloodkick: async ({ sock, from, msg, args, isGroup, isBotAdmin }) => {
+    if (!isGroup) return sock.sendMessage(from, { text: '❌ Group only!' }, { quoted: msg });
+    if (!isBotAdmin) return sock.sendMessage(from, { text: '❌ Bot admin only!' }, { quoted: msg });
+    const n = parseInt(args[0], 10);
+    if (!n || n < 1) return sock.sendMessage(from, { text: '📝 Usage: .setfloodkick <warnCount>' }, { quoted: msg });
+    const { db, settings } = getSettings(from);
+    settings.floodKickAfter = n;
+    saveGG(db);
+    await sock.sendMessage(from, { text: `✅ Sender gets removed after ${n} flood warning(s).` }, { quoted: msg });
   },
 
   badwords: async ({ sock, from, msg, args, isGroup, isBotAdmin }) => {
@@ -148,6 +207,33 @@ module.exports = {
         await sock.sendMessage(from, { text: `🔗 @${sender.split('@')[0]} removed for posting a group invite link.`, mentions: [sender] });
       } catch (e) { /* bot may not be admin — fail silently, already logged elsewhere */ }
       return true;
+    }
+
+    if (settings.antiflood) {
+      const entry = _checkFlood(from, sender, settings.floodLimit, settings.floodWindowSec);
+      if (entry.timestamps.length >= settings.floodLimit) {
+        entry.warnCount = (entry.warnCount || 0) + 1;
+        entry.timestamps = []; // reset the window so we don't re-trigger every message while flooding continues
+        floodTracker.set(`${from}|${sender}`, entry);
+        try { await sock.sendMessage(from, { delete: msg.key }); } catch (e) {}
+        if (entry.warnCount >= settings.floodKickAfter) {
+          try {
+            await sock.groupParticipantsUpdate(from, [sender], 'remove');
+            await sock.sendMessage(from, { text: `🌊 @${sender.split('@')[0]} removed for repeated message flooding.`, mentions: [sender] });
+          } catch (e) {
+            await sock.sendMessage(from, { text: `🌊 @${sender.split('@')[0]}, you're flooding this chat — slow down.`, mentions: [sender] });
+          }
+          floodTracker.delete(`${from}|${sender}`);
+        } else {
+          try {
+            await sock.sendMessage(from, {
+              text: `🌊 @${sender.split('@')[0]}, slow down — that's flood warning ${entry.warnCount}/${settings.floodKickAfter}.`,
+              mentions: [sender]
+            });
+          } catch (e) {}
+        }
+        return true;
+      }
     }
 
     if (settings.antibad && settings.badwords.some(w => (body || '').toLowerCase().includes(w))) {

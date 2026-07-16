@@ -53,7 +53,7 @@ const CATEGORY_EMOJI = {
   osint: '🔎', owner: '👑', quotes: '💬', scheduler: '⏰', search: '🔍',
   setcookies: '🍪', 'settings ext': '🛠️', sports: '⚽', stalk: '🕵️',
   stickers: '🎨', sudo: '👑', tempmail: '📧', tools: '🧰', upload: '☁️',
-  urltools: '🔗', utility: '🧮', wallet: '💰',
+  urltools: '🔗', utility: '🧮',
 };
 
 function categoryEmoji(cat) {

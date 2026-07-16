@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: info)
+// Beast MD ported module (category: info)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -1196,7 +1196,7 @@ Object.assign(module.exports, (() => {
 Object.assign(module.exports, (() => {
   const pkg = require('api-qasim');
   // --- helper code from trends.js ---
-  const QasimAny = pkg;
+  const PortedAPI = pkg;
   return {
 
     // ── .trends ─── Get trending topics from a country. | usage: .trends <country-name>
@@ -1227,7 +1227,7 @@ Object.assign(module.exports, (() => {
                 }, { quoted: message });
                 return;
             }
-            const result = await QasimAny.trendtwit(country);
+            const result = await PortedAPI.trendtwit(country);
             if (!result) {
                 throw new Error('No data received');
             }

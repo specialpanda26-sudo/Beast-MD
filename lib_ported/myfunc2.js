@@ -72,7 +72,7 @@ const webp2mp4File = (filePath) => {
             }).then(({ data }) => {
                 const $ = cheerio.load(data);
                 const result = `https:${ $('div#output > p.outfile > video > source').attr('src')}`;
-                resolve({ status: true, message: 'Created By Eternity', result });
+                resolve({ status: true, message: `Created by ${require('../config_ported').botOwner}`, result });
             }).catch(reject);
         }).catch(reject);
     });

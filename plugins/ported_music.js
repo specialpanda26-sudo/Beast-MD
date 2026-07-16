@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: music)
+// Beast MD ported module (category: music)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -222,7 +222,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from ringtone.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -451,7 +451,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from ytsearch.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 

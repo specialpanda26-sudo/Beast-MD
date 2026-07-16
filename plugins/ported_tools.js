@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: tools)
+// Beast MD ported module (category: tools)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -282,7 +282,7 @@ Object.assign(module.exports, (() => {
             contextInfo: {
                 externalAdReply: {
                     title,
-                    body: 'Shared via Halloween MD',
+                    body: 'Shared via Beast MD',
                     thumbnailUrl: url || 'https://i.ibb.co/3S6f0mS/default.jpg',
                     mediaType: 1,
                     renderLargerThumbnail: true,
@@ -371,7 +371,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from flip.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -433,7 +433,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from forwarded.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -552,7 +552,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🖤 *Grayscale Image*\n\nProcessed by: Halloween MD`
+                caption: `🖤 *Grayscale Image*\n\nProcessed by: Beast MD`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }
@@ -701,7 +701,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🤍 *Inverted Image*\n\nProcessed by: Halloween MD`
+                caption: `🤍 *Inverted Image*\n\nProcessed by: Beast MD`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }
@@ -1268,7 +1268,7 @@ Object.assign(module.exports, (() => {
             fs.writeFileSync(grayFile, res.data);
             await sock.sendMessage(chatId, {
                 image: { url: grayFile },
-                caption: `🧡 *Sepia Image*\n\nProcessed by: Halloween MD`
+                caption: `🧡 *Sepia Image*\n\nProcessed by: Beast MD`
             }, { quoted: message });
             fs.unlinkSync(grayFile);
         }
@@ -1364,7 +1364,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from source.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -1492,7 +1492,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from tinytext.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -1805,7 +1805,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from vnote.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   
   

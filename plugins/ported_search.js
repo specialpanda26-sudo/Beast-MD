@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: search)
+// Beast MD ported module (category: search)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -78,7 +78,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from iplookup.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -141,7 +141,7 @@ Object.assign(module.exports, (() => {
   const pkg = require('api-qasim');
   const { channelInfo } = require('../lib_ported/messageConfig.js');
   // --- helper code from wattpad.js ---
-  const QasimAny = pkg;
+  const PortedAPI = pkg;
   return {
 
     // ── .wattpad ─── Search for stories on Wattpad! | usage: .wattpad <query>
@@ -173,7 +173,7 @@ Object.assign(module.exports, (() => {
             }, { quoted: message });
         }
         try {
-            const results = await QasimAny.wattpad(query);
+            const results = await PortedAPI.wattpad(query);
             if (!Array.isArray(results) || results.length === 0) {
                 throw new Error('No results found for your query.');
             }

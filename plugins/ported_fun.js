@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: fun)
+// Beast MD ported module (category: fun)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -240,7 +240,7 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const axios = require('axios');
+  const { pickRandom } = require('../lib_ported/localData');
 
   return {
 
@@ -265,15 +265,10 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await axios.get('https://raw.githubusercontent.com/GlobalTechInfo/Database/main/text/random_jokes.txt');
-            if (!res.data) {
-                return await sock.sendMessage(chatId, { text: '❌ Failed to fetch joke.' }, { quoted: message });
-            }
-            const jokes = res.data.split('\n').filter((line) => line.trim() !== '');
-            if (jokes.length === 0) {
+            const randomJoke = pickRandom('text/random_jokes.json');
+            if (!randomJoke) {
                 return await sock.sendMessage(chatId, { text: '❌ No jokes available.' }, { quoted: message });
             }
-            const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
             await sock.sendMessage(chatId, { text: `😂 *Joke*\n\n${randomJoke}` }, { quoted: message });
         }
         catch (err) {

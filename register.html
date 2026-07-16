@@ -1,411 +1,306 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Register — Halloween MD™</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Your Account — Beast MD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
-    --bg:#0a0300;--surface:#170a04;--border:#3d1f08;--accent:#ff7518;--accent2:#8e2de2;
-    --green:#39ff14;--text:#f3e9d2;--muted:#9a7d5a;--card:#1a0d06;--red:#ff2b2b;
+    --bg:#14171C; --bg-raised:#1B1F26; --ember:#E8A33D; --ember-dim:#8A6224;
+    --crimson:#7A2E2E; --bone:#F2EFE9; --ash:#8B93A1; --line:#2A2F38;
+    --good:#4CA870; --bad:#C1553F;
   }
-  body{
-    background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:6rem 20px 20px;
-    background-image:
-      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-    background-size:50px 50px;
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--bone);font-family:'Space Grotesk',sans-serif;min-height:100vh;}
+  a{color:inherit;text-decoration:none;}
+  .serif{font-family:'Fraunces',serif;font-weight:600;}
+  .serif-i{font-family:'Fraunces',serif;font-style:italic;font-weight:500;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  .claw{height:28px;width:100%;background:var(--bg);clip-path:polygon(0 0,6% 100%,12% 10%,18% 100%,24% 5%,31% 100%,38% 15%,45% 100%,52% 0,58% 100%,65% 10%,72% 100%,79% 5%,86% 100%,93% 15%,100% 0,100% 100%,0 100%);}
+
+  header{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:18px 6vw;background:rgba(20,23,28,0.8);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
+  .logo{display:flex;align-items:center;gap:2px;font-size:22px;}
+  .logo .serif-i{color:var(--ember);}
+  nav{display:flex;gap:30px;align-items:center;}
+  nav a{position:relative;font-size:14px;color:var(--ash);font-weight:500;}
+  nav a.current{color:var(--ember);}
+  nav a:hover{color:var(--bone);}
+
+  .btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 30px;font-weight:600;font-size:14px;background:transparent;cursor:pointer;border-radius:999px;border:none;transition:transform .25s,box-shadow .3s;}
+  .btn:hover{transform:translateY(-3px);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+  .btn-primary{background:var(--ember);color:#1A1305;}
+  .btn-primary:hover:not(:disabled){box-shadow:0 0 32px rgba(232,163,61,0.5);}
+  .btn-ghost{color:var(--bone);box-shadow:inset 0 0 0 1px var(--line);}
+  .btn-ghost:hover{box-shadow:inset 0 0 0 1px var(--ember-dim);color:var(--ember);}
+  .btn-block{width:100%;}
+
+  main{padding:150px 6vw 100px;min-height:100vh;display:flex;justify-content:center;}
+  .wrap{width:100%;max-width:520px;}
+
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ember);border:1px solid var(--ember-dim);padding:6px 14px;border-radius:20px;margin-bottom:26px;}
+  .eyebrow::before{content:'';width:6px;height:6px;background:var(--ember);border-radius:50%;box-shadow:0 0 8px var(--ember);animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(30px,4.2vw,42px);line-height:1.1;margin-bottom:14px;}
+  h1 em{font-style:italic;color:var(--ember);}
+  .lede{color:var(--ash);font-size:15px;line-height:1.6;margin-bottom:34px;max-width:440px;}
+
+  .free-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(76,168,112,0.12);border:1px solid var(--good);color:var(--good);font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;margin-bottom:28px;font-family:'JetBrains Mono',monospace;}
+
+  .panel{background:var(--bg-raised);border:1px solid var(--line);padding:34px;clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);position:relative;overflow:hidden;}
+  .panel::before{content:'';position:absolute;top:-40%;right:-20%;width:60%;height:180%;background:radial-gradient(circle, rgba(232,163,61,0.08), transparent 70%);pointer-events:none;}
+
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:12px;color:var(--ash);margin-bottom:8px;font-family:'JetBrains Mono',monospace;letter-spacing:0.3px;}
+  .phone-row{display:flex;gap:10px;}
+  .cc-select{background:var(--bg);border:1px solid var(--line);color:var(--bone);padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:14px;border-radius:8px;width:96px;}
+  input[type=tel],input[type=text],input[type=email],input[type=password]{
+    width:100%;flex:1;background:var(--bg);border:1px solid var(--line);color:var(--bone);
+    padding:13px 14px;font-size:15px;border-radius:8px;font-family:'Space Grotesk',sans-serif;transition:border-color .2s;
   }
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1.1rem 2.5rem;
-    background: rgba(2,4,8,0.7); backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(0,229,255,0.08);
-  }
-  .nav-logo {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700;
-    color: var(--accent); letter-spacing: 0.08em; text-decoration: none;
-    text-shadow: 0 0 20px rgba(0,229,255,0.5);
-  }
-  .nav-logo span { color: var(--text); }
-  .nav-logo .v { color: var(--muted); }
-  .nav-links {
-    display: flex; align-items: center; gap: 1.8rem;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
-    letter-spacing: 0.05em;
-  }
-  .nav-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
-  .nav-links a:hover { color: var(--accent); }
-  .nav-links .nav-pair-btn {
-    color: #000; background: var(--green); padding: 0.4rem 0.9rem;
-    border-radius: 6px; font-weight: 700; box-shadow: 0 0 14px rgba(0,255,136,0.25);
-  }
-  .nav-links .nav-pair-btn:hover { color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
-  .nav-status {
-    display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem;
-    color: var(--green); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
-    text-shadow: 0 0 10px rgba(0,255,136,0.4);
-  }
-  .pulse { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.8); } }
-  @media (max-width: 760px) { .nav-links { display: none; } .nav-hamburger { display: flex !important; } }
-  .nav-hamburger {
-    display: none; align-items: center; justify-content: center;
-    width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
-    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-    color: #ccc; font-size: 16px; margin-left: 10px;
-  }
-  .nav-hamburger:hover { background: rgba(255,255,255,.12); }
-  #mobileMenuOverlay {
-    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.6);
-    backdrop-filter: blur(4px); display: none;
-  }
-  #mobileMenuOverlay.open { display: block; }
-  #mobileMenuPanel {
-    position: fixed; top: 0; right: 0; z-index: 201; width: 240px; height: 100vh;
-    background: #0d0e1a; border-left: 1px solid rgba(255,255,255,.08);
-    padding: 20px 16px; display: flex; flex-direction: column; gap: 8px;
-    transform: translateX(100%); transition: transform .25s ease;
-  }
-  #mobileMenuOverlay.open #mobileMenuPanel { transform: translateX(0); }
-  #mobileMenuPanel a {
-    display: block; padding: 12px; border-radius: 10px; color: #ccc;
-    text-decoration: none; font-size: 14px; background: rgba(255,255,255,.05);
-  }
-  #mobileMenuPanel a.nav-pair-btn { color: #00ff88; }
-  .card{
-    width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);
-    border-radius:18px;padding:34px 28px;box-shadow:0 0 60px rgba(0,229,255,0.08);
-    position:relative;overflow:hidden;
-  }
-  .card::before{
-    content:"";position:absolute;top:-80px;left:50%;transform:translateX(-50%);
-    width:300px;height:300px;background:var(--accent);filter:blur(100px);opacity:0.15;pointer-events:none;
-  }
-  h1{
-    font-family:'JetBrains Mono',monospace;font-size:1.05rem;color:var(--accent);
-    text-shadow:0 0 18px rgba(0,229,255,0.5);text-align:center;margin-bottom:4px;letter-spacing:0.04em;
-  }
-  .sub{text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:24px}
-  label{display:block;font-size:0.78rem;color:var(--muted);margin:14px 0 6px;font-family:'JetBrains Mono',monospace}
-  input{
-    width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;
-    padding:12px 14px;color:var(--text);font-size:0.95rem;outline:none;transition:border-color .2s;
-  }
-  input:focus{border-color:var(--accent)}
-  .btn{
-    width:100%;margin-top:22px;padding:13px;border:none;border-radius:10px;
-    background:linear-gradient(90deg,var(--accent),var(--accent2));color:#000;font-weight:700;
-    font-size:0.95rem;cursor:pointer;transition:opacity .2s;
-  }
-  .btn:hover{opacity:0.88}
-  .btn:disabled{opacity:0.5;cursor:not-allowed}
-  .msg{margin-top:16px;font-size:0.85rem;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
-  .msg.error{background:rgba(255,59,92,0.1);color:var(--red);border:1px solid rgba(255,59,92,0.25);display:block}
-  .msg.success{background:rgba(0,255,136,0.08);color:var(--green);border:1px solid rgba(0,255,136,0.25);display:block}
-  .step{display:none}
-  .step.active{display:block}
-  .badge-result{text-align:center;padding:20px 0}
-  .badge-icon{font-size:48px;margin-bottom:10px}
-  .badge-title{font-family:'JetBrains Mono',monospace;color:var(--green);font-size:1.1rem;font-weight:700;margin-bottom:6px}
-  .credit-line{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:1rem;margin-top:8px}
-  .hint{color:var(--muted);font-size:0.75rem;margin-top:10px;line-height:1.5}
-  .back-link{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:0.8rem;text-decoration:none}
-  .back-link:hover{color:var(--accent)}
-  .method-toggle{display:flex;gap:8px;margin-top:6px}
-  .method-btn{
-    flex:1;padding:10px 8px;border-radius:10px;border:1px solid var(--border);
-    background:var(--surface);color:var(--muted);font-size:0.82rem;font-family:'Space Grotesk',sans-serif;
-    cursor:pointer;text-align:center;transition:all .15s;
-  }
-  .method-btn.active{
-    border-color:var(--accent);color:var(--accent);
-    background:rgba(0,229,255,0.08);box-shadow:0 0 12px rgba(0,229,255,0.15);
-  }
-  .field-hidden{display:none}
-  .brand-bg-image {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image: url('/assets/menu-bg.jpg');
-    background-size: cover; background-position: top center; background-repeat: no-repeat;
-    opacity: 0.14;
-    mask-image: linear-gradient(180deg, black 0%, black 40%, transparent 90%);
-    -webkit-mask-image: linear-gradient(180deg, black 0%, black 40%, transparent 90%);
-  }
+  input:focus,.cc-select:focus{outline:none;border-color:var(--ember-dim);}
+
+  .method-toggle{display:flex;gap:10px;margin-bottom:18px;}
+  .method-opt{flex:1;text-align:center;padding:12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px;color:var(--ash);transition:all .2s;}
+  .method-opt.active{border-color:var(--ember);color:var(--ember);background:rgba(232,163,61,0.06);}
+
+  .msg-box{display:none;padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:18px;font-family:'JetBrains Mono',monospace;}
+  .msg-box.show{display:block;}
+  .msg-box.err{background:rgba(193,85,63,0.1);border:1px solid var(--bad);color:var(--bad);}
+  .msg-box.ok{background:rgba(76,168,112,0.1);border:1px solid var(--good);color:var(--good);}
+
+  .step{display:none;}
+  .step.active{display:block;}
+
+  .otp-tiles{display:flex;gap:8px;justify-content:center;margin:22px 0 8px;}
+  .otp-tile{width:44px;height:52px;background:var(--bg);border:1px solid var(--line);border-radius:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--ember);}
+  .otp-tile:focus{outline:none;border-color:var(--ember);}
+  .otp-sub{text-align:center;color:var(--ash);font-size:13px;margin-bottom:20px;}
+  .otp-sub b{color:var(--bone);}
+  .resend{display:block;text-align:center;font-size:13px;color:var(--ember);cursor:pointer;margin-top:14px;}
+  .resend:hover{text-decoration:underline;}
+
+  .success-card{display:none;text-align:center;padding:6px 0;}
+  .success-card.show{display:block;}
+  .success-card .check{width:56px;height:56px;border-radius:50%;background:rgba(76,168,112,0.15);border:1px solid var(--good);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:26px;color:var(--good);}
+  .success-card h3{font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin-bottom:8px;}
+  .success-card p{color:var(--ash);font-size:14px;margin-bottom:24px;}
+  .badge-tag{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--ember-dim);padding:8px 16px;border-radius:20px;font-size:13px;color:var(--ember);margin-bottom:26px;font-family:'JetBrains Mono',monospace;}
+
+  .switch-line{text-align:center;margin-top:22px;font-size:13px;color:var(--ash);}
+  .switch-line a{color:var(--ember);font-weight:600;}
+
+  footer{border-top:1px solid var(--line);padding:40px 6vw;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--ash);}
+  footer .fbrand{display:flex;align-items:center;gap:2px;color:var(--bone);font-weight:600;font-size:16px;}
+  footer .fbrand .serif-i{color:var(--ember);}
+
+  @media(max-width:640px){ nav{display:none;} main{padding-top:130px;} .panel{padding:24px;} }
 </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&display=swap" rel="stylesheet">
-  <style>
-    /* 🎃 Halloween MD spooky type + ambiance */
-    h1, .logo, .brand, .brand-name, .title, .page-title, .app-title {
-      font-family: 'Creepster', cursive, system-ui, sans-serif !important;
-      letter-spacing: 0.5px;
-      text-shadow: 0 0 8px var(--accent, #ff7518), 0 0 18px rgba(142,45,226,0.35);
-    }
-    @keyframes hmd-flicker {
-      0%, 19%, 21%, 23%, 55%, 100% { opacity: 1; }
-      20%, 22%, 54% { opacity: 0.75; }
-    }
-    h1, .logo, .brand, .brand-name { animation: hmd-flicker 6s infinite; }
-    .hmd-howl-btn {
-      position: fixed; bottom: 18px; right: 18px; z-index: 9999;
-      width: 52px; height: 52px; border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, var(--accent, #ff7518), #6b1a00);
-      border: 2px solid var(--accent2, #8e2de2);
-      color: #fff; font-size: 22px; cursor: pointer;
-      box-shadow: 0 0 14px rgba(255,117,24,0.6);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.15s ease;
-    }
-    .hmd-howl-btn:hover { transform: scale(1.1); }
-    .hmd-howl-btn:active { transform: scale(0.95); }
-  </style>
-  <link rel="stylesheet" href="/assets/spooky-fx.css">
 </head>
 <body>
-  <div class="brand-bg-image"></div>
+
+<header>
+  <a href="index.html" class="logo"><span class="serif" style="font-weight:600;">BEAST</span><span class="serif-i">MD</span></a>
   <nav>
-    <a href="/" class="nav-logo">HENRY <span>HALLOWEEN MD</span> <span class="v">V19™</span></a>
-    <div class="nav-links">
-      <a href="/#commands">Commands</a>
-      <a href="/#how-it-works">How It Works</a>
-      <a href="/#deploy">Deploy</a>
-      <a href="/panel">Bot Panel Login</a>
-      <a href="/pair" class="nav-pair-btn">📱 Pair Now</a>
-    </div>
-    <div class="nav-status"><div class="pulse"></div> BOT ONLINE</div>
-    <button class="nav-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
+    <a href="index.html#features">Features</a>
+    <a href="pair.html">Pairing</a>
+    <a href="register.html" class="current">Register</a>
+    <a href="admin.html">Admin</a>
   </nav>
+  <a href="pair.html" class="btn btn-ghost" style="padding:10px 20px;font-size:13px;">Pair a Number</a>
+</header>
 
-  <div id="mobileMenuOverlay" onclick="if(event.target===this) closeMobileMenu()">
-    <div id="mobileMenuPanel">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="color:#a78bfa;font-weight:700;font-size:15px">Menu</span>
-        <button onclick="closeMobileMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
+<main>
+  <div class="wrap">
+    <div class="eyebrow mono">FREE ACCOUNT · NO PAYMENT REQUIRED</div>
+    <h1>Create your <em>account.</em></h1>
+    <p class="lede">Register your WhatsApp number to unlock your panel. Beast MD is completely free — no plans, no paywalls.</p>
+    <div class="free-tag">✓ 100% free, always</div>
+
+    <div class="panel">
+      <div class="msg-box" id="msg-box"></div>
+
+      <!-- STEP 1: DETAILS -->
+      <div class="step active" id="step-details">
+        <div class="field">
+          <label>Full name</label>
+          <input type="text" id="name" placeholder="Your name">
+        </div>
+        <div class="field">
+          <label>WhatsApp number</label>
+          <div class="phone-row">
+            <select class="cc-select mono" id="cc">
+              <option value="254">🇰🇪 +254</option>
+              <option value="234">🇳🇬 +234</option>
+              <option value="27">🇿🇦 +27</option>
+              <option value="256">🇺🇬 +256</option>
+              <option value="1">🇺🇸 +1</option>
+              <option value="44">🇬🇧 +44</option>
+            </select>
+            <input type="tel" id="phone" placeholder="712 345 678" inputmode="numeric">
+          </div>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="At least 6 characters">
+        </div>
+
+        <div class="field">
+          <label>Send verification code via</label>
+          <div class="method-toggle">
+            <div class="method-opt active" data-method="whatsapp">WhatsApp</div>
+            <div class="method-opt" data-method="email">Email</div>
+          </div>
+        </div>
+        <div class="field" id="email-field" style="display:none;">
+          <label>Email address</label>
+          <input type="email" id="email" placeholder="you@example.com">
+        </div>
+
+        <button class="btn btn-primary btn-block" id="register-btn">Create Account</button>
+        <p class="switch-line">Already registered? <a href="panel.html">Go to your panel →</a></p>
       </div>
-      <a href="/#commands" onclick="closeMobileMenu()">📋 Commands</a>
-      <a href="/#how-it-works" onclick="closeMobileMenu()">⚙️ How It Works</a>
-      <a href="/#deploy" onclick="closeMobileMenu()">🚀 Deploy</a>
-      <a href="/panel" onclick="closeMobileMenu()">🔓 Bot Panel Login</a>
-      <a href="/admin" onclick="closeMobileMenu()">🛡️ Admin Panel</a>
-      <a href="/pair" class="nav-pair-btn">📱 Pair Now</a>
+
+      <!-- STEP 2: OTP -->
+      <div class="step" id="step-otp">
+        <p class="otp-sub">Enter the 6-digit code sent to <b id="otp-target">your WhatsApp</b></p>
+        <div class="otp-tiles" id="otp-tiles">
+          <input class="otp-tile mono" maxlength="1" inputmode="numeric">
+          <input class="otp-tile mono" maxlength="1" inputmode="numeric">
+          <input class="otp-tile mono" maxlength="1" inputmode="numeric">
+          <input class="otp-tile mono" maxlength="1" inputmode="numeric">
+          <input class="otp-tile mono" maxlength="1" inputmode="numeric">
+          <input class="otp-tile mono" maxlength="1" inputmode="numeric">
+        </div>
+        <button class="btn btn-primary btn-block" id="verify-btn">Verify & Finish</button>
+        <span class="resend" id="resend-link">Didn't get it? Resend code</span>
+      </div>
+
+      <!-- STEP 3: SUCCESS -->
+      <div class="success-card" id="step-success">
+        <div class="check">✓</div>
+        <h3>You're verified</h3>
+        <p>Your account is active. Head to your panel to manage your session anytime — no payment ever required.</p>
+        <div class="badge-tag">🛡️ Trusted badge unlocked</div>
+        <a href="panel.html" class="btn btn-primary btn-block">Go to Your Panel →</a>
+      </div>
     </div>
   </div>
-  <script>
-    function toggleMobileMenu() { document.getElementById('mobileMenuOverlay').classList.add('open'); }
-    function closeMobileMenu() { document.getElementById('mobileMenuOverlay').classList.remove('open'); }
-  </script>
+</main>
 
-  <div class="card">
-    <h1>🪪 BOT PANEL ACCESS</h1>
-    <p class="sub">Register your WhatsApp number — verify to unlock your Trust Badge</p>
-
-    <!-- STEP 1: REGISTER -->
-    <div class="step active" id="step-register">
-      <label>WhatsApp Number (with country code)</label>
-      <input type="text" id="reg-phone" placeholder="254712345678" inputmode="numeric"/>
-      <label>Name</label>
-      <input type="text" id="reg-name" placeholder="Your name"/>
-      <label>Create a Password (for your bot panel login)</label>
-      <input type="password" id="reg-password" placeholder="At least 6 characters"/>
-
-      <label>Get my code via</label>
-      <div class="method-toggle">
-        <button type="button" class="method-btn active" id="method-whatsapp" onclick="setMethod('whatsapp')">📱 WhatsApp</button>
-        <button type="button" class="method-btn" id="method-email" onclick="setMethod('email')">📧 Email</button>
-      </div>
-
-      <div id="email-field" class="field-hidden">
-        <label>Email Address</label>
-        <input type="email" id="reg-email" placeholder="you@example.com"/>
-      </div>
-
-      <button class="btn" id="btn-register" onclick="doRegister()">Send Verification Code →</button>
-      <div class="hint" id="method-hint">Your 6-digit code will be sent as a WhatsApp message from the bot.</div>
-      <div class="msg" id="register-msg"></div>
-    </div>
-
-    <!-- STEP 2: VERIFY OTP -->
-    <div class="step" id="step-verify">
-      <label id="verify-label">Enter the 6-digit code sent to your WhatsApp</label>
-      <input type="text" id="otp-input" placeholder="000000" inputmode="numeric" maxlength="6"/>
-      <button class="btn" id="btn-verify" onclick="doVerify()">Verify Number →</button>
-      <div class="msg" id="verify-msg"></div>
-    </div>
-
-    <!-- STEP 3: SUCCESS -->
-    <div class="step" id="step-success">
-      <div class="badge-result">
-        <div class="badge-icon">🛡️</div>
-        <div class="badge-title">TRUSTED BADGE UNLOCKED</div>
-        <div class="credit-line" id="credit-result"></div>
-        <div class="hint" style="margin-top:14px">Your number is now verified on the bot panel.</div>
-        <a class="btn" style="display:block;text-decoration:none;text-align:center;margin-top:20px" href="/panel">🔓 Open Bot Panel →</a>
-      </div>
-    </div>
-
-    <a class="back-link" href="/">← Back to home</a>
-  </div>
+<div class="claw"></div>
+<footer>
+  <div class="fbrand"><span class="serif" style="font-weight:600;">BEAST</span><span class="serif-i">MD</span></div>
+  <div>Free forever · No hidden fees</div>
+</footer>
 
 <script>
-  let registeredPhone = "";
-  let deliveryMethod = "whatsapp";
-  // Referral code passed via ?ref=<referrer phone> — captured once on load
-  // and sent along with /api/register so the backend can credit them.
-  const referralCode = new URLSearchParams(window.location.search).get("ref") || "";
-
-  function showMsg(id, text, type) {
-    const el = document.getElementById(id);
-    el.textContent = text;
-    el.className = "msg " + type;
+  const msgBox = document.getElementById('msg-box');
+  function showMsg(text, ok){
+    msgBox.textContent = text;
+    msgBox.className = 'msg-box show ' + (ok ? 'ok' : 'err');
   }
+  function clearMsg(){ msgBox.className = 'msg-box'; }
 
-  function setMethod(method) {
-    deliveryMethod = method;
-    document.getElementById("method-whatsapp").classList.toggle("active", method === "whatsapp");
-    document.getElementById("method-email").classList.toggle("active", method === "email");
-    document.getElementById("email-field").classList.toggle("field-hidden", method !== "email");
-    document.getElementById("method-hint").textContent = method === "email"
-      ? "Your 6-digit code will be sent to your email address."
-      : "Your 6-digit code will be sent as a WhatsApp message from the bot.";
-    // ✅ FIX: switching delivery method left the previous attempt's error
-    // (e.g. an SMTP failure from Email) showing even after switching to
-    // WhatsApp, making it look like WhatsApp delivery failed too.
-    const msgEl = document.getElementById("register-msg");
-    msgEl.textContent = "";
-    msgEl.className = "msg";
-  }
+  // method toggle
+  let method = 'whatsapp';
+  const methodOpts = document.querySelectorAll('.method-opt');
+  const emailField = document.getElementById('email-field');
+  methodOpts.forEach(o => o.addEventListener('click', () => {
+    methodOpts.forEach(x => x.classList.remove('active'));
+    o.classList.add('active');
+    method = o.dataset.method;
+    emailField.style.display = method === 'email' ? 'block' : 'none';
+  }));
 
-  async function doRegister() {
-    const phone = document.getElementById("reg-phone").value.trim();
-    const name = document.getElementById("reg-name").value.trim();
-    const email = document.getElementById("reg-email").value.trim();
-    const password = document.getElementById("reg-password").value;
-    const btn = document.getElementById("btn-register");
+  let regPhone = '';
 
-    if (!name) {
-      return showMsg("register-msg", "Enter your name.", "error");
-    }
-    if (!password || password.length < 6) {
-      return showMsg("register-msg", "Password must be at least 6 characters.", "error");
-    }
-    if (deliveryMethod === "email" && !email) {
-      return showMsg("register-msg", "Enter your email address to receive the code.", "error");
-    }
+  document.getElementById('register-btn').addEventListener('click', async () => {
+    clearMsg();
+    const name = document.getElementById('name').value.trim();
+    const cc = document.getElementById('cc').value;
+    const phoneRaw = document.getElementById('phone').value.replace(/\s/g,'');
+    const password = document.getElementById('password').value;
+    const email = document.getElementById('email').value.trim();
 
-    btn.disabled = true; btn.textContent = "Sending...";
+    if(!name) return showMsg('Enter your name.', false);
+    if(phoneRaw.length < 7) return showMsg('Enter a valid WhatsApp number.', false);
+    if(password.length < 6) return showMsg('Password must be at least 6 characters.', false);
+    if(method === 'email' && (!email.includes('@') || !email.includes('.'))) return showMsg('Enter a valid email address.', false);
 
-    try {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name, email, password, method: deliveryMethod, ref: referralCode })
+    regPhone = cc + phoneRaw;
+    const btn = document.getElementById('register-btn');
+    btn.disabled = true; btn.textContent = 'Sending code…';
+
+    try{
+      const res = await fetch('/api/register', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name, phone: regPhone, email, method, password })
       });
       const data = await res.json();
-      if (data.success) {
-        registeredPhone = phone.replace(/\s+/g, "").replace("+", "");
-        document.getElementById("verify-label").textContent =
-          deliveryMethod === "email"
-            ? "Enter the 6-digit code sent to your email"
-            : "Enter the 6-digit code sent to your WhatsApp";
-        document.getElementById("step-register").classList.remove("active");
-        document.getElementById("step-verify").classList.add("active");
-      } else {
-        showMsg("register-msg", data.error || "Something went wrong.", "error");
-      }
-    } catch (e) {
-      showMsg("register-msg", "Network error. Try again.", "error");
-    } finally {
-      btn.disabled = false; btn.textContent = "Send Verification Code →";
+      btn.disabled = false; btn.textContent = 'Create Account';
+      if(!data.success){ return showMsg(data.error || 'Something went wrong.', false); }
+
+      document.getElementById('otp-target').textContent = method === 'email' ? email : 'your WhatsApp';
+      document.getElementById('step-details').classList.remove('active');
+      document.getElementById('step-otp').classList.add('active');
+      clearMsg();
+      document.querySelector('.otp-tile').focus();
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Create Account';
+      showMsg('Network error — check your connection and try again.', false);
     }
-  }
+  });
 
-  async function doVerify() {
-    const otp = document.getElementById("otp-input").value.trim();
-    const btn = document.getElementById("btn-verify");
-    btn.disabled = true; btn.textContent = "Verifying...";
+  // OTP auto-advance
+  const tiles = [...document.querySelectorAll('.otp-tile')];
+  tiles.forEach((t,i) => {
+    t.addEventListener('input', () => {
+      t.value = t.value.replace(/[^0-9]/g,'');
+      if(t.value && tiles[i+1]) tiles[i+1].focus();
+    });
+    t.addEventListener('keydown', (e) => {
+      if(e.key === 'Backspace' && !t.value && tiles[i-1]) tiles[i-1].focus();
+    });
+  });
 
-    try {
-      const res = await fetch("/api/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: registeredPhone, otp })
+  document.getElementById('verify-btn').addEventListener('click', async () => {
+    clearMsg();
+    const otp = tiles.map(t => t.value).join('');
+    if(otp.length !== 6) return showMsg('Enter the full 6-digit code.', false);
+
+    const btn = document.getElementById('verify-btn');
+    btn.disabled = true; btn.textContent = 'Verifying…';
+
+    try{
+      const res = await fetch('/api/verify-otp', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ phone: regPhone, otp })
       });
       const data = await res.json();
-      if (data.success) {
-        document.getElementById("step-verify").classList.remove("active");
-        document.getElementById("step-success").classList.add("active");
-        document.getElementById("credit-result").textContent = `+ ${data.credits} kesh free credit added`;
-      } else {
-        showMsg("verify-msg", data.error || "Incorrect code.", "error");
-      }
-    } catch (e) {
-      showMsg("verify-msg", "Network error. Try again.", "error");
-    } finally {
-      btn.disabled = false; btn.textContent = "Verify Number →";
+      btn.disabled = false; btn.textContent = 'Verify & Finish';
+      if(!data.success){ return showMsg(data.error || 'Incorrect code.', false); }
+
+      document.getElementById('step-otp').classList.remove('active');
+      document.getElementById('step-success').classList.add('show');
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Verify & Finish';
+      showMsg('Network error — check your connection and try again.', false);
     }
-  }
+  });
+
+  document.getElementById('resend-link').addEventListener('click', () => {
+    document.getElementById('register-btn').click ? null : null;
+    document.getElementById('step-otp').classList.remove('active');
+    document.getElementById('step-details').classList.add('active');
+    showMsg('Re-submit to get a new code.', true);
+  });
 </script>
-  <button class="hmd-howl-btn" id="hmdHowlBtn" title="Howl 🐺" aria-label="Play howl sound">🐺</button>
-  <script>
-  (function () {
-    // 🎃 Halloween MD — synthesized wolf-howl tone (no audio file needed).
-    function playHowl() {
-      try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        var ctx = new Ctx();
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
 
-        // Howl: slow rise, hold, wavering vibrato, slow fade.
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(520, now + 0.9);
-        osc.frequency.exponentialRampToValueAtTime(430, now + 1.4);
-
-        var lfo = ctx.createOscillator();
-        var lfoGain = ctx.createGain();
-        lfo.frequency.value = 6;
-        lfoGain.gain.value = 18;
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        lfo.start(now);
-        lfo.stop(now + 2.2);
-
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.12, now + 1.5);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
-
-        osc.start(now);
-        osc.stop(now + 2.3);
-      } catch (e) { /* Web Audio unsupported — fail silently */ }
-    }
-    var btn = document.getElementById('hmdHowlBtn');
-    if (btn) btn.addEventListener('click', playHowl);
-
-    // Browsers block audio autoplay before any user gesture, so we howl
-    // once on the first click/tap/keypress anywhere on the page.
-    var howled = false;
-    function howlOnce() {
-      if (howled) return;
-      howled = true;
-      playHowl();
-      window.removeEventListener('click', howlOnce);
-      window.removeEventListener('keydown', howlOnce);
-      window.removeEventListener('touchstart', howlOnce);
-    }
-    window.addEventListener('click', howlOnce);
-    window.addEventListener('keydown', howlOnce);
-    window.addEventListener('touchstart', howlOnce);
-  })();
-  </script>
-  <script src="/assets/spooky-fx.js" defer></script>
 </body>
 </html>

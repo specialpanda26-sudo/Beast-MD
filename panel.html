@@ -1,739 +1,295 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Bot Panel — Halloween MD™</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Panel — Beast MD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0a0300; --surface: #170a04; --border: #3d1f08;
-    --accent: #ff7518; --accent2: #8e2de2; --green: #39ff14;
-    --text: #f3e9d2; --muted: #9a7d5a; --card: #1a0d06;
-    --red: #ff2b2b; --yellow: #ffb020;
+  :root{
+    --bg:#14171C; --bg-raised:#1B1F26; --panel2:#20242C; --ember:#E8A33D; --ember-dim:#8A6224;
+    --bone:#F2EFE9; --ash:#8B93A1; --line:#2A2F38; --good:#4CA870; --bad:#C1553F;
   }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg); color: var(--text);
-    font-family: 'Space Grotesk', sans-serif;
-    min-height: 100vh; overflow-x: hidden;
-    display: flex; flex-direction: column;
-  }
-  #particles-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-  .grid-bg {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
-    background-size: 50px 50px;
-  }
-  .radial-glow {
-    position: fixed; width: 700px; height: 700px; border-radius: 50%;
-    pointer-events: none; z-index: 0; filter: blur(120px); opacity: 0.18;
-  }
-  .radial-glow.top { background: var(--accent); top: -200px; left: 50%; transform: translateX(-50%); }
-  .radial-glow.bottom { background: var(--accent2); bottom: -200px; right: -100px; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--bone);font-family:'Space Grotesk',sans-serif;min-height:100vh;}
+  a{color:inherit;text-decoration:none;}
+  .serif{font-family:'Fraunces',serif;font-weight:600;}
+  .serif-i{font-family:'Fraunces',serif;font-style:italic;font-weight:500;}
+  .mono{font-family:'JetBrains Mono',monospace;}
 
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1.1rem 2.5rem;
-    background: rgba(2,4,8,0.7); backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(0,229,255,0.08);
-  }
-  .nav-logo {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700;
-    color: var(--accent); letter-spacing: 0.08em;
-    text-shadow: 0 0 20px rgba(0,229,255,0.5); text-decoration: none;
-  }
-  .nav-logo span { color: var(--text); }
-  .nav-logo .v { color: var(--muted); }
-  .nav-links {
-    display: flex; align-items: center; gap: 1.8rem;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; letter-spacing: 0.05em;
-  }
-  .nav-links a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
-  .nav-links a:hover { color: var(--accent); }
-  .nav-links .nav-cta {
-    color: #000; background: var(--green); padding: 0.4rem 0.9rem;
-    border-radius: 6px; font-weight: 700; box-shadow: 0 0 14px rgba(0,255,136,0.25);
-  }
-  .nav-links .nav-cta:hover { color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
-  .nav-status {
-    display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem;
-    color: var(--green); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
-    text-shadow: 0 0 10px rgba(0,255,136,0.4);
-  }
-  .pulse { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.8); } }
-  @media (max-width: 760px) { .nav-links { display: none; } .nav-hamburger { display: flex !important; } }
-  .nav-hamburger {
-    display: none; align-items: center; justify-content: center;
-    width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
-    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-    color: #ccc; font-size: 16px; margin-left: 10px;
-  }
-  .nav-hamburger:hover { background: rgba(255,255,255,.12); }
-  #mobileMenuOverlay {
-    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.6);
-    backdrop-filter: blur(4px); display: none;
-  }
-  #mobileMenuOverlay.open { display: block; }
-  #mobileMenuPanel {
-    position: fixed; top: 0; right: 0; z-index: 201; width: 240px; height: 100vh;
-    background: #0d0e1a; border-left: 1px solid rgba(255,255,255,.08);
-    padding: 20px 16px; display: flex; flex-direction: column; gap: 8px;
-    transform: translateX(100%); transition: transform .25s ease;
-  }
-  #mobileMenuOverlay.open #mobileMenuPanel { transform: translateX(0); }
-  #mobileMenuPanel a {
-    display: block; padding: 12px; border-radius: 10px; color: #ccc;
-    text-decoration: none; font-size: 14px; background: rgba(255,255,255,.05);
-  }
-  #mobileMenuPanel a.nav-pair-btn { color: #00ff88; }
+  .claw{height:28px;width:100%;background:var(--bg);clip-path:polygon(0 0,6% 100%,12% 10%,18% 100%,24% 5%,31% 100%,38% 15%,45% 100%,52% 0,58% 100%,65% 10%,72% 100%,79% 5%,86% 100%,93% 15%,100% 0,100% 100%,0 100%);}
 
-  .page-body {
-    position: relative; z-index: 1;
-    display: flex; align-items: center; justify-content: center;
-    flex: 1; padding: 6rem 1.5rem 3rem;
-  }
-  .card {
-    width: 100%; max-width: 460px;
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 20px; padding: 36px 30px;
-    box-shadow: 0 0 60px rgba(0,229,255,0.08), 0 0 0 1px rgba(0,229,255,0.04);
-    position: relative; overflow: hidden;
-  }
-  .card::before {
-    content: ""; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
-    width: 300px; height: 300px; background: var(--accent);
-    filter: blur(100px); opacity: 0.12; pointer-events: none;
-  }
-  .card-header { text-align: center; margin-bottom: 26px; }
-  .card-icon { font-size: 2.2rem; margin-bottom: 10px; }
-  h1 {
-    font-family: 'JetBrains Mono', monospace; font-size: 1.05rem; color: var(--accent);
-    text-shadow: 0 0 18px rgba(0,229,255,0.5); letter-spacing: 0.04em; margin-bottom: 6px;
-  }
-  .sub { color: var(--muted); font-size: 0.85rem; }
+  header{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:18px 6vw;background:rgba(20,23,28,0.8);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
+  .logo{display:flex;align-items:center;gap:2px;font-size:22px;}
+  .logo .serif-i{color:var(--ember);}
+  nav{display:flex;gap:30px;align-items:center;}
+  nav a{font-size:14px;color:var(--ash);font-weight:500;}
+  nav a.current{color:var(--ember);}
+  nav a:hover{color:var(--bone);}
 
-  label { display: block; font-size: 0.78rem; color: var(--muted); margin: 16px 0 6px; font-family: 'JetBrains Mono', monospace; }
-  input {
-    width: 100%; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 13px 15px; color: var(--text);
-    font-size: 0.95rem; outline: none; transition: border-color .2s, box-shadow .2s;
-    font-family: 'Space Grotesk', sans-serif;
-  }
-  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.1); }
+  .btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 30px;font-weight:600;font-size:14px;background:transparent;cursor:pointer;border-radius:999px;border:none;transition:transform .25s,box-shadow .3s;}
+  .btn:hover{transform:translateY(-3px);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+  .btn-primary{background:var(--ember);color:#1A1305;}
+  .btn-primary:hover:not(:disabled){box-shadow:0 0 32px rgba(232,163,61,0.5);}
+  .btn-ghost{color:var(--bone);box-shadow:inset 0 0 0 1px var(--line);}
+  .btn-ghost:hover{box-shadow:inset 0 0 0 1px var(--ember-dim);color:var(--ember);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:9px 18px;font-size:13px;}
 
-  .btn {
-    width: 100%; margin-top: 22px; padding: 14px;
-    border: none; border-radius: 10px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    color: #000; font-weight: 700; font-size: 0.95rem;
-    cursor: pointer; transition: opacity .2s, transform .15s;
-    font-family: 'Space Grotesk', sans-serif;
-  }
-  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .btn-secondary {
-    width: 100%; margin-top: 10px; padding: 13px;
-    border: 1px solid var(--border); border-radius: 10px;
-    background: var(--surface); color: var(--text);
-    font-weight: 600; font-size: 0.88rem; cursor: pointer;
-    transition: border-color .2s; font-family: 'Space Grotesk', sans-serif;
-  }
-  .btn-secondary:hover { border-color: var(--accent); }
+  main{padding:150px 6vw 100px;min-height:100vh;display:flex;justify-content:center;}
+  .wrap{width:100%;max-width:460px;}
+  .dash-wrap{width:100%;max-width:760px;}
 
-  .msg { margin-top: 14px; font-size: 0.84rem; padding: 10px 13px; border-radius: 8px; display: none; line-height: 1.5; }
-  .msg.error { background: rgba(255,59,92,0.1); color: var(--red); border: 1px solid rgba(255,59,92,0.25); display: block; }
-  .msg.success { background: rgba(0,255,136,0.08); color: var(--green); border: 1px solid rgba(0,255,136,0.25); display: block; }
-  .step { display: none; }
-  .step.active { display: block; }
-  .hint { color: var(--muted); font-size: 0.75rem; margin-top: 10px; line-height: 1.5; }
-  .btn-link { display: block; text-align: center; margin-top: 16px; color: var(--muted); font-size: 0.8rem; text-decoration: none; transition: color .2s; }
-  .btn-link:hover { color: var(--accent); }
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ember);border:1px solid var(--ember-dim);padding:6px 14px;border-radius:20px;margin-bottom:26px;}
+  .eyebrow::before{content:'';width:6px;height:6px;background:var(--ember);border-radius:50%;box-shadow:0 0 8px var(--ember);animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 
-  /* ── Profile Panel ── */
-  .profile-head { text-align: center; padding: 6px 0 20px; }
-  .profile-badge-icon { font-size: 50px; margin-bottom: 10px; }
-  .profile-name { font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; color: var(--text); font-weight: 700; }
-  .profile-phone { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
-  .stat-row { display: flex; gap: 10px; margin: 18px 0; }
-  .stat-box {
-    flex: 1; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 14px; text-align: center;
-  }
-  .stat-value { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-size: 1.3rem; font-weight: 700; }
-  .stat-label { color: var(--muted); font-size: 0.7rem; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .section-title {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.08em; margin: 20px 0 8px;
-  }
-  .menu-list { list-style: none; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-  .menu-list li {
-    padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 0.88rem;
-    display: flex; justify-content: space-between; align-items: center; background: var(--surface);
-  }
-  .menu-list li:last-child { border-bottom: none; }
-  .menu-list .cmd { font-family: 'JetBrains Mono', monospace; color: var(--accent2); font-size: 0.82rem; }
-  .menu-list .desc { color: var(--muted); font-size: 0.78rem; text-align: right; flex-shrink: 0; margin-left: 12px; }
-  .status-pill {
-    font-size: 0.68rem; padding: 3px 9px; border-radius: 20px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.03em;
-  }
-  .status-pending { background: rgba(255,176,32,0.12); color: var(--yellow); }
-  .status-approved { background: rgba(0,255,136,0.12); color: var(--green); }
-  .status-rejected { background: rgba(255,59,92,0.12); color: var(--red); }
-  .referral-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 8px; }
-  .risk-pill {
-    font-size: 0.68rem; padding: 3px 9px; border-radius: 20px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.03em; display: inline-block;
-  }
-  .health-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 8px; }
-  .health-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .health-row:last-child { margin-bottom: 0; }
-  .buy-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 8px; }
-  .buy-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-  .buy-row input {
-    flex: 1; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-size: 0.9rem;
-  }
-  .buy-row button {
-    padding: 10px 16px; border: none; border-radius: 8px; background: var(--accent);
-    color: #000; font-weight: 700; cursor: pointer; font-size: 0.85rem; white-space: nowrap;
-  }
-  .buy-row button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .buy-cost { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
-  .referral-link {
-    font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; color: var(--accent);
-    word-break: break-all; background: var(--bg); padding: 8px 10px;
-    border-radius: 8px; margin-top: 8px; cursor: pointer; display: block;
-  }
-  .logout-btn {
-    width: 100%; margin-top: 22px; padding: 12px;
-    border: 1px solid var(--border); border-radius: 10px;
-    background: transparent; color: var(--muted); font-size: 0.85rem;
-    cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: border-color .2s, color .2s;
-  }
-  .logout-btn:hover { border-color: var(--red); color: var(--red); }
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(30px,4.2vw,42px);line-height:1.1;margin-bottom:14px;}
+  h1 em{font-style:italic;color:var(--ember);}
+  .lede{color:var(--ash);font-size:15px;line-height:1.6;margin-bottom:34px;}
+
+  .panel{background:var(--bg-raised);border:1px solid var(--line);padding:34px;clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);position:relative;overflow:hidden;}
+  .panel::before{content:'';position:absolute;top:-40%;right:-20%;width:60%;height:180%;background:radial-gradient(circle, rgba(232,163,61,0.08), transparent 70%);pointer-events:none;}
+
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:12px;color:var(--ash);margin-bottom:8px;font-family:'JetBrains Mono',monospace;}
+  .phone-row{display:flex;gap:10px;}
+  .cc-select{background:var(--bg);border:1px solid var(--line);color:var(--bone);padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:14px;border-radius:8px;width:96px;}
+  input[type=tel],input[type=text],input[type=password]{width:100%;flex:1;background:var(--bg);border:1px solid var(--line);color:var(--bone);padding:13px 14px;font-size:15px;border-radius:8px;}
+  input:focus,.cc-select:focus{outline:none;border-color:var(--ember-dim);}
+
+  .msg-box{display:none;padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:18px;font-family:'JetBrains Mono',monospace;}
+  .msg-box.show{display:block;}
+  .msg-box.err{background:rgba(193,85,63,0.1);border:1px solid var(--bad);color:var(--bad);}
+  .msg-box.ok{background:rgba(76,168,112,0.1);border:1px solid var(--good);color:var(--good);}
+
+  .switch-line{text-align:center;margin-top:22px;font-size:13px;color:var(--ash);}
+  .switch-line a{color:var(--ember);font-weight:600;}
+  .forgot-link{display:block;text-align:right;font-size:12.5px;color:var(--ember);cursor:pointer;margin:-10px 0 18px;}
+
+  /* ===== DASHBOARD ===== */
+  .dash-header{display:flex;align-items:center;gap:16px;margin-bottom:32px;flex-wrap:wrap;}
+  .avatar-lg{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--ember),var(--ember-dim));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;color:#1A1305;flex-shrink:0;}
+  .dash-header h2{font-family:'Fraunces',serif;font-weight:600;font-size:24px;}
+  .dash-header .sub{color:var(--ash);font-size:13px;}
+  .badge-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(232,163,61,0.1);border:1px solid var(--ember-dim);color:var(--ember);font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;margin-top:6px;font-family:'JetBrains Mono',monospace;}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px;}
+  .card{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:20px;}
+  .card .label{font-size:11.5px;color:var(--ash);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;font-family:'JetBrains Mono',monospace;}
+  .card .val{font-family:'Fraunces',serif;font-weight:600;font-size:22px;}
+  .card .val.good{color:var(--good);}
+  .card .val.bad{color:var(--bad);}
+  .card .sub2{font-size:12px;color:var(--ash);margin-top:6px;}
+
+  .session-card{background:var(--bg-raised);border:1px solid var(--line);border-radius:10px;padding:24px;margin-bottom:16px;}
+  .session-card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .session-card h3{font-family:'Fraunces',serif;font-weight:600;font-size:17px;}
+  .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+  .status-dot.on{background:var(--good);box-shadow:0 0 8px var(--good);}
+  .status-dot.off{background:var(--ash);}
+  .session-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;font-size:13px;}
+  .session-grid .k{color:var(--ash);font-size:11.5px;margin-bottom:4px;font-family:'JetBrains Mono',monospace;}
+  .no-session{text-align:center;padding:24px;color:var(--ash);font-size:13.5px;}
+
+  .quick-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;}
+
+  footer{border-top:1px solid var(--line);padding:40px 6vw;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--ash);}
+  footer .fbrand{display:flex;align-items:center;gap:2px;color:var(--bone);font-weight:600;font-size:16px;}
+  footer .fbrand .serif-i{color:var(--ember);}
+
+  @media(max-width:640px){ nav{display:none;} main{padding-top:130px;} .panel{padding:24px;} }
 </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&display=swap" rel="stylesheet">
-  <style>
-    /* 🎃 Halloween MD spooky type + ambiance */
-    h1, .logo, .brand, .brand-name, .title, .page-title, .app-title {
-      font-family: 'Creepster', cursive, system-ui, sans-serif !important;
-      letter-spacing: 0.5px;
-      text-shadow: 0 0 8px var(--accent, #ff7518), 0 0 18px rgba(142,45,226,0.35);
-    }
-    @keyframes hmd-flicker {
-      0%, 19%, 21%, 23%, 55%, 100% { opacity: 1; }
-      20%, 22%, 54% { opacity: 0.75; }
-    }
-    h1, .logo, .brand, .brand-name { animation: hmd-flicker 6s infinite; }
-    .hmd-howl-btn {
-      position: fixed; bottom: 18px; right: 18px; z-index: 9999;
-      width: 52px; height: 52px; border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, var(--accent, #ff7518), #6b1a00);
-      border: 2px solid var(--accent2, #8e2de2);
-      color: #fff; font-size: 22px; cursor: pointer;
-      box-shadow: 0 0 14px rgba(255,117,24,0.6);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.15s ease;
-    }
-    .hmd-howl-btn:hover { transform: scale(1.1); }
-    .hmd-howl-btn:active { transform: scale(0.95); }
-  </style>
-  <link rel="stylesheet" href="/assets/spooky-fx.css">
 </head>
 <body>
 
-<canvas id="particles-canvas"></canvas>
-<div class="grid-bg"></div>
-<div class="radial-glow top"></div>
-<div class="radial-glow bottom"></div>
+<header>
+  <a href="index.html" class="logo"><span class="serif" style="font-weight:600;">BEAST</span><span class="serif-i">MD</span></a>
+  <nav>
+    <a href="index.html#features">Features</a>
+    <a href="pair.html">Pairing</a>
+    <a href="panel.html" class="current">Panel</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+  <a href="pair.html" class="btn btn-ghost btn-sm">Pair a Number</a>
+</header>
 
-<nav>
-  <a href="/" class="nav-logo">HENRY <span>HALLOWEEN MD</span> <span class="v">V19™</span></a>
-  <div class="nav-links">
-    <a href="/#commands">Commands</a>
-    <a href="/#how-it-works">How It Works</a>
-    <a href="/#deploy">Deploy</a>
-    <a href="/register">Register</a>
-    <a href="/chat">Chat</a>
-    <a href="/admin">Admin</a>
-    <a href="/pair" class="nav-cta">📱 Pair Now</a>
-  </div>
-  <div class="nav-status"><div class="pulse"></div> BOT ONLINE</div>
-  <button class="nav-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">☰</button>
-</nav>
+<main>
+  <!-- LOGIN VIEW -->
+  <div class="wrap" id="login-view">
+    <div class="eyebrow mono">FREE ACCOUNT PANEL</div>
+    <h1>Welcome <em>back.</em></h1>
+    <p class="lede">Log in with the name, number, and password you registered with.</p>
 
-<div id="mobileMenuOverlay" onclick="if(event.target===this) closeMobileMenu()">
-  <div id="mobileMenuPanel">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <span style="color:#a78bfa;font-weight:700;font-size:15px">Menu</span>
-      <button onclick="closeMobileMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
-    </div>
-    <a href="/#commands" onclick="closeMobileMenu()">📋 Commands</a>
-    <a href="/#how-it-works" onclick="closeMobileMenu()">⚙️ How It Works</a>
-    <a href="/#deploy" onclick="closeMobileMenu()">🚀 Deploy</a>
-    <a href="/register" onclick="closeMobileMenu()">🪪 Register</a>
-    <a href="/chat" onclick="closeMobileMenu()">💬 Chat</a>
-    <a href="/admin" onclick="closeMobileMenu()">🛡️ Admin Panel</a>
-    <a href="/pair" class="nav-pair-btn">📱 Pair Now</a>
-  </div>
-</div>
-<script>
-  function toggleMobileMenu() { document.getElementById('mobileMenuOverlay').classList.add('open'); }
-  function closeMobileMenu() { document.getElementById('mobileMenuOverlay').classList.remove('open'); }
-</script>
-
-<div class="page-body">
-  <div class="card">
-
-    <!-- STEP 1: LOGIN -->
-    <div class="step active" id="step-login">
-      <div class="card-header">
-        <div class="card-icon">🔥</div>
-        <h1>BOT PANEL LOGIN</h1>
-        <p class="sub">Sign in with your registered name, number &amp; password</p>
+    <div class="panel">
+      <div class="msg-box" id="login-msg"></div>
+      <div class="field">
+        <label>Full name</label>
+        <input type="text" id="login-name" placeholder="Your name">
       </div>
-      <label>Name</label>
-      <input type="text" id="login-name" placeholder="Your name"/>
-      <label>WhatsApp Number (with country code)</label>
-      <input type="text" id="login-phone" placeholder="254712345678" inputmode="numeric"/>
-      <label>Password</label>
-      <input type="password" id="login-password" placeholder="Your panel password"/>
-      <button class="btn" id="btn-login" onclick="doLogin()">Sign In →</button>
-      <div class="msg" id="login-msg"></div>
-      <a class="btn-link" href="#" onclick="showForgotPassword();return false" style="margin-top:6px">Forgot password?</a>
-      <a class="btn-link" href="/register" style="margin-top:14px">Don't have an account? Register →</a>
-      <a class="btn-link" href="/">← Back to home</a>
-    </div>
-
-    <!-- STEP FORGOT-1: REQUEST CODE -->
-    <div class="step" id="step-forgot-request">
-      <div class="card-header">
-        <div class="card-icon">🔑</div>
-        <h1>RESET PASSWORD</h1>
-        <p class="sub">Enter your registered WhatsApp number and we'll send you a code</p>
-      </div>
-      <label>WhatsApp Number (with country code)</label>
-      <input type="text" id="forgot-phone" placeholder="254712345678" inputmode="numeric"/>
-      <button class="btn" id="btn-forgot-request" onclick="requestForgotCode()">Send Code →</button>
-      <div class="msg" id="forgot-request-msg"></div>
-      <a class="btn-link" href="#" onclick="backToLoginFromForgot()">← Back to login</a>
-    </div>
-
-    <!-- STEP FORGOT-2: ENTER CODE + NEW PASSWORD -->
-    <div class="step" id="step-forgot-reset">
-      <div class="card-header">
-        <div class="card-icon">🔑</div>
-        <h1>ENTER NEW PASSWORD</h1>
-        <p class="sub">Check your WhatsApp for the 6-digit code</p>
-      </div>
-      <label>Code</label>
-      <input type="text" id="forgot-otp" placeholder="123456" inputmode="numeric" maxlength="6"/>
-      <label>New Password</label>
-      <input type="password" id="forgot-new-password" placeholder="At least 6 characters"/>
-      <button class="btn" id="btn-forgot-reset" onclick="submitForgotReset()">Reset Password →</button>
-      <div class="msg" id="forgot-reset-msg"></div>
-      <a class="btn-link" href="#" onclick="backToLoginFromForgot()">← Back to login</a>
-    </div>
-
-    <!-- STEP 2: PROFILE -->
-    <div class="step" id="step-profile">
-      <div class="profile-head">
-        <div class="profile-badge-icon" id="profile-badge-icon">🛡️</div>
-        <div class="profile-name" id="profile-name">—</div>
-        <div class="profile-phone" id="profile-phone">—</div>
-      </div>
-      <div class="stat-row">
-        <div class="stat-box">
-          <div class="stat-value" id="profile-balance">—</div>
-          <div class="stat-label">kesh balance</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value" id="profile-badge-label">—</div>
-          <div class="stat-label">trust level</div>
+      <div class="field">
+        <label>WhatsApp number</label>
+        <div class="phone-row">
+          <select class="cc-select mono" id="login-cc">
+            <option value="254">🇰🇪 +254</option>
+            <option value="234">🇳🇬 +234</option>
+            <option value="27">🇿🇦 +27</option>
+            <option value="256">🇺🇬 +256</option>
+            <option value="1">🇺🇸 +1</option>
+            <option value="44">🇬🇧 +44</option>
+          </select>
+          <input type="tel" id="login-phone" placeholder="712 345 678" inputmode="numeric">
         </div>
       </div>
-
-      <div class="section-title">📋 Bot Commands</div>
-      <ul class="menu-list">
-        <li><span class="cmd">.menu</span><span class="desc">Full command list</span></li>
-        <li><span class="cmd">.ping</span><span class="desc">Bot speed check</span></li>
-        <li><span class="cmd">.imagine [desc]</span><span class="desc">AI image gen</span></li>
-        <li><span class="cmd">.tts [text]</span><span class="desc">Text-to-speech</span></li>
-        <li><span class="cmd">.model [name]</span><span class="desc">Switch AI model</span></li>
-        <li><span class="cmd">.dl [url]</span><span class="desc">Universal downloader</span></li>
-        <li><span class="cmd">.sticker</span><span class="desc">Image to sticker</span></li>
-        <li><span class="cmd">.profile</span><span class="desc">Wallet &amp; balance</span></li>
-        <li><span class="cmd">.addfunds [amt] [code]</span><span class="desc">Top up wallet</span></li>
-        <li><span class="cmd">.referral</span><span class="desc">Referral link</span></li>
-        <li><span class="cmd">.schedule add ...</span><span class="desc">Schedule a message</span></li>
-        <li><span class="cmd">/ask [query]</span><span class="desc">Ask AI anything</span></li>
-        <li><span class="cmd">.checklink [url]</span><span class="desc">Link safety check</span></li>
-      </ul>
-
-      <div class="section-title">🛡️ Your Bot Health</div>
-      <div class="health-box" id="health-box">
-        <div style="color:var(--muted);font-size:0.82rem">Loading...</div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Your password">
       </div>
+      <span class="forgot-link" id="forgot-link">Forgot password?</span>
+      <button class="btn btn-primary btn-block" id="login-btn">Log In</button>
+      <p class="switch-line">New here? <a href="register.html">Create a free account →</a></p>
+    </div>
+  </div>
 
-      <div class="section-title">💳 Buy Subscription Time</div>
-      <div class="buy-box" id="buy-box">
-        <div style="color:var(--muted);font-size:0.82rem">Loading...</div>
+  <!-- DASHBOARD VIEW -->
+  <div class="dash-wrap" id="dash-view" style="display:none;">
+    <div class="dash-header">
+      <div class="avatar-lg" id="dash-avatar">?</div>
+      <div>
+        <h2 id="dash-name">—</h2>
+        <div class="sub" id="dash-phone">—</div>
+        <div class="badge-pill" id="dash-badge">🛡️ Trusted</div>
       </div>
-
-      <div class="section-title">🤝 Your Referral Link</div>
-      <div class="referral-box">
-        <div style="color:var(--muted);font-size:0.8rem">Share this link to earn kesh for every verified signup:</div>
-        <div class="referral-link" id="referral-link" onclick="copyReferral()">Loading...</div>
-        <div class="hint" id="referral-stats"></div>
+      <div style="margin-left:auto;">
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Log Out</button>
       </div>
-
-      <div class="section-title">💰 Recent Top-Up Requests</div>
-      <ul class="menu-list" id="topup-list">
-        <li style="color:var(--muted);font-size:0.82rem">Loading...</li>
-      </ul>
-
-      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
     </div>
 
+    <div class="cards">
+      <div class="card">
+        <div class="label">Member since</div>
+        <div class="val" id="member-since" style="font-size:16px;">—</div>
+      </div>
+      <div class="card">
+        <div class="label">Account status</div>
+        <div class="val good" style="font-size:16px;">Free · Active</div>
+        <div class="sub2">No payment ever required</div>
+      </div>
+    </div>
+
+    <div class="session-card" id="session-card">
+      <div class="top">
+        <h3>Your bot session</h3>
+      </div>
+      <div id="session-body"><div class="no-session">Loading…</div></div>
+    </div>
+
+    <div class="quick-actions">
+      <a href="pair.html" class="btn btn-primary btn-sm">Pair a Number</a>
+      <a href="#" class="btn btn-ghost btn-sm" id="open-console-btn">Open Console</a>
+    </div>
   </div>
-</div>
+</main>
+
+<div class="claw"></div>
+<footer>
+  <div class="fbrand"><span class="serif" style="font-weight:600;">BEAST</span><span class="serif-i">MD</span></div>
+  <div>Free forever · No hidden fees</div>
+</footer>
 
 <script>
-  // ── Particles ──────────────────────────────────────────────────────────────
-  const canvas = document.getElementById('particles-canvas');
-  const ctx = canvas.getContext('2d');
-  let particles = [];
-  function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
-  for (let i = 0; i < 55; i++) {
-    particles.push({
-      x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-      r: Math.random() * 1.5 + 0.3, a: Math.random() * 0.5 + 0.1
-    });
-  }
-  function animateParticles() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles.forEach(p => {
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
-      if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(0,229,255,${p.a})`; ctx.fill();
-    });
-    requestAnimationFrame(animateParticles);
-  }
-  animateParticles();
+  const loginMsg = document.getElementById('login-msg');
+  function showMsg(text, ok){ loginMsg.textContent = text; loginMsg.className = 'msg-box show ' + (ok?'ok':'err'); }
 
-  // ── Panel logic ────────────────────────────────────────────────────────────
-  let sessionData = null;
-
-  function showMsg(id, text, type) {
-    const el = document.getElementById(id);
-    el.textContent = text; el.className = "msg " + type;
+  let creds = JSON.parse(sessionStorage_safe_get());
+  function sessionStorage_safe_get(){
+    try{ return localStorage.getItem('beastmd_panel_creds') || 'null'; }catch(e){ return 'null'; }
   }
 
-  async function doLogin() {
+  document.getElementById('login-btn').addEventListener('click', async () => {
     const name = document.getElementById('login-name').value.trim();
-    const phone = document.getElementById('login-phone').value.trim();
+    const cc = document.getElementById('login-cc').value;
+    const phoneRaw = document.getElementById('login-phone').value.replace(/\s/g,'');
     const password = document.getElementById('login-password').value;
-    const btn = document.getElementById('btn-login');
-    if (!name || !phone || !password) return showMsg('login-msg', 'Please fill in all fields.', 'error');
-    btn.disabled = true; btn.textContent = 'Signing in...';
-    try {
+    if(!name || phoneRaw.length < 7 || !password) return showMsg('Fill in all fields to log in.', false);
+    const phone = cc + phoneRaw;
+    await doLogin(name, phone, password, true);
+  });
+
+  document.getElementById('forgot-link').addEventListener('click', () => {
+    showMsg('Send *.forgot* to the bot on WhatsApp, or use the reset link sent to your registered contact method.', true);
+  });
+
+  async function doLogin(name, phone, password, remember){
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = 'Logging in…';
+    try{
       const res = await fetch('/api/profile', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ name, phone, password })
       });
       const data = await res.json();
-      if (data.success) {
-        sessionData = data;
-        renderProfile(data);
-        document.getElementById('step-login').classList.remove('active');
-        document.getElementById('step-profile').classList.add('active');
-      } else { showMsg('login-msg', data.error || 'Login failed.', 'error'); }
-    } catch (e) { showMsg('login-msg', 'Network error. Try again.', 'error'); }
-    finally { btn.disabled = false; btn.textContent = 'Sign In →'; }
-  }
-
-  function showForgotPassword() {
-    document.getElementById('step-login').classList.remove('active');
-    document.getElementById('step-forgot-request').classList.add('active');
-    const phone = document.getElementById('login-phone').value.trim();
-    if (phone) document.getElementById('forgot-phone').value = phone;
-  }
-
-  function backToLoginFromForgot() {
-    document.getElementById('step-forgot-request').classList.remove('active');
-    document.getElementById('step-forgot-reset').classList.remove('active');
-    document.getElementById('step-login').classList.add('active');
-    document.getElementById('forgot-request-msg').textContent = '';
-    document.getElementById('forgot-reset-msg').textContent = '';
-  }
-
-  async function requestForgotCode() {
-    const phone = document.getElementById('forgot-phone').value.trim();
-    const btn = document.getElementById('btn-forgot-request');
-    if (!phone) return showMsg('forgot-request-msg', 'Enter your WhatsApp number.', 'error');
-    btn.disabled = true; btn.textContent = 'Sending...';
-    try {
-      const res = await fetch('/api/forgot-password', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
-      });
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById('step-forgot-request').classList.remove('active');
-        document.getElementById('step-forgot-reset').classList.add('active');
-        showMsg('forgot-reset-msg', data.message, 'success');
-      } else { showMsg('forgot-request-msg', data.error || 'Could not send code.', 'error'); }
-    } catch (e) { showMsg('forgot-request-msg', 'Network error. Try again.', 'error'); }
-    finally { btn.disabled = false; btn.textContent = 'Send Code →'; }
-  }
-
-  async function submitForgotReset() {
-    const phone = document.getElementById('forgot-phone').value.trim();
-    const otp = document.getElementById('forgot-otp').value.trim();
-    const newPassword = document.getElementById('forgot-new-password').value;
-    const btn = document.getElementById('btn-forgot-reset');
-    if (!otp || !newPassword) return showMsg('forgot-reset-msg', 'Enter the code and a new password.', 'error');
-    btn.disabled = true; btn.textContent = 'Resetting...';
-    try {
-      const res = await fetch('/api/reset-password', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp, new_password: newPassword })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showMsg('forgot-reset-msg', data.message, 'success');
-        setTimeout(backToLoginFromForgot, 1800);
-      } else { showMsg('forgot-reset-msg', data.error || 'Could not reset password.', 'error'); }
-    } catch (e) { showMsg('forgot-reset-msg', 'Network error. Try again.', 'error'); }
-    finally { btn.disabled = false; btn.textContent = 'Reset Password →'; }
-  }
-
-  function renderProfile(data) {
-    const publicUrl = window.location.origin;
-    document.getElementById('profile-name').textContent = data.name || '—';
-    document.getElementById('profile-phone').textContent = '+' + (data.phone || '');
-    // ✅ FIX: backend returns "credits", this was reading "balance" (always
-    // undefined) and "payments" (actual key is "recent_payments") — the
-    // wallet balance and top-up list never rendered correctly before.
-    document.getElementById('profile-balance').textContent = data.credits ?? '—';
-    document.getElementById('profile-badge-label').textContent = data.badge || '—';
-    document.getElementById('profile-badge-icon').textContent = data.badge === 'trusted' ? '🛡️' : data.badge === 'premium' ? '💎' : '👤';
-    const refLink = `${publicUrl}/register?ref=${data.phone}`;
-    document.getElementById('referral-link').textContent = refLink;
-    if (data.referral_stats) {
-      document.getElementById('referral-stats').textContent = `${data.referral_stats.count || 0} signups · ${data.referral_stats.earned || 0} kesh earned`;
-    }
-    const topupList = document.getElementById('topup-list');
-    if (data.recent_payments && data.recent_payments.length) {
-      topupList.innerHTML = data.recent_payments.map(p => `
-        <li>
-          <span>KES ${p.amount} · <span style="color:var(--muted);font-size:0.78rem">${p.mpesa_code}</span></span>
-          <span class="status-pill status-${p.status}">${p.status}</span>
-        </li>`).join('');
-    } else {
-      topupList.innerHTML = '<li style="color:var(--muted);font-size:0.82rem">No top-up requests yet. Use .addfunds to submit one.</li>';
-    }
-
-    renderHealthBox(data.bot_session);
-    renderBuyBox(data.bot_session);
-  }
-
-  // ── Bot Health (per-session antiban stats — just THIS user's session) ──
-  const RISK_META = {
-    low:      { color: '#4ade80', label: 'LOW',      icon: '🟢' },
-    medium:   { color: '#facc15', label: 'MEDIUM',   icon: '🟡' },
-    high:     { color: '#fb923c', label: 'HIGH',     icon: '🟠' },
-    critical: { color: '#ff4455', label: 'CRITICAL', icon: '🔴' },
-  };
-
-  function renderHealthBox(botSession) {
-    const box = document.getElementById('health-box');
-    if (!botSession) {
-      box.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">No bot linked to this account yet. <a href="/pair" style="color:var(--accent)">Pair your bot →</a></div>';
-      return;
-    }
-    const rm = RISK_META[botSession.antiban_risk];
-    const riskHtml = rm
-      ? `<span class="risk-pill" style="background:${rm.color}22;color:${rm.color};border:1px solid ${rm.color}55">${rm.icon} ${rm.label}</span>`
-      : `<span class="risk-pill" style="background:rgba(255,255,255,0.06);color:var(--muted)">No data yet</span>`;
-    const warmup = (botSession.antiban_warmup_day != null && botSession.antiban_warmup_total != null)
-      ? `Day ${botSession.antiban_warmup_day}/${botSession.antiban_warmup_total}` : '—';
-    const expiryHtml = botSession.expiry_display
-      ? (botSession.expired
-          ? `<span style="color:var(--red)">⛔ Expired ${botSession.expiry_display}</span>`
-          : `<span style="color:var(--green)">⏳ Until ${botSession.expiry_display}</span>`)
-      : '<span style="color:var(--muted)">♾️ No expiry set</span>';
-
-    box.innerHTML = `
-      <div class="health-row"><span style="color:var(--muted);font-size:0.82rem">Status</span><span style="font-size:0.82rem">${botSession.online ? '🟢 Online' : '⚪ Offline'}</span></div>
-      <div class="health-row"><span style="color:var(--muted);font-size:0.82rem">Ban risk</span>${riskHtml}</div>
-      <div class="health-row"><span style="color:var(--muted);font-size:0.82rem">Warm-up</span><span style="font-size:0.82rem">${warmup}</span></div>
-      <div class="health-row"><span style="color:var(--muted);font-size:0.82rem">Subscription</span><span style="font-size:0.82rem">${expiryHtml}</span></div>
-    `;
-  }
-
-  // ── Buy Subscription Time (not config reselling — this is bot-activation days, paid from wallet kesh) ──
-  let subscriptionPricePerDay = null;
-
-  async function loadSubscriptionPricing() {
-    if (subscriptionPricePerDay !== null) return subscriptionPricePerDay;
-    try {
-      const res = await fetch('/api/subscription-pricing');
-      const data = await res.json();
-      subscriptionPricePerDay = data.success ? data.kesh_per_day : 10;
-    } catch (e) { subscriptionPricePerDay = 10; }
-    return subscriptionPricePerDay;
-  }
-
-  async function renderBuyBox(botSession) {
-    const box = document.getElementById('buy-box');
-    const perDay = await loadSubscriptionPricing();
-    if (!botSession) {
-      box.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">Pair a bot first, then come back here to buy it more subscription time.</div>';
-      return;
-    }
-    box.innerHTML = `
-      <div style="color:var(--muted);font-size:0.8rem">${perDay} kesh per day, paid straight from your wallet balance above.</div>
-      <div class="buy-row">
-        <input type="number" id="buy-days" min="1" max="365" value="7" oninput="updateBuyCost()"/>
-        <button id="btn-buy-sub" onclick="buySubscription()">Buy →</button>
-      </div>
-      <div class="buy-cost" id="buy-cost"></div>
-      <div class="msg" id="buy-msg"></div>
-    `;
-    updateBuyCost();
-  }
-
-  function updateBuyCost() {
-    const daysEl = document.getElementById('buy-days');
-    if (!daysEl) return;
-    const days = parseInt(daysEl.value, 10) || 0;
-    const cost = days * (subscriptionPricePerDay || 0);
-    document.getElementById('buy-cost').textContent = days > 0 ? `= ${cost} kesh` : '';
-  }
-
-  async function buySubscription() {
-    const days = parseInt(document.getElementById('buy-days').value, 10);
-    const btn = document.getElementById('btn-buy-sub');
-    if (!days || days < 1) return showMsg('buy-msg', 'Enter a valid number of days.', 'error');
-    if (!sessionData) return;
-    btn.disabled = true; btn.textContent = 'Processing...';
-    try {
-      const res = await fetch('/api/subscription/buy', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: sessionData.name,
-          phone: sessionData.phone,
-          password: document.getElementById('login-password').value,
-          days
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showMsg('buy-msg', `✅ Added ${data.days_added} day(s). New expiry: ${data.expiry_display}`, 'success');
-        document.getElementById('profile-balance').textContent = data.remaining_credits;
-        sessionData.credits = data.remaining_credits;
-        if (sessionData.bot_session) {
-          sessionData.bot_session.expiry_ts = data.expiry_ts;
-          sessionData.bot_session.expiry_display = data.expiry_display;
-          sessionData.bot_session.expired = false;
-          sessionData.bot_session.activated = true;
-        }
-        renderHealthBox(sessionData.bot_session);
-      } else {
-        showMsg('buy-msg', data.error || 'Purchase failed.', 'error');
+      btn.disabled = false; btn.textContent = 'Log In';
+      if(!data.success){ return showMsg(data.error || 'Login failed.', false); }
+      if(remember){
+        try{ localStorage.setItem('beastmd_panel_creds', JSON.stringify({name, phone, password})); }catch(e){}
       }
-    } catch (e) {
-      showMsg('buy-msg', 'Network error. Try again.', 'error');
-    } finally {
-      btn.disabled = false; btn.textContent = 'Buy →';
+      renderDashboard(data);
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Log In';
+      showMsg('Network error — check your connection.', false);
     }
   }
 
-  function copyReferral() {
-    const link = document.getElementById('referral-link').textContent;
-    if (navigator.clipboard) navigator.clipboard.writeText(link);
-    const el = document.getElementById('referral-link');
-    el.textContent = '✅ Copied!';
-    setTimeout(() => { if (sessionData) el.textContent = `${window.location.origin}/register?ref=${sessionData.phone}`; }, 1500);
+  function initials(name){ return (name||'?').slice(0,2).toUpperCase(); }
+  function fmtDate(ts){ return ts ? new Date(ts*1000).toLocaleDateString([], {day:'numeric',month:'short',year:'numeric'}) : '—'; }
+
+  function renderDashboard(data){
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('dash-view').style.display = 'block';
+    document.getElementById('dash-avatar').textContent = initials(data.name);
+    document.getElementById('dash-name').textContent = data.name;
+    document.getElementById('dash-phone').textContent = '+' + data.phone;
+    document.getElementById('dash-badge').textContent = data.badge && data.badge !== 'none' ? '🛡️ ' + data.badge : 'Registered';
+    document.getElementById('member-since').textContent = fmtDate(data.member_since);
+
+    const s = data.bot_session;
+    const body = document.getElementById('session-body');
+    if(!s){
+      body.innerHTML = '<div class="no-session">You haven\'t paired a WhatsApp number yet.<br><br>'+
+        '<a href="pair.html" class="btn btn-primary btn-sm">Pair Your Number →</a></div>';
+      document.getElementById('open-console-btn').style.pointerEvents = 'none';
+      document.getElementById('open-console-btn').style.opacity = '.4';
+    }else{
+      document.getElementById('open-console-btn').href = 'console.html?session=' + encodeURIComponent(s.session);
+      body.innerHTML = `
+        <div class="session-grid">
+          <div><div class="k">STATUS</div><div><span class="status-dot ${s.online?'on':'off'}"></span>${s.online ? 'Online' : 'Offline'}</div></div>
+          <div><div class="k">SESSION ID</div><div class="mono">${s.session}</div></div>
+          <div><div class="k">ACCESS</div><div>${s.activated ? (s.expired ? 'Expired' : 'Active') : 'Not activated'}</div></div>
+          <div><div class="k">EXPIRES</div><div>${s.expiry_display || '—'}</div></div>
+          ${s.antiban_risk ? `<div><div class="k">ANTIBAN RISK</div><div>${s.antiban_risk}</div></div>` : ''}
+          ${s.antiban_warmup_total ? `<div><div class="k">WARM-UP</div><div>Day ${s.antiban_warmup_day||0}/${s.antiban_warmup_total}</div></div>` : ''}
+        </div>`;
+    }
   }
 
-  function doLogout() {
-    sessionData = null;
-    document.getElementById('step-profile').classList.remove('active');
-    document.getElementById('step-login').classList.add('active');
-    document.getElementById('login-password').value = '';
-  }
-</script>
-  <button class="hmd-howl-btn" id="hmdHowlBtn" title="Howl 🐺" aria-label="Play howl sound">🐺</button>
-  <script>
-  (function () {
-    // 🎃 Halloween MD — synthesized wolf-howl tone (no audio file needed).
-    function playHowl() {
-      try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        var ctx = new Ctx();
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    try{ localStorage.removeItem('beastmd_panel_creds'); }catch(e){}
+    location.reload();
+  });
 
-        // Howl: slow rise, hold, wavering vibrato, slow fade.
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(520, now + 0.9);
-        osc.frequency.exponentialRampToValueAtTime(430, now + 1.4);
-
-        var lfo = ctx.createOscillator();
-        var lfoGain = ctx.createGain();
-        lfo.frequency.value = 6;
-        lfoGain.gain.value = 18;
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        lfo.start(now);
-        lfo.stop(now + 2.2);
-
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.12, now + 1.5);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
-
-        osc.start(now);
-        osc.stop(now + 2.3);
-      } catch (e) { /* Web Audio unsupported — fail silently */ }
-    }
-    var btn = document.getElementById('hmdHowlBtn');
-    if (btn) btn.addEventListener('click', playHowl);
-
-    // Browsers block audio autoplay before any user gesture, so we howl
-    // once on the first click/tap/keypress anywhere on the page.
-    var howled = false;
-    function howlOnce() {
-      if (howled) return;
-      howled = true;
-      playHowl();
-      window.removeEventListener('click', howlOnce);
-      window.removeEventListener('keydown', howlOnce);
-      window.removeEventListener('touchstart', howlOnce);
-    }
-    window.addEventListener('click', howlOnce);
-    window.addEventListener('keydown', howlOnce);
-    window.addEventListener('touchstart', howlOnce);
+  // auto-login if we have saved creds
+  (function autoLogin(){
+    try{
+      const saved = JSON.parse(localStorage.getItem('beastmd_panel_creds') || 'null');
+      if(saved) doLogin(saved.name, saved.phone, saved.password, false);
+    }catch(e){}
   })();
-  </script>
-  <script src="/assets/spooky-fx.js" defer></script>
+</script>
+
 </body>
 </html>

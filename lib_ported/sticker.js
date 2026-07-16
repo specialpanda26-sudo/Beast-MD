@@ -11,7 +11,7 @@ async function sticker(isImage, url, _packname, _author) {
         const response = await fetch(url);
         const buffer = Buffer.from(await response.arrayBuffer());
         return await new Sticker(buffer, {
-            pack: config.packname || 'Halloween MD',
+            pack: config.packname || 'Beast MD',
             author: config.author || 'Henry',
             type: StickerTypes.DEFAULT
         }).toBuffer();

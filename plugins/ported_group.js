@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: group)
+// Beast MD ported module (category: group)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,

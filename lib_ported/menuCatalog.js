@@ -203,13 +203,13 @@ function buildFullCatalogSingleMessage(perms, prefix = '.') {
     body = renderSingleCatalog(categories, byCategory, prefix, cap);
     usedCap = cap;
     const header = `📚 *${smallCaps('FULL COMMAND CATALOG')}* — ${grouped.length} commands (all in one message)\n\n`;
-    const footer = `\n\n> 🔥 Halloween MD™ | ${prefix}menu quick for the short curated view`;
+    const footer = `\n\n> 🔥 Beast MD | ${prefix}menu quick for the short curated view`;
     if ((header + body + footer).length <= SAFE_MESSAGE_LIMIT) break;
     // else loop continues with a shorter cap
   }
 
   const header = `📚 *${smallCaps('FULL COMMAND CATALOG')}* — ${grouped.length} commands (all in one message)\n\n`;
-  const footer = `\n\n> 🔥 Halloween MD™ | ${prefix}menu quick for the short curated view`;
+  const footer = `\n\n> 🔥 Beast MD | ${prefix}menu quick for the short curated view`;
   return header + body + footer;
 }
 

@@ -22,7 +22,7 @@ const PMPERMIT_FILE = path.join(DATA_DIR, 'pmpermit.json');
 const GREETED_FILE = path.join(DATA_DIR, 'first-contact-greeted.json');
 
 const DEFAULTS = {
-  botname: process.env.BOT_NAME || 'Halloween MD',
+  botname: process.env.BOT_NAME || 'Beast MD',
   prefix: (process.env.PREFIXES ? process.env.PREFIXES.split(',')[0] : '.'),
   pmpermit: false,          // opt-in: strangers DMing need approval first
   chatbot: true,            // matches existing always-on DM AI chat

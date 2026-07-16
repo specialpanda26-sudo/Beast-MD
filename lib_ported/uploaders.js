@@ -1,6 +1,6 @@
 /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
 const axios = require('axios');
 const FormData = require('form-data');
@@ -270,7 +270,7 @@ async function uploadFile(filePath) {
 
 /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
 
 

@@ -3,6 +3,7 @@ aiosqlite
 httpx
 yt-dlp
 python-dotenv
+edge-tts
 # PO Token provider plugin for yt-dlp — see Dockerfile's git-clone step for
 # the matching Node.js server this talks to, and app.py/media.js for how
 # it's wired in. Discovered automatically by yt-dlp at runtime (no extra

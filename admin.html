@@ -1,1793 +1,1043 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Halloween MD™ — Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0a0300; --surface: #170a04; --border: #3d1f08;
-      --accent: #ff7518; --green: #39ff14; --red: #ff2b2b;
-      --yellow: #ffb020; --text: #f3e9d2; --muted: #9a7d5a;
-      --card: #1a0d06;
-    }
-    body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', Arial, sans-serif; min-height: 100vh; }
-    code, .mono { font-family: 'JetBrains Mono', monospace; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Beast MD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14171C; --panel:#1B1F26; --panel2:#20242C; --ember:#E8A33D; --ember-dim:#8A6224;
+    --bone:#F2EFE9; --ash:#8B93A1; --line:#2A2F38; --good:#4CA870; --bad:#C1553F; --warn:#D4A73A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--bone);font-family:'Space Grotesk',sans-serif;height:100vh;overflow:hidden;}
+  a{color:inherit;text-decoration:none;}
+  .serif{font-family:'Fraunces',serif;font-weight:600;}
+  .serif-i{font-family:'Fraunces',serif;font-style:italic;font-weight:500;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;}
+  input,select,textarea{font-family:inherit;}
 
-    /* ── LOGIN PAGE ── */
-    #login-page {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh; padding: 20px;
-      background:
-        radial-gradient(circle at 20% 10%, rgba(0,229,255,0.08), transparent 40%),
-        radial-gradient(circle at 80% 90%, rgba(124,58,237,0.08), transparent 40%);
-    }
-    .login-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; padding: 40px; max-width: 400px; width: 100%;
-      box-shadow: 0 0 0 1px rgba(0,229,255,0.04), 0 30px 60px rgba(0,0,0,0.6), 0 0 60px rgba(0,229,255,0.06);
-    }
-    .login-card h1 { color: var(--accent); font-size: 28px; margin-bottom: 8px; text-shadow: 0 0 20px rgba(0,229,255,0.35); }
-    .login-card p { color: var(--muted); margin-bottom: 28px; font-size: 14px; }
-    .field { margin-bottom: 16px; }
-    .field label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace; }
-    .field input {
-      width: 100%; padding: 14px 16px; background: var(--bg);
-      border: 1px solid var(--border); border-radius: 10px;
-      color: var(--text); font-size: 16px;
-    }
-    .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.1); }
-    .btn {
-      width: 100%; padding: 14px; border-radius: 10px; border: none;
-      background: var(--accent); color: #000; font-size: 16px;
-      font-weight: bold; cursor: pointer; margin-top: 8px;
-      box-shadow: 0 0 20px rgba(0,229,255,0.3);
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 0 28px rgba(0,229,255,0.45); }
+  /* ===== LOGIN GATE ===== */
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .gate-box{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:32px;}
+  .gate-box .logo{display:flex;align-items:center;gap:2px;font-size:20px;margin-bottom:6px;}
+  .gate-box .logo .serif-i{color:var(--ember);}
+  .gate-box h2{font-family:'Fraunces',serif;font-weight:500;font-size:19px;margin:14px 0 6px;}
+  .gate-box p{color:var(--ash);font-size:13px;margin-bottom:20px;}
+  .gate-box input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;color:var(--bone);font-size:14px;margin-bottom:16px;}
+  .gate-box input:focus{outline:none;border-color:var(--ember-dim);}
+  .gate-box button{width:100%;padding:13px;border-radius:999px;border:none;background:var(--ember);color:#1A1305;font-weight:600;font-size:14px;cursor:pointer;}
+  .gate-msg{font-size:12.5px;padding:10px 12px;border-radius:8px;margin-bottom:16px;display:none;font-family:'JetBrains Mono',monospace;background:rgba(193,85,63,0.1);border:1px solid var(--bad);color:var(--bad);}
+  .gate-msg.show{display:block;}
 
-    .btn:hover { opacity: 0.85; }
-    .btn-red { background: var(--red); color: white; }
-    .btn-green { background: var(--green); color: #000; }
-    .btn-sm {
-      padding: 6px 14px; font-size: 13px; border-radius: 8px;
-      border: none; cursor: pointer; font-weight: bold; width: auto;
-    }
-    .activity-filter-btn {
-      background: rgba(255,255,255,.06); color: #ccc; border: 1px solid rgba(255,255,255,.1);
-    }
-    .activity-filter-btn.active {
-      background: var(--accent); color: #000; border-color: var(--accent);
-    }
-    .error { color: var(--red); font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+  /* ===== SHELL ===== */
+  .shell{display:none;grid-template-columns:230px 1fr;height:100vh;}
+  .shell.show{display:grid;}
 
-    /* ── ADMIN DASHBOARD ── */
-    #admin-page { display: none; }
-    .topbar {
-      background: rgba(8,15,26,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
-      padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 10;
-    }
-    .topbar h1 { color: var(--accent); font-size: 20px; text-shadow: 0 0 16px rgba(0,229,255,0.3); letter-spacing: -0.01em; }
-    .topbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .badge { background: var(--green); color: #000; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 0 12px rgba(0,255,136,0.3); }
-    .logout-btn { background: var(--border); color: var(--muted); padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; transition: color 0.15s; }
-    .logout-btn:hover { color: var(--text); }
-    .server-time { color: var(--muted); font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;}
+  .side-top{padding:20px 20px 16px;border-bottom:1px solid var(--line);}
+  .side-top .logo{display:flex;align-items:center;gap:2px;font-size:18px;}
+  .side-top .logo .serif-i{color:var(--ember);}
+  .side-top small{display:block;color:var(--good);font-size:11px;margin-top:4px;font-family:'JetBrains Mono',monospace;}
 
-    .content { padding: 24px; max-width: 1000px; margin: 0 auto; }
+  .tabs{flex:1;padding:14px 10px;overflow-y:auto;}
+  .tab-btn{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:none;background:none;color:var(--ash);font-size:13.5px;font-weight:500;text-align:left;cursor:pointer;border-radius:8px;margin-bottom:2px;}
+  .tab-btn:hover{background:var(--panel2);color:var(--bone);}
+  .tab-btn.active{background:rgba(232,163,61,0.1);color:var(--ember);}
+  .tab-btn .ic{width:16px;text-align:center;}
 
-    /* Tabs */
-    .tabs { display: flex; gap: 4px; margin-bottom: 24px; overflow-x: auto; border-bottom: 1px solid var(--border); }
-    .tab {
-      padding: 12px 18px; cursor: pointer; color: var(--muted); font-size: 14px;
-      font-weight: bold; white-space: nowrap; border-bottom: 2px solid transparent;
-      border-radius: 999px 999px 0 0;
-      transition: color 0.2s ease, background 0.2s ease, transform 0.15s ease;
-    }
-    .tab:hover { color: var(--text); transform: translateY(-2px); }
-    .tab.active {
-      color: #fff; border-bottom-color: var(--accent2);
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      box-shadow: 0 0 14px rgba(255,117,24,0.45);
-    }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+  .side-bottom{padding:14px;border-top:1px solid var(--line);}
+  .logout{width:100%;padding:10px;border-radius:8px;background:none;border:1px solid var(--line);color:var(--ash);cursor:pointer;font-size:12.5px;}
+  .logout:hover{color:var(--bad);border-color:var(--bad);}
 
-    /* Stats cards */
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 28px; }
-    .stat-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 14px; padding: 20px; text-align: center;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-    .stat-card:hover { border-color: rgba(0,229,255,0.3); transform: translateY(-2px); }
-    .stat-num { font-size: 32px; font-weight: bold; color: var(--accent); font-family: 'JetBrains Mono', monospace; text-shadow: 0 0 14px rgba(0,229,255,0.25); }
-    .stat-label { color: var(--muted); font-size: 11px; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .content{overflow-y:auto;padding:28px 34px;}
+  .content h1{font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin-bottom:4px;}
+  .content .head-sub{color:var(--ash);font-size:13px;margin-bottom:24px;}
 
-    /* Sessions */
-    .section-title { font-size: 16px; font-weight: bold; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .session-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 14px; padding: 20px; margin-bottom: 12px;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-      transition: border-color 0.2s;
-    }
-    .session-card:hover { border-color: rgba(0,229,255,0.2); }
-    .session-info { display: flex; align-items: center; gap: 14px; }
-    .session-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); flex-shrink: 0; }
-    .session-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); }
-    .session-name { font-weight: bold; font-size: 15px; }
-    .session-number { color: var(--muted); font-size: 13px; }
-    .session-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
-    .session-date { color: var(--yellow); font-size: 12px; margin-top: 2px; }
-    .session-actions { display: flex; gap: 8px; }
+  .pane{display:none;}
+  .pane.active{display:block;}
 
-    .empty { text-align: center; color: var(--muted); padding: 40px; font-size: 14px; }
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:26px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;}
+  .card .label{font-size:11px;color:var(--ash);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;}
+  .card .val{font-family:'Fraunces',serif;font-weight:600;font-size:26px;}
 
-    /* Contacts */
-    .contacts-list { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-    .contact-row { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 14px; }
-    .contact-row:last-child { border-bottom: none; }
-    .contact-name { font-weight: bold; }
-    .contact-num { color: var(--muted); font-size: 12px; }
-    .contact-time { color: var(--muted); font-size: 12px; }
+  .section-title{font-size:13px;font-weight:600;color:var(--bone);margin:26px 0 12px;display:flex;align-items:center;justify-content:space-between;}
 
-    .refresh-btn { background: var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; }
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  thead th{text-align:left;font-size:11px;color:var(--ash);text-transform:uppercase;letter-spacing:0.4px;padding:12px 14px;background:var(--panel2);font-family:'JetBrains Mono',monospace;font-weight:500;}
+  tbody td{padding:12px 14px;font-size:13px;border-top:1px solid var(--line);}
+  tbody tr:hover{background:var(--panel2);}
+  .empty-row td{text-align:center;color:var(--ash);padding:30px;}
 
-    /* Forms in tabs */
-    .form-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-      padding: 20px; margin-bottom: 20px;
-    }
-    .form-card label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; text-transform: uppercase; }
-    .form-card input, .form-card select, .form-card textarea {
-      width: 100%; padding: 12px 14px; background: var(--bg);
-      border: 1px solid var(--border); border-radius: 8px;
-      color: var(--text); font-size: 14px; margin-bottom: 14px; font-family: inherit;
-    }
-    .form-card textarea { resize: vertical; min-height: 80px; }
-    .form-card .btn { width: auto; padding: 12px 24px; }
+  .status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;}
+  .status-dot.on{background:var(--good);box-shadow:0 0 6px var(--good);}
+  .status-dot.off{background:var(--ash);}
+  .pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+  .pill.good{background:rgba(76,168,112,0.12);color:var(--good);}
+  .pill.warn{background:rgba(212,167,58,0.12);color:var(--warn);}
+  .pill.bad{background:rgba(193,85,63,0.12);color:var(--bad);}
+  .pill.ash{background:rgba(139,147,161,0.12);color:var(--ash);}
 
-    /* ── BOT HEALTH / BURN METER ── */
-    .health-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-      padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden;
-    }
-    .health-card.loading::before {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(100deg, transparent 30%, rgba(0,229,255,0.08) 50%, transparent 70%);
-      background-size: 200% 100%; animation: health-shimmer 1.4s infinite;
-      pointer-events: none;
-    }
-    @keyframes health-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .health-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .health-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
-    .health-pulse-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; animation: health-pulse 1.6s ease-in-out infinite; }
-    @keyframes health-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.75); } }
-    .health-badge {
-      font-size: 0.72rem; font-weight: 700; padding: 3px 12px; border-radius: 12px;
-      text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .health-bar-track {
-      width: 100%; height: 10px; border-radius: 6px; background: rgba(255,255,255,0.06);
-      overflow: hidden; margin-bottom: 12px;
-    }
-    .health-bar-fill {
-      height: 100%; border-radius: 6px; transition: width 0.6s ease, background 0.6s ease;
-      box-shadow: 0 0 12px currentColor;
-    }
-    .health-msg { font-size: 13px; line-height: 1.5; color: var(--text); }
-    .health-msg b { color: inherit; }
-    .health-submeta { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .row-actions{display:flex;gap:6px;}
+  .mini-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--bone);font-size:12px;cursor:pointer;}
+  .mini-btn:hover{border-color:var(--ember-dim);color:var(--ember);}
+  .mini-btn.danger:hover{border-color:var(--bad);color:var(--bad);}
+  .mini-btn.good:hover{border-color:var(--good);color:var(--good);}
 
-    .list-row {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 10px; padding: 12px 16px; margin-bottom: 8px;
-      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
-      font-size: 13px;
-    }
-    .msg-result { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-    .msg-meta { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-    .msg-body { font-size: 14px; color: var(--text); word-break: break-word; }
-    .hint { color: var(--muted); font-size: 12px; margin-top: -8px; margin-bottom: 14px; }
-  </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&display=swap" rel="stylesheet">
-  <style>
-    /* 🎃 Halloween MD spooky type + ambiance */
-    h1, .logo, .brand, .brand-name, .title, .page-title, .app-title {
-      font-family: 'Creepster', cursive, system-ui, sans-serif !important;
-      letter-spacing: 0.5px;
-      text-shadow: 0 0 8px var(--accent, #ff7518), 0 0 18px rgba(142,45,226,0.35);
-    }
-    @keyframes hmd-flicker {
-      0%, 19%, 21%, 23%, 55%, 100% { opacity: 1; }
-      20%, 22%, 54% { opacity: 0.75; }
-    }
-    h1, .logo, .brand, .brand-name { animation: hmd-flicker 6s infinite; }
-    .hmd-howl-btn {
-      position: fixed; bottom: 18px; right: 18px; z-index: 9999;
-      width: 52px; height: 52px; border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, var(--accent, #ff7518), #6b1a00);
-      border: 2px solid var(--accent2, #8e2de2);
-      color: #fff; font-size: 22px; cursor: pointer;
-      box-shadow: 0 0 14px rgba(255,117,24,0.6);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.15s ease;
-    }
-    .hmd-howl-btn:hover { transform: scale(1.1); }
-    .hmd-howl-btn:active { transform: scale(0.95); }
-  </style>
-  <link rel="stylesheet" href="/assets/spooky-fx.css">
+  .toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .toolbar input,.toolbar select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--bone);font-size:13px;}
+  .toolbar input{flex:1;min-width:180px;}
+  .btn{padding:9px 18px;border-radius:8px;border:none;background:var(--ember);color:#1A1305;font-weight:600;font-size:13px;cursor:pointer;
+    box-shadow:0 3px 0 var(--ember-dim,#8A6224),0 6px 12px -4px rgba(0,0,0,.5);
+    transform:translateY(0);transition:transform .12s ease,box-shadow .12s ease,filter .2s ease;}
+  .btn:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 5px 0 var(--ember-dim,#8A6224),0 10px 16px -4px rgba(0,0,0,.5);}
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ember-dim,#8A6224),0 2px 6px -2px rgba(0,0,0,.5);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn-ghost{background:none;border:1px solid var(--line);color:var(--bone);box-shadow:0 3px 0 rgba(255,255,255,.05),0 6px 12px -4px rgba(0,0,0,.4);}
+  .btn-ghost:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(255,255,255,.05);}
+
+  .tilt-wrap{perspective:900px;}
+  .tilt-3d{transform-style:preserve-3d;transition:transform .15s ease-out,box-shadow .2s ease;will-change:transform;}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--line);padding:12px 18px;border-radius:8px;font-size:13px;z-index:200;display:none;font-family:'JetBrains Mono',monospace;}
+  .toast.show{display:block;animation:toastIn .3s ease;}
+  .toast.ok{border-color:var(--good);color:var(--good);}
+  .toast.err{border-color:var(--bad);color:var(--bad);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+  .key-reveal{background:var(--panel2);border:1px solid var(--ember-dim);border-radius:8px;padding:14px;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ember);}
+
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+  @media(max-width:820px){ .shell.show{grid-template-columns:1fr;} .sidebar{display:none;} }
+</style>
 </head>
 <body>
 
-<!-- LOGIN PAGE -->
-<div id="login-page">
-  <div class="login-card" id="login-step">
-    <h1>🔥 Halloween MD™</h1>
-    <p>Admin Panel — Login to continue</p>
-    <div class="field">
-      <label>Admin Password</label>
-      <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-    </div>
-    <button class="btn" onclick="doLogin()">Login →</button>
-    <div class="error" id="login-error">❌ Wrong password</div>
-    <div class="hint" style="text-align:center;margin-top:14px;cursor:pointer;text-decoration:underline" onclick="showForgotRequest()">Forgot password?</div>
-  </div>
-
-  <!-- FORGOT PASSWORD — step 1: request a code sent to OWNER_NUMBER on WhatsApp -->
-  <div class="login-card" id="forgot-request-step" style="display:none">
-    <h1>🔑 Reset Admin Password</h1>
-    <p>A 6-digit code will be sent to the owner's WhatsApp number.</p>
-    <button class="btn" id="btn-forgot-request" onclick="requestForgotCode()">Send Code →</button>
-    <div class="error" id="forgot-request-error"></div>
-    <div class="hint" style="text-align:center;margin-top:14px;cursor:pointer;text-decoration:underline" onclick="backToLogin()">← Back to login</div>
-  </div>
-
-  <!-- FORGOT PASSWORD — step 2: enter the code + new password -->
-  <div class="login-card" id="forgot-reset-step" style="display:none">
-    <h1>🔑 Enter Reset Code</h1>
-    <div class="field">
-      <label>6-Digit Code</label>
-      <input type="text" id="forgot-otp" placeholder="123456" maxlength="6"/>
-    </div>
-    <div class="field">
-      <label>New Password (min 8 chars)</label>
-      <input type="password" id="forgot-new-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitForgotReset()"/>
-    </div>
-    <button class="btn" id="btn-forgot-reset" onclick="submitForgotReset()">Reset Password →</button>
-    <div class="error" id="forgot-reset-error"></div>
-    <div class="hint" id="forgot-reset-success" style="text-align:center;margin-top:10px;color:var(--green);display:none"></div>
-    <div class="hint" style="text-align:center;margin-top:14px;cursor:pointer;text-decoration:underline" onclick="backToLogin()">← Back to login</div>
+<div id="gate">
+  <div class="gate-box">
+    <div class="logo"><span class="serif">BEAST</span><span class="serif-i">MD</span></div>
+    <h2>Admin login</h2>
+    <p>Enter the admin password to manage sessions, access requests, and moderation.</p>
+    <div class="gate-msg" id="gate-msg"></div>
+    <input type="password" id="admin-pass" placeholder="Admin password">
+    <button id="gate-btn">Log In</button>
   </div>
 </div>
 
-<!-- ADMIN DASHBOARD -->
-<div id="admin-page">
-  <div class="topbar">
-    <h1>🔥 Halloween MD™ Admin</h1>
-    <div class="topbar-right">
-      <span class="server-time" id="server-time"></span>
-      <span class="badge" id="online-badge">● ONLINE</span>
-      <a href="/" class="logout-btn" style="text-decoration:none;display:inline-flex;align-items:center">🏠 Home</a>
-      <button class="logout-btn" onclick="doLogout()">Logout</button>
-      <button class="logout-btn" id="admin-hamburger" onclick="toggleAdminMenu()" aria-label="Menu" style="font-size:16px;">☰</button>
+<div class="shell" id="shell">
+  <div class="sidebar">
+    <div class="side-top">
+      <div class="logo"><span class="serif">BEAST</span><span class="serif-i">MD</span></div>
+      <small>● Admin session active</small>
     </div>
-  </div>
-
-  <div id="adminMenuOverlay" onclick="if(event.target===this) closeAdminMenu()" style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;">
-    <div id="adminMenuPanel" style="position:fixed;top:0;right:0;z-index:201;width:230px;height:100vh;background:#0d0e1a;border-left:1px solid rgba(255,255,255,.08);padding:20px 16px;display:flex;flex-direction:column;gap:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="color:var(--accent);font-weight:700;font-size:15px">Sections</span>
-        <button onclick="closeAdminMenu()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer">✕</button>
-      </div>
-      <a href="#" onclick="switchTab('overview');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">📊 Overview</a>
-      <a href="#" onclick="switchTab('sessions');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">📱 Sessions</a>
-      <a href="#" onclick="switchTab('contacts');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">👥 Contacts</a>
-      <a href="#" onclick="switchTab('search');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🔍 Search</a>
-      <a href="#" onclick="switchTab('keywords');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🔑 Keywords</a>
-      <a href="#" onclick="switchTab('features');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">⚙️ Features</a>
-      <a href="#" onclick="switchTab('blacklist');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🚫 Blacklist</a>
-      <a href="#" onclick="switchTab('broadcast');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">📢 Broadcast</a>
-      <a href="#" onclick="switchTab('registrations');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🛡️ Registrations</a>
-      <a href="#" onclick="switchTab('payments');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">💰 Payments</a>
-      <a href="#" onclick="switchTab('activation');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">🔑 Activation</a>
-      <a href="#" onclick="switchTab('scheduler');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">⏰ Scheduler</a>
-      <a href="#" onclick="switchTab('viewonce');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">👁️ View-Once</a>
-      <a href="#" onclick="switchTab('activity');closeAdminMenu();return false" style="display:block;padding:12px;border-radius:10px;color:#ccc;text-decoration:none;font-size:14px;background:rgba(255,255,255,.05)">📜 Activity Log</a>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="overview"><span class="ic">◆</span> Overview</button>
+      <button class="tab-btn" data-tab="sessions"><span class="ic">▣</span> Sessions</button>
+      <button class="tab-btn" data-tab="activation"><span class="ic">✓</span> Access Requests</button>
+      <button class="tab-btn" data-tab="registrations"><span class="ic">◇</span> Registrations</button>
+      <button class="tab-btn" data-tab="broadcast"><span class="ic">▶</span> Broadcast</button>
+      <button class="tab-btn" data-tab="keywords"><span class="ic">≡</span> Keywords</button>
+      <button class="tab-btn" data-tab="blacklist"><span class="ic">⊘</span> Blacklist</button>
+      <button class="tab-btn" data-tab="features"><span class="ic">⚙</span> Features</button>
+      <button class="tab-btn" data-tab="search"><span class="ic">⌕</span> Search</button>
+      <button class="tab-btn" data-tab="scheduler"><span class="ic">◷</span> Scheduler</button>
+      <button class="tab-btn" data-tab="menu"><span class="ic">▤</span> Menu</button>
+      <button class="tab-btn" data-tab="sitemusic"><span class="ic">♫</span> Site Music</button>
+      <button class="tab-btn" data-tab="cookies"><span class="ic">🍪</span> YT Cookies</button>
+      <button class="tab-btn" data-tab="ownerchats"><span class="ic">✉</span> Owner Chats</button>
+      <button class="tab-btn" data-tab="viewonce"><span class="ic">◉</span> View-Once</button>
+      <button class="tab-btn" data-tab="reports"><span class="ic">⚑</span> Reports</button>
+      <button class="tab-btn" data-tab="groupbans"><span class="ic">⛔</span> Group Bans</button>
+      <button class="tab-btn" data-tab="activitylog"><span class="ic">▦</span> Activity Log</button>
+      <button class="tab-btn" data-tab="settings"><span class="ic">⚒</span> Settings</button>
     </div>
+    <div class="side-bottom"><button class="logout" id="logout-btn">Log Out</button></div>
   </div>
 
   <div class="content">
-    <div class="tabs">
-      <div class="tab active" data-tab="overview" onclick="switchTab('overview')">📊 Overview</div>
-      <div class="tab" data-tab="sessions" onclick="switchTab('sessions')">📱 Sessions</div>
-      <div class="tab" data-tab="contacts" onclick="switchTab('contacts')">👥 Contacts</div>
-      <div class="tab" data-tab="search" onclick="switchTab('search')">🔍 Search</div>
-      <div class="tab" data-tab="cmdfinder" onclick="switchTab('cmdfinder')">🧭 Command Finder</div>
-      <div class="tab" data-tab="keywords" onclick="switchTab('keywords')">🔑 Keywords</div>
-      <div class="tab" data-tab="ownerchats" onclick="switchTab('ownerchats')">💬 Owner Chats</div>
-      <div class="tab" data-tab="features" onclick="switchTab('features')">⚙️ Features</div>
-      <div class="tab" data-tab="menu" onclick="switchTab('menu')">🖼️ Menu</div>
-      <div class="tab" data-tab="blacklist" onclick="switchTab('blacklist')">🚫 Blacklist</div>
-      <div class="tab" data-tab="broadcast" onclick="switchTab('broadcast')">📢 Broadcast</div>
-      <div class="tab" data-tab="registrations" onclick="switchTab('registrations')">🛡️ Registrations</div>
-      <div class="tab" data-tab="payments" onclick="switchTab('payments')">💰 Payments</div>
-      <div class="tab" data-tab="activation" onclick="switchTab('activation')">🔑 Activation</div>
-      <div class="tab" data-tab="scheduler" onclick="switchTab('scheduler')">⏰ Scheduler</div>
-      <div class="tab" data-tab="viewonce" onclick="switchTab('viewonce')">👁️ View-Once</div>
-      <div class="tab" data-tab="activity" onclick="switchTab('activity')">📜 Activity Log</div>
-      <div class="tab" data-tab="reports" onclick="switchTab('reports')">🛡️ Reports</div>
-      <div class="tab" data-tab="groupbans" onclick="switchTab('groupbans')">⛔ Group Bans</div>
+    <!-- OVERVIEW -->
+    <div class="pane active" id="pane-overview">
+      <h1>Overview</h1>
+      <div class="head-sub">Live stats across every paired session — free, no billing data here.</div>
+      <div class="cards" id="stat-cards">
+        <div class="card tilt-3d"><div class="label">Contacts</div><div class="val">—</div></div>
+        <div class="card tilt-3d"><div class="label">Messages</div><div class="val">—</div></div>
+        <div class="card tilt-3d"><div class="label">View-once saved</div><div class="val">—</div></div>
+        <div class="card tilt-3d"><div class="label">Scheduled pending</div><div class="val">—</div></div>
+        <div class="card tilt-3d"><div class="label">Uptime</div><div class="val" id="stat-uptime">—</div></div>
+      </div>
+      <div class="section-title">Live sessions</div>
+      <table>
+        <thead><tr><th>Session</th><th>Number</th><th>Status</th><th>Antiban</th><th>Since</th></tr></thead>
+        <tbody id="overview-sessions"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
+      <div class="section-title">Messages — last 7 days</div>
+      <div id="activity-chart" style="display:flex;align-items:flex-end;gap:10px;height:120px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:26px;"></div>
+      <div class="section-title">Recent contacts</div>
+      <table>
+        <thead><tr><th>Name</th><th>Sender</th><th>Time</th></tr></thead>
+        <tbody id="recent-contacts"><tr class="empty-row"><td colspan="3">Loading…</td></tr></tbody>
+      </table>
     </div>
 
-    <!-- OVERVIEW TAB -->
-    <div class="tab-content active" id="tab-overview">
-      <div class="stats">
-        <div class="stat-card"><div class="stat-num" id="stat-sessions">0</div><div class="stat-label">Active Sessions</div></div>
-        <div class="stat-card"><div class="stat-num" id="stat-contacts">0</div><div class="stat-label">Total Contacts</div></div>
-        <div class="stat-card"><div class="stat-num" id="stat-messages">0</div><div class="stat-label">Messages Logged</div></div>
-        <div class="stat-card"><div class="stat-num" id="stat-messages-today">0</div><div class="stat-label">Messages Today</div></div>
-        <div class="stat-card"><div class="stat-num" id="stat-viewonce">0</div><div class="stat-label">View Once Saved</div></div>
-        <div class="stat-card"><div class="stat-num" id="stat-scheduled">0</div><div class="stat-label">Pending Scheduled</div></div>
-      </div>
-      <div class="health-card loading" id="health-card">
-        <div class="health-head">
-          <div class="health-title"><span class="health-pulse-dot" id="health-dot" style="background:var(--muted)"></span> 🔥 Bot Health — Ban Risk</div>
-          <span class="health-badge" id="health-badge" style="background:rgba(255,255,255,0.06);color:var(--muted)">Checking…</span>
-        </div>
-        <div class="health-bar-track"><div class="health-bar-fill" id="health-bar" style="width:0%;background:var(--muted);color:var(--muted)"></div></div>
-        <div class="health-msg" id="health-msg">Loading bot health, one moment…</div>
-        <div class="health-submeta" id="health-submeta"></div>
-      </div>
-      <div class="form-card">
-        <div class="section-title">⏱️ Server Uptime</div>
-        <div id="uptime-display" style="color:var(--muted);font-size:14px">Loading...</div>
-      </div>
-      <div class="form-card">
-        <div class="section-title">👑 Owner Number</div>
-        <div class="hint">Change who the bot treats as owner — takes effect within ~30s, no redeploy needed. Leave blank and save to revert to the OWNER_NUMBER env var.</div>
-        <input type="text" id="owner-number-input" placeholder="e.g. 254712345678" />
-        <button class="btn" style="margin-top:10px" onclick="saveOwnerNumber()">💾 Save</button>
-        <div id="owner-number-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
-      </div>
+    <!-- SESSIONS -->
+    <div class="pane" id="pane-sessions">
+      <h1>Sessions</h1>
+      <div class="head-sub">Every session that has ever registered, with live health where connected.</div>
+      <table>
+        <thead><tr><th>Session</th><th>Number</th><th>Status</th><th>Messages</th><th>Antiban</th><th>Actions</th></tr></thead>
+        <tbody id="sessions-table"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
     </div>
 
-    <!-- SESSIONS TAB -->
-    <div class="tab-content" id="tab-sessions">
-      <div class="section-header">
-        <div class="section-title">📱 Active Sessions</div>
-        <button class="refresh-btn" onclick="loadDashboard()">↻ Refresh</button>
-      </div>
-      <div id="sessions-list"><div class="empty">Loading sessions...</div></div>
+    <!-- ACTIVATION / ACCESS -->
+    <div class="pane" id="pane-activation">
+      <h1>Access Requests</h1>
+      <div class="head-sub">Approve or deny sessions asking to be activated. Free — this just grants access, no payment involved.</div>
+      <table>
+        <thead><tr><th>Session</th><th>Phone</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
+        <tbody id="activation-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
+      <div class="key-reveal" id="key-reveal" style="display:none;"></div>
     </div>
 
-    <!-- CONTACTS TAB -->
-    <div class="tab-content" id="tab-contacts">
-      <div class="section-header"><div class="section-title">👥 Recent Contacts</div></div>
-      <div class="contacts-list" id="contacts-list"><div class="contact-row"><span style="color:var(--muted)">Loading...</span></div></div>
+    <!-- REGISTRATIONS -->
+    <div class="pane" id="pane-registrations">
+      <h1>Registrations</h1>
+      <div class="head-sub">Everyone who's created a free account.</div>
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Badge</th><th>Verified</th><th>Joined</th></tr></thead>
+        <tbody id="registrations-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
     </div>
 
-    <!-- SEARCH TAB -->
-    <div class="tab-content" id="tab-search">
-      <div class="form-card">
-        <div class="section-title">🔍 Search Logged Messages</div>
-        <label>Search Term</label>
-        <input type="text" id="search-query" placeholder="Type a word or phrase..." onkeydown="if(event.key==='Enter')doSearch()"/>
-        <button class="btn" style="width:auto" onclick="doSearch()">Search</button>
-      </div>
-      <div id="search-results"></div>
-    </div>
-
-    <!-- ✅ NEW: COMMAND FINDER TAB — describe what you want, get the command -->
-    <div class="tab-content" id="tab-cmdfinder">
-      <div class="form-card">
-        <div class="section-title">🧭 Command Finder</div>
-        <div class="hint" style="margin-bottom:14px">Type what you want in plain words — e.g. "save a view once" or "block a number" — and it'll show you the exact command to send on WhatsApp.</div>
-        <label>What do you want to do?</label>
-        <input type="text" id="admin-cmd-finder-in" placeholder="e.g. download a youtube video" onkeydown="if(event.key==='Enter')runAdminCommandFinder()"/>
-        <button class="btn" style="width:auto" onclick="runAdminCommandFinder()">Find it</button>
-      </div>
-      <div id="admin-cmd-finder-out"></div>
-    </div>
-
-    <!-- KEYWORDS TAB -->
-    <div class="tab-content" id="tab-keywords">
-      <div class="form-card">
-        <div class="section-title">🔑 Add Keyword Auto-Reply</div>
-        <label>Trigger Word / Phrase</label>
-        <input type="text" id="kw-trigger" placeholder="e.g. price"/>
-        <label>Match Type</label>
-        <select id="kw-match-type">
-          <option value="contains">Contains (message includes this anywhere)</option>
-          <option value="exact">Exact match (message is exactly this)</option>
-          <option value="starts_with">Starts with</option>
-        </select>
-        <label>Reply</label>
-        <textarea id="kw-reply" placeholder="What the bot should send back..."></textarea>
-        <div class="hint">Checked on every incoming message before commands. Lowercase, case-insensitive.</div>
-        <button class="btn" style="width:auto" onclick="addKeyword()">Save Keyword</button>
-      </div>
-      <div class="section-title">Active Keywords</div>
-      <div id="keywords-list"><div class="empty">Loading...</div></div>
-    </div>
-
-    <!-- OWNER CHATS TAB -->
-    <div class="tab-content" id="tab-ownerchats">
-      <div class="form-card">
-        <div class="section-title">💬 Owner Number — Personal Auto-Reply</div>
-        <div class="hint" style="margin-bottom:14px">
-          Only chats turned ON here get an AI auto-reply (in Sheng) on your own number, and only
-          after you've been quiet there for 5+ minutes — everywhere else, it stays silent and lets
-          you reply yourself. New chats always get a one-time "save my number" note regardless of
-          this toggle.
-        </div>
-        <div id="ownerchats-list"><div class="empty">Loading...</div></div>
-      </div>
-    </div>
-
-    <!-- FEATURES TAB -->
-    <div class="tab-content" id="tab-features">
-      <div class="form-card">
-        <div class="section-title">⚙️ Module Toggles</div>
-        <div class="hint" style="margin-bottom:14px">Turn entire features on/off across all sessions without redeploying.</div>
-        <div id="features-list"><div class="empty">Loading...</div></div>
-      </div>
-    </div>
-
-    <!-- MENU TAB -->
-    <div class="tab-content" id="tab-menu">
-      <div class="form-card">
-        <div class="section-title">🖼️ .menu Media</div>
-        <div class="hint" style="margin-bottom:14px">Upload the image or video sent with every .menu command. Current: <span id="menu-media-current">loading…</span></div>
-        <input type="file" id="menu-media-input" accept="image/jpeg,image/png,image/webp,video/mp4,video/3gpp,video/quicktime"/>
-        <button class="btn" onclick="uploadMenuMedia()" style="margin-top:10px">Upload</button>
-        <div class="hint" id="menu-media-status" style="margin-top:8px"></div>
-      </div>
-      <div class="form-card" style="margin-top:16px">
-        <div class="section-title">📝 Custom Caption</div>
-        <div class="hint" style="margin-bottom:14px">Leave blank to use the bot's normal auto-generated command list. Fill this in to replace it with your own text.</div>
-        <textarea id="menu-caption-input" rows="8" style="width:100%" placeholder="Leave blank for the default menu text..."></textarea>
-        <button class="btn" onclick="saveMenuCaption()" style="margin-top:10px">Save Caption</button>
-        <div class="hint" id="menu-caption-status" style="margin-top:8px"></div>
-      </div>
-    </div>
-
-    <!-- BLACKLIST TAB -->
-    <div class="tab-content" id="tab-blacklist">
-      <div class="form-card">
-        <div class="section-title">🚫 Add to Blacklist</div>
-        <label>Phone Number (with country code)</label>
-        <input type="text" id="blacklist-input" placeholder="254712345678"/>
-        <div class="hint">Blacklisted numbers cannot use the bot at all.</div>
-        <button class="btn btn-red" style="width:auto" onclick="addBlacklist()">Block Number</button>
-      </div>
-      <div class="section-title">Currently Blacklisted</div>
-      <div id="blacklist-list"><div class="empty">Loading...</div></div>
-    </div>
-
-    <!-- BROADCAST TAB -->
-    <div class="tab-content" id="tab-broadcast">
-      <div class="form-card">
-        <div class="section-title">📢 Send Broadcast</div>
-        <label>Send To</label>
-        <select id="broadcast-target">
-          <option value="all_contacts">All Saved Contacts</option>
-          <option value="all_groups">All Groups</option>
-        </select>
-        <label>Message</label>
-        <textarea id="broadcast-message" placeholder="Type your broadcast message..."></textarea>
-        <div class="hint">⚠️ Sent with a delay between each message to avoid WhatsApp bans. Picked up by the bot within ~20 seconds.</div>
-        <button class="btn btn-green" style="width:auto" onclick="sendBroadcast()">Queue Broadcast</button>
-        <div id="broadcast-status" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
-      </div>
-    </div>
-
-    <!-- REGISTRATIONS TAB -->
-    <div class="tab-content" id="tab-registrations">
-      <div class="form-card">
-        <div class="section-title">🛡️ Add / Top-Up Credit Manually</div>
-        <label>Phone Number (with country code)</label>
-        <input type="text" id="reg-credit-phone" placeholder="254712345678"/>
-        <label>Name</label>
-        <input type="text" id="reg-credit-name" placeholder="Customer name"/>
-        <label>Amount (kesh)</label>
-        <input type="number" id="reg-credit-amount" placeholder="e.g. 80"/>
-        <div class="hint">If the number isn't registered yet, this creates a verified record for it directly — no OTP needed since you've already confirmed identity.</div>
-        <button class="btn btn-green" style="width:auto" onclick="addRegCredit()">Add Credit</button>
-        <div id="reg-credit-status" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
-      </div>
-      <div class="section-header">
-        <div class="section-title">📋 Registered Users</div>
-        <button class="refresh-btn" onclick="loadRegistrations()">↻ Refresh</button>
-      </div>
-      <div id="registrations-list"><div class="empty">Loading...</div></div>
-    </div>
-
-    <!-- PAYMENTS TAB -->
-    <div class="tab-content" id="tab-payments">
-      <div class="form-card">
-        <div class="hint">⚠️ There's no live M-Pesa API hookup here — every request below is a user's *claim* that they sent money. Cross-check the amount and code against your own M-Pesa statement (and the screenshot, if attached) before approving. Approving is what actually adds kesh to their wallet.</div>
-        <label>Filter</label>
-        <select id="payments-filter" onchange="loadPayments()">
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-          <option value="">All</option>
+    <!-- BROADCAST -->
+    <div class="pane" id="pane-broadcast">
+      <h1>Broadcast</h1>
+      <div class="head-sub">Queue a message to send out. The bot bridge picks it up and delivers it.</div>
+      <div class="toolbar">
+        <select id="bc-target">
+          <option value="all_contacts">All contacts</option>
+          <option value="all_groups">All groups</option>
         </select>
       </div>
-      <div class="section-header">
-        <div class="section-title">💰 Top-Up Requests</div>
-        <button class="refresh-btn" onclick="loadPayments()">↻ Refresh</button>
-      </div>
-      <div id="payments-list"><div class="empty">Loading...</div></div>
+      <textarea id="bc-message" placeholder="Write your broadcast message…" style="width:100%;min-height:120px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;color:var(--bone);font-size:14px;margin-bottom:14px;"></textarea>
+      <button class="btn" id="bc-send">Queue Broadcast</button>
     </div>
 
-    <!-- ACTIVATION TAB -->
-    <div class="tab-content" id="tab-activation">
-      <div class="form-card">
-        <div class="hint">Every newly-paired customer session starts locked. They send *.pair key* in chat, you get pinged on WhatsApp (or approve here), and they redeem the key with *.key XXXXXX* within 10 minutes. You can also extend/renew a session's days directly below without going through that flow.</div>
-        <label>Default subscription length (days)</label>
-        <input type="number" id="activation-default-days" min="1" placeholder="30" />
-        <label style="margin-top:10px">Subscription price <span style="color:var(--muted);font-weight:400">(kesh/day — what customers pay from their own wallet in the panel's Buy Subscription Time section)</span></label>
-        <input type="number" id="subscription-kesh-per-day" min="0" placeholder="10" />
-        <label style="margin-top:10px">Master bypass key <span style="color:var(--muted);font-weight:400">(entering this as a *.key* value activates any session instantly, permanently, no approval needed)</span></label>
-        <input type="text" id="activation-bypass-key" placeholder="Loading..." style="text-transform:uppercase" />
-        <button class="btn" style="margin-top:10px" onclick="saveActivationSettings()">💾 Save Settings</button>
-        <div id="activation-settings-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+    <!-- KEYWORDS -->
+    <div class="pane" id="pane-keywords">
+      <h1>Keywords</h1>
+      <div class="head-sub">Auto-replies triggered by message content.</div>
+      <div class="toolbar">
+        <input type="text" id="kw-trigger" placeholder="Trigger word/phrase">
+        <input type="text" id="kw-reply" placeholder="Reply text">
+        <select id="kw-match"><option value="contains">Contains</option><option value="exact">Exact</option><option value="starts_with">Starts with</option></select>
+        <button class="btn" id="kw-add">Add</button>
       </div>
-      <div class="section-header">
-        <div class="section-title">🔑 Sessions &amp; Requests</div>
-        <button class="refresh-btn" onclick="loadActivation()">↻ Refresh</button>
-      </div>
-      <div id="activation-list"><div class="empty">Loading...</div></div>
+      <table>
+        <thead><tr><th>Trigger</th><th>Reply</th><th>Match</th><th>Enabled</th><th></th></tr></thead>
+        <tbody id="keywords-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
     </div>
 
-    <!-- SCHEDULER TAB -->
-    <div class="tab-content" id="tab-scheduler">
-      <div class="form-card">
-        <div class="hint">Pending messages queued via the *.schedule* WhatsApp command. Cancel one here instead of needing WhatsApp access.</div>
+    <!-- BLACKLIST -->
+    <div class="pane" id="pane-blacklist">
+      <h1>Blacklist</h1>
+      <div class="head-sub">Numbers blocked from interacting with the bot.</div>
+      <div class="toolbar">
+        <input type="text" id="bl-number" placeholder="Phone number (e.g. 2547XXXXXXXX)">
+        <button class="btn" id="bl-add">Add</button>
       </div>
-      <div class="section-header">
-        <div class="section-title">⏰ Scheduled Messages</div>
-        <button class="refresh-btn" onclick="loadScheduler()">↻ Refresh</button>
-      </div>
-      <div id="scheduler-list"><div class="empty">Loading...</div></div>
+      <table>
+        <thead><tr><th>Number</th><th></th></tr></thead>
+        <tbody id="blacklist-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
+      </table>
     </div>
 
-    <!-- VIEW-ONCE TAB -->
-    <div class="tab-content" id="tab-viewonce">
-      <div class="form-card">
-        <div class="hint">Media auto-intercepted from view-once messages, most recent first. This is private content from other people's chats — access is logged the same way it would be if you'd checked your own WhatsApp DMs.</div>
-      </div>
-      <div class="section-header">
-        <div class="section-title">👁️ Recent View-Once Media</div>
-        <button class="refresh-btn" onclick="loadViewOnce()">↻ Refresh</button>
-      </div>
-      <div id="viewonce-list"><div class="empty">Loading...</div></div>
+    <!-- FEATURES -->
+    <div class="pane" id="pane-features">
+      <h1>Features</h1>
+      <div class="head-sub">Toggle bot features on or off globally.</div>
+      <table>
+        <thead><tr><th>Feature</th><th>Enabled</th></tr></thead>
+        <tbody id="features-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
+      </table>
     </div>
 
-    <!-- ACTIVITY LOG TAB -->
-    <div class="tab-content" id="tab-activity">
-      <div class="form-card">
-        <div class="hint">Live feed of what the bot has been doing. <strong>Errors</strong> and <strong>Sensitive actions</strong> also ping you directly on WhatsApp the moment they happen — this panel is the full history.</div>
+    <!-- SEARCH -->
+    <div class="pane" id="pane-search">
+      <h1>Search</h1>
+      <div class="head-sub">Search message history by content.</div>
+      <div class="toolbar">
+        <input type="text" id="search-q" placeholder="Search message text…">
+        <button class="btn" id="search-btn">Search</button>
       </div>
-      <div class="section-header">
-        <div class="section-title">📜 Activity Log</div>
-        <div style="display:flex;gap:8px">
-          <button class="refresh-btn" onclick="loadActivityLog()">↻ Refresh</button>
-          <button class="btn-sm" onclick="exportActivityLog()">⬇️ Export CSV</button>
-          <button class="btn-sm btn-red" onclick="clearActivityLog()">🗑️ Clear</button>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        <button class="btn-sm activity-filter-btn active" data-cat="command" onclick="setActivityCategory('command')">💬 Commands</button>
-        <button class="btn-sm activity-filter-btn" data-cat="error" onclick="setActivityCategory('error')">⚠️ Errors</button>
-        <button class="btn-sm activity-filter-btn" data-cat="sensitive" onclick="setActivityCategory('sensitive')">🛡️ Sensitive Actions</button>
-      </div>
-      <div id="activity-list"><div class="empty">Loading...</div></div>
+      <table>
+        <thead><tr><th>Sender</th><th>Name</th><th>Message</th><th>Time</th></tr></thead>
+        <tbody id="search-table"><tr class="empty-row"><td colspan="4">Type a query and press Search.</td></tr></tbody>
+      </table>
     </div>
 
-    <!-- REPORTS TAB -->
-    <div class="tab-content" id="tab-reports">
-      <div class="form-card">
-        <div class="hint">From <code>.report [@user] [reason]</code> — anyone in a group can flag someone/something to you. Resolving just marks it handled here, it doesn't take any action in the group itself.</div>
-      </div>
-      <div class="section-header">
-        <div class="section-title">🛡️ Reports</div>
-        <button class="refresh-btn" onclick="loadReports()">↻ Refresh</button>
-      </div>
-      <div id="reports-list"><div class="empty">Loading...</div></div>
+    <!-- SCHEDULER -->
+    <div class="pane" id="pane-scheduler">
+      <h1>Scheduler</h1>
+      <div class="head-sub">Pending scheduled messages from the .schedule command.</div>
+      <table>
+        <thead><tr><th>To</th><th>Message</th><th>Next Run</th><th>Repeat</th><th></th></tr></thead>
+        <tbody id="scheduler-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
     </div>
 
-    <!-- GROUP BANS TAB -->
-    <div class="tab-content" id="tab-groupbans">
-      <div class="form-card">
-        <div class="hint">Audit trail from <code>.ban</code> — the actual WhatsApp removal already happened when the command ran; this list is just a record you can check re-adds against, and lift here if a ban was a mistake.</div>
+    <!-- MENU -->
+    <div class="pane" id="pane-menu">
+      <h1>Menu</h1>
+      <div class="head-sub">The header image/video and caption shown with the .menu command.</div>
+      <div style="margin-bottom:14px;color:var(--ash);font-size:13px;" id="menu-current-info">Loading current settings…</div>
+      <div class="toolbar">
+        <input type="file" id="menu-media-file" accept="image/jpeg,image/png,image/webp,video/mp4,video/3gpp,video/quicktime,video/x-matroska">
+        <button class="btn" id="menu-media-upload-btn">Upload New Media</button>
       </div>
-      <div class="section-header">
-        <div class="section-title">⛔ Group Bans</div>
-        <button class="refresh-btn" onclick="loadGroupBans()">↻ Refresh</button>
+      <textarea id="menu-caption" placeholder="Custom .menu caption (leave blank for auto-generated)" style="width:100%;min-height:100px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;color:var(--bone);font-size:14px;margin:6px 0 14px;"></textarea>
+      <button class="btn btn-ghost" id="menu-caption-save">Save Caption</button>
+    </div>
+
+    <!-- SITE MUSIC -->
+    <div class="pane" id="pane-sitemusic">
+      <h1>Site Music</h1>
+      <div class="head-sub">One background track that plays for visitors on the public website. Browsers block autoplay with sound, so it starts muted and turns on with the visitor's first tap.</div>
+      <div style="margin-bottom:14px;color:var(--ash);font-size:13px;" id="sitemusic-current-info">Loading current settings…</div>
+      <div class="toolbar">
+        <input type="file" id="sitemusic-file" accept="audio/mpeg,audio/ogg,audio/wav,audio/mp4,.mp3,.ogg,.wav,.m4a">
+        <button class="btn" id="sitemusic-upload-btn">Upload Track</button>
       </div>
-      <div id="groupbans-list"><div class="empty">Loading...</div></div>
+      <input type="text" id="sitemusic-title" placeholder="Track title shown to visitors (optional)" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;color:var(--bone);font-size:14px;margin:6px 0 14px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="sitemusic-toggle-btn">Enable</button>
+        <button class="btn btn-ghost" id="sitemusic-title-save">Save Title</button>
+        <button class="btn btn-ghost" id="sitemusic-remove-btn" style="color:#e05a5a;">Remove Track</button>
+      </div>
+    </div>
+
+    <!-- YT COOKIES -->
+    <div class="pane" id="pane-cookies">
+      <h1>YouTube Cookies</h1>
+      <div class="head-sub">YouTube blocks Render's server IP faster than a real browser. A cookies.txt from a logged-in YouTube account is the single biggest fix for "Sign in to confirm you're not a bot" errors on downloads. Re-upload every couple weeks — YouTube sessions expire.</div>
+      <div style="margin-bottom:14px;color:var(--ash);font-size:13px;" id="cookies-current-info">Loading current status…</div>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px;font-size:13px;color:var(--ash);">
+        <strong style="color:var(--bone);">How to get one:</strong> On a computer, log into youtube.com in Chrome or Firefox, install the "Get cookies.txt LOCALLY" extension, open it while on youtube.com, and export the file. Then upload it below.
+      </div>
+      <div class="toolbar">
+        <input type="file" id="cookies-file" accept=".txt">
+        <button class="btn" id="cookies-upload-btn">Upload cookies.txt</button>
+      </div>
+    </div>
+
+    <!-- OWNER CHATS -->
+    <div class="pane" id="pane-ownerchats">
+      <h1>Owner Chats</h1>
+      <div class="head-sub">Chats where the owner's number has been seen. Toggle whether the AI assistant may respond in each.</div>
+      <table>
+        <thead><tr><th>Chat</th><th>AI Allowed</th></tr></thead>
+        <tbody id="ownerchats-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- VIEW-ONCE -->
+    <div class="pane" id="pane-viewonce">
+      <h1>View-Once</h1>
+      <div class="head-sub">Media intercepted from view-once messages.</div>
+      <table>
+        <thead><tr><th>Sender</th><th>Type</th><th>Caption</th><th>Time</th><th></th></tr></thead>
+        <tbody id="viewonce-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="pane" id="pane-reports">
+      <h1>Reports</h1>
+      <div class="head-sub">User-submitted reports from groups.</div>
+      <table>
+        <thead><tr><th>Group</th><th>Reporter</th><th>Target</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+        <tbody id="reports-table"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- GROUP BANS -->
+    <div class="pane" id="pane-groupbans">
+      <h1>Group Bans</h1>
+      <div class="head-sub">Audit trail from .ban — the removal already happened on WhatsApp; this just tracks it and lets you lift a mistaken ban.</div>
+      <table>
+        <thead><tr><th>Group</th><th>Number</th><th>Reason</th><th>Banned</th><th></th></tr></thead>
+        <tbody id="groupbans-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div class="pane" id="pane-activitylog">
+      <h1>Activity Log</h1>
+      <div class="head-sub">Command, error, and sensitive-action history.</div>
+      <div class="toolbar">
+        <select id="al-category">
+          <option value="command">Command</option>
+          <option value="error">Error</option>
+          <option value="sensitive">Sensitive</option>
+        </select>
+        <button class="btn-ghost mini-btn" id="al-export">Export CSV</button>
+        <button class="mini-btn danger" id="al-clear">Clear This Category</button>
+      </div>
+      <table>
+        <thead><tr><th>Type</th><th>Actor</th><th>Detail</th><th>Time</th></tr></thead>
+        <tbody id="activitylog-table"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="pane" id="pane-settings">
+      <h1>Settings</h1>
+      <div class="head-sub">Owner number and activation defaults. No billing settings live here.</div>
+      <div class="section-title">Owner Number</div>
+      <div class="toolbar">
+        <input type="text" id="set-owner-number" placeholder="2547XXXXXXXX (blank = use env var)">
+        <button class="btn" id="set-owner-save">Save</button>
+      </div>
+      <div style="color:var(--ash);font-size:12.5px;margin-bottom:20px;" id="owner-number-info"></div>
+
+      <div class="section-title">Activation Defaults</div>
+      <div class="toolbar">
+        <input type="number" id="set-default-days" placeholder="Default days granted" min="1">
+        <input type="text" id="set-bypass-key" placeholder="Bypass key (optional)">
+        <button class="btn" id="set-activation-save">Save</button>
+      </div>
     </div>
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-  let token = sessionStorage.getItem("admin_pass");
-
-  function authedFetch(url, opts = {}) {
-    const sep = url.includes("?") ? "&" : "?";
-    const finalUrl = token ? `${url}${sep}pass=${encodeURIComponent(token)}` : url;
-    return fetch(finalUrl, opts);
+  let ADMIN_PASS = '';
+  function authHeaders(){ return { 'Authorization': 'Bearer ' + ADMIN_PASS, 'Content-Type': 'application/json' }; }
+  function toast(msg, ok){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast show ' + (ok?'ok':'err');
+    setTimeout(() => t.classList.remove('show'), 2600);
   }
-
-  async function doLogin() {
-    const p = document.getElementById("password").value.trim();
-    token = p;
-    try {
-      const res = await authedFetch("/admin/stats");
-      if (res.status === 401) {
-        document.getElementById("login-error").style.display = "block";
-        token = null;
-        return;
-      }
-      sessionStorage.setItem("admin_pass", p);
-      showAdmin();
-    } catch (e) {
-      document.getElementById("login-error").textContent = "❌ Connection error";
-      document.getElementById("login-error").style.display = "block";
-    }
-  }
-
-  function doLogout() {
-    sessionStorage.removeItem("admin_pass");
-    token = null;
-    document.getElementById("admin-page").style.display = "none";
-    document.getElementById("login-page").style.display = "flex";
-  }
-
-  // ── Forgot password (admin) ──────────────────────────────────────────────
-  function showStep(id) {
-    ["login-step", "forgot-request-step", "forgot-reset-step"].forEach(s => {
-      document.getElementById(s).style.display = (s === id) ? "block" : "none";
-    });
-  }
-  function showForgotRequest() {
-    document.getElementById("forgot-request-error").style.display = "none";
-    showStep("forgot-request-step");
-  }
-  function backToLogin() {
-    document.getElementById("login-error").style.display = "none";
-    document.getElementById("forgot-reset-success").style.display = "none";
-    showStep("login-step");
-  }
-
-  async function requestForgotCode() {
-    const btn = document.getElementById("btn-forgot-request");
-    const err = document.getElementById("forgot-request-error");
-    err.style.display = "none";
-    btn.disabled = true; btn.textContent = "Sending...";
-    try {
-      const res = await fetch("/admin/forgot-password", { method: "POST" });
-      const data = await res.json();
-      if (data.success) {
-        showStep("forgot-reset-step");
-      } else {
-        err.textContent = "❌ " + (data.error || "Could not send code.");
-        err.style.display = "block";
-      }
-    } catch (e) {
-      err.textContent = "❌ Connection error";
-      err.style.display = "block";
-    } finally {
-      btn.disabled = false; btn.textContent = "Send Code →";
-    }
-  }
-
-  async function submitForgotReset() {
-    const otp = document.getElementById("forgot-otp").value.trim();
-    const newPassword = document.getElementById("forgot-new-password").value;
-    const btn = document.getElementById("btn-forgot-reset");
-    const err = document.getElementById("forgot-reset-error");
-    const ok = document.getElementById("forgot-reset-success");
-    err.style.display = "none"; ok.style.display = "none";
-    if (!otp || !newPassword) {
-      err.textContent = "❌ Enter the code and a new password.";
-      err.style.display = "block";
-      return;
-    }
-    btn.disabled = true; btn.textContent = "Resetting...";
-    try {
-      const res = await fetch("/admin/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp, new_password: newPassword })
-      });
-      const data = await res.json();
-      if (data.success) {
-        ok.textContent = "✅ " + data.message;
-        ok.style.display = "block";
-        setTimeout(backToLogin, 1800);
-      } else {
-        err.textContent = "❌ " + (data.error || "Could not reset password.");
-        err.style.display = "block";
-      }
-    } catch (e) {
-      err.textContent = "❌ Connection error";
-      err.style.display = "block";
-    } finally {
-      btn.disabled = false; btn.textContent = "Reset Password →";
-    }
-  }
-
-  function showAdmin() {
-    document.getElementById("login-page").style.display = "none";
-    document.getElementById("admin-page").style.display = "block";
-    loadDashboard();
-    loadUptime();
-    loadOwnerNumber();
-    setInterval(loadDashboard, 15000);
-  }
-
-  function switchTab(name) {
-    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
-    document.querySelectorAll(".tab-content").forEach(c => c.classList.toggle("active", c.id === `tab-${name}`));
-    if (name === "blacklist") loadBlacklist();
-    if (name === "keywords") loadKeywords();
-    if (name === "features") loadFeatures();
-    if (name === "ownerchats") loadOwnerChats();
-    if (name === "reports") loadReports();
-    if (name === "groupbans") loadGroupBans();
-    if (name === "registrations") loadRegistrations();
-    if (name === "payments") loadPayments();
-    if (name === "activation") loadActivation();
-    if (name === "scheduler") loadScheduler();
-    if (name === "viewonce") loadViewOnce();
-    if (name === "activity") loadActivityLog();
-    if (name === "menu") loadMenuSettings();
-  }
-
-  function toggleAdminMenu() { document.getElementById('adminMenuOverlay').style.display = 'block'; }
-  function closeAdminMenu() { document.getElementById('adminMenuOverlay').style.display = 'none'; }
-
-  /* ── REGISTRATIONS ── */
-  async function loadRegistrations() {
-    const list = document.getElementById('registrations-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/registrations');
-      const data = await res.json();
-      const regs = data.registrations || [];
-      if (regs.length === 0) {
-        list.innerHTML = '<div class="empty">No registrations yet.</div>';
-        return;
-      }
-      list.innerHTML = regs.map(r => `
-        <div class="contact-row">
-          <div>
-            <strong>${r.name || 'Unnamed'}</strong> — ${r.phone}<br/>
-            <span style="color:var(--muted);font-size:12px">${r.email || 'no email'}</span>
-          </div>
-          <div style="text-align:right">
-            <div style="color:${r.verified ? 'var(--green)' : 'var(--muted)'};font-size:12px">${r.verified ? '🛡️ ' + r.badge : '⏳ Unverified'}</div>
-            <div style="color:var(--accent);font-weight:700">${r.credits} kesh</div>
-          </div>
-        </div>
-      `).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load.</div>';
-    }
-  }
-
-  async function addRegCredit() {
-    const phone = document.getElementById('reg-credit-phone').value.trim();
-    const name = document.getElementById('reg-credit-name').value.trim();
-    const amount = document.getElementById('reg-credit-amount').value.trim();
-    const status = document.getElementById('reg-credit-status');
-    if (!phone || !amount) { status.textContent = 'Phone and amount are required.'; return; }
-    status.textContent = 'Saving...';
-    try {
-      const res = await authedFetch('/admin/registrations/add-credit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, name, amount })
-      });
-      const data = await res.json();
-      status.textContent = data.success ? data.message : (data.error || 'Failed.');
-      if (data.success) {
-        document.getElementById('reg-credit-phone').value = '';
-        document.getElementById('reg-credit-name').value = '';
-        document.getElementById('reg-credit-amount').value = '';
-        loadRegistrations();
-      }
-    } catch (e) {
-      status.textContent = 'Network error.';
-    }
-  }
-
-  /* ── PAYMENTS ── */
-  async function loadPayments() {
-    const list = document.getElementById('payments-list');
-    const filter = document.getElementById('payments-filter').value;
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch(`/admin/payments${filter ? `?status=${filter}` : ''}`);
-      const data = await res.json();
-      const pays = data.payments || [];
-      if (pays.length === 0) {
-        list.innerHTML = '<div class="empty">No requests here.</div>';
-        return;
-      }
-      list.innerHTML = pays.map(p => {
-        const statusColor = p.status === 'approved' ? 'var(--green)' : p.status === 'rejected' ? '#ef4444' : '#f59e0b';
-        const when = p.created_at ? new Date(p.created_at * 1000).toLocaleString() : '';
-        return `
-        <div class="contact-row" style="flex-direction:column;align-items:stretch;gap:8px">
-          <div style="display:flex;justify-content:space-between">
-            <div>
-              <strong>#${p.id} — ${p.phone}</strong><br/>
-              <span style="color:var(--muted);font-size:12px">${when}</span>
-            </div>
-            <div style="text-align:right">
-              <div style="color:${statusColor};font-size:12px;text-transform:uppercase">${p.status}</div>
-              <div style="color:var(--accent);font-weight:700">${p.amount} kesh</div>
-            </div>
-          </div>
-          <div style="font-size:13px;color:#ccc">Code: <strong>${p.mpesa_code}</strong>
-            ${p.has_screenshot ? ` · <a href="#" onclick="authedFetch('/admin/payment-proof/${p.id}').then(r=>r.blob()).then(b=>window.open(URL.createObjectURL(b)));return false">📸 View screenshot</a>` : ' · <span style="color:var(--muted)">no screenshot</span>'}
-          </div>
-          ${p.status === 'pending' ? `
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-green" style="width:auto;padding:6px 14px" onclick="reviewPayment(${p.id},'approve')">✅ Approve</button>
-            <button class="btn" style="width:auto;padding:6px 14px;background:#ef4444" onclick="reviewPayment(${p.id},'reject')">❌ Reject</button>
-          </div>` : (p.admin_note ? `<div style="font-size:12px;color:var(--muted)">Note: ${p.admin_note}</div>` : '')}
-        </div>`;
-      }).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load.</div>';
-    }
-  }
-
-  async function reviewPayment(id, action) {
-    let note = '';
-    if (action === 'reject') note = prompt('Optional reason for rejecting (shown to the user):') || '';
-    if (!confirm(`${action === 'approve' ? 'Approve' : 'Reject'} request #${id}?`)) return;
-    try {
-      const res = await authedFetch('/admin/payments/review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action, note })
-      });
-      const data = await res.json();
-      if (!data.success) { alert(data.error || 'Failed.'); return; }
-      loadPayments();
-    } catch (e) {
-      alert('Network error.');
-    }
-  }
-
-  /* ── ACTIVATION (paid pairing keys) ── */
-  async function loadActivation() {
-    try {
-      const sres = await authedFetch('/admin/activation-settings');
-      const s = await sres.json();
-      document.getElementById('activation-default-days').value = s.activation_default_days || 30;
-      document.getElementById('activation-bypass-key').value = s.activation_bypass_key || '';
-      document.getElementById('subscription-kesh-per-day').value = s.subscription_kesh_per_day || 10;
-    } catch (e) {}
-
-    const list = document.getElementById('activation-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/activation-list');
-      const data = await res.json();
-      const rows = data.sessions || [];
-      if (rows.length === 0) {
-        list.innerHTML = '<div class="empty">No sessions yet.</div>';
-        return;
-      }
-      list.innerHTML = rows.map(r => {
-        const statusColor = r.request_status === 'pending' ? '#f59e0b' : r.activated && !r.expired ? 'var(--green)' : '#ef4444';
-        const statusText = r.request_status === 'pending' ? 'PENDING REQUEST' : (r.activated && !r.expired ? 'ACTIVE' : (r.expired ? 'EXPIRED' : 'LOCKED'));
-        return `
-        <div class="contact-row" style="flex-direction:column;align-items:stretch;gap:8px">
-          <div style="display:flex;justify-content:space-between">
-            <div>
-              <strong>${r.session}</strong> — ${r.phone || 'unknown'}<br/>
-              <span style="color:var(--muted);font-size:12px">${r.expiry_display ? `expires ${r.expiry_display}` : 'no expiry set'}</span>
-            </div>
-            <div style="text-align:right">
-              <div style="color:${statusColor};font-size:12px;text-transform:uppercase">${statusText}</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            ${r.request_status === 'pending' ? `
-              <button class="btn btn-green" style="width:auto;padding:6px 14px" onclick="activationApprove('${r.session}')">✅ Approve</button>
-              <button class="btn" style="width:auto;padding:6px 14px;background:#ef4444" onclick="activationDeny('${r.session}')">❌ Deny</button>
-            ` : ''}
-            <button class="refresh-btn" onclick="activationExtend('${r.session}')">➕ Extend / Re-subscribe</button>
-          </div>
-        </div>`;
-      }).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load.</div>';
-    }
-  }
-
-  async function activationApprove(session) {
-    const days = prompt('Days of access to grant (leave blank for default):', '');
-    try {
-      const res = await authedFetch('/admin/activation-approve', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session, days: days ? parseInt(days, 10) : undefined })
-      });
-      const data = await res.json();
-      if (!data.success) { alert(data.error || 'Failed.'); return; }
-      alert(`Key: ${data.key} (valid 10 min, ${data.days} day(s)). It has NOT been sent automatically from here — send it to the customer yourself, or approve via the WhatsApp yes/no flow instead so it's delivered for you.`);
-      loadActivation();
-    } catch (e) { alert('Network error.'); }
-  }
-
-  async function activationDeny(session) {
-    if (!confirm('Deny this request?')) return;
-    try {
-      await authedFetch('/admin/activation-deny', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session })
-      });
-      loadActivation();
-    } catch (e) { alert('Network error.'); }
-  }
-
-  async function activationExtend(session) {
-    const days = prompt('Add how many days of access?', '30');
-    if (!days) return;
-    try {
-      const res = await authedFetch('/admin/activation-extend', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session, days: parseInt(days, 10) })
-      });
-      const data = await res.json();
-      if (!data.success) { alert(data.error || 'Failed.'); return; }
-      loadActivation();
-    } catch (e) { alert('Network error.'); }
-  }
-
-  async function saveActivationSettings() {
-    const status = document.getElementById('activation-settings-status');
-    const activation_default_days = document.getElementById('activation-default-days').value.trim();
-    const activation_bypass_key = document.getElementById('activation-bypass-key').value.trim();
-    const subscription_kesh_per_day = document.getElementById('subscription-kesh-per-day').value.trim();
-    status.textContent = 'Saving...';
-    try {
-      const res = await authedFetch('/admin/activation-settings', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activation_default_days, activation_bypass_key, subscription_kesh_per_day })
-      });
-      const data = await res.json();
-      status.textContent = data.success ? '✅ Saved.' : (data.error || 'Failed.');
-    } catch (e) {
-      status.textContent = 'Network error.';
-    }
-  }
-
-  /* ── SCHEDULER ── */
-  async function loadScheduler() {
-    const list = document.getElementById('scheduler-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/scheduler');
-      const data = await res.json();
-      const items = (data.messages || []).filter(m => !m.sent);
-      if (items.length === 0) {
-        list.innerHTML = '<div class="empty">No pending scheduled messages.</div>';
-        return;
-      }
-      list.innerHTML = items.map(m => `
-        <div class="contact-row">
-          <div>
-            <strong>${escapeHtml(m.to || '')}</strong>${m.repeat ? ` <span style="color:var(--muted);font-size:12px">(🔁 ${m.repeat})</span>` : ''}<br/>
-            <span style="color:var(--muted);font-size:12px">${escapeHtml((m.message || '').slice(0, 80))}</span><br/>
-            <span style="color:var(--accent);font-size:12px">⏰ ${m.next_run || 'unknown time'}</span>
-          </div>
-          <button class="btn-sm btn-red" onclick="cancelScheduled('${m.id}')">Cancel</button>
-        </div>
-      `).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load.</div>';
-    }
-  }
-
-  async function cancelScheduled(id) {
-    if (!confirm(`Cancel scheduled message ${id}?`)) return;
-    try {
-      const res = await authedFetch(`/admin/scheduler/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!data.success) { alert(data.error || 'Failed.'); return; }
-      loadScheduler();
-    } catch (e) {
-      alert('Network error.');
-    }
-  }
-
-  /* ── ACTIVITY LOG ── */
-  let activityCategory = 'command';
-  const ACTIVITY_ICON = { command: '💬', error: '⚠️', sensitive: '🛡️' };
-  const ACTIVITY_EMPTY = {
-    command: 'No commands run yet.',
-    error: 'No errors logged. 🎉',
-    sensitive: 'No sensitive actions logged yet.',
-  };
-
-  function setActivityCategory(cat) {
-    activityCategory = cat;
-    document.querySelectorAll('.activity-filter-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.cat === cat)
-    );
-    loadActivityLog();
-  }
-
-  async function loadActivityLog() {
-    const list = document.getElementById('activity-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch(`/admin/activity-log?category=${encodeURIComponent(activityCategory)}&limit=150`);
-      const data = await res.json();
-      const items = data.events || [];
-      if (items.length === 0) {
-        list.innerHTML = `<div class="empty">${ACTIVITY_EMPTY[activityCategory] || 'Nothing here yet.'}</div>`;
-        return;
-      }
-      const icon = ACTIVITY_ICON[activityCategory] || '📜';
-      const borderColor = activityCategory === 'error' ? 'var(--red)' : (activityCategory === 'sensitive' ? 'var(--accent)' : 'rgba(255,255,255,.1)');
-      list.innerHTML = items.map(e => `
-        <div class="contact-row" style="border-left:3px solid ${borderColor}">
-          <div>
-            <strong>${icon} .${escapeHtml(e.type || '')}</strong>
-            ${e.actor ? ` <span style="color:var(--muted);font-size:12px">by ${escapeHtml(e.actor)}</span>` : ''}<br/>
-            <span style="color:var(--muted);font-size:13px">${escapeHtml((e.detail || '').slice(0, 300))}</span><br/>
-            <span style="color:var(--accent);font-size:12px">🕐 ${escapeHtml(e.timestamp || '')}</span>
-          </div>
-        </div>
-      `).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load.</div>';
-    }
-  }
-
-  function exportActivityLog() {
-    // Exports ALL categories combined (no &category= param) since a
-    // download is usually meant as a full record, not just the tab
-    // currently being viewed.
-    const finalUrl = token
-      ? `/admin/activity-log/export?pass=${encodeURIComponent(token)}`
-      : '/admin/activity-log/export';
-    window.open(finalUrl, '_blank');
-  }
-
-  async function clearActivityLog() {
-    const label = { command: 'Commands', error: 'Errors', sensitive: 'Sensitive Actions' }[activityCategory] || activityCategory;
-    if (!confirm(`Clear the entire "${label}" log? This can't be undone.`)) return;
-    try {
-      const res = await authedFetch(`/admin/activity-log?category=${encodeURIComponent(activityCategory)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!data.success) { alert(data.error || 'Failed.'); return; }
-      loadActivityLog();
-    } catch (e) {
-      alert('Network error.');
-    }
-  }
-
-  /* ── VIEW-ONCE MEDIA ── */
-  async function loadViewOnce() {
-    const list = document.getElementById('viewonce-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/viewonce');
-      const data = await res.json();
-      const items = data.items || [];
-      if (items.length === 0) {
-        list.innerHTML = '<div class="empty">Nothing intercepted yet.</div>';
-        return;
-      }
-      list.innerHTML = items.map(v => {
-        const fileUrl = token
-          ? `/admin/viewonce/file/${encodeURIComponent(v.filename)}?pass=${encodeURIComponent(token)}`
-          : `/admin/viewonce/file/${encodeURIComponent(v.filename)}`;
-        const isImage = v.media_type === 'imageMessage';
-        const preview = isImage
-          ? `<img src="${fileUrl}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>`
-          : `<div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:var(--card);border-radius:8px;border:1px solid var(--border);font-size:22px">${v.media_type === 'videoMessage' ? '🎥' : '🎙️'}</div>`;
-        return `
-        <div class="contact-row">
-          <div style="display:flex;gap:12px;align-items:center">
-            ${preview}
-            <div>
-              <strong>${escapeHtml(v.name || 'Unknown')}</strong> — ${escapeHtml(v.sender || '')}<br/>
-              <span style="color:var(--muted);font-size:12px">${v.time}${v.caption ? ' · ' + escapeHtml(v.caption.slice(0, 40)) : ''}</span>
-            </div>
-          </div>
-          <a href="${fileUrl}" target="_blank" class="btn-sm" style="background:var(--border);color:var(--text);text-decoration:none;display:inline-block">Open</a>
-        </div>`;
-      }).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load.</div>';
-    }
-  }
-
-  /* ── KEYWORDS ── */
-  async function loadKeywords() {
-    const list = document.getElementById('keywords-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/keywords');
-      const data = await res.json();
-      const kws = data.keywords || [];
-      if (kws.length === 0) {
-        list.innerHTML = '<div class="empty">No keywords yet — add one above.</div>';
-        return;
-      }
-      list.innerHTML = kws.map(k => `
-        <div class="contact-row">
-          <span><strong>${escapeHtml(k.trigger)}</strong> <span style="color:var(--muted);font-size:12px">(${k.match_type})</span><br/>
-          <span style="color:var(--muted);font-size:13px">${escapeHtml(k.reply)}</span></span>
-          <span style="display:flex;gap:6px">
-            <button class="btn-sm ${k.enabled ? 'btn-green' : ''}" onclick="toggleKeyword('${encodeURIComponent(k.trigger)}', ${!k.enabled})">${k.enabled ? 'ON' : 'OFF'}</button>
-            <button class="btn-sm btn-red" onclick="removeKeyword('${encodeURIComponent(k.trigger)}')">Delete</button>
-          </span>
-        </div>`).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load keywords.</div>';
-    }
-  }
-
-  async function addKeyword() {
-    const trigger = document.getElementById('kw-trigger').value.trim();
-    const reply = document.getElementById('kw-reply').value.trim();
-    const match_type = document.getElementById('kw-match-type').value;
-    if (!trigger || !reply) return;
-    await authedFetch('/admin/keywords/add', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ trigger, reply, match_type })
-    });
-    document.getElementById('kw-trigger').value = '';
-    document.getElementById('kw-reply').value = '';
-    loadKeywords();
-  }
-
-  async function removeKeyword(triggerEncoded) {
-    const trigger = decodeURIComponent(triggerEncoded);
-    await authedFetch('/admin/keywords/remove', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ trigger })
-    });
-    loadKeywords();
-  }
-
-  async function toggleKeyword(triggerEncoded, enabled) {
-    const trigger = decodeURIComponent(triggerEncoded);
-    await authedFetch('/admin/keywords/toggle', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ trigger, enabled })
-    });
-    loadKeywords();
-  }
-
-  /* ── FEATURES ── */
-  const FEATURE_LABELS = {
-    ai_chat: '🧠 AI Chat (/ask)',
-    downloads: '📥 Video & Song Downloads',
-    keywords: '🔑 Keyword Auto-Replies',
-    status_save: '💾 Auto-Save Statuses',
-    antilink: '🚫 Anti-Link (warn → kick)',
-    menu_buttons: '🔘 Tappable Menu Buttons',
-    antiban_notify_only: '🔥 Send Anyway During Ban-Recovery Pause (OFF = safe, blocks sends; ON = risk of burns)',
-    antiban_enabled: '🛡️ Anti-Ban Protection (global kill-switch, applies to every session)'
-  };
-
-  async function loadFeatures() {
-    const list = document.getElementById('features-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/features');
-      const data = await res.json();
-      const feats = data.features || [];
-      list.innerHTML = feats.map(f => `
-        <div class="contact-row">
-          <span>${FEATURE_LABELS[f.name] || f.name}</span>
-          <button class="btn-sm ${f.enabled ? 'btn-green' : 'btn-red'}" onclick="toggleFeature('${f.name}', ${!f.enabled})">${f.enabled ? 'ENABLED' : 'DISABLED'}</button>
-        </div>`).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load features.</div>';
-    }
-  }
-
-  async function toggleFeature(name, enabled) {
-    await authedFetch('/admin/features/toggle', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, enabled })
-    });
-    loadFeatures();
-  }
-
-  async function loadMenuSettings() {
-    try {
-      const res = await authedFetch('/admin/menu-settings');
-      const s = await res.json();
-      document.getElementById('menu-media-current').textContent = `${s.mediaType} (${s.mediaFile})`;
-      document.getElementById('menu-caption-input').value = s.caption || '';
-    } catch (e) {
-      document.getElementById('menu-media-current').textContent = 'unknown';
-    }
-  }
-
-  async function uploadMenuMedia() {
-    const input = document.getElementById('menu-media-input');
-    const status = document.getElementById('menu-media-status');
-    if (!input.files[0]) { status.textContent = 'Choose a file first.'; return; }
-    const fd = new FormData();
-    fd.append('media', input.files[0]);
-    status.textContent = 'Uploading...';
-    try {
-      const res = await authedFetch('/admin/menu-media/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      status.textContent = data.success ? `✅ Uploaded as ${data.mediaType}.` : `❌ ${data.error || 'Upload failed'}`;
-      if (data.success) loadMenuSettings();
-    } catch (e) {
-      status.textContent = '❌ Upload failed.';
-    }
-  }
-
-  async function saveMenuCaption() {
-    const caption = document.getElementById('menu-caption-input').value;
-    const status = document.getElementById('menu-caption-status');
-    try {
-      await authedFetch('/admin/menu-settings', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ caption })
-      });
-      status.textContent = '✅ Saved.';
-    } catch (e) {
-      status.textContent = '❌ Failed to save.';
-    }
-  }
-
-  async function toggleSessionAntiban(session, enabled) {
-    await authedFetch('/admin/session-antiban/toggle', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session, enabled })
-    });
-    loadDashboard();
-  }
-
-  /* ── OWNER CHATS (personal auto-reply toggle) ── */
-  async function loadOwnerChats() {
-    const list = document.getElementById('ownerchats-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/owner-chats');
-      const data = await res.json();
-      const chats = data.chats || [];
-      if (!chats.length) {
-        list.innerHTML = '<div class="empty">No chats yet — this fills in as people message your own number.</div>';
-        return;
-      }
-      list.innerHTML = chats.map(c => `
-        <div class="contact-row">
-          <span>+${escapeHtml((c.chat_id || '').split('@')[0])}</span>
-          <button class="btn-sm ${c.ai_allowed ? 'btn-green' : 'btn-red'}" onclick="toggleOwnerChat('${c.chat_id}', ${!c.ai_allowed})">${c.ai_allowed ? 'AUTO-REPLY ON' : 'AUTO-REPLY OFF'}</button>
-        </div>`).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load.</div>';
-    }
-  }
-
-  async function toggleOwnerChat(chatId, allowed) {
-    await authedFetch('/admin/owner-chats/toggle', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, allowed })
-    });
-    loadOwnerChats();
-  }
-
-  /* ── REPORTS ── */
-  async function loadReports() {
-    const list = document.getElementById('reports-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/reports');
-      const data = await res.json();
-      const reports = data.reports || [];
-      if (!reports.length) {
-        list.innerHTML = '<div class="empty">No reports yet.</div>';
-        return;
-      }
-      list.innerHTML = reports.map(r => `
-        <div class="contact-row" style="${r.resolved ? 'opacity:.5' : ''}">
-          <div>
-            <div><strong>${escapeHtml(r.target || 'unspecified')}</strong> — ${escapeHtml(r.reason || '')}</div>
-            <div style="font-size:0.72rem;color:var(--muted)">
-              by ${escapeHtml((r.reporter || '').split('@')[0])} in ${escapeHtml((r.group_id || '').split('@')[0])} ·
-              ${r.timestamp ? new Date(r.timestamp * 1000).toLocaleString() : ''}
-            </div>
-          </div>
-          ${r.resolved
-            ? '<span class="btn-sm" style="background:var(--border);color:var(--muted)">RESOLVED</span>'
-            : `<button class="btn-sm btn-green" onclick="resolveReport(${r.id})">Mark Resolved</button>`}
-        </div>`).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load reports.</div>';
-    }
-  }
-
-  async function resolveReport(id) {
-    await authedFetch('/admin/reports/resolve', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
-    loadReports();
-  }
-
-  /* ── GROUP BANS ── */
-  async function loadGroupBans() {
-    const list = document.getElementById('groupbans-list');
-    list.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch('/admin/group-bans');
-      const data = await res.json();
-      const bans = data.bans || [];
-      if (!bans.length) {
-        list.innerHTML = '<div class="empty">No group bans recorded.</div>';
-        return;
-      }
-      list.innerHTML = bans.map(b => `
-        <div class="contact-row">
-          <div>
-            <div><strong>+${escapeHtml(b.number)}</strong> ${b.reason ? '— ' + escapeHtml(b.reason) : ''}</div>
-            <div style="font-size:0.72rem;color:var(--muted)">
-              in ${escapeHtml((b.group_id || '').split('@')[0])} ·
-              ${b.banned_at ? new Date(b.banned_at * 1000).toLocaleString() : ''}
-            </div>
-          </div>
-          <button class="btn-sm btn-red" onclick="removeGroupBan('${b.group_id}', '${b.number}')">Lift Ban</button>
-        </div>`).join('');
-    } catch (e) {
-      list.innerHTML = '<div class="empty">Failed to load bans.</div>';
-    }
-  }
-
-  async function removeGroupBan(groupId, number) {
-    await authedFetch('/admin/group-bans/remove', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ group_id: groupId, number })
-    });
-    loadGroupBans();
-  }
-
-  function escapeHtml(s) {
-    return (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-  }
-
-  // ── Bot Health / Burn Meter ──────────────────────────────────────────
-  // Reads the same antiban_risk / warm-up fields already pushed per-session
-  // by client_bridge.js's antibanSaveInterval (see /admin/update-session).
-  // Shows the WORST risk across all connected sessions — one bad number
-  // shouldn't hide behind a healthy one.
-  const HEALTH_TIERS = {
-    low:      { pct: 20,  color: '#4ade80', label: 'LOW',      icon: '🟢',
-                msg: '<b>Running smoothly.</b> Sending normally, no throttling needed. No action required.' },
-    medium:   { pct: 50,  color: '#facc15', label: 'MEDIUM',   icon: '🟡',
-                msg: '<b>Elevated risk.</b> The bot has started spacing out messages a bit more. Fine to keep using — just avoid big broadcasts today.' },
-    high:     { pct: 78,  color: '#fb923c', label: 'HIGH',     icon: '🟠',
-                msg: '<b>High risk — sends are being auto-throttled.</b> Avoid <code>.announce</code>/bulk broadcasts and cold-DMing new numbers until this drops. Let it cool off for a few hours.' },
-    critical: { pct: 96,  color: '#ff4455', label: 'CRITICAL', icon: '🔴',
-                msg: '<b>🚨 CRITICAL — you may get banned.</b> Stop broadcasting immediately. Let this number rest for 24h and avoid messaging unknown/cold contacts. Check <code>.antibanstats</code> in chat for details.' },
-  };
-  function renderHealthCard(sessions) {
-    const card = document.getElementById('health-card');
-    const dot = document.getElementById('health-dot');
-    const badge = document.getElementById('health-badge');
-    const bar = document.getElementById('health-bar');
-    const msg = document.getElementById('health-msg');
-    const submeta = document.getElementById('health-submeta');
-
-    const withRisk = sessions.filter(s => s.antiban_risk);
-    if (withRisk.length === 0) {
-      card.classList.add('loading');
-      dot.style.background = 'var(--muted)';
-      badge.style.background = 'rgba(255,255,255,0.06)'; badge.style.color = 'var(--muted)';
-      badge.textContent = sessions.length === 0 ? 'No sessions' : 'No data yet';
-      bar.style.width = '0%';
-      msg.innerHTML = sessions.length === 0
-        ? 'No active sessions yet. Link a number to see its ban-risk health here.'
-        : 'Waiting for the first health check-in from your session (updates every ~2 min)…';
-      submeta.textContent = '';
-      return;
-    }
-    card.classList.remove('loading');
-
-    const order = ['low', 'medium', 'high', 'critical'];
-    const worst = withRisk.reduce((acc, s) => {
-      const i = order.indexOf(s.antiban_risk);
-      return i > order.indexOf(acc) ? s.antiban_risk : acc;
-    }, 'low');
-    const tier = HEALTH_TIERS[worst] || HEALTH_TIERS.low;
-
-    dot.style.background = tier.color;
-    badge.style.background = tier.color + '22'; badge.style.color = tier.color;
-    badge.textContent = `${tier.icon} ${tier.label}`;
-    bar.style.width = tier.pct + '%';
-    bar.style.background = tier.color;
-    bar.style.color = tier.color;
-    msg.innerHTML = tier.msg;
-
-    const worstSession = withRisk.find(s => s.antiban_risk === worst);
-    const warmupBit = (worstSession && worstSession.antiban_warmup_day != null)
-      ? ` · Warm-up day ${worstSession.antiban_warmup_day}/${worstSession.antiban_warmup_total}` : '';
-    submeta.textContent = `${withRisk.length} session${withRisk.length > 1 ? 's' : ''} reporting${warmupBit} · updates every ~2 min`;
-  }
-
-  async function loadDashboard() {
-    try {
-      const res = await authedFetch("/admin/stats");
-      if (res.status === 401) { doLogout(); return; }
-      const stats = await res.json();
-
-      document.getElementById("stat-sessions").textContent = stats.sessions || 0;
-      document.getElementById("stat-contacts").textContent = stats.contacts || 0;
-      document.getElementById("stat-messages").textContent = stats.messages || 0;
-      document.getElementById("stat-messages-today").textContent = stats.messages_today || 0;
-      document.getElementById("stat-viewonce").textContent = stats.viewonce || 0;
-      document.getElementById("stat-scheduled").textContent = stats.scheduled_pending || 0;
-      document.getElementById("server-time").textContent = stats.server_time || "";
-
-      const sessionsEl = document.getElementById("sessions-list");
-      const sessions = stats.session_list || [];
-      renderHealthCard(sessions);
-      if (sessions.length === 0) {
-        sessionsEl.innerHTML = '<div class="empty">No active sessions. <a href="/pair" style="color:var(--accent)">Link one →</a></div>';
-      } else {
-        sessionsEl.innerHTML = sessions.map(s => {
-          const riskColors = { low: '#4ade80', medium: '#facc15', high: '#fb923c', critical: '#ff6b6b' };
-          const riskColor = riskColors[s.antiban_risk] || '#555';
-          const riskBadge = s.antiban_risk
-            ? `<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:0.68rem;font-weight:600;background:${riskColor}22;color:${riskColor};border:1px solid ${riskColor}55;margin-left:6px">🛡️ ${s.antiban_risk.toUpperCase()}</span>`
-            : '';
-          const warmupBadge = (s.antiban_warmup_day != null && s.antiban_warmup_total != null)
-            ? `<span style="color:var(--muted);font-size:0.72rem;margin-left:6px">Warm-up day ${s.antiban_warmup_day}/${s.antiban_warmup_total}</span>`
-            : '';
-          return `
-          <div class="session-card">
-            <div class="session-info">
-              <div class="session-dot ${s.online ? '' : 'offline'}"></div>
-              <div>
-                <div class="session-name">${s.name}${riskBadge}${warmupBadge}</div>
-                <div class="session-number">+${s.number || 'Unknown'}</div>
-                <div class="session-meta">Messages: ${s.msg_count || 0} · Last active: ${s.last_active || 'N/A'}</div>
-                <div class="session-date">📅 Session started: ${s.since || 'N/A'}</div>
-                <div class="session-date" style="${s.expired ? 'color:#ff6b6b;font-weight:600' : ''}">
-                  ${s.expiry_display ? (s.expired ? `⛔ Subscription expired: ${s.expiry_display}` : `⏳ Subscription valid until: ${s.expiry_display}`) : '♾️ No expiry set'}
-                </div>
-              </div>
-            </div>
-            <div class="session-actions" style="flex-direction:column;align-items:flex-end;gap:6px">
-              <div style="display:flex;gap:6px">
-                <button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="viewSession('${s.name}')">View</button>
-                <button class="btn-sm ${s.antiban_enabled ? 'btn-green' : 'btn-red'}" onclick="toggleSessionAntiban('${s.name}', ${!s.antiban_enabled})">🛡️ Antiban ${s.antiban_enabled ? 'ON' : 'OFF'}</button>
-                <button class="btn-sm btn-red" onclick="terminateSession('${s.name}')">Terminate</button>
-              </div>
-              <div style="display:flex;gap:6px;align-items:center">
-                <input type="datetime-local" id="expiry-${s.name}" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.75rem" />
-                <button class="btn-sm" style="background:var(--accent2);color:#fff" onclick="setExpiry('${s.name}')">Set Expiry</button>
-                ${s.expiry_ts ? `<button class="btn-sm" style="background:var(--border);color:var(--text)" onclick="clearExpiry('${s.name}')">Clear</button>` : ''}
-              </div>
-            </div>
-          </div>
-        `;
-        }).join("");
-      }
-
-      const contactsEl = document.getElementById("contacts-list");
-      const contacts = stats.recent_contacts || [];
-      if (contacts.length === 0) {
-        contactsEl.innerHTML = '<div class="contact-row"><span style="color:var(--muted)">No contacts yet</span></div>';
-      } else {
-        contactsEl.innerHTML = contacts.map(c => `
-          <div class="contact-row">
-            <div>
-              <div class="contact-name">${c.name}</div>
-              <div class="contact-num">${c.sender}</div>
-            </div>
-            <div class="contact-time">${c.time}</div>
-          </div>
-        `).join("");
-      }
-    } catch(e) {
-      console.error("Dashboard error:", e);
-    }
-  }
-
-  async function loadUptime() {
-    try {
-      const res = await authedFetch("/admin/uptime");
-      const data = await res.json();
-      document.getElementById("uptime-display").innerHTML =
-        `🟢 Up for <strong style="color:var(--green)">${data.uptime_human}</strong><br/>📅 Started: ${data.started_at}`;
-    } catch(e) {}
-  }
-
-  async function loadOwnerNumber() {
-    try {
-      const res = await authedFetch("/admin/owner-number");
-      const data = await res.json();
-      const input = document.getElementById("owner-number-input");
-      input.value = data.owner_number || "";
-      input.placeholder = data.owner_number ? `Current: +${data.owner_number} (${data.source})` : "Not set — owner-only commands are disabled";
-    } catch(e) {}
-  }
-
-  async function saveOwnerNumber() {
-    const status = document.getElementById("owner-number-status");
-    const owner_number = document.getElementById("owner-number-input").value.trim();
-    status.textContent = "Saving...";
-    try {
-      const res = await authedFetch("/admin/owner-number", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ owner_number })
-      });
-      const data = await res.json();
-      if (!res.ok) { status.textContent = `❌ ${data.error || 'Save failed'}`; return; }
-      status.textContent = owner_number ? `✅ Owner number set to +${data.owner_number}` : "✅ Reverted to OWNER_NUMBER env var";
-      loadOwnerNumber();
-    } catch(e) { status.textContent = "❌ Save failed"; }
-  }
-
-  async function setExpiry(name) {
-    const input = document.getElementById(`expiry-${name}`);
-    if (!input || !input.value) { alert("Pick a date & time first."); return; }
-    const expiryTs = new Date(input.value).getTime() / 1000;
-    try {
-      await authedFetch("/admin/set-expiry", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ session: name, expiry_ts: expiryTs })
-      });
-      loadDashboard();
-    } catch(e) {
-      alert("Error: " + e.message);
-    }
-  }
-
-  async function clearExpiry(name) {
-    try {
-      await authedFetch("/admin/set-expiry", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ session: name, expiry_ts: null })
-      });
-      loadDashboard();
-    } catch(e) {
-      alert("Error: " + e.message);
-    }
-  }
-
-  async function terminateSession(name) {
-    if (!confirm(`Terminate session "${name}"? This will disconnect WhatsApp.`)) return;
-    try {
-      await authedFetch("/admin/terminate", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({session: name})
-      });
-      alert(`Session "${name}" terminated.`);
-      loadDashboard();
-    } catch(e) {
-      alert("Error: " + e.message);
-    }
-  }
-
-  function viewSession(name) {
-    window.open(`/admin/session-detail?session=${encodeURIComponent(name)}&pass=${encodeURIComponent(token)}`, '_blank');
-  }
-
-  // ✅ NEW: COMMAND FINDER — shares assets/command-finder.js with the public site
-  async function runAdminCommandFinder() {
-    const q = document.getElementById('admin-cmd-finder-in').value.trim();
-    const out = document.getElementById('admin-cmd-finder-out');
-    if (!q) { out.innerHTML = ''; return; }
-    out.innerHTML = '<div class="empty">Searching...</div>';
-    try {
-      const results = await window.CommandFinder.findCommands(q, 8);
-      if (!results.length) {
-        out.innerHTML = '<div class="empty">No matching command found — try different words.</div>';
-        return;
-      }
-      out.innerHTML = results.map(cmd => `
-        <div class="msg-result">
-          <div class="msg-meta" style="cursor:pointer" onclick="navigator.clipboard && navigator.clipboard.writeText('.${cmd.usage.replace(/^\./, '')}')">.${cmd.usage.replace(/^\./, '')} 📋</div>
-          <div class="msg-body">${cmd.description}</div>
-        </div>
-      `).join('');
-    } catch (e) {
-      out.innerHTML = `<div class="empty">${e.message}</div>`;
-    }
-  }
-
-  async function doSearch() {
-    const q = document.getElementById("search-query").value.trim();
-    const resultsEl = document.getElementById("search-results");
-    if (!q) return;
-    resultsEl.innerHTML = '<div class="empty">Searching...</div>';
-    try {
-      const res = await authedFetch(`/admin/search-messages?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      const results = data.results || [];
-      if (results.length === 0) {
-        resultsEl.innerHTML = '<div class="empty">No messages found.</div>';
-        return;
-      }
-      resultsEl.innerHTML = results.map(r => `
-        <div class="msg-result">
-          <div class="msg-meta">${r.name} (${r.sender}) · ${r.time}</div>
-          <div class="msg-body">${r.body}</div>
-        </div>
-      `).join("");
-    } catch(e) {
-      resultsEl.innerHTML = '<div class="empty">Search failed.</div>';
-    }
-  }
-
-  async function loadBlacklist() {
-    const el = document.getElementById("blacklist-list");
-    el.innerHTML = '<div class="empty">Loading...</div>';
-    try {
-      const res = await authedFetch("/admin/blacklist");
-      const data = await res.json();
-      const list = data.blacklist || [];
-      if (list.length === 0) {
-        el.innerHTML = '<div class="empty">No blacklisted numbers.</div>';
-        return;
-      }
-      el.innerHTML = list.map(b => `
-        <div class="list-row">
-          <span>${b}</span>
-          <button class="btn-sm btn-red" onclick="removeBlacklist('${b}')">Remove</button>
-        </div>
-      `).join("");
-    } catch(e) {
-      el.innerHTML = '<div class="empty">Failed to load.</div>';
-    }
-  }
-
-  async function addBlacklist() {
-    const input = document.getElementById("blacklist-input");
-    const num = input.value.trim().replace(/[^0-9]/g, '');
-    if (!num) return;
-    try {
-      await authedFetch("/admin/blacklist/add", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({sender: num})
-      });
-      input.value = "";
-      loadBlacklist();
-    } catch(e) {
-      alert("Failed: " + e.message);
-    }
-  }
-
-  async function removeBlacklist(sender) {
-    try {
-      await authedFetch("/admin/blacklist/remove", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({sender})
-      });
-      loadBlacklist();
-    } catch(e) {
-      alert("Failed: " + e.message);
-    }
-  }
-
-  async function sendBroadcast() {
-    const target = document.getElementById("broadcast-target").value;
-    const message = document.getElementById("broadcast-message").value.trim();
-    const statusEl = document.getElementById("broadcast-status");
-    if (!message) { statusEl.textContent = "❌ Message cannot be empty."; return; }
-    statusEl.textContent = "📤 Queuing...";
-    try {
-      const res = await authedFetch("/admin/broadcast", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({target, message})
-      });
-      const data = await res.json();
-      statusEl.textContent = `✅ Queued! The bot will pick it up within ~20 seconds. (Queue size: ${data.queue_size})`;
-      document.getElementById("broadcast-message").value = "";
-    } catch(e) {
-      statusEl.textContent = "❌ Failed to queue broadcast.";
-    }
-  }
-
-  document.addEventListener("keydown", e => {
-    if (e.key === "Enter" && document.getElementById("login-page").style.display !== "none") {
-      doLogin();
+  function fmtTime(ts){ return ts ? new Date(ts*1000).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'; }
+  function esc(s){ const d=document.createElement('div'); d.textContent=s??''; return d.innerHTML; }
+
+  const gateMsg = document.getElementById('gate-msg');
+  document.getElementById('gate-btn').addEventListener('click', async () => {
+    const pass = document.getElementById('admin-pass').value;
+    const btn = document.getElementById('gate-btn');
+    btn.disabled = true; btn.textContent = 'Checking…';
+    try{
+      const res = await fetch('/admin/stats', { headers: { 'Authorization': 'Bearer ' + pass } });
+      btn.disabled = false; btn.textContent = 'Log In';
+      if(res.status === 401){ gateMsg.textContent = 'Incorrect password.'; gateMsg.classList.add('show'); return; }
+      ADMIN_PASS = pass;
+      try{ sessionStorage.setItem('beastmd_admin_pass', pass); }catch(e){}
+      openShell();
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Log In';
+      gateMsg.textContent = 'Network error — try again.'; gateMsg.classList.add('show');
     }
   });
 
-  if (token) {
-    authedFetch("/admin/stats").then(res => {
-      if (res.status === 401) { token = null; sessionStorage.removeItem("admin_pass"); }
-      else showAdmin();
-    }).catch(() => {});
-  }
-</script>
-<script src="/assets/command-finder.js"></script>
-  <button class="hmd-howl-btn" id="hmdHowlBtn" title="Howl 🐺" aria-label="Play howl sound">🐺</button>
-  <script>
-  (function () {
-    // 🎃 Halloween MD — synthesized wolf-howl tone (no audio file needed).
-    function playHowl() {
-      try {
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        var ctx = new Ctx();
-        var now = ctx.currentTime;
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        // Howl: slow rise, hold, wavering vibrato, slow fade.
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(520, now + 0.9);
-        osc.frequency.exponentialRampToValueAtTime(430, now + 1.4);
-
-        var lfo = ctx.createOscillator();
-        var lfoGain = ctx.createGain();
-        lfo.frequency.value = 6;
-        lfoGain.gain.value = 18;
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        lfo.start(now);
-        lfo.stop(now + 2.2);
-
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.12, now + 1.5);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.3);
-
-        osc.start(now);
-        osc.stop(now + 2.3);
-      } catch (e) { /* Web Audio unsupported — fail silently */ }
-    }
-    var btn = document.getElementById('hmdHowlBtn');
-    if (btn) btn.addEventListener('click', playHowl);
-
-    // Browsers block audio autoplay before any user gesture, so we howl
-    // once on the first click/tap/keypress anywhere on the page.
-    var howled = false;
-    function howlOnce() {
-      if (howled) return;
-      howled = true;
-      playHowl();
-      window.removeEventListener('click', howlOnce);
-      window.removeEventListener('keydown', howlOnce);
-      window.removeEventListener('touchstart', howlOnce);
-    }
-    window.addEventListener('click', howlOnce);
-    window.addEventListener('keydown', howlOnce);
-    window.addEventListener('touchstart', howlOnce);
+  (function tryRestore(){
+    try{
+      const saved = sessionStorage.getItem('beastmd_admin_pass');
+      if(saved){ ADMIN_PASS = saved; openShell(); }
+    }catch(e){}
   })();
-  </script>
-  <script src="/assets/spooky-fx.js" defer></script>
+
+  function openShell(){
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('shell').classList.add('show');
+    loadOverview();
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    try{ sessionStorage.removeItem('beastmd_admin_pass'); }catch(e){}
+    location.reload();
+  });
+
+  // ===== 3D TILT =====
+  function attachTilt(el, maxDeg){
+    el.style.transformStyle = 'preserve-3d';
+    function onMove(e){
+      const r = el.getBoundingClientRect();
+      const px = ((e.clientX - r.left) / r.width) - 0.5;
+      const py = ((e.clientY - r.top) / r.height) - 0.5;
+      el.style.transform = `rotateX(${(-py*maxDeg).toFixed(2)}deg) rotateY(${(px*maxDeg).toFixed(2)}deg) translateY(-3px)`;
+    }
+    function onLeave(){ el.style.transform = ''; }
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+  }
+  document.querySelectorAll('.tilt-3d').forEach(el => attachTilt(el, 6));
+
+  // ===== TABS =====
+  const loaders = {
+    sessions: loadSessions, activation: loadActivation, registrations: loadRegistrations,
+    keywords: loadKeywords, blacklist: loadBlacklist, features: loadFeatures,
+    scheduler: loadScheduler, menu: loadMenuSettings, sitemusic: loadSiteMusic, cookies: loadCookiesStatus, ownerchats: loadOwnerChats,
+    viewonce: loadViewOnce, reports: loadReports, groupbans: loadGroupBans,
+    activitylog: loadActivityLog, settings: loadSettingsTab,
+  };
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+      const tab = btn.dataset.tab;
+      document.getElementById('pane-'+tab).classList.add('active');
+      if(loaders[tab]) loaders[tab]();
+    });
+  });
+
+  // ===== OVERVIEW =====
+  async function loadOverview(){
+    const res = await fetch('/admin/stats', { headers: authHeaders() });
+    if(res.status === 401) return toast('Session expired — log in again.', false);
+    const data = await res.json();
+    const cards = document.querySelectorAll('#stat-cards .card .val');
+    cards[0].textContent = data.contacts ?? 0;
+    cards[1].textContent = data.messages ?? 0;
+    cards[2].textContent = data.viewonce ?? 0;
+    cards[3].textContent = data.scheduled_pending ?? 0;
+    fetch('/admin/uptime', { headers: authHeaders() }).then(r => r.json()).then(u => {
+      document.getElementById('stat-uptime').textContent = u.uptime_human || '—';
+    }).catch(() => {});
+    fetch('/admin/activity-trend', { headers: authHeaders() }).then(r => r.json()).then(t => {
+      const chart = document.getElementById('activity-chart');
+      chart.innerHTML = '';
+      const days = t.days || [];
+      const max = Math.max(1, ...days.map(d => d.count));
+      days.forEach(d => {
+        const col = document.createElement('div');
+        col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;';
+        const barWrap = document.createElement('div');
+        barWrap.style.cssText = 'flex:1;display:flex;align-items:flex-end;width:100%;justify-content:center;';
+        const bar = document.createElement('div');
+        const pct = Math.max(4, Math.round((d.count / max) * 100));
+        bar.style.cssText = `width:60%;height:${pct}%;background:var(--ember);border-radius:4px 4px 0 0;`;
+        bar.title = `${d.date}: ${d.count} message(s)`;
+        barWrap.appendChild(bar);
+        const label = document.createElement('div');
+        label.style.cssText = 'font-size:10px;color:var(--ash);font-family:\'JetBrains Mono\',monospace;';
+        label.textContent = d.label;
+        col.appendChild(barWrap);
+        col.appendChild(label);
+        chart.appendChild(col);
+      });
+    }).catch(() => {});
+
+    const sBody = document.getElementById('overview-sessions');
+    sBody.innerHTML = '';
+    if(!data.session_list || !data.session_list.length){
+      sBody.innerHTML = '<tr class="empty-row"><td colspan="5">No sessions registered yet.</td></tr>';
+    }else{
+      data.session_list.forEach(s => {
+        sBody.innerHTML += `<tr>
+          <td class="mono">${esc(s.name)}</td>
+          <td>${esc(s.number||'—')}</td>
+          <td><span class="status-dot ${s.online?'on':'off'}"></span>${s.online?'Online':'Offline'}</td>
+          <td>${s.antiban_risk ? `<span class="pill ${s.antiban_risk==='high'?'bad':s.antiban_risk==='medium'?'warn':'good'}">${esc(s.antiban_risk)}</span>` : '—'}</td>
+          <td>${esc(s.since||'—')}</td>
+        </tr>`;
+      });
+    }
+
+    const cBody = document.getElementById('recent-contacts');
+    cBody.innerHTML = '';
+    if(!data.recent_contacts || !data.recent_contacts.length){
+      cBody.innerHTML = '<tr class="empty-row"><td colspan="3">No contacts yet.</td></tr>';
+    }else{
+      data.recent_contacts.forEach(c => {
+        cBody.innerHTML += `<tr><td>${esc(c.name||'—')}</td><td class="mono">${esc(c.sender)}</td><td>${esc(c.time)}</td></tr>`;
+      });
+    }
+  }
+
+  // ===== SESSIONS =====
+  async function loadSessions(){
+    const res = await fetch('/admin/stats', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('sessions-table');
+    body.innerHTML = '';
+    if(!data.session_list || !data.session_list.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">No sessions yet.</td></tr>'; return;
+    }
+    data.session_list.forEach(s => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(s.name)}</td>
+        <td>${esc(s.number||'—')}</td>
+        <td><span class="status-dot ${s.online?'on':'off'}"></span>${s.online?'Online':'Offline'}</td>
+        <td>${s.msg_count ?? 0}</td>
+        <td><input type="checkbox" ${s.antiban_enabled?'checked':''} onchange="toggleSessionAntiban('${esc(s.name)}', this.checked)"></td>
+        <td class="row-actions">
+          <button class="mini-btn" onclick="setSessionExpiry('${esc(s.name)}')">Set Expiry</button>
+          <button class="mini-btn danger" onclick="terminateSession('${esc(s.name)}')">Terminate</button>
+        </td>
+      </tr>`;
+    });
+  }
+  window.terminateSession = async function(name){
+    if(!confirm('Terminate session "'+name+'"?')) return;
+    const res = await fetch('/admin/terminate', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session: name }) });
+    const data = await res.json();
+    toast(data.status === 'terminated' ? 'Session terminated.' : 'Failed.', data.status === 'terminated');
+    loadSessions();
+  };
+  window.toggleSessionAntiban = async function(session, enabled){
+    await fetch('/admin/session-antiban/toggle', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session, enabled }) });
+    toast('Antiban updated.', true);
+  };
+  window.setSessionExpiry = async function(name){
+    const input = prompt('Days from now until expiry (blank or 0 clears it):', '30');
+    if(input === null) return;
+    const days = parseFloat(input);
+    const expiry_ts = (input.trim() === '' || !days || days <= 0) ? null : (Date.now()/1000 + days*86400);
+    const res = await fetch('/admin/set-expiry', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session: name, expiry_ts }) });
+    toast(res.ok ? 'Expiry updated.' : 'Failed.', res.ok);
+    loadSessions();
+  };
+
+  // ===== ACTIVATION =====
+  async function loadActivation(){
+    const res = await fetch('/admin/activation-list', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('activation-table');
+    body.innerHTML = '';
+    if(!data.sessions || !data.sessions.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No access requests yet.</td></tr>'; return;
+    }
+    data.sessions.forEach(s => {
+      const statusPill = s.request_status === 'pending' ? '<span class="pill warn">Pending</span>'
+        : s.activated ? (s.expired ? '<span class="pill bad">Expired</span>' : '<span class="pill good">Active</span>')
+        : '<span class="pill ash">'+esc(s.request_status||'none')+'</span>';
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(s.session)}</td>
+        <td>${esc(s.phone||'—')}</td>
+        <td>${statusPill}</td>
+        <td>${esc(s.expiry_display||'—')}</td>
+        <td class="row-actions">
+          <button class="mini-btn good" onclick="approveSession('${esc(s.session)}')">Approve</button>
+          <button class="mini-btn danger" onclick="denySession('${esc(s.session)}')">Deny</button>
+          <button class="mini-btn" onclick="extendSession('${esc(s.session)}')">Extend</button>
+        </td>
+      </tr>`;
+    });
+  }
+  window.extendSession = async function(session){
+    const days = prompt('Extend by how many days?', '30');
+    if(!days) return;
+    const res = await fetch('/admin/activation-extend', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session, days: parseInt(days) }) });
+    const data = await res.json();
+    toast(data.success ? 'Extended.' : (data.error||'Failed.'), !!data.success);
+    loadActivation();
+  };
+  window.approveSession = async function(session){
+    const days = prompt('Grant how many days of access?', '30');
+    if(!days) return;
+    const res = await fetch('/admin/activation-approve', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session, days: parseInt(days) }) });
+    const data = await res.json();
+    if(data.success){
+      document.getElementById('key-reveal').style.display = 'block';
+      document.getElementById('key-reveal').textContent = 'Key for '+session+': '+data.key+' (valid '+Math.round(data.expires_in/60)+' min, grants '+data.days+' days)';
+      toast('Access approved.', true);
+    }else toast(data.error || 'Failed.', false);
+    loadActivation();
+  };
+  window.denySession = async function(session){
+    const res = await fetch('/admin/activation-deny', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session }) });
+    const data = await res.json();
+    toast(data.success ? 'Request denied.' : 'Failed.', data.success);
+    loadActivation();
+  };
+
+  // ===== REGISTRATIONS =====
+  async function loadRegistrations(){
+    const res = await fetch('/admin/registrations', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('registrations-table');
+    body.innerHTML = '';
+    if(!data.registrations || !data.registrations.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No registrations yet.</td></tr>'; return;
+    }
+    data.registrations.forEach(r => {
+      body.innerHTML += `<tr>
+        <td>${esc(r.name)}</td><td class="mono">${esc(r.phone)}</td>
+        <td>${r.badge && r.badge!=='none' ? '<span class="pill good">'+esc(r.badge)+'</span>' : '—'}</td>
+        <td>${r.verified ? '<span class="pill good">Yes</span>' : '<span class="pill ash">No</span>'}</td>
+        <td>${fmtTime(r.created_at)}</td>
+      </tr>`;
+    });
+  }
+
+  // ===== BROADCAST =====
+  document.getElementById('bc-send').addEventListener('click', async () => {
+    const target = document.getElementById('bc-target').value;
+    const message = document.getElementById('bc-message').value.trim();
+    if(!message) return toast('Write a message first.', false);
+    const res = await fetch('/admin/broadcast', { method:'POST', headers: authHeaders(), body: JSON.stringify({ target, message }) });
+    const data = await res.json();
+    if(data.status === 'queued'){
+      toast('Queued — position '+data.queue_size+' in line.', true);
+      document.getElementById('bc-message').value = '';
+    }else toast(data.message || 'Failed.', false);
+  });
+
+  // ===== KEYWORDS =====
+  async function loadKeywords(){
+    const res = await fetch('/admin/keywords', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('keywords-table');
+    body.innerHTML = '';
+    if(!data.keywords || !data.keywords.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No keywords yet.</td></tr>'; return;
+    }
+    data.keywords.forEach(k => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(k.trigger)}</td><td>${esc(k.reply)}</td><td>${esc(k.match_type)}</td>
+        <td><input type="checkbox" ${k.enabled?'checked':''} onchange="toggleKeyword('${esc(k.trigger)}', this.checked)"></td>
+        <td><button class="mini-btn danger" onclick="removeKeyword('${esc(k.trigger)}')">Remove</button></td>
+      </tr>`;
+    });
+  }
+  document.getElementById('kw-add').addEventListener('click', async () => {
+    const trigger = document.getElementById('kw-trigger').value.trim();
+    const reply = document.getElementById('kw-reply').value.trim();
+    const match_type = document.getElementById('kw-match').value;
+    if(!trigger || !reply) return toast('Trigger and reply are required.', false);
+    const res = await fetch('/admin/keywords/add', { method:'POST', headers: authHeaders(), body: JSON.stringify({ trigger, reply, match_type }) });
+    const data = await res.json();
+    if(data.success){ toast('Keyword added.', true); document.getElementById('kw-trigger').value=''; document.getElementById('kw-reply').value=''; loadKeywords(); }
+    else toast(data.error || 'Failed.', false);
+  });
+  window.toggleKeyword = async function(trigger, enabled){
+    await fetch('/admin/keywords/toggle', { method:'POST', headers: authHeaders(), body: JSON.stringify({ trigger, enabled }) });
+    toast('Updated.', true);
+  };
+  window.removeKeyword = async function(trigger){
+    if(!confirm('Remove keyword "'+trigger+'"?')) return;
+    await fetch('/admin/keywords/remove', { method:'POST', headers: authHeaders(), body: JSON.stringify({ trigger }) });
+    toast('Removed.', true); loadKeywords();
+  };
+
+  // ===== BLACKLIST =====
+  async function loadBlacklist(){
+    const res = await fetch('/admin/blacklist', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('blacklist-table');
+    body.innerHTML = '';
+    if(!data.blacklist || !data.blacklist.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="2">Nobody blacklisted.</td></tr>'; return;
+    }
+    data.blacklist.forEach(sender => {
+      body.innerHTML += `<tr><td class="mono">${esc(sender)}</td><td><button class="mini-btn danger" onclick="removeBlacklist('${esc(sender)}')">Remove</button></td></tr>`;
+    });
+  }
+  document.getElementById('bl-add').addEventListener('click', async () => {
+    const sender = document.getElementById('bl-number').value.trim();
+    if(!sender) return;
+    await fetch('/admin/blacklist/add', { method:'POST', headers: authHeaders(), body: JSON.stringify({ sender }) });
+    toast('Added to blacklist.', true); document.getElementById('bl-number').value=''; loadBlacklist();
+  });
+  window.removeBlacklist = async function(sender){
+    await fetch('/admin/blacklist/remove', { method:'POST', headers: authHeaders(), body: JSON.stringify({ sender }) });
+    toast('Removed.', true); loadBlacklist();
+  };
+
+  // ===== FEATURES =====
+  async function loadFeatures(){
+    const res = await fetch('/admin/features', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('features-table');
+    body.innerHTML = '';
+    if(!data.features || !data.features.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="2">No features configured yet.</td></tr>'; return;
+    }
+    data.features.forEach(f => {
+      body.innerHTML += `<tr><td>${esc(f.name)}</td><td><input type="checkbox" ${f.enabled?'checked':''} onchange="toggleFeature('${esc(f.name)}', this.checked)"></td></tr>`;
+    });
+  }
+  window.toggleFeature = async function(name, enabled){
+    await fetch('/admin/features/toggle', { method:'POST', headers: authHeaders(), body: JSON.stringify({ name, enabled }) });
+    toast('Updated.', true);
+  };
+
+  // ===== SEARCH =====
+  document.getElementById('search-btn').addEventListener('click', async () => {
+    const q = document.getElementById('search-q').value.trim();
+    const body = document.getElementById('search-table');
+    if(!q){ body.innerHTML = '<tr class="empty-row"><td colspan="4">Type a query and press Search.</td></tr>'; return; }
+    body.innerHTML = '<tr class="empty-row"><td colspan="4">Searching…</td></tr>';
+    const res = await fetch('/admin/search-messages?q=' + encodeURIComponent(q), { headers: authHeaders() });
+    const data = await res.json();
+    body.innerHTML = '';
+    if(!data.results || !data.results.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="4">No matches.</td></tr>'; return;
+    }
+    data.results.forEach(r => {
+      body.innerHTML += `<tr><td class="mono">${esc(r.sender)}</td><td>${esc(r.name||'—')}</td><td>${esc(r.body)}</td><td>${esc(r.time)}</td></tr>`;
+    });
+  });
+
+  // ===== SCHEDULER =====
+  async function loadScheduler(){
+    const res = await fetch('/admin/scheduler', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('scheduler-table');
+    body.innerHTML = '';
+    if(!data.messages || !data.messages.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">Nothing scheduled.</td></tr>'; return;
+    }
+    data.messages.forEach(m => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(m.to)}</td><td>${esc(m.message)}</td><td>${esc(m.next_run||'—')}</td>
+        <td>${esc(m.repeat||'once')}</td>
+        <td class="row-actions"><button class="mini-btn danger" onclick="deleteScheduled('${esc(m.id)}')">Delete</button></td>
+      </tr>`;
+    });
+  }
+  window.deleteScheduled = async function(id){
+    if(!confirm('Cancel this scheduled message?')) return;
+    await fetch('/admin/scheduler/' + encodeURIComponent(id), { method:'DELETE', headers: authHeaders() });
+    toast('Cancelled.', true); loadScheduler();
+  };
+
+  // ===== MENU =====
+  async function loadMenuSettings(){
+    const res = await fetch('/admin/menu-settings', { headers: authHeaders() });
+    const data = await res.json();
+    document.getElementById('menu-current-info').textContent = 'Current: ' + (data.mediaFile||'menu-bg.jpg') + ' (' + (data.mediaType||'image') + ')';
+    document.getElementById('menu-caption').value = data.caption || '';
+  }
+  document.getElementById('menu-media-upload-btn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('menu-media-file');
+    if(!fileInput.files.length) return toast('Choose a file first.', false);
+    const fd = new FormData();
+    fd.append('media', fileInput.files[0]);
+    const res = await fetch('/admin/menu-media/upload', { method:'POST', headers: { 'Authorization': 'Bearer ' + ADMIN_PASS }, body: fd });
+    const data = await res.json();
+    if(data.success){ toast('Menu media updated.', true); fileInput.value = ''; loadMenuSettings(); }
+    else toast(data.error || 'Upload failed.', false);
+  });
+  document.getElementById('menu-caption-save').addEventListener('click', async () => {
+    const caption = document.getElementById('menu-caption').value;
+    const res = await fetch('/admin/menu-settings', { method:'POST', headers: authHeaders(), body: JSON.stringify({ caption }) });
+    const data = await res.json();
+    toast(data.success ? 'Caption saved.' : 'Failed.', !!data.success);
+  });
+
+  // ===== YT COOKIES =====
+  async function loadCookiesStatus(){
+    const res = await fetch('/admin/cookies/status', { headers: authHeaders() });
+    const data = await res.json();
+    document.getElementById('cookies-current-info').textContent = data.present
+      ? 'Uploaded ' + data.age_days + ' day(s) ago' + (data.age_days > 14 ? ' — probably expired, re-upload a fresh one.' : ' — looking fresh.')
+      : 'No cookies.txt uploaded yet — downloads are running without cookie support.';
+  }
+  document.getElementById('cookies-upload-btn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('cookies-file');
+    if(!fileInput.files.length) return toast('Choose a cookies.txt file first.', false);
+    const fd = new FormData();
+    fd.append('cookies', fileInput.files[0]);
+    const res = await fetch('/admin/cookies/upload', { method:'POST', headers: { 'Authorization': 'Bearer ' + ADMIN_PASS }, body: fd });
+    const data = await res.json();
+    if(data.success){ toast('cookies.txt uploaded.', true); fileInput.value = ''; loadCookiesStatus(); }
+    else toast(data.error || 'Upload failed.', false);
+  });
+
+  // ===== SITE MUSIC =====
+  let siteMusicEnabled = false;
+  async function loadSiteMusic(){
+    const res = await fetch('/admin/site-music', { headers: authHeaders() });
+    const data = await res.json();
+    siteMusicEnabled = !!data.enabled;
+    document.getElementById('sitemusic-current-info').textContent = data.file
+      ? 'Current: ' + data.file + (data.title ? ' — "' + data.title + '"' : '') + (data.enabled ? ' (playing on site)' : ' (uploaded, currently off)')
+      : 'No track uploaded yet.';
+    document.getElementById('sitemusic-title').value = data.title || '';
+    document.getElementById('sitemusic-toggle-btn').textContent = siteMusicEnabled ? 'Disable' : 'Enable';
+  }
+  document.getElementById('sitemusic-upload-btn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('sitemusic-file');
+    if(!fileInput.files.length) return toast('Choose an audio file first.', false);
+    const fd = new FormData();
+    fd.append('audio', fileInput.files[0]);
+    const res = await fetch('/admin/site-music/upload', { method:'POST', headers: { 'Authorization': 'Bearer ' + ADMIN_PASS }, body: fd });
+    const data = await res.json();
+    if(data.success){ toast('Track uploaded — now playing on the site.', true); fileInput.value = ''; loadSiteMusic(); }
+    else toast(data.error || 'Upload failed.', false);
+  });
+  document.getElementById('sitemusic-toggle-btn').addEventListener('click', async () => {
+    const res = await fetch('/admin/site-music', { method:'POST', headers: authHeaders(), body: JSON.stringify({ enabled: !siteMusicEnabled }) });
+    const data = await res.json();
+    if(data.success){ toast(data.settings.enabled ? 'Site music enabled.' : 'Site music disabled.', true); loadSiteMusic(); }
+    else toast(data.error || 'Failed.', false);
+  });
+  document.getElementById('sitemusic-title-save').addEventListener('click', async () => {
+    const title = document.getElementById('sitemusic-title').value;
+    const res = await fetch('/admin/site-music', { method:'POST', headers: authHeaders(), body: JSON.stringify({ title }) });
+    const data = await res.json();
+    toast(data.success ? 'Title saved.' : 'Failed.', !!data.success);
+  });
+  document.getElementById('sitemusic-remove-btn').addEventListener('click', async () => {
+    if(!confirm('Remove the uploaded track and turn site music off?')) return;
+    const res = await fetch('/admin/site-music/remove', { method:'POST', headers: authHeaders() });
+    const data = await res.json();
+    if(data.success){ toast('Track removed.', true); loadSiteMusic(); }
+    else toast(data.error || 'Failed.', false);
+  });
+
+  // ===== OWNER CHATS =====
+  async function loadOwnerChats(){
+    const res = await fetch('/admin/owner-chats', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('ownerchats-table');
+    body.innerHTML = '';
+    if(!data.chats || !data.chats.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="2">No chats seen yet.</td></tr>'; return;
+    }
+    data.chats.forEach(c => {
+      body.innerHTML += `<tr><td class="mono">${esc(c.chat_id)}</td><td><input type="checkbox" ${c.ai_allowed?'checked':''} onchange="toggleOwnerChat('${esc(c.chat_id)}', this.checked)"></td></tr>`;
+    });
+  }
+  window.toggleOwnerChat = async function(chat_id, allowed){
+    await fetch('/admin/owner-chats/toggle', { method:'POST', headers: authHeaders(), body: JSON.stringify({ chat_id, allowed }) });
+    toast('Updated.', true);
+  };
+
+  // ===== VIEW-ONCE =====
+  async function loadViewOnce(){
+    const res = await fetch('/admin/viewonce', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('viewonce-table');
+    body.innerHTML = '';
+    if(!data.items || !data.items.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">Nothing saved.</td></tr>'; return;
+    }
+    data.items.forEach(v => {
+      const link = '/admin/viewonce/file/' + encodeURIComponent(v.filename) + '?pass=' + encodeURIComponent(ADMIN_PASS);
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(v.sender)}</td><td>${esc(v.media_type)}</td><td>${esc(v.caption||'—')}</td><td>${esc(v.time)}</td>
+        <td><a href="${link}" target="_blank" class="mini-btn">View</a></td>
+      </tr>`;
+    });
+  }
+
+  // ===== REPORTS =====
+  async function loadReports(){
+    const res = await fetch('/admin/reports', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('reports-table');
+    body.innerHTML = '';
+    if(!data.reports || !data.reports.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">No reports.</td></tr>'; return;
+    }
+    data.reports.forEach(r => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(r.group_id)}</td><td class="mono">${esc(r.reporter)}</td><td class="mono">${esc(r.target)}</td>
+        <td>${esc(r.reason)}</td>
+        <td>${r.resolved ? '<span class="pill good">Resolved</span>' : '<span class="pill warn">Open</span>'}</td>
+        <td>${r.resolved ? '' : '<button class="mini-btn good" onclick="resolveReport('+r.id+')">Resolve</button>'}</td>
+      </tr>`;
+    });
+  }
+  window.resolveReport = async function(id){
+    await fetch('/admin/reports/resolve', { method:'POST', headers: authHeaders(), body: JSON.stringify({ id }) });
+    toast('Marked resolved.', true); loadReports();
+  };
+
+  // ===== GROUP BANS =====
+  async function loadGroupBans(){
+    const res = await fetch('/admin/group-bans', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('groupbans-table');
+    body.innerHTML = '';
+    if(!data.bans || !data.bans.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No bans recorded.</td></tr>'; return;
+    }
+    data.bans.forEach(b => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(b.group_id)}</td><td class="mono">${esc(b.number)}</td><td>${esc(b.reason||'—')}</td>
+        <td>${fmtTime(b.banned_at)}</td>
+        <td><button class="mini-btn danger" onclick="removeGroupBan('${esc(b.group_id)}','${esc(b.number)}')">Lift</button></td>
+      </tr>`;
+    });
+  }
+  window.removeGroupBan = async function(group_id, number){
+    if(!confirm('Lift this ban?')) return;
+    await fetch('/admin/group-bans/remove', { method:'POST', headers: authHeaders(), body: JSON.stringify({ group_id, number }) });
+    toast('Lifted.', true); loadGroupBans();
+  };
+
+  // ===== ACTIVITY LOG =====
+  async function loadActivityLog(){
+    const category = document.getElementById('al-category').value;
+    const res = await fetch('/admin/activity-log?category=' + category + '&limit=150', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('activitylog-table');
+    body.innerHTML = '';
+    if(!data.events || !data.events.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="4">Nothing logged.</td></tr>'; return;
+    }
+    data.events.forEach(e => {
+      body.innerHTML += `<tr><td>${esc(e.type)}</td><td class="mono">${esc(e.actor||'—')}</td><td>${esc(e.detail||'—')}</td><td>${esc(e.timestamp||'—')}</td></tr>`;
+    });
+  }
+  document.getElementById('al-category').addEventListener('change', loadActivityLog);
+  document.getElementById('al-export').addEventListener('click', () => {
+    window.open('/admin/activity-log/export?pass=' + encodeURIComponent(ADMIN_PASS), '_blank');
+  });
+  document.getElementById('al-clear').addEventListener('click', async () => {
+    const category = document.getElementById('al-category').value;
+    if(!confirm('Clear all "' + category + '" log entries? This cannot be undone.')) return;
+    await fetch('/admin/activity-log?category=' + category, { method:'DELETE', headers: authHeaders() });
+    toast('Cleared.', true); loadActivityLog();
+  });
+
+  // ===== SETTINGS (owner number + activation defaults — no billing fields here) =====
+  async function loadSettingsTab(){
+    const [ownerRes, actRes] = await Promise.all([
+      fetch('/admin/owner-number', { headers: authHeaders() }),
+      fetch('/admin/activation-settings', { headers: authHeaders() }),
+    ]);
+    const owner = await ownerRes.json();
+    const act = await actRes.json();
+    document.getElementById('set-owner-number').value = owner.source === 'override' ? owner.owner_number : '';
+    document.getElementById('owner-number-info').textContent = 'Active: +' + (owner.owner_number||'—') + ' (source: ' + owner.source + ')';
+    document.getElementById('set-default-days').value = act.activation_default_days || '';
+    document.getElementById('set-bypass-key').value = act.activation_bypass_key || '';
+  }
+  document.getElementById('set-owner-save').addEventListener('click', async () => {
+    const owner_number = document.getElementById('set-owner-number').value.trim();
+    const res = await fetch('/admin/owner-number', { method:'POST', headers: authHeaders(), body: JSON.stringify({ owner_number }) });
+    const data = await res.json();
+    toast(data.success ? 'Owner number saved.' : (data.error||'Failed.'), !!data.success);
+    loadSettingsTab();
+  });
+  document.getElementById('set-activation-save').addEventListener('click', async () => {
+    const body = {};
+    const days = document.getElementById('set-default-days').value;
+    const key = document.getElementById('set-bypass-key').value;
+    if(days) body.activation_default_days = days;
+    if(key) body.activation_bypass_key = key;
+    const res = await fetch('/admin/activation-settings', { method:'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    const data = await res.json();
+    toast(data.success ? 'Saved.' : (data.error||'Failed.'), !!data.success);
+  });
+</script>
+
 </body>
 </html>

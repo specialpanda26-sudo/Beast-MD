@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: owner)
+// Beast MD ported module (category: owner)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -2057,7 +2057,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from getplugin.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -2386,7 +2386,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from listcmd.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   
   
@@ -3261,12 +3261,12 @@ Object.assign(module.exports, (() => {
 
 Object.assign(module.exports, (() => {
   const store = require('../lib_ported/lightweight_store.js');
-  const axios = require('axios');
+  const { loadArray } = require('../lib_ported/localData');
   // --- helper code from setbio.js ---
-  const QUOTE_URLS = [
-      'https://raw.githubusercontent.com/GlobalTechInfo/Islamic-Database/main/text/random_quotes.txt',
-      'https://raw.githubusercontent.com/GlobalTechInfo/Islamic-Database/main/text/motivational_quotes.txt',
-      'https://raw.githubusercontent.com/GlobalTechInfo/Islamic-Database/main/text/pickup_quotes.txt'
+  const QUOTE_FILES = [
+      'text/random_quotes.json',
+      'text/motivational_quotes.json',
+      'text/pickup_quotes.json'
   ];
   let cachedQuotes = [];
   let lastFetchTime = 0;
@@ -3277,22 +3277,14 @@ Object.assign(module.exports, (() => {
               return cachedQuotes;
           }
           const allQuotes = [];
-          for (const url of QUOTE_URLS) {
-              try {
-                  const response = await axios.get(url, { timeout: 15000 });
-                  const lines = response.data
-                      .split('\n')
-                      .map((line) => line.trim())
-                      .filter((line) => line.length > 10);
-                  allQuotes.push(...lines);
-              }
-              catch (error) {
-              }
+          for (const file of QUOTE_FILES) {
+              const lines = loadArray(file);
+              allQuotes.push(...lines);
           }
           if (allQuotes.length === 0) {
               // Fallback quotes if fetch fails
               return [
-                  '💎 By Halloween MD - Your WhatsApp Bot',
+                  '💎 By Beast MD - Your WhatsApp Bot',
                   '🌟 Stay positive, work hard, make it happen.',
                   '✨ Believe in yourself and all that you are.',
                   '🚀 The future belongs to those who believe in the beauty of their dreams.',
@@ -3307,12 +3299,12 @@ Object.assign(module.exports, (() => {
           return allQuotes;
       }
       catch (error) {
-          return cachedQuotes.length > 0 ? cachedQuotes : ['💎 By Halloween MD - Your WhatsApp Bot'];
+          return cachedQuotes.length > 0 ? cachedQuotes : ['💎 By Beast MD - Your WhatsApp Bot'];
       }
   }
   function getRandomQuote(quotes) {
       if (!quotes || quotes.length === 0)
-          return '💎 By Halloween MD';
+          return '💎 By Beast MD';
       return quotes[Math.floor(Math.random() * quotes.length)];
   }
   async function updateAutoBio(sock) {
@@ -3327,7 +3319,7 @@ Object.assign(module.exports, (() => {
               bio = autoBioSettings.customBio.replace('{quote}', randomQuote);
           }
           else {
-              bio = `${randomQuote}\n\n💎 Halloween MD`;
+              bio = `${randomQuote}\n\n💎 Beast MD`;
           }
           if (bio.length > 139) {
               bio = `${bio.substring(0, 136) }...`;
@@ -3397,7 +3389,7 @@ Object.assign(module.exports, (() => {
                         `• \`.setbio set <text>\` - Set custom bio\n` +
                         `• \`.setbio reset\` - Reset to default bio\n` +
                         `• \`.setbio preview\` - Preview random quote\n\n` +
-                        `*Default Bio:*\n{quote}\n💎 Halloween MD\n\n` +
+                        `*Default Bio:*\n{quote}\n💎 Beast MD\n\n` +
                         `*Custom Bio:*\n${autoBioSettings.customBio || 'Not set'}\n\n` +
                         `*Note:* Use \`{quote}\` in custom bio to insert random quotes.\n\n` +
                         `*Sources:*\n• Famous Quotes\n• Motivational Quotes\n• Pickup Lines`
@@ -3407,7 +3399,7 @@ Object.assign(module.exports, (() => {
                 const quotes = await fetchQuotes();
                 const randomQuote = getRandomQuote(quotes);
                 return await sock.sendMessage(chatId, {
-                    text: `*📝 Preview Quote*\n\n${randomQuote}\n\n💎 Halloween MD\n\n_This is how your bio will look with random quotes_`
+                    text: `*📝 Preview Quote*\n\n${randomQuote}\n\n💎 Beast MD\n\n_This is how your bio will look with random quotes_`
                 }, { quoted: message });
             }
             if (action === 'on') {
@@ -3468,7 +3460,7 @@ Object.assign(module.exports, (() => {
                     await updateAutoBio(sock);
                 }
                 return await sock.sendMessage(chatId, {
-                    text: '✅ *Bio reset to default!*\n\n*Default bio:*\n{quote}\n💎 Halloween MD'
+                    text: '✅ *Bio reset to default!*\n\n*Default bio:*\n{quote}\n💎 Beast MD'
                 }, { quoted: message });
             }
             return await sock.sendMessage(chatId, {
@@ -3500,7 +3492,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from setcmd.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   
   

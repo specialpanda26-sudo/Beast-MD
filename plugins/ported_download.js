@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: download)
+// Beast MD ported module (category: download)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -17,7 +17,7 @@ Object.assign(module.exports, (() => {
   // --- helper code from alamy.js ---
   /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
   return {
 
@@ -92,7 +92,7 @@ Object.assign(module.exports, (() => {
   const pkg = require('api-qasim');
   const axios = require('axios');
   // --- helper code from android1.js ---
-  const QasimAny = pkg;
+  const PortedAPI = pkg;
   return {
 
     // ── .apkdl ─── Search APKs and download by reply | usage: .apkdl <apk_name>
@@ -121,7 +121,7 @@ Object.assign(module.exports, (() => {
                 return await sock.sendMessage(chatId, { text: '*Please provide an APK name.*\nExample: .apkdl Telegram' }, { quoted: message });
             }
             await sock.sendMessage(chatId, { text: '🔎 Searching for APKs...' }, { quoted: message });
-            const res = await QasimAny.apksearch(query);
+            const res = await PortedAPI.apksearch(query);
             if (!res?.data || !Array.isArray(res.data) || res.data.length === 0) {
                 return await sock.sendMessage(chatId, { text: '❌ No APKs found.' }, { quoted: message });
             }
@@ -260,7 +260,7 @@ Object.assign(module.exports, (() => {
             const caption = `📘 *Facebook Downloader*
 🎞 Quality: *${selected.resolution || 'Unknown'}*
 
-> *_Downloaded by Halloween MD_*`;
+> *_Downloaded by Beast MD_*`;
             await sock.sendMessage(chatId, { video: { url: videoUrl }, mimetype: 'video/mp4', caption }, { quoted: message });
         }
         catch (err) {
@@ -540,7 +540,7 @@ Object.assign(module.exports, (() => {
                 document: { url },
                 fileName: filename,
                 mimetype: 'application/zip',
-                caption: `📦 *Repository:* ${user}/${repo}\n✨ *Cloned by Halloween MD*`
+                caption: `📦 *Repository:* ${user}/${repo}\n✨ *Cloned by Beast MD*`
             }, { quoted: message });
         }
         catch (err) {
@@ -631,13 +631,13 @@ Object.assign(module.exports, (() => {
                     await sock.sendMessage(chatId, {
                         video: { url },
                         mimetype: 'video/mp4',
-                        caption: '📥 *Downloaded by Halloween MD*'
+                        caption: '📥 *Downloaded by Beast MD*'
                     }, { quoted: message });
                 }
                 else {
                     await sock.sendMessage(chatId, {
                         image: { url },
-                        caption: '📥 *Downloaded by Halloween MD*'
+                        caption: '📥 *Downloaded by Beast MD*'
                     }, { quoted: message });
                 }
                 if (i < mediaList.length - 1) {
@@ -1821,7 +1821,7 @@ Object.assign(module.exports, (() => {
                 video: { url: videoData.downloadUrl },
                 mimetype: 'video/mp4',
                 fileName: `${videoData.title || videoTitle || 'video'}.mp4`,
-                caption: `🎬 *${videoData.title || videoTitle || 'Video'}*\n\n> *_Downloaded by Halloween MD_*`
+                caption: `🎬 *${videoData.title || videoTitle || 'Video'}*\n\n> *_Downloaded by Beast MD_*`
             }, { quoted: message });
         }
         catch (err) {

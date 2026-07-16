@@ -1,6 +1,8 @@
 import os
 import io
 import csv
+import ast
+import string
 import time
 import asyncio
 import logging
@@ -22,7 +24,7 @@ except ImportError:
     pass
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("HenryTechCore")
+logger = logging.getLogger("BotCore")
 
 def print_banner():
     banner = """
@@ -43,8 +45,8 @@ def print_banner():
 ║   \033[1;35m██████╔╝╚██████╔╝   ██║   ███████║\033[1;36m                    ║
 ║   \033[1;35m╚═════╝  ╚═════╝    ╚═╝   ╚══════╝\033[1;36m                   ║
 ║                                                              ║
-║      \033[1;33m✦ Halloween MD™ — created by Henry ✦\033[1;36m              ║
-║      \033[1;32m⚡ HALLOWEEN MD v19™  |  PYTHON BACKEND\033[1;36m              ║
+║      \033[1;33m✦ Beast MD — created by Henry ✦\033[1;36m              ║
+║      \033[1;32m⚡ BEAST MD  |  PYTHON BACKEND\033[1;36m              ║
 ║      \033[1;33m⚡ AI  |  DATABASE  |  COMMANDS  |  API\033[1;36m            ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -112,7 +114,7 @@ SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Henry Tech Bot Panel")
+SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Beast MD Panel")
 
 # ✅ FIX: Render blocks outbound traffic on raw SMTP ports (25/465/587) —
 # this is why /register's email path always failed with "couldn't reach
@@ -124,31 +126,9 @@ SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Henry Tech Bot Panel")
 # somewhere that doesn't block SMTP, e.g. Railway/a VPS).
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
-REG_STARTER_CREDITS = int(os.environ.get("REG_STARTER_CREDITS", "80"))  # 80 kesh starter credit on verify
-
-# ── Referral program ─────────────────────────────────────────────────────
-# Whoever invited a new user (referrer) gets REFERRAL_REFERRER_BONUS kesh,
-# and the new user themself gets REFERRAL_REFERRED_BONUS kesh — paid out
-# automatically (no human review) the moment the referred user completes
-# OTP verification. This stacks on top of REG_STARTER_CREDITS, which every
-# verified user gets regardless of referral.
-REFERRAL_REFERRER_BONUS = int(os.environ.get("REFERRAL_REFERRER_BONUS", "15"))
-REFERRAL_REFERRED_BONUS = int(os.environ.get("REFERRAL_REFERRED_BONUS", "30"))
 OTP_TTL_SECONDS = 600  # 10 minutes
 
-# NEW: manual top-up / wallet funding via M-Pesa "Send Money" to the admin's
-# own number. We CANNOT verify in real time whether an M-Pesa code or
-# screenshot is genuine (that needs a Safaricom Daraja API integration this
-# project doesn't have) — so instead of pretending to auto-verify, this
-# queues every submission for a human admin to approve/reject from the
-# Payments tab. Credits only land in the user's wallet once approved.
 import re as _re
-import base64 as _b64
-
-MPESA_CODE_RE = _re.compile(r"^[A-Z0-9]{8,12}$")
-PAYMENT_PROOFS_DIR = DATA_DIR / "payment_proofs"
-PAYMENT_PROOFS_DIR.mkdir(exist_ok=True)
-ADMIN_PAYTO_NUMBER = os.environ.get("ADMIN_PAYTO_NUMBER", "")  # e.g. 254712345678 — shown to users as where to send M-Pesa funds
 
 
 def _generate_otp() -> str:
@@ -229,13 +209,13 @@ async def send_otp_whatsapp(phone: str, otp: str, name: str, require_owner_sessi
 async def _send_otp_email_resend(to_email: str, otp: str, name: str) -> dict:
     """HTTPS-based email send via Resend's API — works on Render since it's
     just a normal outbound web request, unlike raw SMTP which Render blocks."""
-    subject = "Your Henry Tech Bot Panel verification code"
+    subject = "Your Beast MD Panel verification code"
     html_body = (
         f"<p>Hi {html.escape(name or 'there')},</p>"
         f"<p>Your verification code is: <b style='font-size:20px'>{otp}</b></p>"
         f"<p>This code expires in 10 minutes. Enter it on the registration page to verify "
-        f"your number and unlock your trust badge + {REG_STARTER_CREDITS} kesh free credit.</p>"
-        f"<p>— Henry Tech Bot Panel</p>"
+        f"your number and unlock your trust badge.</p>"
+        f"<p>— Beast MD Panel</p>"
     )
     try:
         async with httpx.AsyncClient(timeout=8) as client:
@@ -276,13 +256,13 @@ async def send_otp_email(to_email: str, otp: str, name: str) -> dict:
     import smtplib
     from email.mime.text import MIMEText
 
-    subject = "Your Henry Tech Bot Panel verification code"
+    subject = "Your Beast MD Panel verification code"
     body = (
         f"Hi {name or 'there'},\n\n"
         f"Your verification code is: {otp}\n\n"
         f"This code expires in 10 minutes. Enter it on the registration page to verify "
-        f"your number and unlock your trust badge + {REG_STARTER_CREDITS} kesh free credit.\n\n"
-        f"— Henry Tech Bot Panel"
+        f"your number and unlock your trust badge.\n\n"
+        f"— Beast MD Panel"
     )
     msg = MIMEText(body)
     msg["Subject"] = subject
@@ -838,13 +818,13 @@ async def init_db():
         """)
 
         await db.commit()
-        logger.info("\033[1;32m⚡ Halloween MD™ — Master Database Synchronized — All tables ready.\033[0m")
+        logger.info("\033[1;32m⚡ Beast MD — Master Database Synchronized — All tables ready.\033[0m")
 
 
 @app.before_serving
 async def startup():
     await init_db()
-    logger.info("\033[1;36m🔥 Halloween MD™ Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
+    logger.info("\033[1;36m🔥 Beast MD Backend LIVE on port %s\033[0m", os.environ.get("PORT", 5000))
     logger.info("\033[1;33m📡 Waiting for WhatsApp bot session (Node.js) to connect...\033[0m")
     if not ADMIN_PASSWORD:
         logger.warning("\033[1;31m⚠️  ADMIN_PASSWORD is not set — /admin has FULL OPEN ACCESS to anyone with the URL. Set ADMIN_PASSWORD in your environment before going live.\033[0m")
@@ -1017,7 +997,7 @@ async def api_register():
 
 @app.route("/api/verify-otp", methods=["POST"])
 async def api_verify_otp():
-    """Step 2: user submits phone + OTP -> verify, award trust badge + free credits."""
+    """Step 2: user submits phone + OTP -> verify, award trust badge."""
     data = await request.get_json(silent=True) or {}
     phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
     otp = (data.get("otp") or "").strip()
@@ -1044,40 +1024,16 @@ async def api_verify_otp():
 
         await db.execute("""
             UPDATE registrations
-            SET verified = 1, badge = 'Trusted', credits = credits + ?, verified_at = ?
+            SET verified = 1, badge = 'Trusted', verified_at = ?
             WHERE phone = ?
-        """, (REG_STARTER_CREDITS, time.time(), phone))
-
-        referral_message = ""
-        total_credits = REG_STARTER_CREDITS
-        if referred_by:
-            # Re-check the referrer is still a verified account at payout time
-            # (defensive — they were checked at registration too).
-            async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (referred_by,)) as c:
-                ref_row = await c.fetchone()
-            if ref_row and ref_row[0] == 1:
-                await db.execute(
-                    "UPDATE registrations SET credits = credits + ? WHERE phone = ?",
-                    (REFERRAL_REFERRER_BONUS, referred_by)
-                )
-                await db.execute(
-                    "UPDATE registrations SET credits = credits + ?, referral_bonus_given = 1 WHERE phone = ?",
-                    (REFERRAL_REFERRED_BONUS, phone)
-                )
-                await db.execute("""
-                    INSERT INTO referrals (referrer_phone, referred_phone, referrer_bonus, referred_bonus, created_at)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (referred_by, phone, REFERRAL_REFERRER_BONUS, REFERRAL_REFERRED_BONUS, time.time()))
-                total_credits += REFERRAL_REFERRED_BONUS
-                referral_message = f" Plus a {REFERRAL_REFERRED_BONUS} kesh referral bonus for signing up via invite!"
+        """, (time.time(), phone))
 
         await db.commit()
 
     return jsonify({
         "success": True,
-        "message": f"Number verified! 🛡️ Trust badge unlocked + {REG_STARTER_CREDITS} kesh free credit added.{referral_message}",
+        "message": "Number verified! 🛡️ Trust badge unlocked.",
         "badge": "Trusted",
-        "credits": total_credits
     })
 
 
@@ -1183,42 +1139,6 @@ async def api_reset_password():
         await db.commit()
 
     return jsonify({"success": True, "message": "Password updated! You can log in with your new password now."})
-
-
-@app.route("/api/referrals", methods=["GET"])
-async def api_referrals():
-    """Referral summary for a verified user: their referral code (their own
-    phone number), total kesh earned from referrals, and the list of people
-    who signed up using their code."""
-    phone = (request.args.get("phone") or "").strip().replace(" ", "").replace("+", "")
-    if not phone or not phone.isdigit():
-        return jsonify({"success": False, "error": "Valid phone number required."}), 400
-
-    async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
-            row = await c.fetchone()
-        if not row:
-            return jsonify({"success": False, "error": "Not registered yet. Send *.register* to the bot first."}), 404
-        if not row[0]:
-            return jsonify({"success": False, "error": "Verify your number first — send *.register*."}), 403
-
-        async with db.execute(
-            "SELECT referred_phone, referrer_bonus, created_at FROM referrals WHERE referrer_phone = ? ORDER BY created_at DESC",
-            (phone,)
-        ) as c:
-            rows = await c.fetchall()
-
-    total_earned = sum(r[1] for r in rows)
-    return jsonify({
-        "success": True,
-        "referral_code": phone,
-        "total_referrals": len(rows),
-        "total_earned": total_earned,
-        "referrer_bonus": REFERRAL_REFERRER_BONUS,
-        "referred_bonus": REFERRAL_REFERRED_BONUS,
-        "referrals": [{"phone": r[0], "bonus": r[1], "created_at": r[2]} for r in rows]
-    })
-
 
 
 @app.route("/panel")
@@ -1328,20 +1248,12 @@ async def _find_bot_session_for_phone(phone: str):
 
 @app.route("/api/profile", methods=["POST"])
 async def api_profile():
-    """Profile panel data for a verified user — wallet balance, badge,
-    recent top-up requests with their review status, and (✅ NEW) their own
+    """Profile panel data for a verified user — trust badge and their own
     linked bot session's antiban health + subscription status. Each user
     only ever sees their own session's numbers here — this is deliberately
     NOT the aggregated "worst session" view /admin shows.
 
-    ✅ FIX: this function existed in the codebase with no @app.route above
-    it, so it was dead code — nothing could ever call it, and the profile
-    panel it was written for was never reachable. Now wired up properly.
-
-    ✅ Also fixed: it was designed to trust a bare phone number with no
-    password, which would have exposed wallet balance and M-Pesa payment
-    history to anyone who guessed/knew a registered number. Now requires
-    name + phone + the password set at registration, matching how
+    Requires name + phone + the password set at registration, matching how
     /api/register and the rest of the panel login work.
     """
     data = await request.get_json(silent=True) or {}
@@ -1355,13 +1267,6 @@ async def api_profile():
         return body, status
     user = result
 
-    async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute(
-            "SELECT id, amount, mpesa_code, status, created_at FROM payments WHERE phone = ? ORDER BY created_at DESC LIMIT 10",
-            (phone,)
-        ) as c:
-            prows = await c.fetchall()
-
     bot_session = await _find_bot_session_for_phone(phone)
 
     return jsonify({
@@ -1370,242 +1275,17 @@ async def api_profile():
         "name": user["name"],
         "email": user["email"],
         "verified": user["verified"],
-        "credits": user["credits"],
         "badge": user["badge"] if user["verified"] else "none",
         "verified_at": user["verified_at"],
         "member_since": user["created_at"],
-        "recent_payments": [
-            {"id": p[0], "amount": p[1], "mpesa_code": p[2], "status": p[3], "created_at": p[4]}
-            for p in prows
-        ],
-        # ✅ NEW: this customer's own bot session — antiban health and
+        # This customer's own bot session — antiban health and
         # subscription/expiry status. None if they haven't paired a bot yet
-        # (registering a wallet account and pairing a bot are separate
+        # (registering an account and pairing a bot are separate
         # steps). Deliberately just THIS session, not every session like
         # /admin/stats shows — each customer's numbers are their own.
         "bot_session": bot_session,
     })
 
-
-@app.route("/api/payment-info", methods=["GET"])
-async def api_payment_info():
-    """Public info the panel's top-up form needs: where to send M-Pesa
-    funds. No auth required — this is just instructions, not user data."""
-    return jsonify({
-        "success": True,
-        "payto_number": ADMIN_PAYTO_NUMBER,
-        "configured": bool(ADMIN_PAYTO_NUMBER)
-    })
-
-
-@app.route("/api/subscription-pricing", methods=["GET"])
-async def api_subscription_pricing_get():
-    """✅ NEW: public read of the kesh-per-day price for buying extra bot
-    subscription time from the wallet. Separate from /api/pricing (which is
-    the config-reselling text) — this is a numeric price used to compute
-    the cost of a specific number of days in the panel's Buy Subscription
-    Time section."""
-    settings = await _get_activation_settings()
-    return jsonify({
-        "success": True,
-        "kesh_per_day": int(settings.get("subscription_kesh_per_day", 10)),
-    })
-
-
-@app.route("/api/subscription/buy", methods=["POST"])
-async def api_subscription_buy():
-    """✅ NEW: let a logged-in customer extend their OWN bot's subscription
-    using their wallet (kesh) balance — no admin approval needed, unlike
-    .addfunds top-ups. This is deliberately separate from the .pricing /
-    .setprice config-reselling flow: that sells access to internet-bundle
-    configs, this sells extra days of the customer's own bot staying
-    activated. Requires the same name+phone+password login as /api/profile.
-    """
-    data = await request.get_json(silent=True) or {}
-    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
-    name = (data.get("name") or "").strip()
-    password = data.get("password") or ""
-
-    ok, result = await _verify_panel_login(phone, name, password)
-    if not ok:
-        body, status = result
-        return body, status
-    user = result
-
-    try:
-        days = int(data.get("days"))
-    except (TypeError, ValueError):
-        return jsonify({"success": False, "error": "Enter a whole number of days."}), 400
-    if days < 1 or days > 365:
-        return jsonify({"success": False, "error": "Choose between 1 and 365 days."}), 400
-
-    bot_session = await _find_bot_session_for_phone(phone)
-    if not bot_session:
-        return jsonify({
-            "success": False,
-            "error": "No bot session is linked to this number yet. Pair your bot first at /pair, then come back to buy subscription time."
-        }), 404
-
-    settings = await _get_activation_settings()
-    kesh_per_day = int(settings.get("subscription_kesh_per_day", 10))
-    cost = days * kesh_per_day
-
-    if user["credits"] < cost:
-        return jsonify({
-            "success": False,
-            "error": f"Not enough kesh. This costs {cost} kesh ({kesh_per_day}/day × {days} days) but your balance is {user['credits']} kesh. Top up with *.addfunds* first."
-        }), 402
-
-    now = time.time()
-    base = bot_session["expiry_ts"] if (bot_session["expiry_ts"] and bot_session["expiry_ts"] > now) else now
-    new_expiry = base + (days * 86400)
-    session = bot_session["session"]
-
-    async with aiosqlite.connect(DB_FILE) as db:
-        await db.execute("UPDATE registrations SET credits = credits - ? WHERE phone = ?", (cost, phone))
-        await db.execute(
-            "UPDATE session_subscriptions SET activated = 1, activated_at = COALESCE(activated_at, ?), "
-            "expiry_ts = ?, subscription_days = COALESCE(subscription_days, 0) + ?, updated_at = ? WHERE session = ?",
-            (now, new_expiry, days, now, session)
-        )
-        await db.execute(
-            "INSERT INTO activity_log (category, type, actor, detail, timestamp) VALUES (?, ?, ?, ?, ?)",
-            ("sensitive", "subscription_purchase", phone,
-             f"Bought {days} day(s) for session '{session}' — {cost} kesh spent, new expiry {time.strftime('%d %b %Y, %H:%M', time.localtime(new_expiry))}",
-             now)
-        )
-        await db.commit()
-
-    # Reflect immediately in the live admin view too, not just after the
-    # next ~2min /admin/update-session ping from the Node bridge.
-    if session in SESSION_REGISTRY:
-        SESSION_REGISTRY[session]["expiry_ts"] = new_expiry
-
-    return jsonify({
-        "success": True,
-        "days_added": days,
-        "cost": cost,
-        "remaining_credits": user["credits"] - cost,
-        "expiry_ts": new_expiry,
-        "expiry_display": time.strftime("%d %b %Y, %H:%M", time.localtime(new_expiry)),
-    })
-
-
-@app.route("/api/pricing", methods=["GET"])
-async def api_pricing_get():
-    """✅ NEW: public read of whatever pricing text the admin has set via
-    .setprice or the panel. No auth needed — this is meant to be shown to
-    prospective customers. Returns a friendly default if never set, so a
-    fresh deploy doesn't show a blank/broken response."""
-    text = await _get_admin_setting("pricing_text")
-    return jsonify({
-        "success": True,
-        "pricing": text or (
-            "Airtel/Telkom Premium — 50 kesh / 30 days\n"
-            "Airtel/Telkom 24H — 15 kesh / 24 hours\n\n"
-            "(Admin hasn't customized this yet — send *.setprice* to update it.)"
-        ),
-    })
-
-
-@app.route("/admin/pricing", methods=["POST"])
-async def api_pricing_set():
-    """Owner-only: update the pricing text shown by .pricing / the public
-    site. Stored as plain text, not structured — deliberately simple since
-    prices here are quoted manually, not enforced programmatically."""
-    if not await _check_admin_auth_async(request):
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-    data = await request.get_json(silent=True) or {}
-    text = (data.get("pricing") or "").strip()
-    if not text:
-        return jsonify({"success": False, "error": "Pricing text can't be empty."}), 400
-    if len(text) > 2000:
-        return jsonify({"success": False, "error": "Keep it under 2000 characters."}), 400
-    await _set_admin_setting("pricing_text", text)
-    return jsonify({"success": True})
-
-
-@app.route("/api/payment/submit", methods=["POST"])
-async def api_payment_submit():
-    """User claims they sent kesh to the admin's M-Pesa number and submits
-    the transaction code (+ optional screenshot as base64) for review.
-
-    Important: this endpoint does NOT and CANNOT confirm the code is real —
-    there's no Safaricom Daraja/M-Pesa API integration here. It only does
-    cheap, honest checks (format looks like a real M-Pesa code, the code
-    hasn't been used before, the user is a verified registrant) and then
-    queues it as 'pending' for a human admin to approve from the Payments
-    tab. Credits are added only on admin approval, never automatically.
-    """
-    data = await request.get_json(silent=True) or {}
-    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
-    amount = data.get("amount")
-    mpesa_code = (data.get("mpesa_code") or "").strip().upper()
-    screenshot_b64 = data.get("screenshot_base64")  # optional, data-URL or raw base64
-
-    if not phone or not phone.isdigit():
-        return jsonify({"success": False, "error": "Valid phone number required."}), 400
-    try:
-        amount = int(amount)
-        if amount <= 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        return jsonify({"success": False, "error": "Amount must be a positive whole number."}), 400
-    if not MPESA_CODE_RE.match(mpesa_code):
-        return jsonify({"success": False, "error": "That doesn't look like a valid M-Pesa transaction code (8-12 letters/numbers, e.g. QFG7H8J9K0)."}), 400
-
-    async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute("SELECT verified FROM registrations WHERE phone = ?", (phone,)) as c:
-            reg = await c.fetchone()
-        if not reg or not reg[0]:
-            return jsonify({"success": False, "error": "Verify your number first — send *.register* to the bot."}), 403
-
-        async with db.execute("SELECT id, status FROM payments WHERE mpesa_code = ?", (mpesa_code,)) as c:
-            dup = await c.fetchone()
-        if dup:
-            return jsonify({"success": False, "error": f"This transaction code was already submitted (status: {dup[1]}). Each code can only be used once."}), 409
-
-        screenshot_path = None
-        if screenshot_b64:
-            try:
-                raw = screenshot_b64.split(",", 1)[-1]  # strip data: URL prefix if present
-                img_bytes = _b64.b64decode(raw)
-                if len(img_bytes) > 6 * 1024 * 1024:
-                    return jsonify({"success": False, "error": "Screenshot too large (max 6MB)."}), 400
-                fname = f"{phone}_{mpesa_code}_{int(time.time())}.jpg"
-                (PAYMENT_PROOFS_DIR / fname).write_bytes(img_bytes)
-                screenshot_path = fname
-            except Exception:
-                return jsonify({"success": False, "error": "Couldn't read that screenshot — try sending it again."}), 400
-
-        now = time.time()
-        await db.execute("""
-            INSERT INTO payments (phone, name, amount, mpesa_code, screenshot_path, status, created_at)
-            VALUES (?, '', ?, ?, ?, 'pending', ?)
-        """, (phone, amount, mpesa_code, screenshot_path, now))
-        await db.commit()
-        async with db.execute("SELECT last_insert_rowid()") as c:
-            new_id = (await c.fetchone())[0]
-
-    # Best-effort nudge to the admin on WhatsApp — never blocks the response
-    try:
-        async with httpx.AsyncClient(timeout=4) as client:
-            await client.post(f"{NODE_PAIR_URL}/notify-owner", headers=_node_headers(), json={
-                "text": (
-                    f"💰 *New top-up request* REF-{str(new_id).zfill(4)}\n"
-                    f"From: {phone}\nAmount: {amount} kesh\nCode: {mpesa_code}\n"
-                    f"{'📸 Screenshot attached' if screenshot_path else '⚠️ No screenshot'}\n\n"
-                    f"Review in /admin → Payments tab."
-                )
-            })
-    except Exception:
-        pass
-
-    return jsonify({
-        "success": True,
-        "id": new_id,
-        "message": "Submitted! Your top-up is pending admin review — you'll be notified once it's approved."
-    })
 
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
@@ -2077,11 +1757,6 @@ ACTIVATION_KEY_TTL_SECONDS = 600  # 10 minutes to redeem an issued key
 DEFAULT_ACTIVATION_SETTINGS = {
     "activation_default_days": "30",
     "activation_bypass_key": "",  # empty until admin sets one (or auto-generated below)
-    # ✅ NEW: kesh price per extra day of bot-subscription time, purchasable
-    # straight from the customer's own wallet balance via the panel — NOT
-    # related to the .pricing / .setprice config-reselling text above, this
-    # is specifically "buy more days of my own bot staying activated".
-    "subscription_kesh_per_day": "10",
 }
 
 
@@ -2096,7 +1771,7 @@ async def _get_activation_settings() -> dict:
     async with aiosqlite.connect(DB_FILE) as db:
         async with db.execute(
             "SELECT key, value FROM admin_settings WHERE key IN "
-            "('activation_default_days','activation_bypass_key','subscription_kesh_per_day')"
+            "('activation_default_days','activation_bypass_key')"
         ) as c:
             rows = await c.fetchall()
         got = {k: v for k, v in rows}
@@ -2464,13 +2139,6 @@ async def activation_settings():
         new_key = (data["activation_bypass_key"] or "").strip().upper()
         if new_key:
             updates["activation_bypass_key"] = new_key
-    if "subscription_kesh_per_day" in data:
-        raw = data["subscription_kesh_per_day"]
-        if raw not in (None, ""):
-            try:
-                updates["subscription_kesh_per_day"] = str(max(0, int(raw)))
-            except (TypeError, ValueError):
-                return jsonify({"error": "subscription_kesh_per_day must be a number"}), 400
     if not updates:
         return jsonify({"error": "nothing to update"}), 400
     async with aiosqlite.connect(DB_FILE) as db:
@@ -2543,140 +2211,6 @@ async def admin_registrations():
          "credits": r[4], "badge": r[5], "created_at": r[6], "verified_at": r[7]}
         for r in rows
     ]})
-
-
-@app.route("/admin/registrations/add-credit", methods=["POST"])
-async def admin_add_credit():
-    """
-    Admin tops up a verified user's kesh credit manually — just phone + name.
-    If the number isn't registered yet, creates a verified record for it
-    (the main bot already has the contact saved, so identity is trusted).
-    """
-    if not await _check_admin_auth_async(request):
-        return jsonify({"error": "unauthorized"}), 401
-    data = await request.get_json(silent=True) or {}
-    phone = (data.get("phone") or "").strip().replace(" ", "").replace("+", "")
-    name = (data.get("name") or "").strip()
-    amount = data.get("amount")
-
-    if not phone or not phone.isdigit():
-        return jsonify({"success": False, "error": "Valid phone number required."}), 400
-    try:
-        amount = int(amount)
-    except (TypeError, ValueError):
-        return jsonify({"success": False, "error": "Amount must be a number."}), 400
-
-    now = time.time()
-    async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute("SELECT phone FROM registrations WHERE phone = ?", (phone,)) as c:
-            exists = await c.fetchone()
-        if exists:
-            await db.execute("UPDATE registrations SET credits = credits + ?, name = COALESCE(NULLIF(?, ''), name) WHERE phone = ?",
-                              (amount, name, phone))
-        else:
-            await db.execute("""
-                INSERT INTO registrations (phone, name, email, otp, otp_expiry, verified, credits, badge, created_at, verified_at)
-                VALUES (?, ?, '', '', 0, 1, ?, 'Trusted', ?, ?)
-            """, (phone, name, amount, now, now))
-        await db.commit()
-
-    return jsonify({"success": True, "message": f"{amount} kesh added to {phone}."})
-
-
-# ── ✅ NEW: Wallet top-up review queue ───────────────────────────────────────
-@app.route("/admin/payments", methods=["GET"])
-async def admin_get_payments():
-    if not await _check_admin_auth_async(request):
-        return jsonify({"error": "unauthorized"}), 401
-    status_filter = (request.args.get("status") or "").strip().lower()
-    query = "SELECT id, phone, amount, mpesa_code, screenshot_path, status, admin_note, created_at, reviewed_at FROM payments"
-    params = ()
-    if status_filter in ("pending", "approved", "rejected"):
-        query += " WHERE status = ?"
-        params = (status_filter,)
-    query += " ORDER BY created_at DESC LIMIT 200"
-    async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute(query, params) as c:
-            rows = await c.fetchall()
-    return jsonify({"payments": [
-        {
-            "id": r[0], "phone": r[1], "amount": r[2], "mpesa_code": r[3],
-            "has_screenshot": bool(r[4]), "status": r[5], "admin_note": r[6],
-            "created_at": r[7], "reviewed_at": r[8],
-        } for r in rows
-    ]})
-
-
-@app.route("/admin/payment-proof/<int:payment_id>", methods=["GET"])
-async def admin_payment_proof(payment_id):
-    """Serves the uploaded screenshot for one payment — gated behind admin
-    auth so users' M-Pesa screenshots (which can contain phone numbers and
-    names) aren't sitting at a guessable public URL."""
-    if not await _check_admin_auth_async(request):
-        return jsonify({"error": "unauthorized"}), 401
-    async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute("SELECT screenshot_path FROM payments WHERE id = ?", (payment_id,)) as c:
-            row = await c.fetchone()
-    if not row or not row[0]:
-        return jsonify({"error": "No screenshot for this payment."}), 404
-    fpath = PAYMENT_PROOFS_DIR / row[0]
-    if not fpath.exists():
-        return jsonify({"error": "Screenshot file missing on disk."}), 404
-    return await app.send_file(fpath)
-
-
-@app.route("/admin/payments/review", methods=["POST"])
-async def admin_review_payment():
-    """Approve or reject a top-up request. Approving is the ONLY way kesh
-    credits get added from a user-submitted M-Pesa code — this is the human
-    verification step standing in for a real payment-gateway integration.
-    Always cross-check the code/amount against your own M-Pesa statement
-    before approving; the screenshot is supporting evidence, not proof."""
-    if not await _check_admin_auth_async(request):
-        return jsonify({"error": "unauthorized"}), 401
-    data = await request.get_json(silent=True) or {}
-    payment_id = data.get("id")
-    action = (data.get("action") or "").strip().lower()
-    note = (data.get("note") or "").strip()
-    if action not in ("approve", "reject"):
-        return jsonify({"success": False, "error": "action must be 'approve' or 'reject'."}), 400
-
-    async with aiosqlite.connect(DB_FILE) as db:
-        async with db.execute(
-            "SELECT phone, amount, status FROM payments WHERE id = ?", (payment_id,)
-        ) as c:
-            row = await c.fetchone()
-        if not row:
-            return jsonify({"success": False, "error": "Payment request not found."}), 404
-        phone, amount, status = row
-        if status != "pending":
-            return jsonify({"success": False, "error": f"Already reviewed (status: {status})."}), 400
-
-        now = time.time()
-        new_status = "approved" if action == "approve" else "rejected"
-        await db.execute(
-            "UPDATE payments SET status = ?, admin_note = ?, reviewed_at = ? WHERE id = ?",
-            (new_status, note, now, payment_id)
-        )
-        if action == "approve":
-            await db.execute(
-                "UPDATE registrations SET credits = credits + ? WHERE phone = ?",
-                (amount, phone)
-            )
-        await db.commit()
-
-    # Best-effort notify the user of the outcome
-    try:
-        if action == "approve":
-            text = f"✅ Your top-up of {amount} kesh has been approved and added to your wallet! Send *.profile* to check your balance."
-        else:
-            text = f"❌ Your top-up request was rejected.{(' Reason: ' + note) if note else ''} Reply to the bot if you think this is a mistake."
-        async with httpx.AsyncClient(timeout=4) as client:
-            await client.post(f"{NODE_PAIR_URL}/notify-user", headers=_node_headers(), json={"phone": phone, "text": text})
-    except Exception:
-        pass
-
-    return jsonify({"success": True, "status": new_status})
 
 
 @app.route("/admin/blacklist", methods=["GET"])
@@ -2802,6 +2336,32 @@ async def admin_uptime():
         "uptime_human": f"{int(uptime_seconds // 3600)}h {int((uptime_seconds % 3600) // 60)}m",
         "started_at": time.strftime("%d %b %Y, %H:%M:%S", time.localtime(PROCESS_START_TIME)),
     })
+
+
+@app.route("/admin/activity-trend", methods=["GET"])
+async def admin_activity_trend():
+    """Real message counts for each of the last 7 days (today included),
+    for the Overview page's activity chart — every number here comes
+    straight from the messages table, same as the rest of the stats."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    now = time.time()
+    today_midnight = now - (now % 86400)
+    days = []
+    async with aiosqlite.connect(DB_FILE) as db:
+        for i in range(6, -1, -1):
+            day_start = today_midnight - i * 86400
+            day_end = day_start + 86400
+            async with db.execute(
+                "SELECT COUNT(*) FROM messages WHERE timestamp >= ? AND timestamp < ?", (day_start, day_end)
+            ) as c:
+                count = (await c.fetchone())[0]
+            days.append({
+                "label": time.strftime("%a", time.localtime(day_start)),
+                "date": time.strftime("%d %b", time.localtime(day_start)),
+                "count": count,
+            })
+    return jsonify({"days": days})
 
 
 @app.route("/admin/keywords", methods=["GET"])
@@ -3466,7 +3026,7 @@ async def natural_chat():
 
     if context == "status":
         system_prompt = (
-            "You are Halloween MD, a friendly Kenyan WhatsApp bot. "
+            "You are Beast MD, a friendly Kenyan WhatsApp bot. "
             "Someone posted a WhatsApp status and you want to leave a short, warm comment. "
             "Rules:\n"
             "1. Keep it under 2 sentences — like a real friend commenting on a status.\n"
@@ -3481,7 +3041,7 @@ async def natural_chat():
         ) + SECRECY_GUARD
     elif context == "group":
         system_prompt = (
-            f"You are Halloween MD, a Kenyan WhatsApp bot in a group chat. "
+            f"You are Beast MD, a Kenyan WhatsApp bot in a group chat. "
             f"You are talking to {name}. "
             "Someone mentioned you or called your name in the group. Reply naturally.\n"
             "Rules:\n"
@@ -3512,7 +3072,7 @@ async def natural_chat():
         ) + SECRECY_GUARD
     else:
         system_prompt = (
-            f"You are Halloween MD, a friendly WhatsApp bot assistant. "
+            f"You are Beast MD, a friendly WhatsApp bot assistant. "
             f"You are talking to {name}. "
             "You are Kenyan and understand Swahili, Sheng (Kenyan street slang), and English. "
             "IMPORTANT RULES:\n"
@@ -3526,7 +3086,7 @@ async def natural_chat():
             "4. Be warm, friendly, sometimes funny — very human-like.\n"
             "5. Do NOT start every reply with 'Hello' or 'Hi'. Be natural.\n"
             "6. Use emoji occasionally but not excessively.\n"
-            "7. Your creator is Henry (@henrytech254)."
+            "7. Your creator is Henry."
         ) + SECRECY_GUARD
 
     try:
@@ -3671,10 +3231,10 @@ async def pair_proxy_post():
 @app.route("/get-bio", methods=["GET"])
 async def generate_auto_bio():
     bios = [
-        f"🤖 Halloween MD™ | Online 24/7 | {time.strftime('%H:%M')} 🌐",
-        f"⚡ Powered by Halloween MD | Always Active | {time.strftime('%H:%M')}",
-        f"🔥 Halloween MD™ Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
-        f"🔥 Halloween MD Automation | {time.strftime('%H:%M')} | All systems go",
+        f"🤖 Beast MD | Online 24/7 | {time.strftime('%H:%M')} 🌐",
+        f"⚡ Powered by Beast MD | Always Active | {time.strftime('%H:%M')}",
+        f"🔥 Beast MD Running | {time.strftime('%d/%m %H:%M')} | DM me 📩",
+        f"🔥 Beast MD Automation | {time.strftime('%H:%M')} | All systems go",
     ]
     return jsonify({"bio": random.choice(bios)})
 
@@ -4981,6 +4541,132 @@ async def admin_upload_menu_media():
     return jsonify({"success": True, "mediaType": media_type, "mediaFile": filename})
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# ✅ NEW: site background music — admin uploads one audio track that plays
+# on the public website (index.html) for visitors. Stored as a fixed
+# assets/site-music.<ext> file (old upload replaced), with a small JSON
+# settings file tracking enabled/title. Browsers block true autoplay-with-
+# sound, so the frontend starts muted and unmutes on the visitor's first
+# click/tap — see the player script in index.html.
+# ══════════════════════════════════════════════════════════════════════════
+SITE_MUSIC_EXTS = {"mp3", "ogg", "wav", "m4a"}
+
+
+def _load_site_music_settings() -> dict:
+    settings_path = DATA_DIR / "site-music-settings.json"
+    settings = {"enabled": False, "file": None, "title": ""}
+    if settings_path.exists():
+        try:
+            settings.update(json.loads(settings_path.read_text()))
+        except Exception:
+            pass
+    return settings
+
+
+def _save_site_music_settings(settings: dict):
+    (DATA_DIR / "site-music-settings.json").write_text(json.dumps(settings, indent=2))
+
+
+@app.route("/admin/site-music", methods=["GET"])
+async def admin_get_site_music():
+    """Current site-music settings for the admin panel's Site Music tab."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify(_load_site_music_settings())
+
+
+@app.route("/admin/site-music", methods=["POST"])
+async def admin_set_site_music():
+    """Toggle enabled/title without touching the uploaded file itself."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    data = await request.get_json(silent=True) or {}
+    settings = _load_site_music_settings()
+    if "enabled" in data:
+        settings["enabled"] = bool(data.get("enabled"))
+    if "title" in data:
+        settings["title"] = (data.get("title") or "").strip()
+    if settings["enabled"] and not settings.get("file"):
+        return jsonify({"success": False, "error": "Upload a track before enabling it."}), 400
+    _save_site_music_settings(settings)
+    return jsonify({"success": True, "settings": settings})
+
+
+@app.route("/admin/site-music/upload", methods=["POST"])
+async def admin_upload_site_music():
+    """Multipart upload (field name "audio") of the track to play on the
+    public site. Accepts mp3/ogg/wav/m4a, stores as assets/site-music.<ext>
+    (fixed name so re-uploads cleanly replace the old file), and turns
+    playback on automatically once a track is uploaded."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    files = await request.files
+    audio = files.get("audio")
+    if not audio or not audio.filename:
+        return jsonify({"success": False, "error": "audio file is required"}), 400
+
+    ext = (audio.filename.rsplit(".", 1)[-1] if "." in audio.filename else "").lower()
+    if ext not in SITE_MUSIC_EXTS:
+        return jsonify({"success": False, "error": "Unsupported file type. Use mp3, ogg, wav, or m4a."}), 400
+
+    raw = audio.read()
+    if len(raw) > 15 * 1024 * 1024:
+        return jsonify({"success": False, "error": "File too large — 15MB max."}), 400
+
+    assets_dir = Path(__file__).parent / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    # Remove any previous site-music.* file (different extension) first, so
+    # stale audio files don't pile up in assets/.
+    for old in assets_dir.glob("site-music.*"):
+        try:
+            old.unlink()
+        except Exception:
+            pass
+
+    filename = f"site-music.{ext}"
+    (assets_dir / filename).write_bytes(raw)
+
+    settings = _load_site_music_settings()
+    settings["file"] = filename
+    settings["enabled"] = True
+    if not settings.get("title"):
+        settings["title"] = audio.filename.rsplit(".", 1)[0]
+    _save_site_music_settings(settings)
+
+    return jsonify({"success": True, "settings": settings})
+
+
+@app.route("/admin/site-music/remove", methods=["POST"])
+async def admin_remove_site_music():
+    """Delete the uploaded track and turn site music off."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    assets_dir = Path(__file__).parent / "assets"
+    for old in assets_dir.glob("site-music.*"):
+        try:
+            old.unlink()
+        except Exception:
+            pass
+    settings = {"enabled": False, "file": None, "title": ""}
+    _save_site_music_settings(settings)
+    return jsonify({"success": True, "settings": settings})
+
+
+@app.route("/api/site-music", methods=["GET"])
+async def public_site_music():
+    """Public, unauthenticated: tells index.html whether music is on and
+    where the file lives, so the visitor's player can load it."""
+    settings = _load_site_music_settings()
+    if not settings.get("enabled") or not settings.get("file"):
+        return jsonify({"enabled": False})
+    return jsonify({
+        "enabled": True,
+        "url": f"/assets/{settings['file']}",
+        "title": settings.get("title") or "",
+    })
+
+
 async def search_songs(query: str, limit: int = 5) -> list:
     """ytsearchN: pseudo-URL — yt-dlp treats this as a real search and
     returns one JSON object per line for each result, using the same
@@ -5103,6 +4789,186 @@ async def widget_define():
         return jsonify({"success": False, "error": f"No definition found for \"{word}\"."}), 404
 
 
+@app.route("/api/widgets/text", methods=["POST"])
+async def widget_text_tool():
+    """Dispatcher for every fully self-contained tool — pure Python, no
+    external API calls at all, so none of these can ever break because a
+    stranger's server went down or a free API key got revoked. This is
+    deliberately one endpoint instead of a dozen tiny routes.
+
+    Supported tools: smallcaps, flip, reverse, upper, lower, title, rot13,
+    caesar, morse, unmorse, binary, unbinary, hex, unhex, wordcount,
+    password, lorem, dice, coinflip, roll, 8ball, calc, unit.
+    """
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    tool = (data.get("tool") or "").strip().lower()
+    text = data.get("text", "")
+    if isinstance(text, str):
+        text = text[:3000]
+
+    try:
+        if tool == "smallcaps":
+            table = str.maketrans(
+                "abcdefghijklmnopqrstuvwxyz",
+                "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘqʀꜱᴛᴜᴠᴡxʏᴢ"
+            )
+            return jsonify({"success": True, "result": text.lower().translate(table)})
+
+        elif tool == "flip":
+            table = str.maketrans(
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+                "ɐqɔpǝɟƃɥıɾʞlɯuodbɹsʇnʌʍxʎz∀BƆDƎℲפHIſʞ˥WNOԀQᴚS┴∩ΛMX⅄Z0Ɩᄅꓸᔭϛ9ㄥ86"
+            )
+            return jsonify({"success": True, "result": text.translate(table)[::-1]})
+
+        elif tool == "reverse":
+            return jsonify({"success": True, "result": text[::-1]})
+
+        elif tool == "upper":
+            return jsonify({"success": True, "result": text.upper()})
+
+        elif tool == "lower":
+            return jsonify({"success": True, "result": text.lower()})
+
+        elif tool == "title":
+            return jsonify({"success": True, "result": text.title()})
+
+        elif tool == "rot13":
+            import codecs
+            return jsonify({"success": True, "result": codecs.encode(text, "rot_13")})
+
+        elif tool == "caesar":
+            shift = int(data.get("shift", 3)) % 26
+            out = []
+            for c in text:
+                if c.isalpha():
+                    base = ord('A') if c.isupper() else ord('a')
+                    out.append(chr((ord(c) - base + shift) % 26 + base))
+                else:
+                    out.append(c)
+            return jsonify({"success": True, "result": "".join(out)})
+
+        elif tool == "morse":
+            MORSE = {'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---','K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-','U':'..-','V':'...-','W':'.--','X':'-..-','Y':'-.--','Z':'--..','0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.'}
+            out = [MORSE.get(c.upper(), '') if c != ' ' else '/' for c in text]
+            return jsonify({"success": True, "result": " ".join(filter(None, out))})
+
+        elif tool == "unmorse":
+            MORSE_REV = {'.-':'A','-...':'B','-.-.':'C','-..':'D','.':'E','..-.':'F','--.':'G','....':'H','..':'I','.---':'J','-.-':'K','.-..':'L','--':'M','-.':'N','---':'O','.--.':'P','--.-':'Q','.-.':'R','...':'S','-':'T','..-':'U','...-':'V','.--':'W','-..-':'X','-.--':'Y','--..':'Z','-----':'0','.----':'1','..---':'2','...--':'3','....-':'4','.....':'5','-....':'6','--...':'7','---..':'8','----.':'9'}
+            words = text.strip().split(' / ')
+            out = [" ".join(MORSE_REV.get(code, '') for code in w.split()) for w in words]
+            return jsonify({"success": True, "result": " ".join(out)})
+
+        elif tool == "binary":
+            return jsonify({"success": True, "result": " ".join(format(ord(c), "08b") for c in text)})
+
+        elif tool == "unbinary":
+            try:
+                result = "".join(chr(int(b, 2)) for b in text.split())
+            except ValueError:
+                return jsonify({"success": False, "error": "That doesn't look like valid binary (space-separated bytes)."}), 400
+            return jsonify({"success": True, "result": result})
+
+        elif tool == "hex":
+            return jsonify({"success": True, "result": text.encode("utf-8").hex(" ")})
+
+        elif tool == "unhex":
+            try:
+                result = bytes.fromhex(text.replace(" ", "")).decode("utf-8", errors="replace")
+            except ValueError:
+                return jsonify({"success": False, "error": "That doesn't look like valid hex."}), 400
+            return jsonify({"success": True, "result": result})
+
+        elif tool == "wordcount":
+            words = text.split()
+            return jsonify({"success": True, "result": {
+                "words": len(words), "characters": len(text), "characters_no_spaces": len(text.replace(" ", "")),
+                "sentences": max(text.count(".") + text.count("!") + text.count("?"), 1 if text.strip() else 0),
+            }})
+
+        elif tool == "password":
+            length = max(4, min(int(data.get("length", 16)), 128))
+            use_symbols = bool(data.get("symbols", True))
+            alphabet = string.ascii_letters + string.digits + ("!@#$%^&*()-_=+" if use_symbols else "")
+            return jsonify({"success": True, "result": "".join(secrets.choice(alphabet) for _ in range(length))})
+
+        elif tool == "lorem":
+            words_n = max(5, min(int(data.get("words", 50)), 500))
+            LOREM = ("lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor "
+                     "incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud "
+                     "exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat").split()
+            out = [secrets.choice(LOREM) for _ in range(words_n)]
+            out[0] = out[0].capitalize()
+            return jsonify({"success": True, "result": " ".join(out) + "."})
+
+        elif tool in ("dice", "roll"):
+            sides = max(2, min(int(data.get("sides", 6)), 1000))
+            count = max(1, min(int(data.get("count", 1)), 20))
+            rolls = [secrets.randbelow(sides) + 1 for _ in range(count)]
+            return jsonify({"success": True, "result": {"rolls": rolls, "total": sum(rolls)}})
+
+        elif tool == "coinflip":
+            return jsonify({"success": True, "result": secrets.choice(["Heads", "Tails"])})
+
+        elif tool == "8ball":
+            ANSWERS = ["It is certain.", "Without a doubt.", "Yes, definitely.", "You may rely on it.",
+                       "As I see it, yes.", "Most likely.", "Outlook good.", "Signs point to yes.",
+                       "Reply hazy, try again.", "Ask again later.", "Better not tell you now.",
+                       "Cannot predict now.", "Concentrate and ask again.", "Don't count on it.",
+                       "My reply is no.", "My sources say no.", "Outlook not so good.", "Very doubtful."]
+            return jsonify({"success": True, "result": secrets.choice(ANSWERS)})
+
+        elif tool == "calc":
+            expr = (data.get("expr") or "").strip()
+            if not expr or len(expr) > 200 or not _re.match(r'^[0-9+\-*/().\s%^]+$', expr):
+                return jsonify({"success": False, "error": "Only numbers and + - * / ( ) % ^ are allowed."}), 400
+            try:
+                node = ast.parse(expr.replace('^', '**'), mode='eval')
+                ALLOWED = (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Constant,
+                           ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod,
+                           ast.USub, ast.UAdd, ast.FloorDiv)
+                for n in ast.walk(node):
+                    if not isinstance(n, ALLOWED):
+                        raise ValueError("disallowed expression")
+                result = eval(compile(node, '<calc>', 'eval'), {"__builtins__": {}}, {})
+                return jsonify({"success": True, "result": result})
+            except Exception:
+                return jsonify({"success": False, "error": "Couldn't evaluate that expression."}), 400
+
+        elif tool == "unit":
+            value = float(data.get("value", 0))
+            from_u = (data.get("from") or "").lower()
+            to_u = (data.get("to") or "").lower()
+            UNITS = {
+                # length, meters as base
+                "m": 1, "km": 1000, "cm": 0.01, "mm": 0.001, "mi": 1609.344, "yd": 0.9144, "ft": 0.3048, "in": 0.0254,
+            }
+            WEIGHT = {"kg": 1, "g": 0.001, "lb": 0.453592, "oz": 0.0283495, "t": 1000}
+            if from_u in UNITS and to_u in UNITS:
+                result = value * UNITS[from_u] / UNITS[to_u]
+            elif from_u in WEIGHT and to_u in WEIGHT:
+                result = value * WEIGHT[from_u] / WEIGHT[to_u]
+            elif from_u == "c" and to_u == "f":
+                result = value * 9 / 5 + 32
+            elif from_u == "f" and to_u == "c":
+                result = (value - 32) * 5 / 9
+            elif from_u == "c" and to_u == "k":
+                result = value + 273.15
+            elif from_u == "k" and to_u == "c":
+                result = value - 273.15
+            else:
+                return jsonify({"success": False, "error": f"Unsupported unit pair: {from_u} → {to_u}"}), 400
+            return jsonify({"success": True, "result": round(result, 6)})
+
+        else:
+            return jsonify({"success": False, "error": f"Unknown tool: {tool}"}), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "error": "Something went wrong processing that."}), 500
+
+
 @app.route("/api/widgets/base64", methods=["POST"])
 async def widget_base64():
     if not _widget_rate_ok(request):
@@ -5121,6 +4987,63 @@ async def widget_base64():
         return jsonify({"success": True, "result": result})
     except Exception:
         return jsonify({"success": False, "error": "Couldn't decode that — is it valid Base64?"}), 400
+
+
+@app.route("/api/widgets/youtube", methods=["POST"])
+async def widget_youtube():
+    """Public site tool: paste a YouTube link, get a playable/downloadable
+    mp4 back. Reuses the same hardened get_video_url() pipeline the bot's
+    .video command uses (client-order spoofing + PO Token + cookies), so
+    reliability here rises and falls with the same fixes as the bot."""
+    if not _widget_rate_ok(request):
+        return jsonify({"success": False, "error": "Too many requests — try again in a few minutes."}), 429
+    data = await request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url or ("youtube.com" not in url and "youtu.be" not in url):
+        return jsonify({"success": False, "error": "Paste a valid YouTube link."}), 400
+    try:
+        result = await get_video_url(url)
+        return jsonify(result), (200 if result.get("success") else 502)
+    except Exception:
+        return jsonify({"success": False, "error": "Couldn't fetch that video right now."}), 502
+
+
+@app.route("/admin/cookies/status", methods=["GET"])
+async def admin_cookies_status():
+    """Tells the admin panel whether a YouTube cookies.txt is present on
+    the persistent disk, and how old it is, so Henry can see at a glance
+    whether it needs re-exporting (YouTube sessions expire)."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    cookie_path = DATA_DIR / "cookies.txt"
+    if not cookie_path.is_file():
+        return jsonify({"present": False})
+    age_days = (time.time() - cookie_path.stat().st_mtime) / 86400
+    return jsonify({"present": True, "age_days": round(age_days, 1), "size_bytes": cookie_path.stat().st_size})
+
+
+@app.route("/admin/cookies/upload", methods=["POST"])
+async def admin_upload_cookies():
+    """Multipart upload (field name "cookies") of a Netscape-format
+    cookies.txt exported from a logged-in YouTube session, saved to the
+    persistent disk at DATA_DIR/cookies.txt where yt-dlp already looks for
+    it. This is the only piece Henry couldn't do without shell access to
+    Render — everything else in the mitigation pipeline was already wired."""
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    files = await request.files
+    cookie_file = files.get("cookies")
+    if not cookie_file or not cookie_file.filename:
+        return jsonify({"success": False, "error": "cookies file is required"}), 400
+    raw = cookie_file.read()
+    if len(raw) > 512 * 1024:
+        return jsonify({"success": False, "error": "That's too large to be a cookies.txt — 512KB max."}), 400
+    text = raw.decode("utf-8", errors="ignore")
+    if "youtube.com" not in text or ("# Netscape HTTP Cookie File" not in text and "\t" not in text):
+        return jsonify({"success": False, "error": "Doesn't look like a valid Netscape-format cookies.txt with YouTube cookies. Use a browser extension like \"Get cookies.txt LOCALLY\" while logged into YouTube."}), 400
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (DATA_DIR / "cookies.txt").write_text(text)
+    return jsonify({"success": True})
 
 
 if __name__ == "__main__":

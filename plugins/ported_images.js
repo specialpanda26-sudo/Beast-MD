@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: images)
+// Beast MD ported module (category: images)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -13,7 +13,7 @@ module.exports = {};
 
 
 Object.assign(module.exports, (() => {
-  const axios = require('axios');
+  const { pickRandom } = require('../lib_ported/localData');
 
   return {
 
@@ -38,11 +38,10 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await axios.get('https://raw.githubusercontent.com/GlobalTechInfo/Database/main/images/coding.json');
-            if (!res.data || !Array.isArray(res.data) || res.data.length === 0) {
+            const randomImage = pickRandom('images/coding.json');
+            if (!randomImage) {
                 return await sock.sendMessage(chatId, { text: '❌ Failed to fetch image.' }, { quoted: message });
             }
-            const randomImage = res.data[Math.floor(Math.random() * res.data.length)];
             await sock.sendMessage(chatId, { image: { url: randomImage }, caption: '💻 Programming Image' }, { quoted: message });
         }
         catch (err) {
@@ -63,7 +62,7 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const axios = require('axios');
+  const { pickRandom } = require('../lib_ported/localData');
 
   return {
 
@@ -88,11 +87,10 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await axios.get('https://raw.githubusercontent.com/GlobalTechInfo/Database/main/images/cyberspace.json');
-            if (!res.data || !Array.isArray(res.data) || res.data.length === 0) {
+            const randomImage = pickRandom('images/cyberspace.json');
+            if (!randomImage) {
                 return await sock.sendMessage(chatId, { text: '❌ Failed to fetch image.' }, { quoted: message });
             }
-            const randomImage = res.data[Math.floor(Math.random() * res.data.length)];
             await sock.sendMessage(chatId, { image: { url: randomImage }, caption: '🌐 Cyberspace Image' }, { quoted: message });
         }
         catch (err) {
@@ -112,7 +110,7 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const axios = require('axios');
+  const { pickRandom } = require('../lib_ported/localData');
 
   return {
 
@@ -137,11 +135,10 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await axios.get('https://raw.githubusercontent.com/GlobalTechInfo/Database/main/images/game.json');
-            if (!res.data || !Array.isArray(res.data) || res.data.length === 0) {
+            const randomImage = pickRandom('images/game.json');
+            if (!randomImage) {
                 return await sock.sendMessage(chatId, { text: '❌ Failed to fetch image.' }, { quoted: message });
             }
-            const randomImage = res.data[Math.floor(Math.random() * res.data.length)];
             await sock.sendMessage(chatId, { image: { url: randomImage }, caption: '🎮 Gaming Image' }, { quoted: message });
         }
         catch (err) {
@@ -161,7 +158,7 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const axios = require('axios');
+  const { pickRandom } = require('../lib_ported/localData');
 
   return {
 
@@ -186,11 +183,10 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await axios.get('https://raw.githubusercontent.com/GlobalTechInfo/Database/main/images/islamic.json');
-            if (!res.data || !Array.isArray(res.data) || res.data.length === 0) {
+            const randomImage = pickRandom('images/islamic.json');
+            if (!randomImage) {
                 return await sock.sendMessage(chatId, { text: '❌ Failed to fetch image.' }, { quoted: message });
             }
-            const randomImage = res.data[Math.floor(Math.random() * res.data.length)];
             await sock.sendMessage(chatId, { image: { url: randomImage }, caption: '🕌 Islamic Image' }, { quoted: message });
         }
         catch (err) {
@@ -210,7 +206,7 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const axios = require('axios');
+  const { pickRandom } = require('../lib_ported/localData');
 
   return {
 
@@ -235,11 +231,10 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await axios.get('https://raw.githubusercontent.com/GlobalTechInfo/Database/main/images/mountain.json');
-            if (!res.data || !Array.isArray(res.data) || res.data.length === 0) {
+            const randomImage = pickRandom('images/mountain.json');
+            if (!randomImage) {
                 return await sock.sendMessage(chatId, { text: '❌ Failed to fetch image.' }, { quoted: message });
             }
-            const randomImage = res.data[Math.floor(Math.random() * res.data.length)];
             await sock.sendMessage(chatId, { image: { url: randomImage }, caption: '🏔️ Mountain Image' }, { quoted: message });
         }
         catch (err) {
@@ -333,7 +328,7 @@ Object.assign(module.exports, (() => {
 
 
 Object.assign(module.exports, (() => {
-  const axios = require('axios');
+  const { pickRandom } = require('../lib_ported/localData');
 
   return {
 
@@ -358,11 +353,10 @@ Object.assign(module.exports, (() => {
 
         const chatId = context.chatId || message.key.remoteJid;
         try {
-            const res = await axios.get('https://raw.githubusercontent.com/GlobalTechInfo/Database/main/images/tech.json');
-            if (!res.data || !Array.isArray(res.data) || res.data.length === 0) {
+            const randomImage = pickRandom('images/tech.json');
+            if (!randomImage) {
                 return await sock.sendMessage(chatId, { text: '❌ Failed to fetch image.' }, { quoted: message });
             }
-            const randomImage = res.data[Math.floor(Math.random() * res.data.length)];
             await sock.sendMessage(chatId, { image: { url: randomImage }, caption: '💻 Tech Image' }, { quoted: message });
         }
         catch (err) {

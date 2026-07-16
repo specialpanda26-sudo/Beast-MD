@@ -3,7 +3,7 @@ const { createRequire } = require('module');
 
 /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/
 const fs = require('fs');
 const path = require('path');
@@ -2051,5 +2051,5 @@ process.on('unhandledRejection', (reason, promise) => {
 module.exports = store;
 /*****************************************************************************
  *  Henry Bots / Henry Config Tools                                          *
- *  Owner: Henry (henrytech254)                                              *
+ *  Owner:                                              *
  *****************************************************************************/

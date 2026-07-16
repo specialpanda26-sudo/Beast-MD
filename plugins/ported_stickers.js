@@ -1,4 +1,4 @@
-// AUTO-PORTED from friend's MEGA-MD bot (category: stickers)
+// Beast MD ported module (category: stickers)
 // Mechanically converted from ESM handler(sock,message,args,context) shape
 // into Henry's CommonJS module.exports = { cmdName: async (h) => {...} } shape.
 // h = { sock, from, msg, isOwner, isPrimaryOwner, isCoOwner, isSubAdmin, isBotAdmin,
@@ -45,7 +45,7 @@ Object.assign(module.exports, (() => {
         }
         try {
             const mp4Buffer = await renderBlinkingVideoWithFfmpeg(text);
-            const webpPath = await writeExifVid(mp4Buffer, { packname: 'Halloween MD', author: 'henrytech254' });
+            const webpPath = await writeExifVid(mp4Buffer, { packname: 'Beast MD', author: '' });
             const webpBuffer = fs.readFileSync(webpPath);
             try {
                 fs.unlinkSync(webpPath);
@@ -845,7 +845,7 @@ Object.assign(module.exports, (() => {
             const bufferImage = Buffer.from(res.data.result.image, 'base64');
             try {
                 const stickerBuffer = await new Sticker(bufferImage, {
-                    pack: 'Halloween MD',
+                    pack: 'Beast MD',
                     author: userName,
                     type: StickerTypes.FULL,
                     categories: ['🤩', '🎉'],
@@ -1069,7 +1069,7 @@ Object.assign(module.exports, (() => {
             await img.load(webpBuffer);
             const json = {
                 'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
-                'sticker-pack-name': config.packname || 'Halloween MD',
+                'sticker-pack-name': config.packname || 'Beast MD',
                 'emojis': ['🤖']
             };
             const exifAttr = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);
@@ -1091,7 +1091,7 @@ Object.assign(module.exports, (() => {
                         await img2.load(smallWebp);
                         const json2 = {
                             'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
-                            'sticker-pack-name': config.packname || 'Halloween MD',
+                            'sticker-pack-name': config.packname || 'Beast MD',
                             'emojis': ['🤖']
                         };
                         const exifAttr2 = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);
@@ -1181,7 +1181,7 @@ Object.assign(module.exports, (() => {
       await img.load(webpBuffer);
       const json = {
           'sticker-pack-id': crypto.randomBytes(32).toString('hex'),
-          'sticker-pack-name': config.packname || 'Halloween MD',
+          'sticker-pack-name': config.packname || 'Beast MD',
           'emojis': ['✂️']
       };
       const exifAttr = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);

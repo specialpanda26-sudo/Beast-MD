@@ -1,7 +1,7 @@
 {
-  "name": "halloween-md",
+  "name": "md-bot",
   "version": "19.0.0",
-  "description": "Halloween MD v19™ — AI-powered WhatsApp automation with multi-session pairing",
+  "description": "Beast MD — AI-powered WhatsApp automation with multi-session pairing",
   "main": "client_bridge.js",
   "scripts": {
     "start": "node client_bridge.js"
@@ -46,9 +46,8 @@
     "whatsapp",
     "bot",
     "automation",
-    "henrytech",
-    "halloweenmd"
+    "mdbot"
   ],
-  "author": "Henry Tech (@henrytech254)",
+  "author": "",
   "license": "MIT"
 }
