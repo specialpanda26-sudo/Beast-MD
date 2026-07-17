@@ -2089,6 +2089,11 @@
   function attachTilt(el, maxDeg){
     el.style.transformStyle = 'preserve-3d';
     function onMove(e){
+      // Touch has no real "hover" — a mouse-tilt effect on a finger tap just
+      // leaves the card permanently rotated once the finger lifts (no
+      // pointerleave fires the way mouseleave does), which is the mobile
+      // "skewed card" bug. Skip tilting for touch/pen input entirely.
+      if (e.pointerType && e.pointerType !== 'mouse') return;
       const r = el.getBoundingClientRect();
       const px = ((e.clientX - r.left) / r.width) - 0.5;
       const py = ((e.clientY - r.top) / r.height) - 0.5;
@@ -2105,6 +2110,10 @@
     }
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerleave', onLeave);
+    // Safety net: on touch devices, always reset on release/cancel in case
+    // any tilt transform slipped through before this fix.
+    el.addEventListener('pointerup', onLeave);
+    el.addEventListener('pointercancel', onLeave);
   }
   document.querySelectorAll('.tilt-3d').forEach(el => attachTilt(el, 8));
   document.querySelectorAll('.btn').forEach(el => attachTilt(el, 10));

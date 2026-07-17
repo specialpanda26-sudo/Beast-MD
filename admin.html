@@ -525,6 +525,9 @@
   function attachTilt(el, maxDeg){
     el.style.transformStyle = 'preserve-3d';
     function onMove(e){
+      // Skip on touch/pen: there's no real "leave" event when a finger lifts,
+      // so the card was getting stuck permanently tilted/skewed on mobile.
+      if (e.pointerType && e.pointerType !== 'mouse') return;
       const r = el.getBoundingClientRect();
       const px = ((e.clientX - r.left) / r.width) - 0.5;
       const py = ((e.clientY - r.top) / r.height) - 0.5;
@@ -533,6 +536,8 @@
     function onLeave(){ el.style.transform = ''; }
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerleave', onLeave);
+    el.addEventListener('pointerup', onLeave);
+    el.addEventListener('pointercancel', onLeave);
   }
   document.querySelectorAll('.tilt-3d').forEach(el => attachTilt(el, 6));
 
