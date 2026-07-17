@@ -251,7 +251,7 @@
       });
       if(initial || wasAtBottom) box.scrollTop = box.scrollHeight;
     } else if(initial && box.children.length === 0){
-      box.innerHTML = '<div class="empty-state" id="empty-state"><div class="big">Quiet in here.</div>'+
+      box.innerHTML = '<div class="empty-state" id="empty-state-dyn"><div class="big">Quiet in here.</div>'+
         (state.dmTarget ? 'Send the first message.' : 'Be the first to say something in the public room.')+'</div>';
     }
   }

@@ -102,12 +102,31 @@
   footer .fbrand .serif-i{color:var(--ember);}
 
   @media(max-width:640px){ nav{display:none;} main{padding-top:130px;} .panel{padding:24px;} }
+
+  /* MOBILE FIX: hamburger reveals the nav as a dropdown instead of the
+     nav just disappearing with no way back on phones. */
+  .nav-toggle{display:none;}
+  @media(max-width:640px){
+    .nav-toggle{
+      display:flex;align-items:center;justify-content:center;width:38px;height:38px;
+      border:1px solid var(--line);border-radius:8px;background:none;color:var(--bone);
+      font-size:18px;cursor:pointer;
+    }
+    header{flex-wrap:wrap;}
+    nav{
+      display:none;flex-basis:100%;flex-direction:column;gap:2px;
+      background:var(--bg);border-top:1px solid var(--line);margin-top:14px;padding-top:10px;
+    }
+    nav.open{display:flex;}
+    nav a{padding:12px 4px;border-bottom:1px solid var(--line);}
+  }
 </style>
 </head>
 <body>
 
 <header>
   <a href="index.html" class="logo"><span class="serif" style="font-weight:600;">BEAST</span><span class="serif-i">MD</span></a>
+  <button id="navToggle" class="nav-toggle" aria-label="Menu" aria-expanded="false">&#9776;</button>
   <nav>
     <a href="index.html#features">Features</a>
     <a href="pair.html">Pairing</a>
@@ -395,5 +414,22 @@
   })();
 </script>
 
+
+<script>
+  // MOBILE FIX: nav used to just vanish under the breakpoint with no way
+  // to reopen it. Now a hamburger button toggles it as a dropdown.
+  (function(){
+    var btn = document.getElementById('navToggle');
+    var nav = document.querySelector('header nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function(){
+      nav.classList.toggle('open');
+      btn.setAttribute('aria-expanded', nav.classList.contains('open') ? 'true' : 'false');
+    });
+    nav.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){ nav.classList.remove('open'); });
+    });
+  })();
+</script>
 </body>
 </html>

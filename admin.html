@@ -68,7 +68,13 @@
 
   .section-title{font-size:13px;font-weight:600;color:var(--bone);margin:26px 0 12px;display:flex;align-items:center;justify-content:space-between;}
 
-  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  /* MOBILE FIX: tables used to clip (overflow:hidden) and squeeze every
+     column to fit the screen, which is why they were only readable at a
+     wider/zoomed-out size. Now each table scrolls horizontally inside its
+     own wrapper instead, so column text stays a normal, tappable size on
+     a phone and you swipe sideways to see the rest. */
+  .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;}
+  table{width:100%;min-width:560px;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;}
   thead th{text-align:left;font-size:11px;color:var(--ash);text-transform:uppercase;letter-spacing:0.4px;padding:12px 14px;background:var(--panel2);font-family:'JetBrains Mono',monospace;font-weight:500;}
   tbody td{padding:12px 14px;font-size:13px;border-top:1px solid var(--line);}
   tbody tr:hover{background:var(--panel2);}
@@ -211,37 +217,37 @@
         <div class="card tilt-3d"><div class="label">Uptime</div><div class="val" id="stat-uptime">—</div></div>
       </div>
       <div class="section-title">Live sessions</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Session</th><th>Number</th><th>Status</th><th>Antiban</th><th>Since</th></tr></thead>
         <tbody id="overview-sessions"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
       <div class="section-title">Messages — last 7 days</div>
       <div id="activity-chart" style="display:flex;align-items:flex-end;gap:10px;height:120px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:26px;"></div>
       <div class="section-title">Recent contacts</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Name</th><th>Sender</th><th>Time</th></tr></thead>
         <tbody id="recent-contacts"><tr class="empty-row"><td colspan="3">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- SESSIONS -->
     <div class="pane" id="pane-sessions">
       <h1>Sessions</h1>
       <div class="head-sub">Every session that has ever registered, with live health where connected.</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Session</th><th>Number</th><th>Status</th><th>Messages</th><th>Antiban</th><th>Actions</th></tr></thead>
         <tbody id="sessions-table"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- REGISTRATIONS -->
     <div class="pane" id="pane-registrations">
       <h1>Registrations</h1>
       <div class="head-sub">Everyone who's created a free account.</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Name</th><th>Phone</th><th>Badge</th><th>Verified</th><th>Joined</th></tr></thead>
         <tbody id="registrations-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- BROADCAST -->
@@ -268,10 +274,10 @@
         <select id="kw-match"><option value="contains">Contains</option><option value="exact">Exact</option><option value="starts_with">Starts with</option></select>
         <button class="btn" id="kw-add">Add</button>
       </div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Trigger</th><th>Reply</th><th>Match</th><th>Enabled</th><th></th></tr></thead>
         <tbody id="keywords-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- BLACKLIST -->
@@ -282,20 +288,20 @@
         <input type="text" id="bl-number" placeholder="Phone number (e.g. 2547XXXXXXXX)">
         <button class="btn" id="bl-add">Add</button>
       </div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Number</th><th></th></tr></thead>
         <tbody id="blacklist-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- FEATURES -->
     <div class="pane" id="pane-features">
       <h1>Features</h1>
       <div class="head-sub">Toggle bot features on or off globally.</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Feature</th><th>Enabled</th></tr></thead>
         <tbody id="features-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- SEARCH -->
@@ -306,10 +312,10 @@
         <input type="text" id="search-q" placeholder="Search message text…">
         <button class="btn" id="search-btn">Search</button>
       </div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Sender</th><th>Name</th><th>Message</th><th>Time</th></tr></thead>
         <tbody id="search-table"><tr class="empty-row"><td colspan="4">Type a query and press Search.</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- COMMAND FINDER -->
@@ -327,10 +333,10 @@
     <div class="pane" id="pane-scheduler">
       <h1>Scheduler</h1>
       <div class="head-sub">Pending scheduled messages from the .schedule command.</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>To</th><th>Message</th><th>Next Run</th><th>Repeat</th><th></th></tr></thead>
         <tbody id="scheduler-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- MENU -->
@@ -388,40 +394,40 @@
     <div class="pane" id="pane-ownerchats">
       <h1>Owner Chats</h1>
       <div class="head-sub">Chats where the owner's number has been seen. Toggle whether the AI assistant may respond in each.</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Chat</th><th>AI Allowed</th></tr></thead>
         <tbody id="ownerchats-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- VIEW-ONCE -->
     <div class="pane" id="pane-viewonce">
       <h1>View-Once</h1>
       <div class="head-sub">Media intercepted from view-once messages.</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Sender</th><th>Type</th><th>Caption</th><th>Time</th><th></th></tr></thead>
         <tbody id="viewonce-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- REPORTS -->
     <div class="pane" id="pane-reports">
       <h1>Reports</h1>
       <div class="head-sub">User-submitted reports from groups.</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Group</th><th>Reporter</th><th>Target</th><th>Reason</th><th>Status</th><th></th></tr></thead>
         <tbody id="reports-table"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- GROUP BANS -->
     <div class="pane" id="pane-groupbans">
       <h1>Group Bans</h1>
       <div class="head-sub">Audit trail from .ban — the removal already happened on WhatsApp; this just tracks it and lets you lift a mistaken ban.</div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Group</th><th>Number</th><th>Reason</th><th>Banned</th><th></th></tr></thead>
         <tbody id="groupbans-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- ACTIVITY LOG -->
@@ -437,10 +443,10 @@
         <button class="btn-ghost mini-btn" id="al-export">Export CSV</button>
         <button class="mini-btn danger" id="al-clear">Clear This Category</button>
       </div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Type</th><th>Actor</th><th>Detail</th><th>Time</th></tr></thead>
         <tbody id="activitylog-table"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- SETTINGS -->
