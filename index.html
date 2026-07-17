@@ -634,10 +634,11 @@
     <div class="tool-card tilt-3d" data-tool="devicescan"><div class="tool-icon">◈</div><div class="tool-label">Device Scan</div></div>
   </div>
 
-  <div class="reveal tilt-3d" style="max-width:640px;margin:24px auto 0;background:var(--bg-raised);border:1px solid var(--line);border-radius:16px;padding:28px;">
+  <button id="tool-back-btn" onclick="closeTool()" style="display:none;max-width:820px;margin:24px auto 0;background:none;border:1px solid var(--line);border-radius:8px;color:var(--bone);padding:8px 14px;font-size:14px;cursor:pointer;">← All tools</button>
+  <div id="tool-panel-wrap" class="reveal tilt-3d" style="display:none;max-width:640px;margin:24px auto 0;background:var(--bg-raised);border:1px solid var(--line);border-radius:16px;padding:28px;">
 
     <!-- YOUTUBE -->
-    <div class="tool-panel" id="panel-youtube">
+    <div class="tool-panel" id="panel-youtube" style="display:none;">
       <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// YOUTUBE DOWNLOAD</span>
       <h4 style="margin:0 0 16px;font-size:20px;">Paste a link, get the video.</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1165,6 +1166,27 @@
         p.classList.add('panel-enter');
       }
     });
+    // ✅ Dedicated single-tool view: hide the icon grid and show a back
+    // button, so tapping a tool takes you to a page for just that tool
+    // instead of leaving the whole catalog visible above it.
+    const grid = document.querySelector('.tool-grid');
+    const backBtn = document.getElementById('tool-back-btn');
+    const wrap = document.getElementById('tool-panel-wrap');
+    if (grid) grid.style.display = 'none';
+    if (backBtn) backBtn.style.display = 'inline-block';
+    if (wrap) { wrap.style.display = 'block'; wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  }
+
+  function closeTool() {
+    const grid = document.querySelector('.tool-grid');
+    const backBtn = document.getElementById('tool-back-btn');
+    const wrap = document.getElementById('tool-panel-wrap');
+    if (grid) grid.style.display = 'grid';
+    if (backBtn) backBtn.style.display = 'none';
+    if (wrap) wrap.style.display = 'none';
+    document.querySelectorAll('.tool-panel').forEach(p => { p.style.display = 'none'; });
+    document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async function fetchYoutube() {
@@ -2030,6 +2052,14 @@
         restore();
         return;
       }
+      // ✅ FIX: async handlers set their "Fetching…/Generating…/Searching…"
+      // status text synchronously before their first await — but that text
+      // was staying in low-contrast gray until the whole call finished, so
+      // on a slow connection you'd see a spinning button next to text you
+      // could barely read, which looked broken. Highlight it immediately,
+      // then let the existing finally-highlight run again once the real
+      // result replaces it.
+      revealResult(btn);
       // Async handlers return a Promise — wait for it, then clear the
       // spinner. Sync/instant handlers (genUuid, calcBmi, etc.) return
       // nothing, so just clear the spinner right away.
