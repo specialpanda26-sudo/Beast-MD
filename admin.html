@@ -75,6 +75,16 @@
      a phone and you swipe sideways to see the rest. */
   .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;}
   table{width:100%;min-width:560px;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;}
+  /* Real on/off switch for Key Features — replaces the plain browser
+     checkbox tick, which read as "checked/unchecked" instead of clearly
+     "on/off". */
+  .switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .switch .slider{position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:24px;transition:background .2s ease;}
+  .switch .slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s ease;}
+  .switch input:checked + .slider{background:#2ecc71;}
+  .switch input:checked + .slider::before{transform:translateX(20px);}
+  .switch input:focus-visible + .slider{outline:2px solid var(--ember);outline-offset:2px;}
   thead th{text-align:left;font-size:11px;color:var(--ash);text-transform:uppercase;letter-spacing:0.4px;padding:12px 14px;background:var(--panel2);font-family:'JetBrains Mono',monospace;font-weight:500;}
   tbody td{padding:12px 14px;font-size:13px;border-top:1px solid var(--line);}
   tbody tr:hover{background:var(--panel2);}
@@ -525,9 +535,6 @@
   function attachTilt(el, maxDeg){
     el.style.transformStyle = 'preserve-3d';
     function onMove(e){
-      // Skip on touch/pen: there's no real "leave" event when a finger lifts,
-      // so the card was getting stuck permanently tilted/skewed on mobile.
-      if (e.pointerType && e.pointerType !== 'mouse') return;
       const r = el.getBoundingClientRect();
       const px = ((e.clientX - r.left) / r.width) - 0.5;
       const py = ((e.clientY - r.top) / r.height) - 0.5;
@@ -536,8 +543,6 @@
     function onLeave(){ el.style.transform = ''; }
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerleave', onLeave);
-    el.addEventListener('pointerup', onLeave);
-    el.addEventListener('pointercancel', onLeave);
   }
   document.querySelectorAll('.tilt-3d').forEach(el => attachTilt(el, 6));
 
@@ -776,7 +781,12 @@
       body.innerHTML = '<tr class="empty-row"><td colspan="2">No features configured yet.</td></tr>'; return;
     }
     data.features.forEach(f => {
-      body.innerHTML += `<tr><td>${esc(prettyFeatureName(f.name))}</td><td><input type="checkbox" ${f.enabled?'checked':''} onchange="toggleFeature('${esc(f.name)}', this.checked)"></td></tr>`;
+      body.innerHTML += `<tr><td>${esc(prettyFeatureName(f.name))}</td><td>
+        <label class="switch">
+          <input type="checkbox" ${f.enabled?'checked':''} onchange="toggleFeature('${esc(f.name)}', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </td></tr>`;
     });
   }
   window.toggleFeature = async function(name, enabled){

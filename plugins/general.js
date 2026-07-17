@@ -283,14 +283,6 @@ ${menuBox('✨', 'ALWAYS-ON FEATURES')}
 │➽ Status AI comments ✅  Permissions ✅  Anti-ban ✅
 ${boxClose}
 
-${menuBox('🆕', 'MORE COMMANDS', `(${liveCommandCount} total loaded)`)}
-│➽ You're looking at the short curated view (${p}menu quick).
-│➽ Plain ${p}menu — 📖 sends ALL ${liveCommandCount} commands, one long message
-│➽ ${p}commands — 📋 Full flat list of everything currently loaded
-│➽ ${p}commands sticker — 🔎 e.g. search loaded commands by keyword
-│➽ ${p}loadmenu / ${p}smenu — Same command as ${p}menu (aliases)
-${boxClose}
-
 > 🔥 *Beast MD* | Made by Henry Ochieng`;
 
     // Send menu with profile photo as thumbnail

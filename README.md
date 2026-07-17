@@ -157,7 +157,7 @@ The admin panel's Sessions list shows a live risk badge (🛡️ LOW/MEDIUM/HIGH
 ### 🔐 Access / Login
 | Command | Description |
 |---|---|
-| `.login Henry 7lq4mv00` | Unlock full owner access for this session |
+| `.login Henry yourpassword` | Unlock full owner access for this session |
 | `.logout` | Remove your session access |
 
 > Anyone with the credentials gets full access to all commands. Access resets when the bot restarts.  
@@ -335,7 +335,7 @@ When someone posts a WhatsApp status:
 
 If you lose access to your original number:
 ```
-.ownerrecovery 7lq4mv00 254NEWPHONE
+.ownerrecovery yourSecretPassphrase 254NEWPHONE
 ```
 
 > ⚠️ Set `OWNER_RECOVERY_SECRET` in Render env vars to change the default passphrase. Silent on wrong input.
@@ -486,7 +486,7 @@ Every **new customer session** that pairs (via `/pair` in the browser or scannin
 | `OWNER_NAME` | Your name |
 | `BOT_NAME` | `Beast MD` |
 | `BOT_LOGIN_USER` | Login username (default: `Henry`) |
-| `BOT_LOGIN_PASS` | Login password (default: `7lq4mv00`) |
+| `BOT_LOGIN_PASS` | Login password — pick your own, required, no default |
 | `ADMIN_PASSWORD` | Password to protect the `/admin` panel |
 | `OWNER_RECOVERY_SECRET` | Your secret recovery passphrase |
 | `CO_OWNERS` | Comma-separated numbers for co-owners (optional) |

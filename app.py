@@ -4084,8 +4084,14 @@ async def console_page():
 from collections import deque, defaultdict
 
 _widget_rate_log: dict = defaultdict(deque)  # ip -> deque[timestamps]
-WIDGET_RATE_LIMIT = 20     # max requests
+WIDGET_RATE_LIMIT = 90     # max requests
 WIDGET_RATE_WINDOW = 300   # per 5 minutes, per IP, across all widgets combined
+# ✅ FIX: was 20/5min shared across ~40 different tools — a normal visitor
+# tapping through the tools one by one to try them (or a fast typist using
+# the debounced Word Count box) would exhaust this in under a minute and
+# every tool after that would silently fail with "Too many requests," which
+# looked identical to a broken tool. Raised to a level that comfortably
+# covers trying every tool in one sitting while still blocking real abuse.
 
 def _widget_rate_ok(req) -> bool:
     ip = req.headers.get("X-Forwarded-For", req.remote_addr or "unknown").split(",")[0].strip()
