@@ -1081,7 +1081,29 @@
   .tool-icon{font-size:22px;margin-bottom:6px;}
   .tool-label{font-size:12px;color:var(--bone);font-weight:600;}
   .tool-input{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--bone);font-family:'Space Grotesk',sans-serif;font-size:14px;}
-  .tool-status{margin-top:14px;font-size:14px;color:var(--ash);}
+  .tool-status{margin-top:14px;font-size:14px;color:var(--ash);transition:color .2s ease;}
+  /* ── FIX: results were rendered in the same dim gray as hint/placeholder
+     text (var(--ash)) — same color whether a tool was empty, working, or
+     done. That's why answers were "there" but invisible: nothing on
+     screen told you WHERE to look or THAT it changed. .has-result now
+     gets full-brightness text, a highlighted card behind it, and a brief
+     flash + auto-scroll-into-view the instant a result lands (wired in
+     the delegated click handler below, so this covers every tool). ── */
+  .tool-status.has-result{
+    color:var(--bone);font-size:15px;line-height:1.6;
+    background:var(--bg);border:1px solid var(--ember-dim,#8A6224);border-radius:10px;
+    padding:14px 16px;box-shadow:0 4px 16px -6px rgba(0,0,0,.5);
+  }
+  .tool-status.flash-in{animation:toolResultFlash .9s ease;}
+  @keyframes toolResultFlash{
+    0%{box-shadow:0 0 0 0 rgba(232,163,61,0.55),0 4px 16px -6px rgba(0,0,0,.5);}
+    100%{box-shadow:0 0 0 14px rgba(232,163,61,0),0 4px 16px -6px rgba(0,0,0,.5);}
+  }
+  /* Panel switch + card tap polish — requested "make it feel cool" pass. */
+  .tool-panel.panel-enter{animation:panelEnter .28s ease;}
+  @keyframes panelEnter{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  .tool-card{transition:transform .12s ease,border-color .15s ease;}
+  .tool-card:active{transform:scale(.95);}
   .music-result{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
   .music-result .mr-info{flex:1;min-width:0;}
   .music-result .mr-title{font-size:14px;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -1108,7 +1130,17 @@
 <script>
   function selectTool(name) {
     document.querySelectorAll('.tool-card').forEach(c => c.classList.toggle('active', c.dataset.tool === name));
-    document.querySelectorAll('.tool-panel').forEach(p => p.style.display = (p.id === 'panel-' + name) ? 'block' : 'none');
+    document.querySelectorAll('.tool-panel').forEach(p => {
+      const isTarget = p.id === 'panel-' + name;
+      p.style.display = isTarget ? 'block' : 'none';
+      if (isTarget) {
+        // Small polish: panel slides/fades in instead of just snapping
+        // into view, so switching tools feels intentional.
+        p.classList.remove('panel-enter');
+        void p.offsetWidth;
+        p.classList.add('panel-enter');
+      }
+    });
   }
 
   async function fetchYoutube() {
@@ -1977,10 +2009,41 @@
       // Async handlers return a Promise — wait for it, then clear the
       // spinner. Sync/instant handlers (genUuid, calcBmi, etc.) return
       // nothing, so just clear the spinner right away.
-      if (result && typeof result.finally === 'function') result.finally(restore);
-      else restore();
+      if (result && typeof result.finally === 'function') result.finally(() => { restore(); revealResult(btn); });
+      else { restore(); revealResult(btn); }
     }
   });
+
+  // ── FIX: results were landing in a dim, low-contrast status line that
+  // looked identical whether a tool was idle, working, or done — nothing
+  // ever told you an answer had actually appeared, or where to look for
+  // it. This runs after every tool action (all ~30 of them, via the one
+  // delegated handler above) and: lights up any status line that now has
+  // real text in it, flashes it once, and smooth-scrolls it into view.
+  // Result containers that already have their own box styling (the
+  // YouTube preview, the music search result card, etc.) just get
+  // scrolled to — they don't need a second border on top of their own.
+  function revealResult(btn) {
+    const panel = btn.closest('.tool-panel');
+    if (!panel) return;
+    let target = null;
+    panel.querySelectorAll('.tool-status').forEach(el => {
+      const hasText = el.textContent.trim().length > 0;
+      el.classList.toggle('has-result', hasText);
+      if (hasText && !target) target = el;
+    });
+    if (!target) {
+      panel.querySelectorAll('[id$="-result"]').forEach(el => {
+        if (!target && el.offsetParent !== null) target = el;
+      });
+    }
+    if (target) {
+      target.classList.remove('flash-in');
+      void target.offsetWidth; // restart the animation if it's already run once
+      target.classList.add('flash-in');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 
 </script>
 

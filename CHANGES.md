@@ -365,7 +365,7 @@ every command-listing/search/stats feature end to end. Found and fixed:
     bot behavior — they save successfully and report success, but don't yet do anything. Needs a
     decision on wiring each one into the real message pipeline before it's touched.
 
-## Update 16 — pairing name field, .toaudio, duplicate .menu fix, homepage playlist search
+## Update 20 — pairing name field, .toaudio, duplicate .menu fix, homepage playlist search
 
 - `pair.html` now asks for the pairer's name (required, above the phone field) and sends it
   along with the number. `client_bridge.js` stores it for the session and the post-pairing
@@ -401,7 +401,7 @@ every command-listing/search/stats feature end to end. Found and fixed:
   hardened bot-detection mitigation (client fallback + retry + optional cookies/PO-token) as
   the WhatsApp `.dl`/`.song` commands.
 
-## Update 17 — removed greeting DM, combined menu into one message, mobile admin nav
+## Update 21 — removed greeting DM, combined menu into one message, mobile admin nav
 
 - **Removed:** the auto-sent "save this contact" first-DM greeting on Henry's own owner
   number. The `owner_first_seen` tracking that the admin panel's "new chats" list depends on
@@ -424,7 +424,7 @@ every command-listing/search/stats feature end to end. Found and fixed:
   on the YouTube tool) — if it's not visible live, it's worth a hard-refresh/re-deploy check
   before assuming it's broken, since the code already has it.
 
-## Update 18 — .menu now sends the FULL catalog by default, one message, no duplicates
+## Update 22 — .menu now sends the FULL catalog by default, one message, no duplicates
 
 - **Changed (per explicit request):** plain `.menu` now sends the media (image/video) with
   ALL ~878 commands (414 base commands, each covering their aliases) as the caption — one
@@ -441,9 +441,22 @@ every command-listing/search/stats feature end to end. Found and fixed:
   fallback is switching to a plain (non-media) text message instead of an image caption,
   which has a much higher confirmed limit.
 
-## Update 19 — fixed blank "by" attribution
+## Update 23 — fixed blank "by" attribution
 
 - Found and fixed: the "_by _" line in the menu banner, the pairing-success banner, and the
   `.welcome` card was literally blank in all three places — never filled in with a name. All
   three now say "by Henry Ochieng."
+
+## Update 24 — free tools results were invisible, not broken; fixed + added polish
+
+- **Found the real bug:** `.tool-status` (where every free tool's answer lands) was styled in
+  the same dim gray (`var(--ash)`) as its own placeholder/hint text — idle, loading, and done
+  all looked identical. The tools were working the whole time; the answer just blended into
+  the background with nothing marking where it landed.
+- **Fixed:** any status line that gets real result text now switches to full-brightness text
+  in a highlighted card (border + subtle shadow), flashes once, and smooth-scrolls into view
+  automatically the moment a result lands — covers all ~30 tools at once since it hooks into
+  the one shared click handler, not each tool individually.
+- **Added, as requested:** tool panels now slide/fade in when you switch tools instead of
+  snapping instantly, and tool cards give a small tap-scale press effect.
 
