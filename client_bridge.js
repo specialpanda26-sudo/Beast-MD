@@ -2497,15 +2497,12 @@ async function startSession(sessionId, opts = {}) {
             const allowSetting = await apiClient.get("/chat-settings/get", { params: { chat_id: sender, key: "owner_ai_allowed" } });
             const allowed = allowSetting?.data?.value === "on";
 
-            // First-time-chat caution — fires once per chat regardless of
-            // the toggle above, so new people always get warned even in
-            // chats Henry hasn't opted into auto-reply for.
+            // First-time-chat tracking — still recorded once per chat (the
+            // admin panel's "new chats" list reads this), but the greeting
+            // message itself was removed on request.
             const seenSetting = await apiClient.get("/chat-settings/get", { params: { chat_id: sender, key: "owner_first_seen" } });
             if (!seenSetting?.data?.value) {
               await apiClient.post("/chat-settings/set", { chat_id: sender, key: "owner_first_seen", value: "1" }).catch(() => {});
-              await socket.sendMessage(sender, {
-                text: `👋 Hey! This is Henry's bot-assisted number — save this contact so future messages don't land as "unknown number" (and to keep it from getting flagged/banned). Henry will get back to you personally, or the bot may step in if he's away for a bit.`
-              }, { quoted: msg });
             }
 
             if (!allowed) return;
@@ -2776,13 +2773,14 @@ async function startSession(sessionId, opts = {}) {
           const welcomeText =
 `╔════════════════════════════════════╗
 ║  🔥 *BEAST MD* 🔥        ║
-║       _by _            ║
+║    _by Henry Ochieng_    ║
 ╚════════════════════════════════════╝
 
 ✅ *Pairing Successful${greetName ? `, ${greetName}` : ""}!*
 Your bot is now live and connected. 🌐
 
 📋 *Session:* ${sessionId}
+_Save this — it's your login for the web Console (open the site → Console), where you can read/send real WhatsApp messages from a browser._
 ⏰ *Time:* ${new Date().toLocaleString()}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

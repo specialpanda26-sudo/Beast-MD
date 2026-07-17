@@ -141,7 +141,7 @@ ${boxClose}` : '';
     const menu =
 `╔══════════════════════════════╗
 ║  🔥 *BEAST MD* 🔥  ║
-║     _by _        ║
+║   _by Henry Ochieng_    ║
 ╚══════════════════════════════╝
 
 ${roleTag} | 📅 ${now.toLocaleDateString()} | 🕐 ${now.toLocaleTimeString()}
@@ -284,28 +284,33 @@ ${menuBox('✨', 'ALWAYS-ON FEATURES')}
 ${boxClose}
 
 ${menuBox('🆕', 'MORE COMMANDS', `(${liveCommandCount} total loaded)`)}
-│➽ Every one of the ${liveCommandCount} loaded commands, described, is sent right
-│  after this as ONE follow-up message — this card is just the quick
-│  summary up top.
-│➽ ${p}menu quick — Skip the full catalog, just this quick view
+│➽ You're looking at the short curated view (${p}menu quick).
+│➽ Plain ${p}menu — 📖 sends ALL ${liveCommandCount} commands, one long message
 │➽ ${p}commands — 📋 Full flat list of everything currently loaded
 │➽ ${p}commands sticker — 🔎 e.g. search loaded commands by keyword
-│➽ ${p}loadmenu / ${p}smenu — Same menu you're looking at now (all one command)
+│➽ ${p}loadmenu / ${p}smenu — Same command as ${p}menu (aliases)
 ${boxClose}
 
-> 🔥 *Beast MD* | `;
+> 🔥 *Beast MD* | Made by Henry Ochieng`;
 
     // Send menu with profile photo as thumbnail
     const fs = require('fs');
-    // ── .menu quick / .menu fast / .menu all / .menu full ──────────────────
-    // ✅ FIX (per request): plain .menu was sending the curated command list
-    // as the image caption AND the full 900-command catalog as a follow-up
-    // — same commands listed twice in two different formats. Now the
-    // default (.menu) sends the media with a short caption + the full
-    // catalog ONCE, right after. ".menu quick" is unchanged: the original
-    // curated caption, full catalog skipped.
-    const wantsQuickOnly = args && args[0] && ['quick', 'fast', 'short'].includes(args[0].toLowerCase());
-    const wantsFull = !wantsQuickOnly;
+    // ── .menu / .menu quick ──────────────────────────────────────────────
+    // ✅ FIX (per explicit request): default .menu must contain EVERY
+    // command — all 878+, one long scrollable message, attached to the
+    // media, never split into a second message and never shown twice.
+    // ".menu quick" is now the opt-in for the short curated view instead.
+    const wantsQuickView = args && args[0] && ['quick', 'fast', 'short'].includes(args[0].toLowerCase());
+    let fullCatalogText = null;
+    try {
+      const { buildFullCatalogSingleMessage } = require('../lib_ported/menuCatalog.js');
+      fullCatalogText = buildFullCatalogSingleMessage(
+        { isOwner: effectiveIsOwner, isBotAdmin: effectiveIsBotAdmin },
+        p
+      );
+    } catch (e) {
+      console.warn('⚠️ Full catalog build failed, falling back to curated menu:', e.message);
+    }
     // ── Admin-panel-editable menu media + caption ──────────────────────────
     // Reads data/menu-settings.json (written by /admin/menu-settings and
     // /admin/menu-media/upload in app.py). Falls back to the original
@@ -325,11 +330,11 @@ ${boxClose}
         if (typeof ms.caption === 'string' && ms.caption.trim()) menuCustomCaption = ms.caption.trim();
       }
     } catch (_) { /* fall back to defaults above */ }
-    // ✅ FIX: only use the long curated command list as the caption when the
-    // full catalog ISN'T also being sent (.menu quick) — otherwise use a
-    // short header so the ${liveCommandCount} commands appear exactly once.
-    const shortCaption = `> 🔥 *Beast MD* — ${liveCommandCount} commands loaded\nSending the full list now… 👇`;
-    const menuCaption = menuCustomCaption || (wantsFull ? shortCaption : menu);
+    // Priority: admin-set custom caption always wins if set. Otherwise:
+    // quick view → curated `menu` text. Default → the full catalog (every
+    // command, one string) if it built successfully, else fall back to
+    // the curated view so .menu never comes back empty.
+    const menuCaption = menuCustomCaption || (wantsQuickView ? menu : (fullCatalogText || menu));
     try {
       const mediaBuffer = fs.readFileSync(menuImagePath);
       const payload = menuMediaType === 'video'
@@ -358,31 +363,6 @@ ${boxClose}
           headerType: 1
         }, { quoted: msg });
       } catch (_) { /* buttons unsupported here, text/image menu already sent */ }
-    }
-
-    // ── .menu all / .menu full ───────────────────────────────────────────
-    // Same single .menu command, just with an argument — sends the FULL
-    // catalog of every live command (874+, auto-generated + hand-described,
-    // see assets/commands-db.json + scripts/build-command-db.js) as a
-    // series of readable follow-up messages, grouped by category, aliases
-    // collapsed under their base command. ".menu quick" gives the fast
-    // curated view only, above, and skips this.
-    if (wantsFull) {
-      try {
-        const { buildFullCatalogSingleMessage } = require('../lib_ported/menuCatalog.js');
-        const fullMsg = buildFullCatalogSingleMessage(
-          { isOwner: effectiveIsOwner, isBotAdmin: effectiveIsBotAdmin },
-          p
-        );
-        if (!fullMsg) {
-          await sock.sendMessage(from, { text: '⚠️ Command catalog not built yet. Run `node scripts/build-command-db.js` on the server first.' }, { quoted: msg });
-        } else {
-          await sock.sendMessage(from, { text: fullMsg }, { quoted: msg });
-        }
-      } catch (e) {
-        console.warn('⚠️ .menu all failed:', e.message);
-        await sock.sendMessage(from, { text: `❌ Couldn't build the full catalog: ${e.message}` }, { quoted: msg });
-      }
     }
   },
 
@@ -575,7 +555,7 @@ _Access resets when bot restarts._
 ╚═══════════════════════════════════════╝
 
 ✨ *BEAST MD* ✨
-_by _
+_by Henry Ochieng_
 
 Karibu! Niko online na niko ready kukusaidia. 🇰🇪
 Ninaongea Kiswahili, Sheng na English!

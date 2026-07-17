@@ -401,3 +401,49 @@ every command-listing/search/stats feature end to end. Found and fixed:
   hardened bot-detection mitigation (client fallback + retry + optional cookies/PO-token) as
   the WhatsApp `.dl`/`.song` commands.
 
+## Update 17 — removed greeting DM, combined menu into one message, mobile admin nav
+
+- **Removed:** the auto-sent "save this contact" first-DM greeting on Henry's own owner
+  number. The `owner_first_seen` tracking that the admin panel's "new chats" list depends on
+  is kept — only the outbound message itself was removed. (There's a *separate*, still-intact,
+  fully opt-outable version of this same idea for customer sessions —
+  `.setfirstcontactgreeting off` — left untouched since it wasn't what was flagged.)
+- **Fixed (per reference example provided):** `.menu` was sending the image/video and the menu
+  text as two separate messages. They're now ONE attached message — media with the full curated
+  caption, nothing split off. The 878-command full catalog no longer sends automatically; it's
+  opt-in only now via `.menu full` / `.menu all`.
+- Added "Made by Henry Ochieng" to the menu footer, matching the reference format shown.
+- **Fixed:** the admin panel sidebar used to just disappear below 820px with no way to reopen
+  it — that's why desktop-site mode was the only way in on a phone. It's now a proper slide-in
+  drawer with a hamburger button, closes on tab-select or tapping outside.
+- Clarified the Console/Session ID flow: the Session ID is already sent via WhatsApp in the
+  post-pairing welcome message (`📋 Session: ...`) — added a line there explaining what it's
+  for (logging into the web Console to read/send real WhatsApp messages from a browser).
+- Confirmed the Free Tools panel already has real loading feedback on every tool (spinner
+  overlay on the tapped button + a status line, e.g. "Fetching… this can take a few seconds"
+  on the YouTube tool) — if it's not visible live, it's worth a hard-refresh/re-deploy check
+  before assuming it's broken, since the code already has it.
+
+## Update 18 — .menu now sends the FULL catalog by default, one message, no duplicates
+
+- **Changed (per explicit request):** plain `.menu` now sends the media (image/video) with
+  ALL ~878 commands (414 base commands, each covering their aliases) as the caption — one
+  attached message, nothing split off, nothing shown twice. `.menu quick` is now the opt-in
+  for the old short curated view instead. The full-catalog builder already had its own
+  footer pointing to `.menu quick` for the short view — this makes `.menu`'s actual behavior
+  match what that text always assumed.
+- Caught and fixed a leftover bug from the prior update before it ever got pushed: the
+  curated view's footer text still described the *old* split-message behavior. Now says
+  plain `.menu` sends everything, `.menu quick` gives the short view.
+- One caveat worth testing live: the full-catalog caption is ~17,300 characters. WhatsApp
+  should handle this fine on current clients, but caption length isn't something I can verify
+  without sending an actual message — if any customer's client visually truncates it, the
+  fallback is switching to a plain (non-media) text message instead of an image caption,
+  which has a much higher confirmed limit.
+
+## Update 19 — fixed blank "by" attribution
+
+- Found and fixed: the "_by _" line in the menu banner, the pairing-success banner, and the
+  `.welcome` card was literally blank in all three places — never filled in with a name. All
+  three now say "by Henry Ochieng."
+
