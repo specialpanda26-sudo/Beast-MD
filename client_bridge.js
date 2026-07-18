@@ -116,6 +116,8 @@ const PLUGIN_NAMES = [
   'ported_general', 'ported_group', 'ported_images', 'ported_info', 'ported_menu',
   'ported_music', 'ported_owner', 'ported_quotes', 'ported_search', 'ported_stalk',
   'ported_stickers', 'ported_tools', 'ported_upload', 'ported_utility',
+  // Kenya-specific tools:
+  'kenya_tools', 'kenya_files',
 ];
 const allCommands = {};
 const cmdOwnerPlugin = {};
