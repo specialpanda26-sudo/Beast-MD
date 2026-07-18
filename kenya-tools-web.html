@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kenya Tools — Free, No Bot Required · Henry Ochibots</title>
+<meta name="description" content="Free Kenyan reference tools, calculators and document generators — KRA, NHIF, NSSF, HELB, KNEC, legal documents, OCR and more. No WhatsApp bot, no payment needed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#f2ede2;
+    --ink-dim:#c9c0ae;
+    --bg:#100e0c;
+    --bg-panel:#17140f;
+    --bg-panel-2:#1d1912;
+    --line:#332c22;
+    --red:#b3382c;
+    --green:#2f6b45;
+    --gold:#c9962c;
+    --focus:#e8c766;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:'Fraunces',serif; font-weight:700; margin:0;}
+  a{color:var(--gold);}
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+  }
+
+  /* ── Hero ─────────────────────────────────────────────────────────── */
+  .hero{
+    position:relative;
+    min-height:min(88vh,760px);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    overflow:hidden;
+    border-bottom:1px solid var(--line);
+  }
+  #hero-canvas{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    z-index:0;
+    opacity:0.9;
+  }
+  .hero-content{
+    position:relative; z-index:1;
+    max-width:920px;
+    margin:0 auto;
+    padding:0 24px;
+    text-align:center;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+  }
+  .eyebrow::before,.eyebrow::after{content:"";flex:0 0 32px;height:1px;background:var(--line);}
+  .hero h1{
+    font-size:clamp(2.2rem,6vw,4rem);
+    line-height:1.04;
+    letter-spacing:-0.01em;
+  }
+  .hero h1 em{
+    font-style:italic;
+    color:var(--gold);
+  }
+  .hero p.lede{
+    margin:22px auto 0;
+    max-width:560px;
+    color:var(--ink-dim);
+    font-size:1.05rem;
+  }
+  .hero .sheng{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    color:var(--ink-dim);
+    margin-top:10px;
+    opacity:0.8;
+  }
+  .hero-cta{
+    margin-top:34px;
+    display:flex;
+    gap:14px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .btn{
+    font-family:'IBM Plex Sans',sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    padding:13px 26px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--ink);
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-block;
+    transition:border-color .15s ease, background .15s ease, transform .15s ease;
+  }
+  .btn:hover{border-color:var(--gold); transform:translateY(-1px);}
+  .btn.primary{background:var(--gold); border-color:var(--gold); color:#1a1508;}
+  .btn.primary:hover{background:#dba838;}
+
+  /* ── Strip: honesty banner ───────────────────────────────────────── */
+  .strip{
+    background:var(--bg-panel);
+    border-bottom:1px solid var(--line);
+    padding:12px 24px;
+    text-align:center;
+    font-size:13px;
+    color:var(--ink-dim);
+  }
+  .strip b{color:var(--ink);}
+
+  /* ── Category nav ────────────────────────────────────────────────── */
+  .nav-wrap{
+    position:sticky; top:0; z-index:20;
+    background:rgba(16,14,12,0.92);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{
+    max-width:1100px; margin:0 auto;
+    display:flex; gap:8px; overflow-x:auto;
+    padding:14px 24px;
+    scrollbar-width:thin;
+  }
+  .nav::-webkit-scrollbar{height:4px;}
+  .nav::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+  .nav button{
+    flex:0 0 auto;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:13px;
+    font-weight:500;
+    padding:8px 16px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:var(--bg-panel);
+    color:var(--ink-dim);
+    cursor:pointer;
+    white-space:nowrap;
+    transition:all .15s ease;
+  }
+  .nav button.active{background:var(--gold); border-color:var(--gold); color:#1a1508;}
+
+  /* ── Main ─────────────────────────────────────────────────────────── */
+  main{max-width:1100px; margin:0 auto; padding:40px 24px 100px;}
+  .category{margin-bottom:56px; scroll-margin-top:80px;}
+  .category h2{
+    font-size:1.5rem;
+    display:flex; align-items:baseline; gap:12px;
+    margin-bottom:20px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--line);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:14px;
+  }
+  .card{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .card .cmdname{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    color:var(--gold);
+  }
+  .card .desc{font-size:14px; color:var(--ink-dim);}
+  .card input[type=text], .card textarea{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:8px;
+    padding:9px 11px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+  }
+  .card input[type=file]{
+    font-size:12px;
+    color:var(--ink-dim);
+  }
+  .filelabel{font-size:11px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.05em;}
+  .card .run-btn{
+    margin-top:4px;
+    align-self:flex-start;
+    background:var(--green);
+    border:none;
+    color:#eafff0;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:9px 18px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:filter .15s ease;
+  }
+  .card .run-btn:hover{filter:brightness(1.12);}
+  .card .run-btn:disabled{opacity:0.5; cursor:wait;}
+  .card .result{
+    margin-top:6px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:12px;
+    font-size:13px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    display:none;
+  }
+  .card .result.show{display:block;}
+  .card .result.error{border-color:var(--red); color:#f2b8b0;}
+  .card .result img{max-width:100%; border-radius:6px; margin-bottom:8px;}
+  .card .result a.dl{
+    display:inline-block;
+    margin-top:6px;
+    font-size:12px;
+    color:var(--gold);
+    text-decoration:underline;
+  }
+
+  footer{
+    border-top:1px solid var(--line);
+    padding:30px 24px;
+    text-align:center;
+    color:var(--ink-dim);
+    font-size:13px;
+  }
+  footer .flag-rule{
+    height:3px;
+    max-width:200px;
+    margin:0 auto 18px;
+    background:linear-gradient(90deg,var(--red) 0 33%, var(--ink) 33% 66%, var(--green) 66% 100%);
+    border-radius:2px;
+  }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <div class="eyebrow">Henry Ochibots</div>
+    <h1>Kenya tools, <em>bila pesa.</em></h1>
+    <p class="lede">Calculators, government-process guides, legal document drafts, real OCR and background removal — the same free tools built into the WhatsApp bot, usable right here without pairing a phone or paying for activation.</p>
+    <p class="sheng">Tuko Pamoja. No cyber needed.</p>
+    <div class="hero-cta">
+      <a class="btn primary" href="#tools">Browse tools</a>
+      <a class="btn" href="#about">How this works</a>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <b>Free and open to anyone.</b> No account, no WhatsApp pairing, no payment. Files you upload are processed for this one request only and aren't stored.
+</div>
+
+<div class="nav-wrap">
+  <nav class="nav" id="categoryNav"></nav>
+</div>
+
+<main id="tools">
+  <div id="categories">
+    <!-- populated from /kenya-tools/manifest -->
+  </div>
+</main>
+
+<footer id="about">
+  <div class="flag-rule"></div>
+  <p>Built by Henry Ochibots. These are reference guides and drafting tools, not official government or legal services — always confirm details on the official portal (e.g. <a href="https://ecitizen.go.ke" target="_blank" rel="noopener">eCitizen</a>, <a href="https://results.knec.ac.ke" target="_blank" rel="noopener">results.knec.ac.ke</a>) and have legal drafts reviewed before signing.</p>
+</footer>
+
+<template id="card-template">
+  <div class="card">
+    <div class="cmdname"></div>
+    <div class="desc"></div>
+    <div class="file-slot-1" style="display:none">
+      <div class="filelabel">File</div>
+      <input type="file" class="file1">
+    </div>
+    <div class="file-slot-2" style="display:none">
+      <div class="filelabel">Second file</div>
+      <input type="file" class="file2">
+    </div>
+    <div class="arg-slot">
+      <input type="text" class="argsInput" placeholder="">
+    </div>
+    <button class="run-btn">Run</button>
+    <div class="result"></div>
+  </div>
+</template>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── 3D hero: a slowly rotating official stamp/seal, plus a few drifting
+// low-poly shards in the flag colors. Purely ambient — page works fine if
+// this fails to load or the browser can't do WebGL.
+(function initHero3D(){
+  try{
+    const canvas = document.getElementById('hero-canvas');
+    if (!canvas || typeof THREE === 'undefined') return;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 1.75));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    camera.position.set(0, 0, 9);
+
+    function resize(){
+      const w = canvas.parentElement.clientWidth;
+      const h = canvas.parentElement.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const key = new THREE.DirectionalLight(0xffdca8, 1.1);
+    key.position.set(4, 5, 6);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0xb3382c, 0.6);
+    rim.position.set(-5, -2, -4);
+    scene.add(rim);
+
+    // The stamp: a ridged cylinder (seal body) + a raised ring + a raised
+    // center boss — reads as an official rubber stamp/seal without needing
+    // real typography carved into geometry.
+    const stampGroup = new THREE.Group();
+
+    const bodyGeo = new THREE.CylinderGeometry(2.15, 2.15, 0.5, 64);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1d1912, metalness:0.25, roughness:0.55 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    stampGroup.add(body);
+
+    const ringGeo = new THREE.TorusGeometry(1.7, 0.09, 16, 64);
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xc9962c, metalness:0.6, roughness:0.35, emissive:0x3a2708, emissiveIntensity:0.3 });
+    const ring = new THREE.Mesh(ringGeo, goldMat);
+    ring.rotation.x = Math.PI/2;
+    ring.position.z = 0.28;
+    stampGroup.add(ring);
+
+    const ring2Geo = new THREE.TorusGeometry(1.15, 0.06, 16, 64);
+    const redMat = new THREE.MeshStandardMaterial({ color: 0xb3382c, metalness:0.4, roughness:0.4 });
+    const ring2 = new THREE.Mesh(ring2Geo, redMat);
+    ring2.rotation.x = Math.PI/2;
+    ring2.position.z = 0.28;
+    stampGroup.add(ring2);
+
+    const bossGeo = new THREE.CylinderGeometry(0.55, 0.6, 0.35, 24);
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x2f6b45, metalness:0.3, roughness:0.5 });
+    const boss = new THREE.Mesh(bossGeo, greenMat);
+    boss.rotation.x = Math.PI/2;
+    boss.position.z = 0.42;
+    stampGroup.add(boss);
+
+    // small notches around the rim, standing in for stamped lettering
+    const notchGeo = new THREE.BoxGeometry(0.07, 0.22, 0.1);
+    for (let i=0;i<28;i++){
+      const notch = new THREE.Mesh(notchGeo, goldMat);
+      const a = (i/28) * Math.PI * 2;
+      notch.position.set(Math.cos(a)*1.92, Math.sin(a)*1.92, 0.28);
+      notch.rotation.z = a + Math.PI/2;
+      stampGroup.add(notch);
+    }
+
+    stampGroup.rotation.x = 0.55;
+    scene.add(stampGroup);
+
+    // Drifting low-poly shards — flag colors, far back, low opacity
+    const shardColors = [0xb3382c, 0x2f6b45, 0xf2ede2];
+    const shards = [];
+    for (let i=0;i<14;i++){
+      const size = 0.15 + Math.random()*0.35;
+      const geo = new THREE.TetrahedronGeometry(size);
+      const mat = new THREE.MeshStandardMaterial({
+        color: shardColors[i % shardColors.length],
+        metalness:0.2, roughness:0.7, transparent:true, opacity:0.35
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set((Math.random()-0.5)*14, (Math.random()-0.5)*8, -3 - Math.random()*6);
+      mesh.userData.spin = (Math.random()-0.5)*0.01;
+      mesh.userData.drift = (Math.random()-0.5)*0.003;
+      scene.add(mesh);
+      shards.push(mesh);
+    }
+
+    let raf;
+    let visible = true;
+    const io = new IntersectionObserver((entries)=>{ visible = entries[0].isIntersecting; }, { threshold: 0 });
+    io.observe(canvas);
+
+    function animate(){
+      raf = requestAnimationFrame(animate);
+      if (!visible) return;
+      stampGroup.rotation.z += 0.0035;
+      stampGroup.position.y = Math.sin(Date.now()*0.0006)*0.15;
+      shards.forEach(s=>{
+        s.rotation.x += s.userData.spin;
+        s.rotation.y += s.userData.spin;
+        s.position.y += s.userData.drift;
+        if (s.position.y > 5) s.position.y = -5;
+        if (s.position.y < -5) s.position.y = 5;
+      });
+      renderer.render(scene, camera);
+    }
+    resize();
+    animate();
+  } catch(e){
+    console.warn('3D hero skipped:', e.message);
+  }
+})();
+
+// ── Tools dashboard ─────────────────────────────────────────────────────
+const BASE = ''; // same-origin (proxied through /kenya-tools/*)
+
+async function loadManifest(){
+  const res = await fetch(BASE + '/kenya-tools/manifest');
+  const data = await res.json();
+  renderCategories(data.categories);
+}
+
+function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
+
+function renderCategories(categories){
+  const nav = document.getElementById('categoryNav');
+  const wrap = document.getElementById('categories');
+  const tpl = document.getElementById('card-template');
+
+  categories.forEach((group, gi) => {
+    const id = 'cat-' + slug(group.cat);
+
+    const navBtn = document.createElement('button');
+    navBtn.textContent = group.cat.replace(/^[^\s]+\s/, ''); // strip leading emoji for nav label brevity
+    navBtn.className = gi === 0 ? 'active' : '';
+    navBtn.addEventListener('click', () => {
+      document.getElementById(id).scrollIntoView({ behavior:'smooth', block:'start' });
+      document.querySelectorAll('#categoryNav button').forEach(b=>b.classList.remove('active'));
+      navBtn.classList.add('active');
+    });
+    nav.appendChild(navBtn);
+
+    const section = document.createElement('div');
+    section.className = 'category';
+    section.id = id;
+    section.innerHTML = `<h2>${group.cat}</h2>`;
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+
+    group.items.forEach(item => {
+      const node = tpl.content.cloneNode(true);
+      const card = node.querySelector('.card');
+      node.querySelector('.cmdname').textContent = '.' + item.cmd;
+      node.querySelector('.desc').textContent = item.desc;
+      const argsInput = node.querySelector('.argsInput');
+      const file1 = node.querySelector('.file1');
+      const file2 = node.querySelector('.file2');
+      const runBtn = node.querySelector('.run-btn');
+      const result = node.querySelector('.result');
+
+      if (item.hint) {
+        argsInput.placeholder = item.hint;
+      } else {
+        argsInput.placeholder = '(optional)';
+      }
+      if (item.needsFile === 'pdf2') {
+        node.querySelector('.arg-slot').style.display = 'none';
+      }
+      if (item.needsFile) {
+        node.querySelector('.file-slot-1').style.display = 'block';
+        if (item.needsFile === 'pdf2') node.querySelector('.file-slot-2').style.display = 'block';
+      }
+
+      runBtn.addEventListener('click', async () => {
+        runBtn.disabled = true;
+        runBtn.textContent = 'Working…';
+        result.className = 'result show';
+        result.textContent = '';
+
+        try {
+          const fd = new FormData();
+          fd.append('command', item.cmd);
+          fd.append('args', argsInput.value || '');
+          if (file1.files[0]) fd.append('file', file1.files[0]);
+          if (file2 && file2.files[0]) fd.append('file2', file2.files[0]);
+
+          const res = await fetch(BASE + '/kenya-tools/run', { method:'POST', body: fd });
+          const data = await res.json();
+
+          if (!data.ok) {
+            result.classList.add('error');
+            result.textContent = '❌ ' + data.error;
+          } else {
+            result.classList.remove('error');
+            result.innerHTML = '';
+            data.messages.forEach(m => {
+              if (m.type === 'text') {
+                const p = document.createElement('div');
+                p.textContent = m.text;
+                result.appendChild(p);
+              } else if (m.type === 'image') {
+                const img = document.createElement('img');
+                img.src = m.dataUrl;
+                result.appendChild(img);
+                const dl = document.createElement('a');
+                dl.href = m.dataUrl; dl.download = item.cmd + '.png'; dl.className = 'dl'; dl.textContent = 'Download image';
+                result.appendChild(dl);
+              } else if (m.type === 'document') {
+                const dl = document.createElement('a');
+                dl.href = m.dataUrl; dl.download = m.fileName || (item.cmd + '.pdf'); dl.className = 'dl';
+                dl.textContent = 'Download ' + (m.fileName || 'file');
+                result.appendChild(dl);
+              }
+            });
+          }
+        } catch (e) {
+          result.classList.add('error');
+          result.textContent = '❌ Something went wrong: ' + e.message;
+        } finally {
+          runBtn.disabled = false;
+          runBtn.textContent = 'Run';
+        }
+      });
+
+      grid.appendChild(node);
+    });
+
+    section.appendChild(grid);
+    wrap.appendChild(section);
+  });
+}
+
+loadManifest().catch(e => {
+  document.getElementById('categories').innerHTML =
+    '<p style="color:#f2b8b0">Couldn\'t load the tools list right now. Try refreshing in a moment.</p>';
+  console.error(e);
+});
+</script>
+</body>
+</html>

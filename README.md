@@ -12,11 +12,12 @@ Beast MD is a Baileys (Node.js) WhatsApp bot with a Python
 (landing page, registration, admin panel, per-user bot panel, chat viewer,
 pairing UI).
 
-**~920 commands loaded** across three merged sources — the original bot
-core, the Delta feature pack, and 236 commands ported from a friend's
-MEGA-MD bot (Henry v20 pack) — with zero command-name collisions between
-them. Run `.commands` in chat for the full live list, or `.commands
-<keyword>` to search it; `.menu` shows the curated core set.
+**1000 commands loaded** across four merged sources — the original bot
+core, the Delta feature pack, 236 commands ported from a friend's
+MEGA-MD bot (Henry v20 pack), and the Kenya Docs & Legal Tools plugin —
+with zero command-name collisions between them. Run `.commands` in chat
+for the full live list, or `.commands <keyword>` to search it; `.menu`
+shows the curated core set.
 
 Multi-session pairing (QR or pairing code), tiered permissions (owner /
 co-owner / sub-admin / public), anti-ban protection (device fingerprinting,
@@ -274,6 +275,27 @@ quotes, search, stalk, stickers, tools, upload, utility. Run `.commands
 commands use optional database backends (MongoDB/Postgres/MySQL) — safe
 to ignore if you don't set those up, only those specific commands are
 affected.
+
+### 🆕 Kenya Docs & Legal Tools (`.kefiles` / `.ke`)
+
+Kenya-specific reference guides (KRA/PIN, NHIF, NSSF, HELB, KNEC results,
+voter registration, matatu fares, M-Pesa tariffs, and more via `.ke`),
+plus a document toolkit: real local OCR (`.ocr`, Tesseract eng+swa — no
+API key, first run downloads language data), free local background
+removal (`.nobg`, runs on-server — AGPL-licensed, see note in
+`plugins/kenya_files.js`), PDF tools (`.pdfinfo`/`.pdfsplit`/`.pdfmerge`/
+`.pdfrotate`), photo tools (`.imgcompress`, `.passport_photo`), QR/vCard/
+barcode generation, and fill-in-the-blank legal document drafts
+(`.affidavit`, `.demandletter`, `.rentalagreement` — drafts only, not
+legal advice; affidavits still need swearing before a Commissioner for
+Oaths). Run `.kefiles` for the document-tools menu or `.ke` for the
+reference-guide menu. Also available as a free public web page at
+`/kenya-tools` on your deployed URL — same underlying command logic
+(nothing is duplicated/reimplemented), no WhatsApp pairing or paid
+activation required. It's served internally by the Node bridge and
+proxied through Python the same way `/pair` already is, so it reaches
+the public URL on single-port hosts like Render without needing a
+second deployment.
 
 ---
 

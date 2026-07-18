@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
+    "@imgly/background-removal-node": "^1.4.5",
     "@whiskeysockets/baileys": "^7.0.0-rc13",
     "acrcloud": "^1.4.0",
     "api-qasim": "^1.0.0",
@@ -29,6 +30,7 @@
     "mysql2": "^3.11.0",
     "node-cache": "^5.1.2",
     "node-webpmux": "^3.1.7",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.12.0",
     "pino": "^8.21.0",
     "qrcode": "^1.5.3",
@@ -37,10 +39,11 @@
     "sharp": "^0.33.4",
     "simple-git": "^3.25.0",
     "socks-proxy-agent": "^10.1.0",
+    "tesseract.js": "^5.1.1",
     "wa-sticker-formatter": "^4.4.4",
     "yt-search": "^2.11.1"
   },
-  "_comment_new_deps": "jimp/form-data required by Delta pack (megajs optional, only for .megabackup/.megarestore). Everything from api-qasim through yt-search is required by Henry v20 ported commands — mongoose/pg/mysql2/better-sqlite3 are only used by a handful of commands with optional DB backends; safe to leave uninstalled/ignore errors on those specific commands if you don't use that DB.",
+  "_comment_new_deps": "jimp/form-data required by Delta pack (megajs optional, only for .megabackup/.megarestore). Everything from api-qasim through yt-search is required by Henry v20 ported commands — mongoose/pg/mysql2/better-sqlite3 are only used by a handful of commands with optional DB backends; safe to leave uninstalled/ignore errors on those specific commands if you don't use that DB. pdf-lib/tesseract.js added for plugins/kenya_files.js (PDF tools + real OCR) — tesseract.js downloads eng+swa language data on first .ocr run. @imgly/background-removal-node added for .nobg (free local background removal) — it's AGPL-licensed (review whether that's acceptable for your commercial use) and pulls in a native ONNX runtime module that may not install/run cleanly on Termux/Android; .nobg fails gracefully with an error message if it can't load rather than crashing plugin load.",
   "_comment_libs": "baileys-antiban is vendored locally at ./libs/baileys-antiban (prebuilt CJS, no install needed). Its optional proxy-rotation feature needs http-proxy-agent/https-proxy-agent/socks-proxy-agent if you ever enable proxyRotator — not required for the default setup.",
   "keywords": [
     "whatsapp",
