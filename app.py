@@ -2877,6 +2877,56 @@ async def pair_proxy_post():
             status=503, content_type="text/html"
         )
 
+# ── /kenya-tools proxy ─────────────────────────────────────────────────────
+# Same reasoning as the /pair proxy above: the free Kenya tools web page is
+# served by the Node bridge's internal pairServer (kenya-web-routes.js,
+# mounted on WEB_PORT), not reachable directly on Render/Railway's single
+# exposed port. These routes forward it through Python so anyone can reach
+# it at the public URL without needing a paired bot session or payment.
+
+@app.route("/kenya-tools", methods=["GET"])
+@app.route("/kenya-tools/", methods=["GET"])
+async def kenya_tools_page_proxy():
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{NODE_PAIR_URL}/kenya-tools")
+            return Response(resp.content, status=resp.status_code,
+                            content_type=resp.headers.get("content-type", "text/html"))
+    except Exception as e:
+        return Response(
+            f"<h2>⏳ Tools are starting up...</h2><p>Try again in 10 seconds.</p><p><small>{e}</small></p>",
+            status=503, content_type="text/html"
+        )
+
+@app.route("/kenya-tools/manifest", methods=["GET"])
+async def kenya_tools_manifest_proxy():
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{NODE_PAIR_URL}/kenya-tools/manifest")
+            return Response(resp.content, status=resp.status_code,
+                            content_type=resp.headers.get("content-type", "application/json"))
+    except Exception as e:
+        return Response(json.dumps({"categories": [], "error": str(e)}),
+                        status=503, content_type="application/json")
+
+@app.route("/kenya-tools/run", methods=["POST"])
+async def kenya_tools_run_proxy():
+    # Forwarded byte-for-byte, including multipart file uploads — Quart's
+    # get_data() returns the raw body regardless of content type, and we
+    # pass the original Content-Type header (with its boundary) straight
+    # through, so the Node side's multipart parser sees exactly what the
+    # browser sent.
+    try:
+        body = await request.get_data()
+        headers = {"Content-Type": request.headers.get("Content-Type", "application/json")}
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(f"{NODE_PAIR_URL}/kenya-tools/run", content=body, headers=headers)
+            return Response(resp.content, status=resp.status_code,
+                            content_type=resp.headers.get("content-type", "application/json"))
+    except Exception as e:
+        return Response(json.dumps({"ok": False, "error": f"Tools server unreachable: {e}"}),
+                        status=503, content_type="application/json")
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.route("/get-bio", methods=["GET"])
@@ -3521,6 +3571,12 @@ CHAT_MAX_MESSAGE_LEN = 1000
 CHAT_MIN_SEND_INTERVAL_SECONDS = 1.2  # basic per-anon_id spam throttle
 _chat_last_send = {}  # anon_id -> last send timestamp (in-memory, resets on restart)
 
+# ✅ NEW: live "is typing…" indicator for the /chat panel. In-memory only,
+# same spirit as _chat_last_send above — no DB table needed, this is
+# inherently ephemeral. room -> {anon_id: {"name": str, "expires": ts}}
+CHAT_TYPING_TTL_SECONDS = 4  # how long a "typing" flag lasts without a refresh
+_chat_typing: dict = {}
+
 
 def _chat_default_name(anon_id: str) -> str:
     return f"Anon-{anon_id[-4:].upper()}"
@@ -3619,7 +3675,56 @@ async def chat_send():
             )
         await db.commit()
     _chat_last_send[anon_id] = now
+    # A message arriving means composing is over — clear any stale typing flag.
+    _chat_typing.get(room, {}).pop(anon_id, None)
     return jsonify({"success": True, "room": room})
+
+
+@app.route("/chat/typing", methods=["POST"])
+async def chat_typing_ping():
+    """Called by the browser while the user is actively composing a message
+    (throttled client-side, NOT on every keystroke). Sets/refreshes a short
+    TTL flag so other viewers of the same room see 'X is typing…'. Purely
+    additive, in-memory, no DB writes — same pattern as _chat_last_send."""
+    data = await request.get_json(silent=True) or {}
+    anon_id = (data.get("anon_id") or "").strip()
+    to = (data.get("to") or "").strip() or None
+    if not anon_id:
+        return jsonify({"success": False, "error": "anon_id required"}), 400
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute("SELECT nickname, banned FROM chat_users WHERE anon_id = ?", (anon_id,)) as c:
+            row = await c.fetchone()
+    if not row:
+        return jsonify({"success": False, "error": "Unknown chat identity — call /chat/identify first."}), 404
+    if row[1]:
+        return jsonify({"success": False, "error": "This chat identity has been banned."}), 403
+    sender_name = row[0] or _chat_default_name(anon_id)
+
+    room = _chat_dm_room(anon_id, to) if to else "public"
+    _chat_typing.setdefault(room, {})[anon_id] = {
+        "name": sender_name, "expires": time.time() + CHAT_TYPING_TTL_SECONDS
+    }
+    return jsonify({"success": True, "room": room})
+
+
+@app.route("/chat/typing", methods=["GET"])
+async def chat_typing_status():
+    """Polled alongside /chat/messages. Returns everyone CURRENTLY typing in
+    this room, excluding the caller themselves and anyone whose flag expired."""
+    anon_id = (request.args.get("anon_id") or "").strip()
+    to = (request.args.get("to") or "").strip() or None
+    if not anon_id:
+        return jsonify({"error": "anon_id required"}), 400
+
+    room = _chat_dm_room(anon_id, to) if to else "public"
+    now = time.time()
+    room_typing = _chat_typing.get(room, {})
+    # Sweep expired entries so this dict doesn't grow forever.
+    for uid in [u for u, v in room_typing.items() if v["expires"] <= now]:
+        room_typing.pop(uid, None)
+    typers = [v["name"] for uid, v in room_typing.items() if uid != anon_id]
+    return jsonify({"room": room, "typing": typers})
 
 
 @app.route("/chat/messages", methods=["GET"])
@@ -5288,6 +5393,112 @@ async def widget_npm_lookup():
     except Exception:
         return jsonify({"success": False, "error": "npm lookup failed — try again shortly."}), 502
 
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ✅ NEW: Link-click analytics ("Grabify" feature). Short redirect links
+# (yourdomain.com/go/<link_id>) that log click data — IP, approximate
+# city/country (from IP, NOT precise GPS), device/browser, referrer — then
+# forward to a real destination (e.g. your WhatsApp group invite, a promo
+# link, your support chat). Same purpose as bit.ly/Google Analytics link
+# tracking: measuring how your own marketing links perform. Entirely
+# additive — new routes only, reuses existing ADMIN_PASSWORD auth and
+# _client_ip() helper, no existing route touched.
+# ══════════════════════════════════════════════════════════════════════════
+
+# link_id -> destination URL. Edit these to your real links, or manage at
+# runtime via POST /api/link-directory (admin-authenticated) so you don't
+# need to redeploy every time a link changes.
+LINK_DIRECTORY: dict = {
+    "invite": "https://example.com",   # e.g. your WhatsApp group invite link
+    "media": "https://example.com",    # e.g. a promo image/video link
+    "support": "https://example.com",  # e.g. your support WhatsApp link
+}
+
+# In-memory click log: {link_id: [click_record, ...]}. Resets on redeploy —
+# same tradeoff as other in-memory state in this file (_chat_last_send,
+# SESSION_REGISTRY). Say the word if you want this persisted to SQLite instead.
+_LINK_CLICK_LOG: dict = {link_id: [] for link_id in LINK_DIRECTORY}
+
+
+async def _lookup_geo(ip: str) -> dict:
+    """Best-effort approximate location from IP — city-level, not precise
+    GPS, and sometimes wrong on mobile carriers/VPNs."""
+    if ip in ("127.0.0.1", "localhost", "::1") or ip.startswith("10.") or ip.startswith("192.168."):
+        return {"city": "local/private network", "country": "n/a"}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"http://ip-api.com/json/{ip}?fields=status,country,regionName,city,isp")
+            data = r.json()
+            if data.get("status") == "success":
+                return {
+                    "city": data.get("city", "unknown"),
+                    "region": data.get("regionName", ""),
+                    "country": data.get("country", "unknown"),
+                    "isp": data.get("isp", "unknown"),
+                }
+    except Exception as e:
+        logger.warning(f"[LinkTracker] geo lookup failed for {ip}: {e}")
+    return {"city": "unknown", "country": "unknown"}
+
+
+@app.route("/go/<link_id>")
+async def link_tracker_redirect(link_id: str):
+    target_url = LINK_DIRECTORY.get(link_id)
+    if not target_url:
+        logger.warning(f"[LinkTracker] unknown link_id '{link_id}' requested.")
+        return Response("<h1>Link Not Found</h1>", status=404, mimetype="text/html")
+
+    ip = _client_ip(request)
+    user_agent = request.headers.get("user-agent", "Unknown Device")
+    referrer = request.headers.get("referer", "direct")
+    geo = await _lookup_geo(ip)
+
+    record = {
+        "timestamp": time.time(),
+        "ip": ip,
+        "user_agent": user_agent,
+        "referrer": referrer,
+        "geo": geo,
+    }
+    _LINK_CLICK_LOG.setdefault(link_id, []).append(record)
+    logger.info(
+        f"[LinkTracker] '{link_id}' clicked from {ip} "
+        f"({geo.get('city','?')}, {geo.get('country','?')}) UA: {user_agent}"
+    )
+    return redirect(target_url)
+
+
+@app.route("/api/link-stats", methods=["GET"])
+async def link_tracker_stats():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    summary = {
+        link_id: {
+            "target": LINK_DIRECTORY.get(link_id, "n/a"),
+            "total_clicks": len(clicks),
+            "recent": clicks[-20:][::-1],  # most recent 20, newest first
+        }
+        for link_id, clicks in _LINK_CLICK_LOG.items()
+    }
+    return jsonify(summary)
+
+
+@app.route("/api/link-directory", methods=["GET", "POST"])
+async def link_tracker_directory():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    if request.method == "GET":
+        return jsonify(LINK_DIRECTORY)
+    data = await request.get_json(silent=True) or {}
+    link_id = (data.get("link_id") or "").strip()
+    url = (data.get("url") or "").strip()
+    if not link_id or not url:
+        return jsonify({"error": "link_id and url are required"}), 400
+    LINK_DIRECTORY[link_id] = url
+    _LINK_CLICK_LOG.setdefault(link_id, [])
+    logger.info(f"[LinkTracker] link '{link_id}' set -> {url}")
+    return jsonify({"ok": True, "link_id": link_id, "url": url})
 
 
 if __name__ == "__main__":

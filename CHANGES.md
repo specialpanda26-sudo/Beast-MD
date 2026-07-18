@@ -2,6 +2,40 @@
 
 > 📜 Looking for older history? See [CHANGES-ARCHIVE.md](./CHANGES-ARCHIVE.md) (Updates 3–14).
 
+## Update 27 — Live "is typing…" indicator on `/chat`, and link-click analytics ("Grabify")
+
+Both additive — nothing existing touched, nothing pushed to Render/GitHub yet (staged locally pending confirmation).
+
+**1. Live typing indicator (`/chat` community panel, public room + DMs):**
+- New in-memory state `_chat_typing` (room → {anon_id: {name, expires}}), same ephemeral
+  pattern as the existing `_chat_last_send` spam throttle — no DB table needed.
+- New routes: `POST /chat/typing` (client pings this while composing, throttled to ~once per
+  1.5s client-side, NOT per keystroke) and `GET /chat/typing` (polled every 1.5s, returns who's
+  currently typing in that room, excluding yourself, with a 4-second TTL so it clears
+  automatically if someone stops typing or closes the tab).
+- `chat.html`: new `#typing-indicator` element above the composer, `pingTyping()`/`pollTyping()`
+  JS functions, wired to the existing `msg-input` element's `input` event and a new 1.5s
+  `setInterval` alongside the existing message/thread polling timers. Clears on room switch and
+  on send.
+- Scope note: this is for the website's anonymous community chat (`chat.html`, browser-to-browser
+  between site visitors), not WhatsApp — WhatsApp's protocol only exposes a composing/paused
+  presence boolean, never draft message text, to any bot on any platform.
+
+**2. Link-click analytics ("Grabify"):** `/go/<link_id>` short-link redirects that log click
+data (IP via existing `_client_ip()` helper, approximate city/country via a free IP-geolocation
+lookup, device/browser, referrer) before forwarding to a real destination — same idea as
+bit.ly/Google Analytics link tracking, for measuring your own marketing links, not for tracking
+a specific individual without their knowledge.
+- `LINK_DIRECTORY` dict holds link_id → target URL (currently placeholder `example.com` values —
+  waiting on real invite/media/support links).
+- `GET /api/link-stats` and `GET`/`POST /api/link-directory` — both reuse the existing
+  `_check_admin_auth_async()` gate (same `?pass=`/Bearer auth as every other admin route), so no
+  new secret was introduced.
+- No new dependency — uses `httpx`, already in `requirements.txt`.
+
+**Verification:** `py_compile` on `app.py` — clean. `node --check` on `chat.html`'s embedded
+script — clean.
+
 ## Update 26 — Paid pairing/activation system fully removed; free access only
 
 Per explicit owner direction: no money integration of any kind inside the bot — only the existing

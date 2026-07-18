@@ -77,6 +77,10 @@
   .send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
   .rate-hint{font-size:11.5px;color:var(--bad);padding:0 20px 8px;display:none;}
   .rate-hint.show{display:block;}
+  /* ✅ NEW: live typing indicator, additive — matches the muted/italic
+     style already used elsewhere (thread-preview, header-sub). */
+  .typing-indicator{font-size:11.5px;color:var(--ash);font-style:italic;padding:0 20px 6px;min-height:16px;}
+  .typing-indicator .dots{display:inline-block;width:16px;text-align:left;}
 
   .nick-modal{position:fixed;inset:0;background:rgba(10,12,15,0.7);display:none;align-items:center;justify-content:center;z-index:50;}
   .nick-modal.show{display:flex;}
@@ -147,6 +151,7 @@
       </div>
     </div>
 
+    <div class="typing-indicator" id="typing-indicator"></div>
     <div class="rate-hint" id="rate-hint">Sending too fast — slow down a little.</div>
     <div class="composer">
       <input type="text" id="msg-input" placeholder="Message Public Room" maxlength="1000">
@@ -177,6 +182,8 @@
     sinceId: {},
     pollTimer: null,
     threadTimer: null,
+    typingTimer: null,      // ✅ NEW: polls who's typing in the current room
+    lastTypingPing: 0,      // ✅ NEW: throttle for outgoing typing pings
   };
 
   function initials(name){ return (name||'?').slice(0,2).toUpperCase(); }
@@ -256,6 +263,34 @@
     }
   }
 
+  // ✅ NEW: live typing indicator — additive, doesn't touch pollMessages above.
+  async function pollTyping(){
+    const params = new URLSearchParams({ anon_id: state.anonId });
+    if(state.dmTarget) params.set('to', state.dmTarget);
+    try {
+      const res = await fetch('/chat/typing?' + params.toString());
+      const data = await res.json();
+      const el = document.getElementById('typing-indicator');
+      const names = data.typing || [];
+      if(!names.length){ el.textContent = ''; return; }
+      const label = names.length === 1 ? names[0] + ' is typing' :
+                    names.slice(0,-1).join(', ') + ' and ' + names[names.length-1] + ' are typing';
+      el.innerHTML = label + '<span class="dots">…</span>';
+    } catch(e) { /* silent — indicator just stays blank on a hiccup */ }
+  }
+
+  function pingTyping(){
+    const now = Date.now();
+    // Throttle to roughly once every 1.5s of active typing, not per keystroke.
+    if(now - state.lastTypingPing < 1500) return;
+    state.lastTypingPing = now;
+    const payload = { anon_id: state.anonId };
+    if(state.dmTarget) payload.to = state.dmTarget;
+    fetch('/chat/typing', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
+
   function switchToPublic(){
     state.room = 'public'; state.dmTarget = null; state.dmTargetName = null;
     document.getElementById('messages').innerHTML = '';
@@ -264,6 +299,7 @@
     document.getElementById('header-avatar').className = 'avatar public';
     document.getElementById('header-avatar').textContent = '#';
     document.getElementById('msg-input').placeholder = 'Message Public Room';
+    document.getElementById('typing-indicator').textContent = '';
     document.querySelectorAll('.thread').forEach(t => t.classList.remove('active'));
     document.getElementById('public-thread').classList.add('active');
     pollMessages(true);
@@ -278,6 +314,7 @@
     document.getElementById('header-avatar').className = 'avatar';
     document.getElementById('header-avatar').textContent = initials(otherName);
     document.getElementById('msg-input').placeholder = 'Message ' + otherName;
+    document.getElementById('typing-indicator').textContent = '';
     pollMessages(true);
     loadThreads();
     if(window.innerWidth <= 760) document.getElementById('sidebar').classList.add('hide');
@@ -325,11 +362,15 @@
     }
     hint.classList.remove('show');
     input.value = '';
+    state.lastTypingPing = 0; // let the next keystroke ping immediately
+    document.getElementById('typing-indicator').textContent = '';
     pollMessages(false);
   }
 
   document.getElementById('send-btn').addEventListener('click', sendMessage);
   document.getElementById('msg-input').addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+  // ✅ NEW: ping the typing indicator while composing (throttled inside pingTyping).
+  document.getElementById('msg-input').addEventListener('input', pingTyping);
   document.getElementById('public-thread').addEventListener('click', switchToPublic);
   document.getElementById('back-btn').addEventListener('click', () => document.getElementById('sidebar').classList.remove('hide'));
 
@@ -371,6 +412,7 @@
     await pollMessages(true);
     state.pollTimer = setInterval(() => pollMessages(false), 2500);
     state.threadTimer = setInterval(loadThreads, 6000);
+    state.typingTimer = setInterval(pollTyping, 1500); // ✅ NEW
   })().catch(() => {
     document.getElementById('messages').innerHTML =
       '<div class="empty-state"><div class="big">Something went wrong</div>Reload the page to try again.</div>';
