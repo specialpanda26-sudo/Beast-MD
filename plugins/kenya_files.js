@@ -58,6 +58,12 @@ function getQuotedMediaMessage(h) {
 }
 
 async function downloadQuoted(h) {
+  // Web bridge (kenya-web-routes.js) sets these directly on `h` instead of
+  // going through WhatsApp's quoted-message machinery — same command body
+  // works for both transports.
+  if (h.webBuffer) {
+    return { buffer: h.webBuffer, kind: h.webKind || 'image', mimetype: h.webMimetype || 'application/octet-stream' };
+  }
   const found = getQuotedMediaMessage(h);
   if (!found) return null;
   const buffer = await downloadMediaMessage(found.dlMsg, 'buffer', {});
@@ -92,6 +98,26 @@ ${prefix}Reply to a photo with *.ocr* and I'll extract the text automatically. N
 _Henry Ochibots 🇰🇪_`
   );
 }
+
+// Shared merge core — used by the .pdfmerge WhatsApp command (which waits
+// for a 2nd message via events) AND the web bridge (which gets both files
+// in a single request, no waiting needed). Exported on module.exports so
+// kenya-web-routes.js can call it directly; denylisted as a real command
+// in client_bridge.js's NON_COMMAND_KEYS (it takes buffers, not an `h`).
+async function mergePdfBuffers(buffer1, buffer2) {
+  const doc1 = await PDFDocument.load(buffer1, { ignoreEncryption: true });
+  const doc2 = await PDFDocument.load(buffer2, { ignoreEncryption: true });
+
+  const mergedDoc = await PDFDocument.create();
+  const pages1 = await mergedDoc.copyPages(doc1, doc1.getPageIndices());
+  pages1.forEach(p => mergedDoc.addPage(p));
+  const pages2 = await mergedDoc.copyPages(doc2, doc2.getPageIndices());
+  pages2.forEach(p => mergedDoc.addPage(p));
+
+  const outBytes = await mergedDoc.save();
+  return { outBytes, pages1: doc1.getPageCount(), pages2: doc2.getPageCount(), pagesTotal: mergedDoc.getPageCount() };
+}
+module.exports.mergePdfBuffers = mergePdfBuffers;
 
 // ── MENU addition ─────────────────────────────────────────────────────────
 
@@ -428,21 +454,12 @@ _Henry Ochibots 🇰🇪_`
 
         try {
           const secondBuffer = await downloadMediaMessage(msgInfo, 'buffer', {});
-          const doc1 = await PDFDocument.load(media.buffer, { ignoreEncryption: true });
-          const doc2 = await PDFDocument.load(secondBuffer, { ignoreEncryption: true });
-
-          const mergedDoc = await PDFDocument.create();
-          const pages1 = await mergedDoc.copyPages(doc1, doc1.getPageIndices());
-          pages1.forEach(p => mergedDoc.addPage(p));
-          const pages2 = await mergedDoc.copyPages(doc2, doc2.getPageIndices());
-          pages2.forEach(p => mergedDoc.addPage(p));
-
-          const outBytes = await mergedDoc.save();
+          const { outBytes, pages1, pages2, pagesTotal } = await mergePdfBuffers(media.buffer, secondBuffer);
           await h.sock.sendMessage(h.from,
             { document: Buffer.from(outBytes), fileName: 'merged.pdf', mimetype: 'application/pdf' },
             { quoted: h.msg }
           );
-          await reply(h, `✅ Merged! ${doc1.getPageCount()} + ${doc2.getPageCount()} = ${mergedDoc.getPageCount()} pages.\n_Henry Ochibots 🇰🇪_`);
+          await reply(h, `✅ Merged! ${pages1} + ${pages2} = ${pagesTotal} pages.\n_Henry Ochibots 🇰🇪_`);
         } catch (e) {
           await reply(h, `❌ Couldn't merge those PDFs: ${e.message}`);
         }

@@ -2877,6 +2877,56 @@ async def pair_proxy_post():
             status=503, content_type="text/html"
         )
 
+# ── /kenya-tools proxy ─────────────────────────────────────────────────────
+# Same reasoning as the /pair proxy above: the free Kenya tools web page is
+# served by the Node bridge's internal pairServer (kenya-web-routes.js,
+# mounted on WEB_PORT), not reachable directly on Render/Railway's single
+# exposed port. These routes forward it through Python so anyone can reach
+# it at the public URL without needing a paired bot session or payment.
+
+@app.route("/kenya-tools", methods=["GET"])
+@app.route("/kenya-tools/", methods=["GET"])
+async def kenya_tools_page_proxy():
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{NODE_PAIR_URL}/kenya-tools")
+            return Response(resp.content, status=resp.status_code,
+                            content_type=resp.headers.get("content-type", "text/html"))
+    except Exception as e:
+        return Response(
+            f"<h2>⏳ Tools are starting up...</h2><p>Try again in 10 seconds.</p><p><small>{e}</small></p>",
+            status=503, content_type="text/html"
+        )
+
+@app.route("/kenya-tools/manifest", methods=["GET"])
+async def kenya_tools_manifest_proxy():
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{NODE_PAIR_URL}/kenya-tools/manifest")
+            return Response(resp.content, status=resp.status_code,
+                            content_type=resp.headers.get("content-type", "application/json"))
+    except Exception as e:
+        return Response(json.dumps({"categories": [], "error": str(e)}),
+                        status=503, content_type="application/json")
+
+@app.route("/kenya-tools/run", methods=["POST"])
+async def kenya_tools_run_proxy():
+    # Forwarded byte-for-byte, including multipart file uploads — Quart's
+    # get_data() returns the raw body regardless of content type, and we
+    # pass the original Content-Type header (with its boundary) straight
+    # through, so the Node side's multipart parser sees exactly what the
+    # browser sent.
+    try:
+        body = await request.get_data()
+        headers = {"Content-Type": request.headers.get("Content-Type", "application/json")}
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(f"{NODE_PAIR_URL}/kenya-tools/run", content=body, headers=headers)
+            return Response(resp.content, status=resp.status_code,
+                            content_type=resp.headers.get("content-type", "application/json"))
+    except Exception as e:
+        return Response(json.dumps({"ok": False, "error": f"Tools server unreachable: {e}"}),
+                        status=503, content_type="application/json")
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.route("/get-bio", methods=["GET"])

@@ -15,6 +15,7 @@ const path = require("path");
 const pino = require("pino");
 const qrcode = require("qrcode-terminal");
 const http = require("http");
+const { handleKenyaWebRequest } = require("./kenya-web-routes.js");
 // ── Anti-ban middleware (baileys-antiban, bundled locally in /libs) ────────
 // Wraps every session's socket with rate limiting, warm-up ramping, health
 // monitoring, legitimacy-signal injection, and group-op guarding — all the
@@ -141,6 +142,7 @@ const NON_COMMAND_KEYS = [
   '_handleTTTReply', '_handleWCGReply', '_enforceGroupGuard', '__getSetting',
   '_handleJoinEvent', '_handleLeaveEvent',
   '__isPmApproved', '__bumpPmStrike', '__hasBeenGreeted', '__markGreeted', '__buildFirstContactMessage',
+  'mergePdfBuffers',
 ];
 NON_COMMAND_KEYS.forEach(k => delete allCommands[k]);
 
@@ -801,6 +803,7 @@ function getOwnerSessionSocket() {
   }
 
   if (await pairServerRoutesExtra(req, res, url)) return;
+  if (await handleKenyaWebRequest(req, res, url)) return;
 
   res.writeHead(404);
   res.end("Not found");
