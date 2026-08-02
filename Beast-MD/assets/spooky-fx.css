@@ -1,0 +1,83 @@
+/* 🎃 Halloween MD — shared spooky effects system
+   Used across all 7 panels: floating ghost/bat decorations,
+   pump-on-hover buttons, pill-highlighted nav, section reveal. */
+
+.hmd-fx-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+}
+
+.hmd-ghost, .hmd-bat {
+  position: absolute;
+  font-size: 28px;
+  opacity: 0.55;
+  filter: drop-shadow(0 0 6px rgba(142,45,226,0.5));
+  will-change: transform;
+}
+
+.hmd-ghost { animation: hmd-drift-ghost linear infinite; }
+.hmd-bat { animation: hmd-drift-bat linear infinite; font-size: 20px; }
+
+@keyframes hmd-drift-ghost {
+  0%   { transform: translate(-10vw, 20vh) translateY(0) scale(1); }
+  25%  { transform: translate(30vw, 10vh) translateY(-14px) scale(1.05); }
+  50%  { transform: translate(65vw, 30vh) translateY(0) scale(1); }
+  75%  { transform: translate(90vw, 15vh) translateY(-10px) scale(0.95); }
+  100% { transform: translate(110vw, 22vh) translateY(0) scale(1); }
+}
+
+@keyframes hmd-drift-bat {
+  0%   { transform: translate(-10vw, 60vh) translateY(0) rotate(0deg); }
+  20%  { transform: translate(20vw, 45vh) translateY(-20px) rotate(-6deg); }
+  40%  { transform: translate(45vw, 65vh) translateY(10px) rotate(4deg); }
+  60%  { transform: translate(70vw, 40vh) translateY(-16px) rotate(-4deg); }
+  80%  { transform: translate(95vw, 58vh) translateY(6px) rotate(3deg); }
+  100% { transform: translate(115vw, 48vh) translateY(0) rotate(0deg); }
+}
+
+/* Pump-on-hover: applied automatically by spooky-fx.js to buttons/links,
+   layered on top of whatever hover effect already exists. */
+.hmd-pump { transition: transform 0.18s ease; }
+.hmd-pump:hover { transform: scale(1.06); }
+.hmd-pump:active { transform: scale(0.97); }
+
+/* Pill-highlighted nav — active link gets a rounded glow pill behind it */
+.hmd-nav-links { position: relative; display: flex; gap: 4px; align-items: center; }
+.hmd-nav-links a {
+  position: relative;
+  padding: 8px 14px;
+  border-radius: 999px;
+  transition: color 0.2s ease;
+  z-index: 1;
+}
+.hmd-nav-links a.hmd-active {
+  color: #fff !important;
+}
+.hmd-nav-pill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent, #ff7518), var(--accent2, #8e2de2));
+  box-shadow: 0 0 16px rgba(255,117,24,0.5);
+  transition: transform 0.28s cubic-bezier(.4,0,.2,1), width 0.28s cubic-bezier(.4,0,.2,1);
+  z-index: 0;
+}
+
+/* Section reveal-on-scroll (for anchor-nav long pages) */
+.hmd-section-fade {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.hmd-section-fade.hmd-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  .hmd-ghost, .hmd-bat { font-size: 20px; }
+}

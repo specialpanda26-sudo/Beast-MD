@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community Chat — Beast MD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14171C; --panel:#1B1F26; --panel2:#20242C; --ember:#E8A33D; --ember-dim:#8A6224;
+    --bone:#F2EFE9; --ash:#8B93A1; --line:#2A2F38; --good:#4CA870; --bad:#C1553F;
+    --bubble-me:#3A3416; --bubble-me-line:#8A6224; --bubble-them:#20242C;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--bone);font-family:'Space Grotesk',sans-serif;height:100vh;overflow:hidden;}
+  a{color:inherit;text-decoration:none;}
+  .serif-i{font-family:'Fraunces',serif;font-style:italic;font-weight:500;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;}
+
+  .app{display:grid;grid-template-columns:340px 1fr;height:100vh;}
+
+  /* ===== SIDEBAR ===== */
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;}
+  .side-top{padding:16px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);}
+  .brand{display:flex;align-items:center;gap:8px;font-size:17px;}
+  .brand .serif-i{color:var(--ember);}
+  .me-chip{display:flex;align-items:center;gap:8px;cursor:pointer;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ember),var(--ember-dim));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#1A1305;flex-shrink:0;}
+  .search-box{padding:10px 14px;}
+  .search-box input{
+    width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:20px;
+    padding:9px 16px;color:var(--bone);font-size:13px;
+  }
+  .search-box input:focus{outline:none;border-color:var(--ember-dim);}
+
+  .thread-list{flex:1;overflow-y:auto;}
+  .thread{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid rgba(42,47,56,0.5);transition:background .15s;}
+  .thread:hover{background:var(--panel2);}
+  .thread.active{background:var(--panel2);border-left:2px solid var(--ember);}
+  .thread .avatar.public{background:linear-gradient(135deg,#4CA870,#2C6B45);}
+  .thread-body{flex:1;min-width:0;}
+  .thread-name{font-size:14px;font-weight:600;display:flex;justify-content:space-between;gap:8px;}
+  .thread-name .t{font-weight:400;font-size:11px;color:var(--ash);flex-shrink:0;}
+  .thread-preview{font-size:12.5px;color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+  .thread-empty{padding:30px 20px;text-align:center;color:var(--ash);font-size:13px;}
+
+  /* ===== CHAT PANE ===== */
+  .chat-pane{display:flex;flex-direction:column;min-width:0;background:
+    repeating-linear-gradient(45deg, rgba(232,163,61,0.02) 0px, rgba(232,163,61,0.02) 2px, transparent 2px, transparent 40px), var(--bg);}
+  .chat-header{display:flex;align-items:center;gap:12px;padding:13px 20px;background:var(--panel);border-bottom:1px solid var(--line);}
+  .chat-header .name{font-size:15px;font-weight:600;}
+  .chat-header .sub{font-size:12px;color:var(--ash);}
+
+  .messages{flex:1;overflow-y:auto;padding:20px 8vw;display:flex;flex-direction:column;gap:6px;}
+  .day-divider{align-self:center;background:var(--panel2);color:var(--ash);font-size:11.5px;padding:4px 12px;border-radius:10px;margin:12px 0;font-family:'JetBrains Mono',monospace;}
+  .bubble-row{display:flex;}
+  .bubble-row.me{justify-content:flex-end;}
+  .bubble{max-width:62%;padding:8px 12px;border-radius:10px;font-size:14px;line-height:1.4;position:relative;}
+  .bubble .sender{font-size:12px;font-weight:700;color:var(--ember);margin-bottom:2px;}
+  .bubble.them{background:var(--bubble-them);border:1px solid var(--line);border-top-left-radius:2px;}
+  .bubble.me{background:var(--bubble-me);border:1px solid var(--bubble-me-line);border-top-right-radius:2px;}
+  .bubble .time{display:block;text-align:right;font-size:10.5px;color:var(--ash);margin-top:3px;}
+  .empty-state{margin:auto;text-align:center;color:var(--ash);font-size:13px;max-width:280px;}
+  .empty-state .big{font-size:15px;color:var(--bone);margin-bottom:6px;font-family:'Fraunces',serif;font-style:italic;}
+
+  .composer{display:flex;align-items:center;gap:10px;padding:14px 20px;background:var(--panel);border-top:1px solid var(--line);}
+  .composer input{
+    flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:22px;
+    padding:11px 18px;color:var(--bone);font-size:14px;
+  }
+  .composer input:focus{outline:none;border-color:var(--ember-dim);}
+  .send-btn{width:40px;height:40px;border-radius:50%;background:var(--ember);border:none;color:#1A1305;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:transform .2s;}
+  .send-btn:hover{transform:scale(1.08);}
+  .send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .rate-hint{font-size:11.5px;color:var(--bad);padding:0 20px 8px;display:none;}
+  .rate-hint.show{display:block;}
+  /* ✅ NEW: live typing indicator, additive — matches the muted/italic
+     style already used elsewhere (thread-preview, header-sub). */
+  .typing-indicator{font-size:11.5px;color:var(--ash);font-style:italic;padding:0 20px 6px;min-height:16px;}
+  .typing-indicator .dots{display:inline-block;width:16px;text-align:left;}
+
+  .nick-modal{position:fixed;inset:0;background:rgba(10,12,15,0.7);display:none;align-items:center;justify-content:center;z-index:50;}
+  .nick-modal.show{display:flex;}
+  .nick-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px;width:320px;}
+  .nick-box h3{font-family:'Fraunces',serif;font-weight:600;margin-bottom:6px;font-size:18px;}
+  .nick-box p{color:var(--ash);font-size:13px;margin-bottom:16px;}
+  .nick-box input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--bone);margin-bottom:16px;}
+  .nick-box .row{display:flex;gap:10px;}
+  .nick-box button{flex:1;padding:10px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:13px;}
+  .nick-box .save{background:var(--ember);color:#1A1305;}
+  .nick-box .cancel{background:transparent;color:var(--ash);box-shadow:inset 0 0 0 1px var(--line);}
+
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+  @media(max-width:760px){
+    .app{grid-template-columns:1fr;}
+    .sidebar{position:fixed;inset:0;z-index:20;transform:translateX(0);transition:transform .25s;}
+    .sidebar.hide{transform:translateX(-100%);}
+    .chat-pane{position:fixed;inset:0;z-index:10;}
+    .back-btn{display:inline-flex!important;}
+  }
+  .back-btn{display:none;background:none;border:none;color:var(--bone);font-size:18px;cursor:pointer;margin-right:4px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="side-top">
+      <div>
+        <a href="index.html" class="brand"><span style="font-weight:700;">BEAST</span><span class="serif-i">MD</span></a>
+        <div style="font-size:12px;margin-top:2px;"><a href="panel.html" style="color:inherit;opacity:.7;">Panel</a> · <a href="admin.html" style="color:inherit;opacity:.7;">Admin</a> · <a href="console.html" style="color:inherit;opacity:.7;">Console</a></div>
+      </div>
+      <div class="me-chip" id="me-chip" title="Edit nickname">
+        <div class="avatar" id="my-avatar">?</div>
+      </div>
+    </div>
+    <div class="search-box"><input type="text" placeholder="Search chats" id="search-input"></div>
+    <div class="thread-list" id="thread-list">
+      <div class="thread active" data-room="public" id="public-thread">
+        <div class="avatar public">#</div>
+        <div class="thread-body">
+          <div class="thread-name"><span>Public Room</span><span class="t" id="public-time">now</span></div>
+          <div class="thread-preview" id="public-preview">Say hello to everyone</div>
+        </div>
+      </div>
+      <div class="thread-empty" id="dm-empty">No direct messages yet. Tap a name in Public Room to start one.</div>
+    </div>
+  </div>
+
+  <!-- CHAT PANE -->
+  <div class="chat-pane">
+    <div class="chat-header">
+      <button class="back-btn" id="back-btn">←</button>
+      <div class="avatar public" id="header-avatar">#</div>
+      <div>
+        <div class="name" id="header-name">Public Room</div>
+        <div class="sub" id="header-sub">Open to everyone · be respectful</div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="empty-state" id="empty-state">
+        <div class="big">Quiet in here.</div>
+        Be the first to say something in the public room.
+      </div>
+    </div>
+
+    <div class="typing-indicator" id="typing-indicator"></div>
+    <div class="rate-hint" id="rate-hint">Sending too fast — slow down a little.</div>
+    <div class="composer">
+      <input type="text" id="msg-input" placeholder="Message Public Room" maxlength="1000">
+      <button class="send-btn" id="send-btn">➤</button>
+    </div>
+  </div>
+</div>
+
+<div class="nick-modal" id="nick-modal">
+  <div class="nick-box">
+    <h3>Pick a display name</h3>
+    <p>This is what other people in the room will see. You stay anonymous otherwise.</p>
+    <input type="text" id="nick-input" placeholder="e.g. QuietFox" maxlength="24">
+    <div class="row">
+      <button class="cancel" id="nick-cancel">Cancel</button>
+      <button class="save" id="nick-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const state = {
+    anonId: localStorage.getItem('beastmd_anon_id') || '',
+    nickname: localStorage.getItem('beastmd_nickname') || '',
+    room: 'public',
+    dmTarget: null,
+    dmTargetName: null,
+    sinceId: {},
+    pollTimer: null,
+    threadTimer: null,
+    typingTimer: null,      // ✅ NEW: polls who's typing in the current room
+    lastTypingPing: 0,      // ✅ NEW: throttle for outgoing typing pings
+  };
+
+  function initials(name){ return (name||'?').slice(0,2).toUpperCase(); }
+  function fmtTime(ts){
+    const d = new Date(ts*1000);
+    return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  }
+
+  async function identify(){
+    let res, data;
+    try {
+      res = await fetch('/chat/identify', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ anon_id: state.anonId })
+      });
+      data = await res.json();
+    } catch(e) {
+      document.getElementById('messages').innerHTML =
+        '<div class="empty-state"><div class="big">Connection error</div>Could not reach the chat server. Check your connection and reload.</div>';
+      return false;
+    }
+    if(!data.success){
+      document.getElementById('messages').innerHTML =
+        '<div class="empty-state"><div class="big">Access blocked</div>'+(data.error||'This identity was banned.')+'</div>';
+      return false;
+    }
+    state.anonId = data.anon_id;
+    state.nickname = data.nickname;
+    localStorage.setItem('beastmd_anon_id', state.anonId);
+    localStorage.setItem('beastmd_nickname', state.nickname);
+    document.getElementById('my-avatar').textContent = initials(state.nickname);
+    return true;
+  }
+
+  function renderMessage(m){
+    const wrap = document.createElement('div');
+    wrap.className = 'bubble-row ' + (m.is_me ? 'me' : 'them');
+    const b = document.createElement('div');
+    b.className = 'bubble ' + (m.is_me ? 'me' : 'them');
+    let html = '';
+    if(!m.is_me && state.room === 'public') html += '<div class="sender">'+escapeHtml(m.sender_name)+'</div>';
+    html += escapeHtml(m.body) + '<span class="time">' + fmtTime(m.created_at) + '</span>';
+    b.innerHTML = html;
+    if(!m.is_me && state.room === 'public'){
+      b.style.cursor = 'pointer';
+      b.title = 'Message ' + m.sender_name + ' privately';
+      b.addEventListener('click', () => openDm(m.sender_id, m.sender_name));
+    }
+    wrap.appendChild(b);
+    return wrap;
+  }
+
+  function escapeHtml(s){
+    const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+  }
+
+  async function pollMessages(initial){
+    const key = state.dmTarget ? ('dm:'+state.dmTarget) : 'public';
+    const since = state.sinceId[key] || 0;
+    const params = new URLSearchParams({ anon_id: state.anonId, since_id: since, limit: initial ? 50 : 50 });
+    if(state.dmTarget) params.set('to', state.dmTarget);
+    const res = await fetch('/chat/messages?' + params.toString());
+    const data = await res.json();
+    if(!data.messages) return;
+    const box = document.getElementById('messages');
+    if(data.messages.length){
+      document.getElementById('empty-state')?.remove();
+      const wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 60;
+      data.messages.forEach(m => {
+        box.appendChild(renderMessage(m));
+        state.sinceId[key] = Math.max(state.sinceId[key]||0, m.id);
+      });
+      if(initial || wasAtBottom) box.scrollTop = box.scrollHeight;
+    } else if(initial && box.children.length === 0){
+      box.innerHTML = '<div class="empty-state" id="empty-state-dyn"><div class="big">Quiet in here.</div>'+
+        (state.dmTarget ? 'Send the first message.' : 'Be the first to say something in the public room.')+'</div>';
+    }
+  }
+
+  // ✅ NEW: live typing indicator — additive, doesn't touch pollMessages above.
+  async function pollTyping(){
+    const params = new URLSearchParams({ anon_id: state.anonId });
+    if(state.dmTarget) params.set('to', state.dmTarget);
+    try {
+      const res = await fetch('/chat/typing?' + params.toString());
+      const data = await res.json();
+      const el = document.getElementById('typing-indicator');
+      const names = data.typing || [];
+      if(!names.length){ el.textContent = ''; return; }
+      const label = names.length === 1 ? names[0] + ' is typing' :
+                    names.slice(0,-1).join(', ') + ' and ' + names[names.length-1] + ' are typing';
+      el.innerHTML = label + '<span class="dots">…</span>';
+    } catch(e) { /* silent — indicator just stays blank on a hiccup */ }
+  }
+
+  function pingTyping(){
+    const now = Date.now();
+    // Throttle to roughly once every 1.5s of active typing, not per keystroke.
+    if(now - state.lastTypingPing < 1500) return;
+    state.lastTypingPing = now;
+    const payload = { anon_id: state.anonId };
+    if(state.dmTarget) payload.to = state.dmTarget;
+    fetch('/chat/typing', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
+
+  function switchToPublic(){
+    state.room = 'public'; state.dmTarget = null; state.dmTargetName = null;
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('header-name').textContent = 'Public Room';
+    document.getElementById('header-sub').textContent = 'Open to everyone · be respectful';
+    document.getElementById('header-avatar').className = 'avatar public';
+    document.getElementById('header-avatar').textContent = '#';
+    document.getElementById('msg-input').placeholder = 'Message Public Room';
+    document.getElementById('typing-indicator').textContent = '';
+    document.querySelectorAll('.thread').forEach(t => t.classList.remove('active'));
+    document.getElementById('public-thread').classList.add('active');
+    pollMessages(true);
+    if(window.innerWidth <= 760) document.getElementById('sidebar').classList.add('hide');
+  }
+
+  function openDm(otherId, otherName){
+    state.room = 'dm'; state.dmTarget = otherId; state.dmTargetName = otherName;
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('header-name').textContent = otherName;
+    document.getElementById('header-sub').textContent = 'Direct message · anonymous';
+    document.getElementById('header-avatar').className = 'avatar';
+    document.getElementById('header-avatar').textContent = initials(otherName);
+    document.getElementById('msg-input').placeholder = 'Message ' + otherName;
+    document.getElementById('typing-indicator').textContent = '';
+    pollMessages(true);
+    loadThreads();
+    if(window.innerWidth <= 760) document.getElementById('sidebar').classList.add('hide');
+  }
+
+  async function loadThreads(){
+    const res = await fetch('/chat/dm/threads?anon_id=' + encodeURIComponent(state.anonId));
+    const data = await res.json();
+    const list = document.getElementById('thread-list');
+    document.querySelectorAll('.thread:not(#public-thread)').forEach(el => el.remove());
+    const emptyEl = document.getElementById('dm-empty');
+    if(!data.threads || !data.threads.length){ emptyEl.style.display = 'block'; return; }
+    emptyEl.style.display = 'none';
+    data.threads.forEach(t => {
+      const el = document.createElement('div');
+      el.className = 'thread' + (state.dmTarget === t.other_id ? ' active' : '');
+      el.innerHTML = '<div class="avatar">'+initials(t.other_name)+'</div>'+
+        '<div class="thread-body"><div class="thread-name"><span>'+escapeHtml(t.other_name)+'</span>'+
+        '<span class="t">'+fmtTime(t.last_message_at)+'</span></div>'+
+        '<div class="thread-preview">Tap to open conversation</div></div>';
+      el.addEventListener('click', () => openDm(t.other_id, t.other_name));
+      list.appendChild(el);
+    });
+  }
+
+  async function sendMessage(){
+    const input = document.getElementById('msg-input');
+    const body = input.value.trim();
+    if(!body) return;
+    const btn = document.getElementById('send-btn');
+    btn.disabled = true;
+    const payload = { anon_id: state.anonId, body };
+    if(state.dmTarget) payload.to = state.dmTarget;
+    const res = await fetch('/chat/send', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    const hint = document.getElementById('rate-hint');
+    if(!data.success){
+      hint.textContent = data.error || 'Message failed to send.';
+      hint.classList.add('show');
+      setTimeout(() => hint.classList.remove('show'), 2500);
+      return;
+    }
+    hint.classList.remove('show');
+    input.value = '';
+    state.lastTypingPing = 0; // let the next keystroke ping immediately
+    document.getElementById('typing-indicator').textContent = '';
+    pollMessages(false);
+  }
+
+  document.getElementById('send-btn').addEventListener('click', sendMessage);
+  document.getElementById('msg-input').addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+  // ✅ NEW: ping the typing indicator while composing (throttled inside pingTyping).
+  document.getElementById('msg-input').addEventListener('input', pingTyping);
+  document.getElementById('public-thread').addEventListener('click', switchToPublic);
+  document.getElementById('back-btn').addEventListener('click', () => document.getElementById('sidebar').classList.remove('hide'));
+
+  // nickname modal
+  const nickModal = document.getElementById('nick-modal');
+  document.getElementById('me-chip').addEventListener('click', () => {
+    document.getElementById('nick-input').value = state.nickname || '';
+    nickModal.classList.add('show');
+  });
+  document.getElementById('nick-cancel').addEventListener('click', () => nickModal.classList.remove('show'));
+  document.getElementById('nick-save').addEventListener('click', async () => {
+    const nickname = document.getElementById('nick-input').value.trim();
+    const res = await fetch('/chat/nickname', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ anon_id: state.anonId, nickname })
+    });
+    const data = await res.json();
+    if(data.success){
+      state.nickname = data.nickname;
+      localStorage.setItem('beastmd_nickname', state.nickname);
+      document.getElementById('my-avatar').textContent = initials(state.nickname);
+    }
+    nickModal.classList.remove('show');
+  });
+
+  // search filter (client-side, over DM thread names)
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    document.querySelectorAll('.thread:not(#public-thread)').forEach(el => {
+      const name = el.querySelector('.thread-name span').textContent.toLowerCase();
+      el.style.display = name.includes(q) ? 'flex' : 'none';
+    });
+  });
+
+  (async function boot(){
+    const ok = await identify();
+    if(!ok) return;
+    await loadThreads();
+    await pollMessages(true);
+    state.pollTimer = setInterval(() => pollMessages(false), 2500);
+    state.threadTimer = setInterval(loadThreads, 6000);
+    state.typingTimer = setInterval(pollTyping, 1500); // ✅ NEW
+  })().catch(() => {
+    document.getElementById('messages').innerHTML =
+      '<div class="empty-state"><div class="big">Something went wrong</div>Reload the page to try again.</div>';
+  });
+</script>
+
+</body>
+</html>

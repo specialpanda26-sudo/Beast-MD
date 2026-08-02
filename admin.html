@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Beast MD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14171C; --panel:#1B1F26; --panel2:#20242C; --ember:#E8A33D; --ember-dim:#8A6224;
+    --bone:#F2EFE9; --ash:#8B93A1; --line:#2A2F38; --good:#4CA870; --bad:#C1553F; --warn:#D4A73A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--bone);font-family:'Space Grotesk',sans-serif;height:100vh;overflow:hidden;}
+  a{color:inherit;text-decoration:none;}
+  .serif{font-family:'Fraunces',serif;font-weight:600;}
+  .serif-i{font-family:'Fraunces',serif;font-style:italic;font-weight:500;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;}
+  input,select,textarea{font-family:inherit;}
+
+  /* ===== LOGIN GATE ===== */
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .gate-box{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:32px;}
+  .gate-box .logo{display:flex;align-items:center;gap:2px;font-size:20px;margin-bottom:6px;}
+  .gate-box .logo .serif-i{color:var(--ember);}
+  .gate-box h2{font-family:'Fraunces',serif;font-weight:500;font-size:19px;margin:14px 0 6px;}
+  .gate-box p{color:var(--ash);font-size:13px;margin-bottom:20px;}
+  .gate-box input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;color:var(--bone);font-size:14px;margin-bottom:16px;}
+  .gate-box input:focus{outline:none;border-color:var(--ember-dim);}
+  .gate-box button{width:100%;padding:13px;border-radius:999px;border:none;background:var(--ember);color:#1A1305;font-weight:600;font-size:14px;cursor:pointer;}
+  .gate-msg{font-size:12.5px;padding:10px 12px;border-radius:8px;margin-bottom:16px;display:none;font-family:'JetBrains Mono',monospace;background:rgba(193,85,63,0.1);border:1px solid var(--bad);color:var(--bad);}
+  .gate-msg.show{display:block;}
+
+  /* ===== SHELL ===== */
+  .shell{display:none;grid-template-columns:230px 1fr;height:100vh;}
+  .shell.show{display:grid;}
+
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;}
+  .side-top{padding:20px 20px 16px;border-bottom:1px solid var(--line);}
+  .side-top .logo{display:flex;align-items:center;gap:2px;font-size:18px;}
+  .side-top .logo .serif-i{color:var(--ember);}
+  .side-top small{display:block;color:var(--good);font-size:11px;margin-top:4px;font-family:'JetBrains Mono',monospace;}
+
+  .tabs{flex:1;padding:14px 10px;overflow-y:auto;}
+  .tab-btn{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:none;background:none;color:var(--ash);font-size:13.5px;font-weight:500;text-align:left;cursor:pointer;border-radius:8px;margin-bottom:2px;}
+  .tab-btn:hover{background:var(--panel2);color:var(--bone);}
+  .tab-btn.active{background:rgba(232,163,61,0.1);color:var(--ember);}
+  .tab-btn .ic{width:16px;text-align:center;}
+
+  .side-bottom{padding:14px;border-top:1px solid var(--line);}
+  .logout{width:100%;padding:10px;border-radius:8px;background:none;border:1px solid var(--line);color:var(--ash);cursor:pointer;font-size:12.5px;}
+  .logout:hover{color:var(--bad);border-color:var(--bad);}
+
+  .content{overflow-y:auto;padding:28px 34px;}
+  .content h1{font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin-bottom:4px;}
+  .content .head-sub{color:var(--ash);font-size:13px;margin-bottom:24px;}
+
+  .pane{display:none;}
+  .pane.active{display:block;}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:26px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;}
+  .card .label{font-size:11px;color:var(--ash);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;}
+  .card .val{font-family:'Fraunces',serif;font-weight:600;font-size:26px;}
+
+  .section-title{font-size:13px;font-weight:600;color:var(--bone);margin:26px 0 12px;display:flex;align-items:center;justify-content:space-between;}
+
+  /* MOBILE FIX: tables used to clip (overflow:hidden) and squeeze every
+     column to fit the screen, which is why they were only readable at a
+     wider/zoomed-out size. Now each table scrolls horizontally inside its
+     own wrapper instead, so column text stays a normal, tappable size on
+     a phone and you swipe sideways to see the rest. */
+  .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;}
+  table{width:100%;min-width:560px;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;}
+  /* Real on/off switch for Key Features — replaces the plain browser
+     checkbox tick, which read as "checked/unchecked" instead of clearly
+     "on/off". */
+  .switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .switch .slider{position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:24px;transition:background .2s ease;}
+  .switch .slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s ease;}
+  .switch input:checked + .slider{background:#2ecc71;}
+  .switch input:checked + .slider::before{transform:translateX(20px);}
+  .switch input:focus-visible + .slider{outline:2px solid var(--ember);outline-offset:2px;}
+  thead th{text-align:left;font-size:11px;color:var(--ash);text-transform:uppercase;letter-spacing:0.4px;padding:12px 14px;background:var(--panel2);font-family:'JetBrains Mono',monospace;font-weight:500;}
+  tbody td{padding:12px 14px;font-size:13px;border-top:1px solid var(--line);}
+  tbody tr:hover{background:var(--panel2);}
+  .empty-row td{text-align:center;color:var(--ash);padding:30px;}
+
+  .status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;}
+  .status-dot.on{background:var(--good);box-shadow:0 0 6px var(--good);}
+  .status-dot.off{background:var(--ash);}
+  .pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+  .pill.good{background:rgba(76,168,112,0.12);color:var(--good);}
+  .pill.warn{background:rgba(212,167,58,0.12);color:var(--warn);}
+  .pill.bad{background:rgba(193,85,63,0.12);color:var(--bad);}
+  .pill.ash{background:rgba(139,147,161,0.12);color:var(--ash);}
+
+  .row-actions{display:flex;gap:6px;}
+  .mini-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--bone);font-size:12px;cursor:pointer;}
+  .mini-btn:hover{border-color:var(--ember-dim);color:var(--ember);}
+  .mini-btn.danger:hover{border-color:var(--bad);color:var(--bad);}
+  .mini-btn.good:hover{border-color:var(--good);color:var(--good);}
+
+  .toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .toolbar input,.toolbar select{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--bone);font-size:13px;}
+  .toolbar input{flex:1;min-width:180px;}
+  .btn{padding:9px 18px;border-radius:8px;border:none;background:var(--ember);color:#1A1305;font-weight:600;font-size:13px;cursor:pointer;
+    box-shadow:0 3px 0 var(--ember-dim,#8A6224),0 6px 12px -4px rgba(0,0,0,.5);
+    transform:translateY(0);transition:transform .12s ease,box-shadow .12s ease,filter .2s ease;}
+  .btn:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 5px 0 var(--ember-dim,#8A6224),0 10px 16px -4px rgba(0,0,0,.5);}
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ember-dim,#8A6224),0 2px 6px -2px rgba(0,0,0,.5);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn-ghost{background:none;border:1px solid var(--line);color:var(--bone);box-shadow:0 3px 0 rgba(255,255,255,.05),0 6px 12px -4px rgba(0,0,0,.4);}
+  .btn-ghost:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(255,255,255,.05);}
+
+  .tilt-wrap{perspective:900px;}
+  .tilt-3d{transform-style:preserve-3d;transition:transform .15s ease-out,box-shadow .2s ease;will-change:transform;}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--line);padding:12px 18px;border-radius:8px;font-size:13px;z-index:200;display:none;font-family:'JetBrains Mono',monospace;}
+  .toast.show{display:block;animation:toastIn .3s ease;}
+  .toast.ok{border-color:var(--good);color:var(--good);}
+  .toast.err{border-color:var(--bad);color:var(--bad);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+  .key-reveal{background:var(--panel2);border:1px solid var(--ember-dim);border-radius:8px;padding:14px;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ember);}
+
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+  /* ===== MOBILE NAV ===== */
+  /* ✅ FIX: sidebar used to just `display:none` under 820px with no way to
+     reopen it — every panel became unreachable without switching to
+     desktop-site mode. Now it's a slide-in drawer, opened by a hamburger
+     button that only appears on small screens. */
+  .mobile-topbar{display:none;}
+  .sidebar-backdrop{display:none;}
+  @media(max-width:820px){
+    .shell.show{grid-template-columns:1fr;}
+    .mobile-topbar{
+      display:flex;align-items:center;gap:14px;padding:14px 16px;
+      background:var(--panel);border-bottom:1px solid var(--line);
+      grid-column:1;position:sticky;top:0;z-index:40;
+    }
+    .mobile-topbar #mobile-menu-btn{
+      background:none;border:1px solid var(--line);color:var(--bone);
+      font-size:18px;width:38px;height:38px;border-radius:8px;cursor:pointer;
+    }
+    .shell{grid-template-rows:auto 1fr;}
+    .shell.show{display:grid;}
+    .sidebar{
+      display:flex;position:fixed;top:0;left:0;bottom:0;width:250px;z-index:60;
+      transform:translateX(-100%);transition:transform .22s ease;
+    }
+    .sidebar.open{transform:translateX(0);box-shadow:8px 0 24px rgba(0,0,0,.5);}
+    .sidebar-backdrop.open{
+      display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;
+    }
+    .content{grid-column:1;}
+  }
+
+  @media(max-width:820px){ .shell.show{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-box">
+    <div class="logo"><span class="serif">BEAST</span><span class="serif-i">MD</span></div>
+    <h2>Admin login</h2>
+    <p>Enter the admin password to manage sessions, access requests, and moderation.</p>
+    <div class="gate-msg" id="gate-msg"></div>
+    <input type="password" id="admin-pass" placeholder="Admin password">
+    <button id="gate-btn">Log In</button>
+  </div>
+</div>
+
+<div class="shell" id="shell">
+  <div class="mobile-topbar" id="mobile-topbar">
+    <button id="mobile-menu-btn" aria-label="Open menu">☰</button>
+    <a href="index.html" class="logo"><span class="serif">BEAST</span><span class="serif-i">MD</span></a>
+  </div>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="side-top">
+      <a href="index.html" class="logo"><span class="serif">BEAST</span><span class="serif-i">MD</span></a>
+      <small>● Admin session active</small>
+      <div style="margin-top:6px;font-size:12px;"><a href="panel.html" style="color:inherit;opacity:.7;">Panel</a> · <a href="console.html" style="color:inherit;opacity:.7;">Console</a> · <a href="chat.html" style="color:inherit;opacity:.7;">Chat</a></div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="overview"><span class="ic">◆</span> Overview</button>
+      <button class="tab-btn" data-tab="sessions"><span class="ic">▣</span> Sessions</button>
+      <button class="tab-btn" data-tab="registrations"><span class="ic">◇</span> Registrations</button>
+      <button class="tab-btn" data-tab="broadcast"><span class="ic">▶</span> Broadcast</button>
+      <button class="tab-btn" data-tab="keywords"><span class="ic">≡</span> Keywords</button>
+      <button class="tab-btn" data-tab="blacklist"><span class="ic">⊘</span> Blacklist</button>
+      <button class="tab-btn" data-tab="features"><span class="ic">⚙</span> Features</button>
+      <button class="tab-btn" data-tab="search"><span class="ic">⌕</span> Search</button>
+      <button class="tab-btn" data-tab="cmdfinder"><span class="ic">🧭</span> Command Finder</button>
+      <button class="tab-btn" data-tab="scheduler"><span class="ic">◷</span> Scheduler</button>
+      <button class="tab-btn" data-tab="menu"><span class="ic">▤</span> Menu</button>
+      <button class="tab-btn" data-tab="sitemusic"><span class="ic">♫</span> Site Music</button>
+      <button class="tab-btn" data-tab="cookies"><span class="ic">🍪</span> YT Cookies</button>
+      <button class="tab-btn" data-tab="ownerchats"><span class="ic">✉</span> Owner Chats</button>
+      <button class="tab-btn" data-tab="viewonce"><span class="ic">◉</span> View-Once</button>
+      <button class="tab-btn" data-tab="reports"><span class="ic">⚑</span> Reports</button>
+      <button class="tab-btn" data-tab="groupbans"><span class="ic">⛔</span> Group Bans</button>
+      <button class="tab-btn" data-tab="activitylog"><span class="ic">▦</span> Activity Log</button>
+      <button class="tab-btn" data-tab="settings"><span class="ic">⚒</span> Settings</button>
+    </div>
+    <div class="side-bottom"><button class="logout" id="logout-btn">Log Out</button></div>
+  </div>
+
+  <div class="content">
+    <!-- OVERVIEW -->
+    <div class="pane active" id="pane-overview">
+      <h1>Overview</h1>
+      <div class="head-sub">Live stats across every paired session — free, no billing data here.</div>
+      <div class="cards" id="stat-cards">
+        <div class="card tilt-3d"><div class="label">Contacts</div><div class="val">—</div></div>
+        <div class="card tilt-3d"><div class="label">Messages</div><div class="val">—</div></div>
+        <div class="card tilt-3d"><div class="label">View-once saved</div><div class="val">—</div></div>
+        <div class="card tilt-3d"><div class="label">Scheduled pending</div><div class="val">—</div></div>
+        <div class="card tilt-3d"><div class="label">Uptime</div><div class="val" id="stat-uptime">—</div></div>
+      </div>
+      <div class="section-title">Live sessions</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Session</th><th>Number</th><th>Status</th><th>Antiban</th><th>Since</th></tr></thead>
+        <tbody id="overview-sessions"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+      <div class="section-title">Messages — last 7 days</div>
+      <div id="activity-chart" style="display:flex;align-items:flex-end;gap:10px;height:120px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:26px;"></div>
+      <div class="section-title">Recent contacts</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Sender</th><th>Time</th></tr></thead>
+        <tbody id="recent-contacts"><tr class="empty-row"><td colspan="3">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- SESSIONS -->
+    <div class="pane" id="pane-sessions">
+      <h1>Sessions</h1>
+      <div class="head-sub">Every session that has ever registered, with live health where connected.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Session</th><th>Number</th><th>Status</th><th>Messages</th><th>Antiban</th><th>Actions</th></tr></thead>
+        <tbody id="sessions-table"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- REGISTRATIONS -->
+    <div class="pane" id="pane-registrations">
+      <h1>Registrations</h1>
+      <div class="head-sub">Everyone who's created a free account.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Badge</th><th>Verified</th><th>Joined</th></tr></thead>
+        <tbody id="registrations-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- BROADCAST -->
+    <div class="pane" id="pane-broadcast">
+      <h1>Broadcast</h1>
+      <div class="head-sub">Queue a message to send out. The bot bridge picks it up and delivers it.</div>
+      <div class="toolbar">
+        <select id="bc-target">
+          <option value="all_contacts">All contacts</option>
+          <option value="all_groups">All groups</option>
+        </select>
+      </div>
+      <textarea id="bc-message" placeholder="Write your broadcast message…" style="width:100%;min-height:120px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;color:var(--bone);font-size:14px;margin-bottom:14px;"></textarea>
+      <button class="btn" id="bc-send">Queue Broadcast</button>
+    </div>
+
+    <!-- KEYWORDS -->
+    <div class="pane" id="pane-keywords">
+      <h1>Keywords</h1>
+      <div class="head-sub">Auto-replies triggered by message content.</div>
+      <div class="toolbar">
+        <input type="text" id="kw-trigger" placeholder="Trigger word/phrase">
+        <input type="text" id="kw-reply" placeholder="Reply text">
+        <select id="kw-match"><option value="contains">Contains</option><option value="exact">Exact</option><option value="starts_with">Starts with</option></select>
+        <button class="btn" id="kw-add">Add</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Trigger</th><th>Reply</th><th>Match</th><th>Enabled</th><th></th></tr></thead>
+        <tbody id="keywords-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- BLACKLIST -->
+    <div class="pane" id="pane-blacklist">
+      <h1>Blacklist</h1>
+      <div class="head-sub">Numbers blocked from interacting with the bot.</div>
+      <div class="toolbar">
+        <input type="text" id="bl-number" placeholder="Phone number (e.g. 2547XXXXXXXX)">
+        <button class="btn" id="bl-add">Add</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Number</th><th></th></tr></thead>
+        <tbody id="blacklist-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="pane" id="pane-features">
+      <h1>Features</h1>
+      <div class="head-sub">Toggle bot features on or off globally.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Feature</th><th>Enabled</th></tr></thead>
+        <tbody id="features-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="pane" id="pane-search">
+      <h1>Search</h1>
+      <div class="head-sub">Search message history by content.</div>
+      <div class="toolbar">
+        <input type="text" id="search-q" placeholder="Search message text…">
+        <button class="btn" id="search-btn">Search</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Sender</th><th>Name</th><th>Message</th><th>Time</th></tr></thead>
+        <tbody id="search-table"><tr class="empty-row"><td colspan="4">Type a query and press Search.</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- COMMAND FINDER -->
+    <div class="pane" id="pane-cmdfinder">
+      <h1>Command Finder</h1>
+      <div class="head-sub">Type what you want in plain words — e.g. "save a view once" or "block a number" — and it'll show you the exact command to send on WhatsApp.</div>
+      <div class="toolbar">
+        <input type="text" id="admin-cmd-finder-in" placeholder="e.g. download a youtube video">
+        <button class="btn" id="admin-cmd-finder-btn">Find it</button>
+      </div>
+      <div id="admin-cmd-finder-out" style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"></div>
+    </div>
+
+    <!-- SCHEDULER -->
+    <div class="pane" id="pane-scheduler">
+      <h1>Scheduler</h1>
+      <div class="head-sub">Pending scheduled messages from the .schedule command.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>To</th><th>Message</th><th>Next Run</th><th>Repeat</th><th></th></tr></thead>
+        <tbody id="scheduler-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- MENU -->
+    <div class="pane" id="pane-menu">
+      <h1>Menu</h1>
+      <div class="head-sub">The header image/video and caption shown with the .menu command.</div>
+      <div style="margin-bottom:14px;color:var(--ash);font-size:13px;" id="menu-current-info">Loading current settings…</div>
+      <div class="toolbar">
+        <input type="file" id="menu-media-file" accept="image/jpeg,image/png,image/webp,video/mp4,video/3gpp,video/quicktime,video/x-matroska">
+        <button class="btn" id="menu-media-upload-btn">Upload New Media</button>
+      </div>
+      <textarea id="menu-caption" placeholder="Custom .menu caption (leave blank for auto-generated)" style="width:100%;min-height:100px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;color:var(--bone);font-size:14px;margin:6px 0 14px;"></textarea>
+      <button class="btn btn-ghost" id="menu-caption-save">Save Caption</button>
+    </div>
+
+    <!-- SITE MUSIC -->
+    <div class="pane" id="pane-sitemusic">
+      <h1>Site Music</h1>
+      <div class="head-sub">Upload tracks, or search YouTube and add one straight to the playlist — visitors get a playlist on the public website. Browsers block autoplay with sound, so it starts muted and turns on with the visitor's first tap.</div>
+
+      <div class="toolbar">
+        <input type="text" id="sitemusic-search-q" placeholder="Search a song or artist..." style="flex:1;min-width:160px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--bone);font-size:14px;">
+        <button class="btn" id="sitemusic-search-btn">Search</button>
+      </div>
+      <div id="sitemusic-search-status" style="color:var(--ash);font-size:13px;margin-bottom:8px;"></div>
+      <div id="sitemusic-search-results" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+
+      <div class="head-sub" style="margin-top:6px;">Or upload a file directly:</div>
+      <div class="toolbar">
+        <input type="file" id="sitemusic-file" accept="audio/mpeg,audio/ogg,audio/wav,audio/mp4,.mp3,.ogg,.wav,.m4a">
+        <input type="text" id="sitemusic-title" placeholder="Track title (optional)" style="flex:1;min-width:160px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--bone);font-size:14px;">
+        <button class="btn" id="sitemusic-upload-btn">Add Track</button>
+      </div>
+      <div style="margin:14px 0;">
+        <button class="btn btn-ghost" id="sitemusic-toggle-btn">Enable Playlist</button>
+      </div>
+      <div id="sitemusic-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <!-- YT COOKIES -->
+    <div class="pane" id="pane-cookies">
+      <h1>YouTube Cookies</h1>
+      <div class="head-sub">YouTube blocks Render's server IP faster than a real browser. A cookies.txt from a logged-in YouTube account is the single biggest fix for "Sign in to confirm you're not a bot" errors on downloads. Re-upload every couple weeks — YouTube sessions expire.</div>
+      <div style="margin-bottom:14px;color:var(--ash);font-size:13px;" id="cookies-current-info">Loading current status…</div>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px;font-size:13px;color:var(--ash);">
+        <strong style="color:var(--bone);">How to get one:</strong> On a computer, log into youtube.com in Chrome or Firefox, install the "Get cookies.txt LOCALLY" extension, open it while on youtube.com, and export the file. Then upload it below.
+      </div>
+      <div class="toolbar">
+        <input type="file" id="cookies-file" accept=".txt">
+        <button class="btn" id="cookies-upload-btn">Upload cookies.txt</button>
+      </div>
+    </div>
+
+    <!-- OWNER CHATS -->
+    <div class="pane" id="pane-ownerchats">
+      <h1>Owner Chats</h1>
+      <div class="head-sub">Chats where the owner's number has been seen. Toggle whether the AI assistant may respond in each.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Chat</th><th>AI Allowed</th></tr></thead>
+        <tbody id="ownerchats-table"><tr class="empty-row"><td colspan="2">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- VIEW-ONCE -->
+    <div class="pane" id="pane-viewonce">
+      <h1>View-Once</h1>
+      <div class="head-sub">Media intercepted from view-once messages.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Sender</th><th>Type</th><th>Caption</th><th>Time</th><th></th></tr></thead>
+        <tbody id="viewonce-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="pane" id="pane-reports">
+      <h1>Reports</h1>
+      <div class="head-sub">User-submitted reports from groups.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Group</th><th>Reporter</th><th>Target</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+        <tbody id="reports-table"><tr class="empty-row"><td colspan="6">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- GROUP BANS -->
+    <div class="pane" id="pane-groupbans">
+      <h1>Group Bans</h1>
+      <div class="head-sub">Audit trail from .ban — the removal already happened on WhatsApp; this just tracks it and lets you lift a mistaken ban.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Group</th><th>Number</th><th>Reason</th><th>Banned</th><th></th></tr></thead>
+        <tbody id="groupbans-table"><tr class="empty-row"><td colspan="5">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div class="pane" id="pane-activitylog">
+      <h1>Activity Log</h1>
+      <div class="head-sub">Command, error, and sensitive-action history.</div>
+      <div class="toolbar">
+        <select id="al-category">
+          <option value="command">Command</option>
+          <option value="error">Error</option>
+          <option value="sensitive">Sensitive</option>
+        </select>
+        <button class="btn-ghost mini-btn" id="al-export">Export CSV</button>
+        <button class="mini-btn danger" id="al-clear">Clear This Category</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Type</th><th>Actor</th><th>Detail</th><th>Time</th></tr></thead>
+        <tbody id="activitylog-table"><tr class="empty-row"><td colspan="4">Loading…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="pane" id="pane-settings">
+      <h1>Settings</h1>
+      <div class="head-sub">Owner number. No billing settings live here — access is free by default.</div>
+      <div class="section-title">Owner Number</div>
+      <div class="toolbar">
+        <input type="text" id="set-owner-number" placeholder="2547XXXXXXXX (blank = use env var)">
+        <button class="btn" id="set-owner-save">Save</button>
+      </div>
+      <div style="color:var(--ash);font-size:12.5px;margin-bottom:20px;" id="owner-number-info"></div>
+
+      <div class="section-title">Feature Toggles</div>
+      <div style="color:var(--ash);font-size:12.5px;margin-bottom:14px;">Ported from the CYPHER-X reference panel. Changes apply live — no redeploy needed.</div>
+      <div id="bot-settings-groups">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let ADMIN_PASS = '';
+  function authHeaders(){ return { 'Authorization': 'Bearer ' + ADMIN_PASS, 'Content-Type': 'application/json' }; }
+  function toast(msg, ok){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast show ' + (ok?'ok':'err');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function fmtTime(ts){ return ts ? new Date(ts*1000).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'; }
+  function esc(s){ const d=document.createElement('div'); d.textContent=s??''; return d.innerHTML; }
+
+  const gateMsg = document.getElementById('gate-msg');
+  document.getElementById('gate-btn').addEventListener('click', async () => {
+    const pass = document.getElementById('admin-pass').value;
+    const btn = document.getElementById('gate-btn');
+    btn.disabled = true; btn.textContent = 'Checking…';
+    try{
+      const res = await fetch('/admin/stats', { headers: { 'Authorization': 'Bearer ' + pass } });
+      btn.disabled = false; btn.textContent = 'Log In';
+      if(res.status === 401){ gateMsg.textContent = 'Incorrect password.'; gateMsg.classList.add('show'); return; }
+      ADMIN_PASS = pass;
+      try{ sessionStorage.setItem('beastmd_admin_pass', pass); }catch(e){}
+      openShell();
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Log In';
+      gateMsg.textContent = 'Network error — try again.'; gateMsg.classList.add('show');
+    }
+  });
+
+  (function tryRestore(){
+    try{
+      const saved = sessionStorage.getItem('beastmd_admin_pass');
+      if(saved){ ADMIN_PASS = saved; openShell(); }
+    }catch(e){}
+  })();
+
+  function openShell(){
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('shell').classList.add('show');
+    loadOverview();
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    try{ sessionStorage.removeItem('beastmd_admin_pass'); }catch(e){}
+    location.reload();
+  });
+
+  // ===== MOBILE NAV DRAWER =====
+  const sidebarEl = document.getElementById('sidebar');
+  const backdropEl = document.getElementById('sidebar-backdrop');
+  const menuBtnEl = document.getElementById('mobile-menu-btn');
+  function closeDrawer(){ sidebarEl.classList.remove('open'); backdropEl.classList.remove('open'); }
+  function openDrawer(){ sidebarEl.classList.add('open'); backdropEl.classList.add('open'); }
+  if (menuBtnEl) menuBtnEl.addEventListener('click', openDrawer);
+  if (backdropEl) backdropEl.addEventListener('click', closeDrawer);
+
+  // ===== 3D TILT =====
+  function attachTilt(el, maxDeg){
+    el.style.transformStyle = 'preserve-3d';
+    function onMove(e){
+      const r = el.getBoundingClientRect();
+      const px = ((e.clientX - r.left) / r.width) - 0.5;
+      const py = ((e.clientY - r.top) / r.height) - 0.5;
+      el.style.transform = `rotateX(${(-py*maxDeg).toFixed(2)}deg) rotateY(${(px*maxDeg).toFixed(2)}deg) translateY(-3px)`;
+    }
+    function onLeave(){ el.style.transform = ''; }
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+  }
+  document.querySelectorAll('.tilt-3d').forEach(el => attachTilt(el, 6));
+
+  // ===== TABS =====
+  const loaders = {
+    sessions: loadSessions, registrations: loadRegistrations,
+    keywords: loadKeywords, blacklist: loadBlacklist, features: loadFeatures,
+    scheduler: loadScheduler, menu: loadMenuSettings, sitemusic: loadSiteMusic, cookies: loadCookiesStatus, ownerchats: loadOwnerChats,
+    viewonce: loadViewOnce, reports: loadReports, groupbans: loadGroupBans,
+    activitylog: loadActivityLog, settings: loadSettingsTab,
+  };
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+      const tab = btn.dataset.tab;
+      document.getElementById('pane-'+tab).classList.add('active');
+      if(loaders[tab]) loaders[tab]();
+      closeDrawer();
+    });
+  });
+
+  // ===== OVERVIEW =====
+  async function loadOverview(){
+    const res = await fetch('/admin/stats', { headers: authHeaders() });
+    if(res.status === 401) return toast('Session expired — log in again.', false);
+    const data = await res.json();
+    const cards = document.querySelectorAll('#stat-cards .card .val');
+    cards[0].textContent = data.contacts ?? 0;
+    cards[1].textContent = data.messages ?? 0;
+    cards[2].textContent = data.viewonce ?? 0;
+    cards[3].textContent = data.scheduled_pending ?? 0;
+    fetch('/admin/uptime', { headers: authHeaders() }).then(r => r.json()).then(u => {
+      document.getElementById('stat-uptime').textContent = u.uptime_human || '—';
+    }).catch(() => {});
+    fetch('/admin/activity-trend', { headers: authHeaders() }).then(r => r.json()).then(t => {
+      const chart = document.getElementById('activity-chart');
+      chart.innerHTML = '';
+      const days = t.days || [];
+      const max = Math.max(1, ...days.map(d => d.count));
+      days.forEach(d => {
+        const col = document.createElement('div');
+        col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;';
+        const barWrap = document.createElement('div');
+        barWrap.style.cssText = 'flex:1;display:flex;align-items:flex-end;width:100%;justify-content:center;';
+        const bar = document.createElement('div');
+        const pct = Math.max(4, Math.round((d.count / max) * 100));
+        bar.style.cssText = `width:60%;height:${pct}%;background:var(--ember);border-radius:4px 4px 0 0;`;
+        bar.title = `${d.date}: ${d.count} message(s)`;
+        barWrap.appendChild(bar);
+        const label = document.createElement('div');
+        label.style.cssText = 'font-size:10px;color:var(--ash);font-family:\'JetBrains Mono\',monospace;';
+        label.textContent = d.label;
+        col.appendChild(barWrap);
+        col.appendChild(label);
+        chart.appendChild(col);
+      });
+    }).catch(() => {});
+
+    const sBody = document.getElementById('overview-sessions');
+    sBody.innerHTML = '';
+    if(!data.session_list || !data.session_list.length){
+      sBody.innerHTML = '<tr class="empty-row"><td colspan="5">No sessions registered yet.</td></tr>';
+    }else{
+      data.session_list.forEach(s => {
+        sBody.innerHTML += `<tr>
+          <td class="mono">${esc(s.name)}</td>
+          <td>${esc(s.number||'—')}</td>
+          <td><span class="status-dot ${s.online?'on':'off'}"></span>${s.online?'Online':'Offline'}</td>
+          <td>${s.antiban_risk ? `<span class="pill ${s.antiban_risk==='high'?'bad':s.antiban_risk==='medium'?'warn':'good'}">${esc(s.antiban_risk)}</span>` : '—'}</td>
+          <td>${esc(s.since||'—')}</td>
+        </tr>`;
+      });
+    }
+
+    const cBody = document.getElementById('recent-contacts');
+    cBody.innerHTML = '';
+    if(!data.recent_contacts || !data.recent_contacts.length){
+      cBody.innerHTML = '<tr class="empty-row"><td colspan="3">No contacts yet.</td></tr>';
+    }else{
+      data.recent_contacts.forEach(c => {
+        cBody.innerHTML += `<tr><td>${esc(c.name||'—')}</td><td class="mono">${esc(c.sender)}</td><td>${esc(c.time)}</td></tr>`;
+      });
+    }
+  }
+
+  // ===== SESSIONS =====
+  async function loadSessions(){
+    const res = await fetch('/admin/stats', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('sessions-table');
+    body.innerHTML = '';
+    if(!data.session_list || !data.session_list.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">No sessions yet.</td></tr>'; return;
+    }
+    data.session_list.forEach(s => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(s.name)}</td>
+        <td>${esc(s.number||'—')}</td>
+        <td><span class="status-dot ${s.online?'on':'off'}"></span>${s.online?'Online':'Offline'}</td>
+        <td>${s.msg_count ?? 0}</td>
+        <td><input type="checkbox" ${s.antiban_enabled?'checked':''} onchange="toggleSessionAntiban('${esc(s.name)}', this.checked)"></td>
+        <td class="row-actions">
+          <button class="mini-btn" onclick="setSessionExpiry('${esc(s.name)}')">Set Expiry</button>
+          <button class="mini-btn danger" onclick="terminateSession('${esc(s.name)}')">Terminate</button>
+        </td>
+      </tr>`;
+    });
+  }
+  window.terminateSession = async function(name){
+    if(!confirm('Terminate session "'+name+'"?')) return;
+    const res = await fetch('/admin/terminate', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session: name }) });
+    const data = await res.json();
+    toast(data.status === 'terminated' ? 'Session terminated.' : 'Failed.', data.status === 'terminated');
+    loadSessions();
+  };
+  window.toggleSessionAntiban = async function(session, enabled){
+    await fetch('/admin/session-antiban/toggle', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session, enabled }) });
+    toast('Antiban updated.', true);
+  };
+  window.setSessionExpiry = async function(name){
+    const input = prompt('Days from now until expiry (blank or 0 clears it):', '30');
+    if(input === null) return;
+    const days = parseFloat(input);
+    const expiry_ts = (input.trim() === '' || !days || days <= 0) ? null : (Date.now()/1000 + days*86400);
+    const res = await fetch('/admin/set-expiry', { method:'POST', headers: authHeaders(), body: JSON.stringify({ session: name, expiry_ts }) });
+    toast(res.ok ? 'Expiry updated.' : 'Failed.', res.ok);
+    loadSessions();
+  };
+
+  // ===== REGISTRATIONS =====
+  async function loadRegistrations(){
+    const res = await fetch('/admin/registrations', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('registrations-table');
+    body.innerHTML = '';
+    if(!data.registrations || !data.registrations.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No registrations yet.</td></tr>'; return;
+    }
+    data.registrations.forEach(r => {
+      body.innerHTML += `<tr>
+        <td>${esc(r.name)}</td><td class="mono">${esc(r.phone)}</td>
+        <td>${r.badge && r.badge!=='none' ? '<span class="pill good">'+esc(r.badge)+'</span>' : '—'}</td>
+        <td>${r.verified ? '<span class="pill good">Yes</span>' : '<span class="pill ash">No</span>'}</td>
+        <td>${fmtTime(r.created_at)}</td>
+      </tr>`;
+    });
+  }
+
+  // ===== BROADCAST =====
+  document.getElementById('bc-send').addEventListener('click', async () => {
+    const target = document.getElementById('bc-target').value;
+    const message = document.getElementById('bc-message').value.trim();
+    if(!message) return toast('Write a message first.', false);
+    const res = await fetch('/admin/broadcast', { method:'POST', headers: authHeaders(), body: JSON.stringify({ target, message }) });
+    const data = await res.json();
+    if(data.status === 'queued'){
+      toast('Queued — position '+data.queue_size+' in line.', true);
+      document.getElementById('bc-message').value = '';
+    }else toast(data.message || 'Failed.', false);
+  });
+
+  // ===== KEYWORDS =====
+  async function loadKeywords(){
+    const res = await fetch('/admin/keywords', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('keywords-table');
+    body.innerHTML = '';
+    if(!data.keywords || !data.keywords.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No keywords yet.</td></tr>'; return;
+    }
+    data.keywords.forEach(k => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(k.trigger)}</td><td>${esc(k.reply)}</td><td>${esc(k.match_type)}</td>
+        <td><input type="checkbox" ${k.enabled?'checked':''} onchange="toggleKeyword('${esc(k.trigger)}', this.checked)"></td>
+        <td><button class="mini-btn danger" onclick="removeKeyword('${esc(k.trigger)}')">Remove</button></td>
+      </tr>`;
+    });
+  }
+  document.getElementById('kw-add').addEventListener('click', async () => {
+    const trigger = document.getElementById('kw-trigger').value.trim();
+    const reply = document.getElementById('kw-reply').value.trim();
+    const match_type = document.getElementById('kw-match').value;
+    if(!trigger || !reply) return toast('Trigger and reply are required.', false);
+    const res = await fetch('/admin/keywords/add', { method:'POST', headers: authHeaders(), body: JSON.stringify({ trigger, reply, match_type }) });
+    const data = await res.json();
+    if(data.success){ toast('Keyword added.', true); document.getElementById('kw-trigger').value=''; document.getElementById('kw-reply').value=''; loadKeywords(); }
+    else toast(data.error || 'Failed.', false);
+  });
+  window.toggleKeyword = async function(trigger, enabled){
+    await fetch('/admin/keywords/toggle', { method:'POST', headers: authHeaders(), body: JSON.stringify({ trigger, enabled }) });
+    toast('Updated.', true);
+  };
+  window.removeKeyword = async function(trigger){
+    if(!confirm('Remove keyword "'+trigger+'"?')) return;
+    await fetch('/admin/keywords/remove', { method:'POST', headers: authHeaders(), body: JSON.stringify({ trigger }) });
+    toast('Removed.', true); loadKeywords();
+  };
+
+  // ===== BLACKLIST =====
+  async function loadBlacklist(){
+    const res = await fetch('/admin/blacklist', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('blacklist-table');
+    body.innerHTML = '';
+    if(!data.blacklist || !data.blacklist.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="2">Nobody blacklisted.</td></tr>'; return;
+    }
+    data.blacklist.forEach(sender => {
+      body.innerHTML += `<tr><td class="mono">${esc(sender)}</td><td><button class="mini-btn danger" onclick="removeBlacklist('${esc(sender)}')">Remove</button></td></tr>`;
+    });
+  }
+  document.getElementById('bl-add').addEventListener('click', async () => {
+    const sender = document.getElementById('bl-number').value.trim();
+    if(!sender) return;
+    await fetch('/admin/blacklist/add', { method:'POST', headers: authHeaders(), body: JSON.stringify({ sender }) });
+    toast('Added to blacklist.', true); document.getElementById('bl-number').value=''; loadBlacklist();
+  });
+  window.removeBlacklist = async function(sender){
+    await fetch('/admin/blacklist/remove', { method:'POST', headers: authHeaders(), body: JSON.stringify({ sender }) });
+    toast('Removed.', true); loadBlacklist();
+  };
+
+  // ===== FEATURES =====
+  function prettyFeatureName(name){
+    if(name.startsWith('cat_')) return name.slice(4).split('_').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ') + ' (module)';
+    return name.split('_').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  }
+  async function loadFeatures(){
+    const res = await fetch('/admin/features', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('features-table');
+    body.innerHTML = '';
+    if(!data.features || !data.features.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="2">No features configured yet.</td></tr>'; return;
+    }
+    data.features.forEach(f => {
+      body.innerHTML += `<tr><td>${esc(prettyFeatureName(f.name))}</td><td>
+        <label class="switch">
+          <input type="checkbox" ${f.enabled?'checked':''} onchange="toggleFeature('${esc(f.name)}', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </td></tr>`;
+    });
+  }
+  window.toggleFeature = async function(name, enabled){
+    await fetch('/admin/features/toggle', { method:'POST', headers: authHeaders(), body: JSON.stringify({ name, enabled }) });
+    toast('Updated.', true);
+  };
+
+  // ===== SEARCH =====
+  document.getElementById('search-btn').addEventListener('click', async () => {
+    const q = document.getElementById('search-q').value.trim();
+    const body = document.getElementById('search-table');
+    if(!q){ body.innerHTML = '<tr class="empty-row"><td colspan="4">Type a query and press Search.</td></tr>'; return; }
+    body.innerHTML = '<tr class="empty-row"><td colspan="4">Searching…</td></tr>';
+    const res = await fetch('/admin/search-messages?q=' + encodeURIComponent(q), { headers: authHeaders() });
+    const data = await res.json();
+    body.innerHTML = '';
+    if(!data.results || !data.results.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="4">No matches.</td></tr>'; return;
+    }
+    data.results.forEach(r => {
+      body.innerHTML += `<tr><td class="mono">${esc(r.sender)}</td><td>${esc(r.name||'—')}</td><td>${esc(r.body)}</td><td>${esc(r.time)}</td></tr>`;
+    });
+  });
+
+  // ===== SCHEDULER =====
+  async function loadScheduler(){
+    const res = await fetch('/admin/scheduler', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('scheduler-table');
+    body.innerHTML = '';
+    if(!data.messages || !data.messages.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">Nothing scheduled.</td></tr>'; return;
+    }
+    data.messages.forEach(m => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(m.to)}</td><td>${esc(m.message)}</td><td>${esc(m.next_run||'—')}</td>
+        <td>${esc(m.repeat||'once')}</td>
+        <td class="row-actions"><button class="mini-btn danger" onclick="deleteScheduled('${esc(m.id)}')">Delete</button></td>
+      </tr>`;
+    });
+  }
+  window.deleteScheduled = async function(id){
+    if(!confirm('Cancel this scheduled message?')) return;
+    await fetch('/admin/scheduler/' + encodeURIComponent(id), { method:'DELETE', headers: authHeaders() });
+    toast('Cancelled.', true); loadScheduler();
+  };
+
+  // ===== MENU =====
+  async function loadMenuSettings(){
+    const res = await fetch('/admin/menu-settings', { headers: authHeaders() });
+    const data = await res.json();
+    document.getElementById('menu-current-info').textContent = 'Current: ' + (data.mediaFile||'menu-bg.jpg') + ' (' + (data.mediaType||'image') + ')';
+    document.getElementById('menu-caption').value = data.caption || '';
+  }
+  document.getElementById('menu-media-upload-btn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('menu-media-file');
+    if(!fileInput.files.length) return toast('Choose a file first.', false);
+    const fd = new FormData();
+    fd.append('media', fileInput.files[0]);
+    const res = await fetch('/admin/menu-media/upload', { method:'POST', headers: { 'Authorization': 'Bearer ' + ADMIN_PASS }, body: fd });
+    const data = await res.json();
+    if(data.success){ toast('Menu media updated.', true); fileInput.value = ''; loadMenuSettings(); }
+    else toast(data.error || 'Upload failed.', false);
+  });
+  document.getElementById('menu-caption-save').addEventListener('click', async () => {
+    const caption = document.getElementById('menu-caption').value;
+    const res = await fetch('/admin/menu-settings', { method:'POST', headers: authHeaders(), body: JSON.stringify({ caption }) });
+    const data = await res.json();
+    toast(data.success ? 'Caption saved.' : 'Failed.', !!data.success);
+  });
+
+  // ===== YT COOKIES =====
+  async function loadCookiesStatus(){
+    const res = await fetch('/admin/cookies/status', { headers: authHeaders() });
+    const data = await res.json();
+    document.getElementById('cookies-current-info').textContent = data.present
+      ? 'Uploaded ' + data.age_days + ' day(s) ago' + (data.age_days > 14 ? ' — probably expired, re-upload a fresh one.' : ' — looking fresh.')
+      : 'No cookies.txt uploaded yet — downloads are running without cookie support.';
+  }
+  document.getElementById('cookies-upload-btn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('cookies-file');
+    if(!fileInput.files.length) return toast('Choose a cookies.txt file first.', false);
+    const fd = new FormData();
+    fd.append('cookies', fileInput.files[0]);
+    const res = await fetch('/admin/cookies/upload', { method:'POST', headers: { 'Authorization': 'Bearer ' + ADMIN_PASS }, body: fd });
+    const data = await res.json();
+    if(data.success){ toast('cookies.txt uploaded.', true); fileInput.value = ''; loadCookiesStatus(); }
+    else toast(data.error || 'Upload failed.', false);
+  });
+
+  // ===== SITE MUSIC =====
+  let siteMusicEnabled = false;
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  async function loadSiteMusic(){
+    const res = await fetch('/admin/site-music', { headers: authHeaders() });
+    const data = await res.json();
+    siteMusicEnabled = !!data.enabled;
+    document.getElementById('sitemusic-toggle-btn').textContent = siteMusicEnabled ? 'Disable Playlist' : 'Enable Playlist';
+    const list = document.getElementById('sitemusic-list');
+    const tracks = data.tracks || [];
+    if(!tracks.length){ list.innerHTML = '<div style="color:var(--ash);font-size:13px;">No tracks uploaded yet.</div>'; return; }
+    list.innerHTML = tracks.map(t => `
+      <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;" data-track-id="${t.id}">
+        <span style="flex:1;font-size:14px;">${escapeHtml(t.title) || '<em>untitled</em>'}</span>
+        <button class="btn btn-ghost btn-sm rename-track-btn" data-id="${t.id}" data-title="${escapeHtml(t.title)}">Rename</button>
+        <button class="btn btn-ghost btn-sm remove-track-btn" data-id="${t.id}" style="color:#e05a5a;">Remove</button>
+      </div>`).join('');
+    list.querySelectorAll('.rename-track-btn').forEach(btn => btn.addEventListener('click', async () => {
+      const newTitle = prompt('New title for this track:', btn.dataset.title || '');
+      if(newTitle === null) return;
+      const res = await fetch('/admin/site-music', { method:'POST', headers: authHeaders(), body: JSON.stringify({ track_id: btn.dataset.id, title: newTitle }) });
+      const d = await res.json();
+      if(d.success){ toast('Renamed.', true); loadSiteMusic(); } else toast(d.error || 'Failed.', false);
+    }));
+    list.querySelectorAll('.remove-track-btn').forEach(btn => btn.addEventListener('click', async () => {
+      if(!confirm('Remove this track from the playlist?')) return;
+      const res = await fetch('/admin/site-music/remove', { method:'POST', headers: authHeaders(), body: JSON.stringify({ track_id: btn.dataset.id }) });
+      const d = await res.json();
+      if(d.success){ toast('Track removed.', true); loadSiteMusic(); } else toast(d.error || 'Failed.', false);
+    }));
+  }
+  document.getElementById('sitemusic-upload-btn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('sitemusic-file');
+    const titleInput = document.getElementById('sitemusic-title');
+    if(!fileInput.files.length) return toast('Choose an audio file first.', false);
+    const fd = new FormData();
+    fd.append('audio', fileInput.files[0]);
+    fd.append('title', titleInput.value || '');
+    const res = await fetch('/admin/site-music/upload', { method:'POST', headers: { 'Authorization': 'Bearer ' + ADMIN_PASS }, body: fd });
+    const data = await res.json();
+    if(data.success){ toast('Track added to playlist.', true); fileInput.value = ''; titleInput.value = ''; loadSiteMusic(); }
+    else toast(data.error || 'Upload failed.', false);
+  });
+
+  // ── Search YouTube and add a result straight to the playlist ──────────
+  // Downloads server-side (via /admin/site-music/add-from-search) so the
+  // track plays reliably for every visitor with no expiring stream links.
+  document.getElementById('sitemusic-search-btn').addEventListener('click', async () => {
+    const q = document.getElementById('sitemusic-search-q').value.trim();
+    const status = document.getElementById('sitemusic-search-status');
+    const results = document.getElementById('sitemusic-search-results');
+    results.innerHTML = '';
+    if(!q) return toast('Type a song name first.', false);
+    status.textContent = 'Searching…';
+    try {
+      const res = await fetch('/admin/site-music/search', { method:'POST', headers: authHeaders(), body: JSON.stringify({ query: q }) });
+      const data = await res.json();
+      if(!data.success){ status.textContent = data.error || 'No results.'; return; }
+      status.textContent = `${data.results.length} result(s):`;
+      results.innerHTML = data.results.map((r, i) => {
+        const mins = r.duration ? Math.floor(r.duration/60) + ':' + String(Math.floor(r.duration%60)).padStart(2,'0') : '';
+        return `<div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;">
+          <span style="flex:1;font-size:14px;">${escapeHtml(r.title)}<br><span style="color:var(--ash);font-size:12px;">${escapeHtml(r.uploader||'')}${mins?' • '+mins:''}</span></span>
+          <button class="btn btn-ghost btn-sm add-search-result-btn" data-idx="${i}">Add to Playlist</button>
+        </div>`;
+      }).join('');
+      results.querySelectorAll('.add-search-result-btn').forEach(btn => btn.addEventListener('click', async () => {
+        const r = data.results[+btn.dataset.idx];
+        btn.disabled = true; btn.textContent = 'Downloading…';
+        try {
+          const addRes = await fetch('/admin/site-music/add-from-search', {
+            method:'POST', headers: authHeaders(),
+            body: JSON.stringify({ url: r.url, title: r.title })
+          });
+          const addData = await addRes.json();
+          if(addData.success){ toast('Added to homepage playlist.', true); btn.textContent = '✔ Added'; loadSiteMusic(); }
+          else { toast(addData.error || 'Failed to add.', false); btn.disabled = false; btn.textContent = 'Add to Playlist'; }
+        } catch(e) { toast('Network error.', false); btn.disabled = false; btn.textContent = 'Add to Playlist'; }
+      }));
+    } catch(e) {
+      status.textContent = 'Network error — try again.';
+    }
+  });
+  document.getElementById('sitemusic-toggle-btn').addEventListener('click', async () => {
+    const res = await fetch('/admin/site-music', { method:'POST', headers: authHeaders(), body: JSON.stringify({ enabled: !siteMusicEnabled }) });
+    const data = await res.json();
+    if(data.success){ toast(data.settings.enabled ? 'Site music enabled.' : 'Site music disabled.', true); loadSiteMusic(); }
+    else toast(data.error || 'Failed.', false);
+  });
+
+  // ===== OWNER CHATS =====
+  async function loadOwnerChats(){
+    const res = await fetch('/admin/owner-chats', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('ownerchats-table');
+    body.innerHTML = '';
+    if(!data.chats || !data.chats.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="2">No chats seen yet.</td></tr>'; return;
+    }
+    data.chats.forEach(c => {
+      body.innerHTML += `<tr><td class="mono">${esc(c.chat_id)}</td><td><input type="checkbox" ${c.ai_allowed?'checked':''} onchange="toggleOwnerChat('${esc(c.chat_id)}', this.checked)"></td></tr>`;
+    });
+  }
+  window.toggleOwnerChat = async function(chat_id, allowed){
+    await fetch('/admin/owner-chats/toggle', { method:'POST', headers: authHeaders(), body: JSON.stringify({ chat_id, allowed }) });
+    toast('Updated.', true);
+  };
+
+  // ===== VIEW-ONCE =====
+  async function loadViewOnce(){
+    const res = await fetch('/admin/viewonce', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('viewonce-table');
+    body.innerHTML = '';
+    if(!data.items || !data.items.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">Nothing saved.</td></tr>'; return;
+    }
+    data.items.forEach(v => {
+      const link = '/admin/viewonce/file/' + encodeURIComponent(v.filename) + '?pass=' + encodeURIComponent(ADMIN_PASS);
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(v.sender)}</td><td>${esc(v.media_type)}</td><td>${esc(v.caption||'—')}</td><td>${esc(v.time)}</td>
+        <td><a href="${link}" target="_blank" class="mini-btn">View</a></td>
+      </tr>`;
+    });
+  }
+
+  // ===== REPORTS =====
+  async function loadReports(){
+    const res = await fetch('/admin/reports', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('reports-table');
+    body.innerHTML = '';
+    if(!data.reports || !data.reports.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">No reports.</td></tr>'; return;
+    }
+    data.reports.forEach(r => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(r.group_id)}</td><td class="mono">${esc(r.reporter)}</td><td class="mono">${esc(r.target)}</td>
+        <td>${esc(r.reason)}</td>
+        <td>${r.resolved ? '<span class="pill good">Resolved</span>' : '<span class="pill warn">Open</span>'}</td>
+        <td>${r.resolved ? '' : '<button class="mini-btn good" onclick="resolveReport('+r.id+')">Resolve</button>'}</td>
+      </tr>`;
+    });
+  }
+  window.resolveReport = async function(id){
+    await fetch('/admin/reports/resolve', { method:'POST', headers: authHeaders(), body: JSON.stringify({ id }) });
+    toast('Marked resolved.', true); loadReports();
+  };
+
+  // ===== GROUP BANS =====
+  async function loadGroupBans(){
+    const res = await fetch('/admin/group-bans', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('groupbans-table');
+    body.innerHTML = '';
+    if(!data.bans || !data.bans.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">No bans recorded.</td></tr>'; return;
+    }
+    data.bans.forEach(b => {
+      body.innerHTML += `<tr>
+        <td class="mono">${esc(b.group_id)}</td><td class="mono">${esc(b.number)}</td><td>${esc(b.reason||'—')}</td>
+        <td>${fmtTime(b.banned_at)}</td>
+        <td><button class="mini-btn danger" onclick="removeGroupBan('${esc(b.group_id)}','${esc(b.number)}')">Lift</button></td>
+      </tr>`;
+    });
+  }
+  window.removeGroupBan = async function(group_id, number){
+    if(!confirm('Lift this ban?')) return;
+    await fetch('/admin/group-bans/remove', { method:'POST', headers: authHeaders(), body: JSON.stringify({ group_id, number }) });
+    toast('Lifted.', true); loadGroupBans();
+  };
+
+  // ===== ACTIVITY LOG =====
+  async function loadActivityLog(){
+    const category = document.getElementById('al-category').value;
+    const res = await fetch('/admin/activity-log?category=' + category + '&limit=150', { headers: authHeaders() });
+    const data = await res.json();
+    const body = document.getElementById('activitylog-table');
+    body.innerHTML = '';
+    if(!data.events || !data.events.length){
+      body.innerHTML = '<tr class="empty-row"><td colspan="4">Nothing logged.</td></tr>'; return;
+    }
+    data.events.forEach(e => {
+      body.innerHTML += `<tr><td>${esc(e.type)}</td><td class="mono">${esc(e.actor||'—')}</td><td>${esc(e.detail||'—')}</td><td>${esc(e.timestamp||'—')}</td></tr>`;
+    });
+  }
+  document.getElementById('al-category').addEventListener('change', loadActivityLog);
+  document.getElementById('al-export').addEventListener('click', () => {
+    window.open('/admin/activity-log/export?pass=' + encodeURIComponent(ADMIN_PASS), '_blank');
+  });
+  document.getElementById('al-clear').addEventListener('click', async () => {
+    const category = document.getElementById('al-category').value;
+    if(!confirm('Clear all "' + category + '" log entries? This cannot be undone.')) return;
+    await fetch('/admin/activity-log?category=' + category, { method:'DELETE', headers: authHeaders() });
+    toast('Cleared.', true); loadActivityLog();
+  });
+
+  // ===== SETTINGS (owner number + Feature Toggles) =====
+  async function loadSettingsTab(){
+    const ownerRes = await fetch('/admin/owner-number', { headers: authHeaders() });
+    const owner = await ownerRes.json();
+    document.getElementById('set-owner-number').value = owner.source === 'override' ? owner.owner_number : '';
+    document.getElementById('owner-number-info').textContent = 'Active: +' + (owner.owner_number||'—') + ' (source: ' + owner.source + ')';
+    loadBotSettings();
+  }
+
+  // Grouped like the CYPHER-X reference panel. Each entry: [key, label, hint]
+  const BOT_SETTINGS_GROUPS = [
+    { title: 'AUTOMATION', items: [
+      ['autobio','Auto Bio','Auto-update bio with status'],
+      ['anticall','Anti Call','Reject incoming calls'],
+      ['autotype','Auto Type','Show typing indicator before replies'],
+      ['autoread','Auto Read','Auto-mark messages as read'],
+      ['autoreact','Auto React','Auto-react to messages'],
+      ['autorecord','Auto Record','Show recording indicator before replies'],
+      ['autorecordtype','Auto Record Type','off / typing / recording', 'text'],
+    ]},
+    { title: 'MODERATION', items: [
+      ['antibug','Anti Bug','Hide internal error text from replies'],
+      ['antiedit','Anti Edit','Announce edited group messages'],
+      ['autoblock','Auto Block','Auto-block unknown numbers (with PM Permit)'],
+      ['antidelete','Anti Delete','Announce deleted group messages'],
+      ['warnlimit','Warn Limit','Max warnings before action', 'text'],
+      ['antisticker','Antisticker','Delete incoming stickers in groups'],
+      ['antistickerkick','Antistickerkick','...and remove the sender'],
+      ['antistickerwarn','Antistickerwarn','...or just warn the sender'],
+    ]},
+    { title: 'AI', items: [
+      ['chatbot','Chatbot','Enable AI chat responses'],
+    ]},
+    { title: 'STATUS', items: [
+      ['autoreadstatus','Auto View Status','Auto-view status updates'],
+      ['autolikestatus','Auto React Status','Auto-react to status updates'],
+      ['statusantidelete','Status Anti Delete','Save deleted status updates'],
+      ['statusemojis','Status Emojis','Comma-separated emojis for status reactions', 'text'],
+    ]},
+    { title: 'MESSAGES', items: [
+      ['anticallmessage','Anti Call Message','Message sent when a call is rejected', 'text'],
+      ['goodbyemessage','Goodbye Message','Group goodbye message', 'text'],
+      ['welcomemessage','Welcome Message','Group welcome message', 'text'],
+    ]},
+    { title: 'OTHER', items: [
+      ['fontstyle','Font Style','Optional unicode font for bot replies', 'text'],
+    ]},
+  ];
+
+  async function loadBotSettings(){
+    const box = document.getElementById('bot-settings-groups');
+    try{
+      const res = await fetch('/admin/bot-settings', { headers: authHeaders() });
+      const data = await res.json();
+      if(!data.success){ box.innerHTML = '<div style="color:var(--ash);">Bot isn\'t reachable — is a session connected?</div>'; return; }
+      const s = data.settings || {};
+      box.innerHTML = BOT_SETTINGS_GROUPS.map(group => `
+        <div style="margin:18px 0 6px;font-size:11.5px;letter-spacing:.08em;color:var(--ash);text-transform:uppercase;">${esc(group.title)}</div>
+        ${group.items.map(([key,label,hint,type]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:16px;">
+            <div>
+              <div style="font-weight:600;">${esc(label)}</div>
+              <div style="color:var(--ash);font-size:12px;">${esc(hint)}</div>
+            </div>
+            ${type === 'text'
+              ? `<input type="text" data-key="${esc(key)}" class="bot-setting-text" value="${esc(String(s[key]??''))}" style="max-width:220px;text-align:right;">`
+              : `<label class="switch"><input type="checkbox" data-key="${esc(key)}" class="bot-setting-bool" ${s[key] ? 'checked' : ''}><span class="slider"></span></label>`
+            }
+          </div>
+        `).join('')}
+      `).join('');
+      box.querySelectorAll('.bot-setting-bool').forEach(el => {
+        el.addEventListener('change', () => saveBotSetting(el.dataset.key, el.checked));
+      });
+      box.querySelectorAll('.bot-setting-text').forEach(el => {
+        el.addEventListener('change', () => saveBotSetting(el.dataset.key, el.value));
+      });
+    }catch(e){
+      box.innerHTML = '<div style="color:var(--ash);">Failed to load settings.</div>';
+    }
+  }
+
+  async function saveBotSetting(key, value){
+    const res = await fetch('/admin/bot-settings/set', { method:'POST', headers: authHeaders(), body: JSON.stringify({ key, value }) });
+    const data = await res.json();
+    toast(data.success ? key + ' saved.' : (data.error||'Failed.'), !!data.success);
+  }
+  document.getElementById('set-owner-save').addEventListener('click', async () => {
+    const owner_number = document.getElementById('set-owner-number').value.trim();
+    const res = await fetch('/admin/owner-number', { method:'POST', headers: authHeaders(), body: JSON.stringify({ owner_number }) });
+    const data = await res.json();
+    toast(data.success ? 'Owner number saved.' : (data.error||'Failed.'), !!data.success);
+    loadSettingsTab();
+  });
+  // ===== COMMAND FINDER =====
+  document.getElementById('admin-cmd-finder-btn').addEventListener('click', async () => {
+    const q = document.getElementById('admin-cmd-finder-in').value.trim();
+    const out = document.getElementById('admin-cmd-finder-out');
+    if(!q){ out.innerHTML = ''; return; }
+    out.innerHTML = '<div style="color:var(--ash);">Searching…</div>';
+    try {
+      const results = await window.CommandFinder.findCommands(q, 8);
+      if(!results.length){ out.innerHTML = '<div style="color:var(--ash);">No matching command found — try different words.</div>'; return; }
+      out.innerHTML = results.map(cmd => `
+        <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;">
+          <div style="font-family:'JetBrains Mono',monospace;color:var(--ember);cursor:pointer;" onclick="navigator.clipboard && navigator.clipboard.writeText('.${cmd.usage.replace(/^\./,'')}')">.${cmd.usage.replace(/^\./,'')} 📋</div>
+          <div style="font-size:13px;color:var(--ash);margin-top:4px;">${cmd.description}</div>
+        </div>`).join('');
+    } catch(e) {
+      out.innerHTML = `<div style="color:var(--ash);">${e.message}</div>`;
+    }
+  });
+  document.getElementById('admin-cmd-finder-in').addEventListener('keydown', e => {
+    if(e.key === 'Enter') document.getElementById('admin-cmd-finder-btn').click();
+  });
+</script>
+<script src="/assets/command-finder.js"></script>
+
+</body>
+</html>

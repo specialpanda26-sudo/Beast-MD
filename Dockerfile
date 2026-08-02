@@ -1,0 +1,81 @@
+# Henry Tech Shark Bot V5.0 - Dockerfile
+FROM node:20-slim
+
+# Install system deps: Python, ffmpeg, curl
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    ffmpeg \
+    curl \
+    unzip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy only dependency manifests first so Docker can cache this layer
+# and skip reinstalling deps when only app code changes.
+COPY package.json package.json
+COPY requirements.txt requirements.txt
+
+# Install Node.js dependencies
+# --legacy-peer-deps: baileys@7.0.0-rc13 lists jimp@^1.6.1 as an optional
+# peer dep, but this project pins jimp@^0.22.12 (texteffects.js uses the
+# old 0.x API). The clash is harmless since it's optional, but npm 10
+# still errors on it (ERESOLVE) unless told to skip strict peer resolution.
+RUN npm install --omit=dev --legacy-peer-deps
+
+# Install Python dependencies straight from requirements.txt so the Docker
+# image and local/Termux installs never drift out of sync.
+RUN pip3 install --break-system-packages --no-cache-dir -r requirements.txt
+
+# Refresh yt-dlp to the latest standalone binary AFTER the pip install above,
+# so this (newer, self-updating) binary wins on PATH instead of pip's copy.
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+    -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp
+
+# ✅ NEW: yt-dlp now requires a JS runtime to solve YouTube's signature
+# challenges — as of late 2025 it started failing with "No supported
+# JavaScript runtime could be found. Only deno is enabled by default" on
+# every YouTube link, regardless of the link itself. This is a genuinely
+# new yt-dlp requirement, not a bug in this codebase. Deno is what yt-dlp
+# looks for automatically with zero extra config once it's on PATH, so
+# .dl/.download/.song/.videosearch/.audiomack all pick it up for free.
+RUN curl -L https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip \
+    -o /tmp/deno.zip && unzip -o /tmp/deno.zip -d /usr/local/bin && \
+    chmod a+rx /usr/local/bin/deno && rm /tmp/deno.zip
+
+# ── PO Token provider (YouTube bot-detection hardening) ────────────────────
+# ✅ NEW: cookies alone don't always survive the jump from a phone's
+# residential IP to Render's datacenter IP — YouTube can still challenge
+# datacenter traffic even with fresh, valid cookies, since IP reputation is
+# a separate signal from login state. A PO (Proof-of-Origin) Token proves
+# the request came from a real client and is what yt-dlp's own maintainers
+# now recommend on top of (not instead of) cookies. This clones and builds
+# the small local HTTP server that generates those tokens on demand;
+# start.sh runs it, and app.py/media.js already know how to talk to it on
+# 127.0.0.1:4416 (see POT_PROVIDER_ENABLED/POT_PROVIDER_PORT in .env.example).
+# Pinned to a known-good release tag on purpose — bump it deliberately when
+# upgrading, so an unrelated breaking release upstream can't silently break
+# a deploy here.
+ARG POT_PROVIDER_VERSION=1.3.1
+RUN git clone --single-branch --branch ${POT_PROVIDER_VERSION} --depth 1 \
+      https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git \
+      /opt/bgutil-pot-provider \
+    && cd /opt/bgutil-pot-provider/server \
+    && npm ci \
+    && npx tsc
+
+# The matching Python side is a yt-dlp plugin discovered automatically at
+# runtime (yt_dlp_plugins namespace package) — installed via requirements.txt
+# alongside the other pip deps, no extra step needed here.
+
+# Now copy the rest of the project
+COPY . .
+
+# Expose backend port
+EXPOSE 5000
+
+# Use startup script so Python starts first, then Node
+CMD ["/bin/bash", "start.sh"]

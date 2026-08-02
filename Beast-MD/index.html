@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beast MD — WhatsApp Automation, Untamed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14171C;
+    --bg-raised:#1B1F26;
+    --ember:#E8A33D;
+    --ember-dim:#8A6224;
+    --crimson:#7A2E2E;
+    --bone:#F2EFE9;
+    --ash:#8B93A1;
+    --line:#2A2F38;
+    --spark:#E8A33D;
+    --spark2:#FFD37A;
+    --spark-dim:#8A6224;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--bone);font-family:'Space Grotesk',sans-serif;overflow-x:hidden;}
+  ::selection{background:var(--ember);color:var(--bg);}
+  a{color:inherit;text-decoration:none;}
+
+  .serif{font-family:'Fraunces',serif;font-weight:600;}
+  .serif-i{font-family:'Fraunces',serif;font-style:italic;font-weight:500;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  .claw{height:28px;width:100%;background:var(--bg);clip-path:polygon(0 0,6% 100%,12% 10%,18% 100%,24% 5%,31% 100%,38% 15%,45% 100%,52% 0,58% 100%,65% 10%,72% 100%,79% 5%,86% 100%,93% 15%,100% 0,100% 100%,0 100%);}
+  .claw.flip{transform:rotate(180deg);}
+
+  /* --- reveal on scroll --- */
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease, transform .7s ease;}
+  .reveal.in{opacity:1;transform:translateY(0);}
+  .reveal.delay-1{transition-delay:.1s;}
+  .reveal.delay-2{transition-delay:.2s;}
+  .reveal.delay-3{transition-delay:.3s;}
+
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 6vw;
+    background:rgba(20,23,28,0.8);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .scroll-progress{position:absolute;bottom:-1px;left:0;height:2px;width:0%;background:linear-gradient(90deg,var(--crimson),var(--ember));box-shadow:0 0 8px rgba(232,163,61,0.6);transition:width .1s linear;}
+  .logo{display:flex;align-items:center;gap:2px;font-size:22px;letter-spacing:0.3px;}
+  .logo .serif-i{color:var(--ember);}
+  nav{display:flex;gap:30px;align-items:center;}
+  nav a{position:relative;font-size:14px;color:var(--ash);font-weight:500;transition:color .25s;}
+  nav a::after{content:'';position:absolute;left:0;bottom:-4px;width:0;height:1px;background:var(--ember);transition:width .3s ease;}
+  nav a:hover{color:var(--bone);}
+  nav a:hover::after{width:100%;}
+
+  /* --- pill / capsule buttons: straight rectangle, semicircle ends --- */
+  .btn{
+    position:relative;
+    display:inline-flex;align-items:center;gap:8px;
+    padding:14px 30px;
+    font-weight:600;font-size:14px;letter-spacing:0.2px;
+    font-family:'Space Grotesk',sans-serif;
+    background:transparent;
+    cursor:pointer;
+    border-radius:999px;
+    transition:transform .2s cubic-bezier(.2,.8,.3,1.2), filter .25s ease, box-shadow .25s ease;
+    isolation:isolate;
+    animation:btnFloat 3.4s ease-in-out infinite;
+    will-change:transform;
+    transform-style:preserve-3d;
+  }
+  @keyframes btnFloat{
+    0%,100%{transform:translateY(0) rotateX(0);}
+    50%{transform:translateY(-7px) rotateX(0);}
+  }
+  .btn:hover{transform:translateY(-11px) scale(1.04) rotateX(var(--tiltx,0deg)) rotateY(var(--tilty,0deg));animation-play-state:paused;box-shadow:0 14px 26px -10px rgba(0,0,0,0.55);}
+  .btn:active{transform:translateY(-2px) scale(.96) translateZ(-6px);animation-play-state:paused;box-shadow:0 4px 10px -6px rgba(0,0,0,0.5);}
+  .btn-sm{animation-delay:-1.1s;}
+  .hero-actions .btn:nth-child(2){animation-delay:-1.9s;}
+  .final-cta .btn{animation-delay:-.6s;}
+
+  .btn-primary{background:var(--ember);color:#1A1305;animation:btnFloat 3.4s ease-in-out infinite, idleGlow 2.6s ease-in-out infinite;}
+  .btn-primary:hover{box-shadow:0 16px 30px -8px rgba(232,163,61,0.5);animation-play-state:paused;}
+  @keyframes idleGlow{
+    0%,100%{box-shadow:0 0 0 rgba(232,163,61,0);}
+    50%{box-shadow:0 0 18px rgba(232,163,61,0.4);}
+  }
+  .btn-primary::before{
+    content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;
+    background:linear-gradient(120deg, transparent, rgba(255,255,255,0.45), transparent);
+    transform:translateX(-120%);
+  }
+  .btn-primary:hover::before{animation:sheen .8s ease forwards;}
+  @keyframes sheen{to{transform:translateX(120%);}}
+
+  .btn-ghost{
+    color:var(--bone);
+    box-shadow:inset 0 0 0 1px var(--line);
+  }
+  .btn-ghost:hover{
+    box-shadow:inset 0 0 0 1px var(--ember-dim), 0 14px 26px -10px rgba(0,0,0,0.5);
+    color:var(--ember);
+  }
+  .btn-sm{padding:10px 20px;font-size:13px;}
+
+  /* --- 3D tilt cards: real perspective depth, driven by cursor position via JS --- */
+  .tilt-wrap{perspective:1000px;}
+  .tilt-3d{
+    transform-style:preserve-3d;
+    transition:transform .15s ease-out, box-shadow .25s ease;
+    will-change:transform;
+  }
+  .tilt-3d .tilt-layer{transform:translateZ(24px);transition:transform .15s ease-out;}
+
+
+  section{padding:110px 6vw;position:relative;}
+
+  /* --- animated circuit wiring background --- */
+  .circuit-bg{position:absolute;inset:0;width:100%;height:100%;opacity:.55;pointer-events:none;z-index:0;}
+  .circuit-bg .wire{
+    fill:none;stroke:var(--spark-dim);stroke-width:0.7;stroke-linecap:round;opacity:.7;
+    stroke-dasharray:1;stroke-dashoffset:1;animation:wireDraw 1.6s ease forwards;
+    filter:drop-shadow(0 0 1.2px rgba(232,163,61,0.55));
+  }
+  .circuit-bg .wire.b2{stroke:var(--spark2);}
+  .circuit-bg .wire:nth-of-type(2){animation-delay:.12s;}
+  .circuit-bg .wire:nth-of-type(3){animation-delay:.24s;}
+  .circuit-bg .wire:nth-of-type(4){animation-delay:.36s;}
+  .circuit-bg .wire:nth-of-type(5){animation-delay:.48s;}
+  .circuit-bg .wire:nth-of-type(6){animation-delay:.6s;}
+  .circuit-bg .wire:nth-of-type(7){animation-delay:.72s;}
+  .circuit-bg .wire:nth-of-type(8){animation-delay:.84s;}
+  @keyframes wireDraw{to{stroke-dashoffset:0;}}
+  .circuit-bg .hub{fill:var(--bg-raised);stroke:var(--spark-dim);stroke-width:0.9;animation:hubPulse 2.6s ease-in-out infinite;}
+  @keyframes hubPulse{0%,100%{stroke-opacity:.55;}50%{stroke-opacity:1;}}
+  .circuit-bg .hub-text{fill:var(--spark);font-family:'JetBrains Mono',monospace;}
+  .circuit-bg .hub-ring{fill:none;stroke:var(--spark-dim);stroke-width:0.6;transform-origin:100px 50px;animation:hubRing 2.8s ease-out infinite;}
+  @keyframes hubRing{0%{r:9;stroke-opacity:.6;}100%{r:18;stroke-opacity:0;}}
+  .circuit-bg .pulse{opacity:.9;}
+
+  /* --- realistic CPU chip at the hub, receiving energy from the wires --- */
+  .circuit-bg .chip-body{fill:url(#chipGrad);stroke:var(--spark-dim);stroke-width:0.9;}
+  .circuit-bg .chip-glow{opacity:.45;animation:chipGlowPulse 2.6s ease-in-out infinite;}
+  @keyframes chipGlowPulse{0%,100%{opacity:.35;}50%{opacity:.95;}}
+  .circuit-bg .chip-die{stroke:var(--spark-dim);stroke-width:0.35;opacity:.55;fill:none;}
+  .circuit-bg .chip-notch{fill:var(--spark);opacity:.9;}
+
+  /* --- pin leads: protruding lines from the chip body that the wires plug into --- */
+  .circuit-bg .chip-pins line{
+    stroke:var(--spark-dim);stroke-width:1.5;stroke-linecap:round;
+    animation:pinFlicker 2.4s ease-in-out infinite;
+    filter:drop-shadow(0 0 2px rgba(232,163,61,0.9));
+  }
+  @keyframes pinFlicker{0%,100%{opacity:.6;stroke:var(--spark-dim);}50%{opacity:1;stroke:var(--spark);}}
+  .circuit-bg .chip-pins line:nth-child(2){animation-delay:.2s;}
+  .circuit-bg .chip-pins line:nth-child(3){animation-delay:.4s;}
+  .circuit-bg .chip-pins line:nth-child(4){animation-delay:.6s;}
+  .circuit-bg .chip-pins line:nth-child(5){animation-delay:.8s;}
+  .circuit-bg .chip-pins line:nth-child(6){animation-delay:1s;}
+  .circuit-bg .chip-pins line:nth-child(7){animation-delay:1.2s;}
+  .circuit-bg .chip-pins line:nth-child(8){animation-delay:1.4s;}
+
+  /* --- decorative fan-out legs: dense QFP-style pins along every edge, purely visual --- */
+  .circuit-bg .chip-pins-deco line{
+    stroke:var(--spark-dim);stroke-width:0.7;stroke-linecap:round;opacity:.4;
+    animation:pinFlickerSoft 3.2s ease-in-out infinite;
+  }
+  @keyframes pinFlickerSoft{0%,100%{opacity:.3;}50%{opacity:.65;}}
+  .circuit-bg .chip-pins-deco line:nth-child(3n){animation-delay:.3s;}
+  .circuit-bg .chip-pins-deco line:nth-child(3n+1){animation-delay:.9s;}
+  .circuit-bg .chip-pins-deco line:nth-child(3n+2){animation-delay:1.5s;}
+
+  .hero .eyebrow, .hero h1, .hero p, .hero-actions, .hero-stats{position:relative;z-index:2;}
+
+  .hero{
+    min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:140px;
+    background:
+      radial-gradient(ellipse 900px 500px at 85% 0%, rgba(232,163,61,0.12), transparent 60%),
+      radial-gradient(ellipse 700px 400px at 0% 100%, rgba(122,46,46,0.15), transparent 60%);
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ember);
+    border:1px solid var(--ember-dim);padding:6px 14px;border-radius:20px;width:fit-content;margin-bottom:30px;
+  }
+  .eyebrow::before{content:'';width:6px;height:6px;background:var(--ember);border-radius:50%;box-shadow:0 0 8px var(--ember);animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .hero h1{font-size:clamp(46px,7.4vw,96px);line-height:0.98;max-width:1040px;}
+  .hero h1 .grotesk{font-family:'Space Grotesk',sans-serif;font-weight:700;text-transform:uppercase;}
+  .hero h1 .accent{
+    font-family:'Fraunces',serif;font-style:italic;font-weight:500;text-transform:none;
+    background:linear-gradient(90deg,var(--ember),#FFD37A,var(--crimson),var(--ember));
+    background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:accentShift 6s ease-in-out infinite;
+  }
+  @keyframes accentShift{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+  .hero p{max-width:560px;font-size:18px;line-height:1.6;color:var(--ash);margin:28px 0 38px;}
+  .hero-actions{display:flex;gap:16px;flex-wrap:wrap;}
+
+  /* --- floating ember particles --- */
+  .embers{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+  .ember-particle{
+    position:absolute;bottom:-10px;width:4px;height:4px;border-radius:50%;
+    background:var(--ember);box-shadow:0 0 6px 2px rgba(232,163,61,0.6);
+    animation:emberRise linear infinite;opacity:0;
+  }
+  @keyframes emberRise{
+    0%{transform:translateY(0) translateX(0);opacity:0;}
+    10%{opacity:.9;}
+    90%{opacity:.5;}
+    100%{transform:translateY(-100vh) translateX(var(--drift,20px));opacity:0;}
+  }
+
+  .hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);margin-top:90px;border:1px solid var(--line);}
+  .stat{background:var(--bg);padding:22px 20px;transition:background .3s ease, transform .3s ease;}
+  .stat:hover{background:var(--bg-raised);transform:translateY(-3px);}
+  .stat .num{font-family:'Fraunces',serif;font-weight:600;font-size:36px;color:var(--ember);}
+  .stat .label{font-size:12px;color:var(--ash);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;font-family:'Space Grotesk',sans-serif;}
+
+  .pain{background:var(--bg-raised);}
+  .pain-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;}
+  .pain h2{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(32px,4vw,50px);line-height:1.08;max-width:520px;}
+  .pain h2 em{font-style:italic;color:var(--ember);}
+  .pain-list{display:flex;flex-direction:column;}
+  .pain-item{display:flex;gap:18px;padding:24px 0;border-bottom:1px solid var(--line);transition:padding-left .3s ease;}
+  .pain-item:first-child{border-top:1px solid var(--line);}
+  .pain-item:hover{padding-left:10px;}
+  .pain-item .mark{font-family:'Fraunces',serif;font-weight:600;color:var(--crimson);font-size:20px;flex-shrink:0;}
+  .pain-item .body h3{font-size:16px;margin-bottom:6px;font-weight:600;}
+  .pain-item .body p{font-size:14px;color:var(--ash);line-height:1.5;}
+
+  .feature-block{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center;padding:80px 6vw;border-bottom:1px solid var(--line);}
+  .feature-block.reverse .fb-visual{order:2;}
+  .fb-tag{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ember);letter-spacing:1px;margin-bottom:16px;display:block;}
+  .feature-block h3{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(26px,3vw,38px);line-height:1.12;margin-bottom:18px;}
+  .feature-block p{color:var(--ash);font-size:16px;line-height:1.65;max-width:460px;}
+  .fb-visual{
+    background:var(--bg-raised);border:1px solid var(--line);padding:28px;min-height:280px;
+    display:flex;flex-direction:column;justify-content:center;gap:12px;position:relative;overflow:hidden;
+    transition:border-color .3s ease, transform .3s ease;
+    clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
+  }
+  .fb-visual{animation:floatY 5s ease-in-out infinite;}
+  .fb-visual:hover{border-color:var(--ember-dim);transform:translateY(-4px);animation-play-state:paused;}
+  @keyframes floatY{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+  .fb-visual::before{content:'';position:absolute;top:-40%;right:-20%;width:60%;height:180%;background:radial-gradient(circle, rgba(232,163,61,0.08), transparent 70%);}
+  .fake-line{height:10px;background:var(--line);border-radius:2px;position:relative;z-index:1;}
+  .fake-line.w60{width:60%;} .fake-line.w80{width:80%;} .fake-line.w40{width:40%;} .fake-line.w95{width:95%;}
+  .fake-line.accent{background:var(--ember-dim);}
+  .fake-card{background:var(--bg);border:1px solid var(--line);padding:14px;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ash);position:relative;z-index:1;}
+  .fake-card .dot{width:7px;height:7px;border-radius:50%;background:var(--ember);box-shadow:0 0 6px var(--ember);animation:pulse 1.8s infinite;}
+
+  .trust{background:var(--bg-raised);}
+  .trust-head{max-width:640px;margin-bottom:60px;}
+  .trust-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(30px,4vw,46px);line-height:1.1;}
+  .trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
+  .trust-card{background:var(--bg-raised);padding:34px 28px;transition:background .3s ease, transform .3s ease;}
+  .trust-card:hover{background:#20242c;transform:translateY(-4px);}
+  .trust-card .icon{
+    font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--ember);margin-bottom:14px;
+    display:inline-block;position:relative;
+  }
+  .trust-card:hover .icon{animation:iconSpin .6s ease;}
+  @keyframes iconSpin{0%{transform:rotateY(0);}100%{transform:rotateY(360deg);}}
+  .trust-card h4{font-size:17px;margin-bottom:10px;font-weight:600;}
+  .trust-card p{font-size:14px;color:var(--ash);line-height:1.6;}
+
+  .final-cta{text-align:center;padding:140px 6vw;background:radial-gradient(ellipse 800px 400px at 50% 100%, rgba(232,163,61,0.1), transparent 70%);}
+  .final-cta h2{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(36px,6vw,66px);line-height:1.05;max-width:820px;margin:0 auto 34px;}
+  .final-cta h2 em{font-style:italic;color:var(--ember);}
+  .final-cta .btn{margin:0 auto;}
+
+  footer{border-top:1px solid var(--line);padding:40px 6vw;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--ash);}
+  footer .fbrand{display:flex;align-items:center;gap:2px;color:var(--bone);font-weight:600;font-size:16px;}
+  footer .fbrand .serif-i{color:var(--ember);}
+
+  @media(max-width:860px){
+    .pain-grid,.feature-block,.trust-grid{grid-template-columns:1fr;}
+    .feature-block.reverse .fb-visual{order:0;}
+    .hero-stats{grid-template-columns:repeat(2,1fr);}
+    nav{display:none;}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
+
+  /* MOBILE FIX: hamburger reveals the nav as a dropdown instead of the
+     nav just disappearing with no way back on phones. */
+  .nav-toggle{display:none;}
+  @media(max-width:860px){
+    .nav-toggle{
+      display:flex;align-items:center;justify-content:center;width:38px;height:38px;
+      border:1px solid var(--line);border-radius:8px;background:none;color:var(--bone);
+      font-size:18px;cursor:pointer;
+    }
+    header{flex-wrap:wrap;}
+    nav{
+      display:none;flex-basis:100%;flex-direction:column;gap:2px;
+      background:var(--bg);border-top:1px solid var(--line);margin-top:14px;padding-top:10px;
+    }
+    nav.open{display:flex;}
+    nav a{padding:12px 4px;border-bottom:1px solid var(--line);}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="serif" style="font-weight:600;">BEAST</span><span class="serif-i">MD</span></div>
+  <button id="navToggle" class="nav-toggle" aria-label="Menu" aria-expanded="false">&#9776;</button>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#trust">Reliability</a>
+    <a href="/kenya-tools">Free Kenya Tools</a>
+    <a href="pair.html">Pairing</a>
+    <a href="register.html">Register</a>
+    <a href="panel.html">My Panel</a>
+    <a href="console.html">Console</a>
+    <a href="chat.html">Community Chat</a>
+  </nav>
+  <a href="pair.html" class="btn btn-primary btn-sm">Pair Now</a>
+  <div class="scroll-progress" id="scrollProgress"></div>
+</header>
+
+<section class="hero">
+  <svg class="circuit-bg" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <filter id="pulseGlow" x="-200%" y="-200%" width="500%" height="500%">
+        <feGaussianBlur stdDeviation="0.5" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <linearGradient id="chipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#262C35"/>
+        <stop offset="55%" stop-color="#1B1F26"/>
+        <stop offset="100%" stop-color="#101318"/>
+      </linearGradient>
+      <radialGradient id="dieGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#E8A33D" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#E8A33D" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <!-- wires run all the way from the edges, through the extended pin leads, into the chip body -->
+    <path class="wire" pathLength="1" d="M 8 18 H 90 Q 95 18 95 23 V 34"/>
+    <path class="wire b2" pathLength="1" d="M 192 18 H 110 Q 105 18 105 23 V 34"/>
+    <path class="wire b2" pathLength="1" d="M 8 82 H 90 Q 95 82 95 77 V 66"/>
+    <path class="wire" pathLength="1" d="M 192 82 H 110 Q 105 82 105 77 V 66"/>
+    <path class="wire b2" pathLength="1" d="M 8 40 V 42 Q 8 47 13 47 H 78"/>
+    <path class="wire" pathLength="1" d="M 8 60 V 58 Q 8 53 13 53 H 78"/>
+    <path class="wire" pathLength="1" d="M 192 40 V 42 Q 192 47 187 47 H 122"/>
+    <path class="wire b2" pathLength="1" d="M 192 60 V 58 Q 192 53 187 53 H 122"/>
+
+    <!-- pulses travel the full route: wire -> pin lead -> chip edge, so the spike is visibly continuous -->
+    <circle class="pulse" r="1" fill="var(--spark)" filter="url(#pulseGlow)">
+      <animateMotion dur="3.2s" begin="1.6s" repeatCount="indefinite" path="M 8 18 H 90 Q 95 18 95 23 V 42"/>
+    </circle>
+    <circle class="pulse" r="1" fill="var(--spark2)" filter="url(#pulseGlow)">
+      <animateMotion dur="3.4s" begin="1.9s" repeatCount="indefinite" path="M 192 18 H 110 Q 105 18 105 23 V 42"/>
+    </circle>
+    <circle class="pulse" r="1" fill="var(--spark2)" filter="url(#pulseGlow)">
+      <animateMotion dur="2.6s" begin="1.2s" repeatCount="indefinite" path="M 8 82 H 90 Q 95 82 95 77 V 58"/>
+    </circle>
+    <circle class="pulse" r="1" fill="var(--spark)" filter="url(#pulseGlow)">
+      <animateMotion dur="2.8s" begin="1.4s" repeatCount="indefinite" path="M 192 82 H 110 Q 105 82 105 77 V 58"/>
+    </circle>
+    <circle class="pulse" r="1" fill="var(--spark2)" filter="url(#pulseGlow)">
+      <animateMotion dur="2.2s" begin="0.9s" repeatCount="indefinite" path="M 8 40 V 42 Q 8 47 13 47 H 88"/>
+    </circle>
+    <circle class="pulse" r="1" fill="var(--spark)" filter="url(#pulseGlow)">
+      <animateMotion dur="2.4s" begin="1.1s" repeatCount="indefinite" path="M 8 60 V 58 Q 8 53 13 53 H 88"/>
+    </circle>
+    <circle class="pulse" r="1" fill="var(--spark)" filter="url(#pulseGlow)">
+      <animateMotion dur="3.6s" begin="2.1s" repeatCount="indefinite" path="M 192 40 V 42 Q 192 47 187 47 H 112"/>
+    </circle>
+    <circle class="pulse" r="1" fill="var(--spark2)" filter="url(#pulseGlow)">
+      <animateMotion dur="3.0s" begin="2.4s" repeatCount="indefinite" path="M 192 60 V 58 Q 192 53 187 53 H 112"/>
+    </circle>
+
+    <circle class="hub-ring" cx="100" cy="50" r="9"/>
+
+    <g class="cpu-chip">
+      <rect class="chip-glow" x="78" y="32" width="44" height="36" fill="url(#dieGlow)"/>
+
+      <!-- decorative dense fan-out legs along every edge, like a real QFP/BGA package -->
+      <g class="chip-pins-deco">
+        <line x1="89" y1="42" x2="89" y2="39"/>
+        <line x1="91" y1="42" x2="91" y2="39"/>
+        <line x1="93" y1="42" x2="93" y2="39"/>
+        <line x1="97" y1="42" x2="97" y2="39"/>
+        <line x1="99" y1="42" x2="99" y2="39"/>
+        <line x1="101" y1="42" x2="101" y2="39"/>
+        <line x1="103" y1="42" x2="103" y2="39"/>
+        <line x1="107" y1="42" x2="107" y2="39"/>
+        <line x1="109" y1="42" x2="109" y2="39"/>
+        <line x1="111" y1="42" x2="111" y2="39"/>
+
+        <line x1="89" y1="58" x2="89" y2="61"/>
+        <line x1="91" y1="58" x2="91" y2="61"/>
+        <line x1="93" y1="58" x2="93" y2="61"/>
+        <line x1="97" y1="58" x2="97" y2="61"/>
+        <line x1="99" y1="58" x2="99" y2="61"/>
+        <line x1="101" y1="58" x2="101" y2="61"/>
+        <line x1="103" y1="58" x2="103" y2="61"/>
+        <line x1="107" y1="58" x2="107" y2="61"/>
+        <line x1="109" y1="58" x2="109" y2="61"/>
+        <line x1="111" y1="58" x2="111" y2="61"/>
+
+        <line x1="88" y1="43" x2="85" y2="43"/>
+        <line x1="88" y1="45" x2="85" y2="45"/>
+        <line x1="88" y1="49" x2="85" y2="49"/>
+        <line x1="88" y1="51" x2="85" y2="51"/>
+        <line x1="88" y1="55" x2="85" y2="55"/>
+        <line x1="88" y1="57" x2="85" y2="57"/>
+
+        <line x1="112" y1="43" x2="115" y2="43"/>
+        <line x1="112" y1="45" x2="115" y2="45"/>
+        <line x1="112" y1="49" x2="115" y2="49"/>
+        <line x1="112" y1="51" x2="115" y2="51"/>
+        <line x1="112" y1="55" x2="115" y2="55"/>
+        <line x1="112" y1="57" x2="115" y2="57"/>
+      </g>
+
+      <!-- pin leads: long protruding lines the live wires plug into, matching pulse routes above -->
+      <g class="chip-pins">
+        <line x1="95" y1="42" x2="95" y2="34"/>
+        <line x1="105" y1="42" x2="105" y2="34"/>
+        <line x1="95" y1="58" x2="95" y2="66"/>
+        <line x1="105" y1="58" x2="105" y2="66"/>
+        <line x1="88" y1="47" x2="78" y2="47"/>
+        <line x1="88" y1="53" x2="78" y2="53"/>
+        <line x1="112" y1="47" x2="122" y2="47"/>
+        <line x1="112" y1="53" x2="122" y2="53"/>
+      </g>
+
+      <rect class="hub chip-body" x="88" y="42" width="24" height="16" rx="1.6"/>
+
+      <!-- etched die traces on the chip surface -->
+      <path class="chip-die" d="M91 45 h4.5 M91 47.5 h7.5 M91 50 h3.5 M91 52.5 h6.5 M91 55 h4.5 M105 45 v3 M108 45 v5.5 M105 55 h3 v-3"/>
+
+      <!-- pin-1 orientation notch -->
+      <circle class="chip-notch" cx="89.6" cy="43.6" r="0.85"/>
+
+      <text class="hub-text" x="100" y="53.2" font-size="6" font-weight="700" text-anchor="middle" letter-spacing="0.3">MD</text>
+    </g>
+  </svg>
+  <div class="embers" id="embers"></div>
+  <div class="eyebrow mono reveal">MULTI-TENANT · BUILT FOR KENYA &amp; BEYOND</div>
+  <h1 class="reveal delay-1">
+    <span class="grotesk">ONE BOT.</span><br>
+    <span class="accent">Unlimited</span> <span class="grotesk">CLIENTS.</span>
+  </h1>
+  <p class="reveal delay-2">Beast MD runs one WhatsApp automation engine across every client you host — isolated sessions, zero cross-talk, full admin control. Free to use, no payment required.</p>
+  <div class="hero-actions reveal delay-3">
+    <a href="pair.html" class="btn btn-primary">Pair Your Number →</a>
+    <a href="#features" class="btn btn-ghost">See What It Does</a>
+    <a href="https://wa.me/{{PUBLIC_CONTACT_NUMBER}}" class="btn btn-ghost" id="contact-whatsapp-btn" target="_blank" rel="noopener">Message Us on WhatsApp</a>
+  </div>
+
+  <div class="hero-stats reveal delay-3">
+    <div class="stat"><div class="num" data-count="900" data-suffix="+">0</div><div class="label">Commands</div></div>
+    <div class="stat"><div class="num">∞</div><div class="label">Tenants</div></div>
+    <div class="stat"><div class="num">24/7</div><div class="label">Uptime target</div></div>
+    <div class="stat"><div class="num" data-count="0">0</div><div class="label">Per-seat cost</div></div>
+  </div>
+</section>
+
+<div class="claw"></div>
+
+<section class="pain">
+  <div class="pain-grid">
+    <h2 class="reveal">Most WhatsApp bots break the moment you <em>scale.</em></h2>
+    <div class="pain-list">
+      <div class="pain-item reveal delay-1">
+        <div class="mark">01</div>
+        <div class="body"><h3>Sessions collide</h3><p>Shared memory between tenants means one client's bug becomes everyone's downtime.</p></div>
+      </div>
+      <div class="pain-item reveal delay-2">
+        <div class="mark">02</div>
+        <div class="body"><h3>No real admin layer</h3><p>Most bots give you a config file, not a panel. Beast MD gives every admin a scoped dashboard.</p></div>
+      </div>
+      <div class="pain-item reveal delay-3">
+        <div class="mark">03</div>
+        <div class="body"><h3>Pairing is a headache</h3><p>QR codes that expire, no retry logic, no status feedback. Beast MD pairing just works.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="feature-block">
+    <div class="fb-content reveal">
+      <span class="fb-tag mono">// SESSION ISOLATION</span>
+      <h3>Per-tenant sessions, no cross-talk.</h3>
+      <p>Every paired number runs its own isolated session and cache. One client's traffic spike never touches another's uptime.</p>
+    </div>
+    <div class="fb-visual reveal delay-1">
+      <div class="fake-card"><span>session_a2f9</span><div class="dot"></div></div>
+      <div class="fake-line w60"></div>
+      <div class="fake-line w80 accent"></div>
+      <div class="fake-line w40"></div>
+    </div>
+  </div>
+
+  <div class="feature-block reverse">
+    <div class="fb-content reveal">
+      <span class="fb-tag mono">// ADMIN CONTROL</span>
+      <h3>A real panel. Scoped per admin.</h3>
+      <p>Owners, co-owners, and customers each get access matched to their role — OTP-secured, with promotion and removal handled through the panel, not raw code edits.</p>
+    </div>
+    <div class="fb-visual reveal delay-1">
+      <div class="fake-line w95"></div>
+      <div class="fake-line w60 accent"></div>
+      <div class="fake-card"><span>role: co-owner</span><div class="dot"></div></div>
+    </div>
+  </div>
+
+  <div class="feature-block">
+    <div class="fb-content reveal">
+      <span class="fb-tag mono">// PAIRING</span>
+      <h3>Pair in one tap, no dead QR codes.</h3>
+      <p>Live status feedback, automatic retry, and a pairing code fallback when QR scanning isn't practical.</p>
+    </div>
+    <div class="fb-visual reveal delay-1">
+      <div class="fake-card"><span>status: connecting…</span><div class="dot"></div></div>
+      <div class="fake-line w80"></div>
+      <div class="fake-line w40 accent"></div>
+    </div>
+  </div>
+</section>
+
+<div class="claw flip"></div>
+
+<section id="trust" class="trust">
+  <div class="trust-head reveal">
+    <h2>Built to stay up when it matters.</h2>
+  </div>
+  <div class="trust-grid">
+    <div class="trust-card reveal tilt-3d">
+      <div class="icon">01</div>
+      <h4>Persistent by design</h4>
+      <p>Scheduler, database, and sessions live on persistent storage — a redeploy never means starting from zero.</p>
+    </div>
+    <div class="trust-card reveal delay-1 tilt-3d">
+      <div class="icon">02</div>
+      <h4>Antiban aware</h4>
+      <p>Health-risk monitoring pauses automatically before a ban happens, not after.</p>
+    </div>
+    <div class="trust-card reveal delay-2 tilt-3d">
+      <div class="icon">03</div>
+      <h4>Parallel reconnects</h4>
+      <p>Every tenant session reconnects in parallel on boot — no waiting in line after maintenance.</p>
+    </div>
+  </div>
+</section>
+
+<div class="claw"></div>
+
+<section id="free-tools" class="trust">
+  <div class="trust-head reveal">
+    <h2>Free tools. No bot required.</h2>
+    <p style="color:var(--ash);max-width:560px;margin:12px auto 0;">Can't pair a number yet? These run straight from the site — the same engine behind the bot's own commands.</p>
+  </div>
+
+  <div class="tool-grid reveal" style="max-width:820px;margin:40px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;">
+    <div class="tool-card tilt-3d active" data-tool="youtube">
+      <div class="tool-icon">▶</div><div class="tool-label">YouTube</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="music">
+      <div class="tool-icon">♫</div><div class="tool-label">Music Search</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="qr">
+      <div class="tool-icon">▦</div><div class="tool-label">QR Code</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="shorten">
+      <div class="tool-icon">🔗</div><div class="tool-label">Link Shortener</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="base64">
+      <div class="tool-icon">⛭</div><div class="tool-label">Base64</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="define">
+      <div class="tool-icon">A</div><div class="tool-label">Dictionary</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="texttools">
+      <div class="tool-icon">✎</div><div class="tool-label">Text Tools</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="password">
+      <div class="tool-icon">🔒</div><div class="tool-label">Password Gen</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="calc">
+      <div class="tool-icon">=</div><div class="tool-label">Calculator</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="unit">
+      <div class="tool-icon">⇌</div><div class="tool-label">Unit Convert</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="random">
+      <div class="tool-icon">🎲</div><div class="tool-label">Random</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="wordcount">
+      <div class="tool-icon">#</div><div class="tool-label">Word Count</div>
+    </div>
+    <div class="tool-card tilt-3d" data-tool="cipher"><div class="tool-icon">✦</div><div class="tool-label">Cipher</div></div>
+    <div class="tool-card tilt-3d" data-tool="sudoku"><div class="tool-icon">▥</div><div class="tool-label">Sudoku</div></div>
+    <div class="tool-card tilt-3d" data-tool="qrreader"><div class="tool-icon">▤</div><div class="tool-label">QR Reader</div></div>
+    <div class="tool-card tilt-3d" data-tool="wordfreq"><div class="tool-icon">%</div><div class="tool-label">Word Freq</div></div>
+    <div class="tool-card tilt-3d" data-tool="distance"><div class="tool-icon">◎</div><div class="tool-label">Distance</div></div>
+    <div class="tool-card tilt-3d" data-tool="imgfilter"><div class="tool-icon">◐</div><div class="tool-label">Image Filter</div></div>
+    <div class="tool-card tilt-3d" data-tool="github"><div class="tool-icon">⌥</div><div class="tool-label">GitHub Lookup</div></div>
+    <div class="tool-card tilt-3d" data-tool="npm"><div class="tool-icon">⬢</div><div class="tool-label">npm Lookup</div></div>
+    <div class="tool-card tilt-3d" data-tool="lorem"><div class="tool-icon">¶</div><div class="tool-label">Lorem Ipsum</div></div>
+    <div class="tool-card tilt-3d" data-tool="dna"><div class="tool-icon">⋈</div><div class="tool-label">DNA Encoder</div></div>
+    <div class="tool-card tilt-3d" data-tool="rle"><div class="tool-icon">≈</div><div class="tool-label">RLE Compress</div></div>
+    <div class="tool-card tilt-3d" data-tool="urlenc"><div class="tool-icon">/</div><div class="tool-label">URL Encode</div></div>
+    <div class="tool-card tilt-3d" data-tool="extractlinks"><div class="tool-icon">⛓</div><div class="tool-label">Extract Links</div></div>
+    <div class="tool-card tilt-3d" data-tool="brainfuck"><div class="tool-icon">∴</div><div class="tool-label">Brainfuck Run</div></div>
+    <div class="tool-card tilt-3d" data-tool="uuid"><div class="tool-icon">◆</div><div class="tool-label">UUID Gen</div></div>
+    <div class="tool-card tilt-3d" data-tool="timestamp"><div class="tool-icon">⏱</div><div class="tool-label">Timestamp</div></div>
+    <div class="tool-card tilt-3d" data-tool="roman"><div class="tool-icon">Ⅻ</div><div class="tool-label">Roman Numeral</div></div>
+    <div class="tool-card tilt-3d" data-tool="palindrome"><div class="tool-icon">↔</div><div class="tool-label">Palindrome</div></div>
+    <div class="tool-card tilt-3d" data-tool="bmi"><div class="tool-icon">⚖</div><div class="tool-label">BMI Calc</div></div>
+    <div class="tool-card tilt-3d" data-tool="age"><div class="tool-icon">🎂</div><div class="tool-label">Age Calc</div></div>
+    <div class="tool-card tilt-3d" data-tool="percent"><div class="tool-icon">%</div><div class="tool-label">Percentage</div></div>
+    <div class="tool-card tilt-3d" data-tool="num2words"><div class="tool-icon">Ⓝ</div><div class="tool-label">Num → Words</div></div>
+    <div class="tool-card tilt-3d" data-tool="color"><div class="tool-icon">◉</div><div class="tool-label">Color Convert</div></div>
+    <div class="tool-card tilt-3d" data-tool="json"><div class="tool-icon">{}</div><div class="tool-label">JSON Format</div></div>
+    <div class="tool-card tilt-3d" data-tool="regex"><div class="tool-icon">.*</div><div class="tool-label">Regex Test</div></div>
+    <div class="tool-card tilt-3d" data-tool="slug"><div class="tool-icon">-</div><div class="tool-label">Slug Gen</div></div>
+    <div class="tool-card tilt-3d" data-tool="diff"><div class="tool-icon">Δ</div><div class="tool-label">Text Diff</div></div>
+    <div class="tool-card tilt-3d" data-tool="ascii"><div class="tool-icon">Aa</div><div class="tool-label">ASCII Table</div></div>
+    <div class="tool-card tilt-3d" data-tool="devicescan"><div class="tool-icon">◈</div><div class="tool-label">Device Scan</div></div>
+  </div>
+
+  <button id="tool-back-btn" onclick="closeTool()" style="display:none;max-width:820px;margin:24px auto 0;background:none;border:1px solid var(--line);border-radius:8px;color:var(--bone);padding:8px 14px;font-size:14px;cursor:pointer;">← All tools</button>
+  <div id="tool-panel-wrap" class="reveal tilt-3d" style="display:none;max-width:640px;margin:24px auto 0;background:var(--bg-raised);border:1px solid var(--line);border-radius:16px;padding:28px;">
+
+    <!-- YOUTUBE -->
+    <div class="tool-panel" id="panel-youtube" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// YOUTUBE DOWNLOAD</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Paste a link, get the video.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="yt-url" type="text" placeholder="https://youtube.com/watch?v=..." class="tool-input">
+        <button id="yt-btn" class="btn btn-ghost btn-sm" data-action="fetchYoutube" style="animation:none;">Download</button>
+      </div>
+      <div id="yt-status" class="tool-status"></div>
+      <div id="yt-result" style="margin-top:14px;display:none;">
+        <video id="yt-video" controls style="width:100%;border-radius:10px;background:#000;"></video>
+        <a id="yt-dl-link" href="#" download class="btn btn-ghost btn-sm" style="margin-top:12px;display:inline-block;animation:none;">Save video ↓</a>
+      </div>
+    </div>
+
+    <!-- MUSIC SEARCH -->
+    <div class="tool-panel" id="panel-music" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// MUSIC SEARCH</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Search a song, pick it, download.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="music-q" type="text" placeholder="Song name or artist..." class="tool-input">
+        <button id="music-btn" class="btn btn-ghost btn-sm" data-action="searchMusic" style="animation:none;">Search</button>
+      </div>
+      <div id="music-status" class="tool-status"></div>
+      <div id="music-results" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <!-- QR -->
+    <div class="tool-panel" id="panel-qr" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// QR CODE</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Turn text or a link into a QR code.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="qr-text" type="text" placeholder="Text or URL..." class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchQr" style="animation:none;">Generate</button>
+      </div>
+      <div id="qr-status" class="tool-status"></div>
+      <div id="qr-result" style="margin-top:14px;display:none;text-align:center;">
+        <img id="qr-img" style="max-width:220px;border-radius:10px;background:#fff;padding:12px;">
+      </div>
+    </div>
+
+    <!-- SHORTEN -->
+    <div class="tool-panel" id="panel-shorten" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// LINK SHORTENER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Shrink a long link.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="short-url" type="text" placeholder="https://..." class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchShorten" style="animation:none;">Shorten</button>
+      </div>
+      <div id="short-status" class="tool-status"></div>
+    </div>
+
+    <!-- BASE64 -->
+    <div class="tool-panel" id="panel-base64" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// BASE64</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Encode or decode text.</h4>
+      <textarea id="b64-text" placeholder="Text here..." class="tool-input" style="width:100%;min-height:80px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" data-action="fetchBase64-encode" style="animation:none;">Encode</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchBase64-decode" style="animation:none;">Decode</button>
+      </div>
+      <div id="b64-status" class="tool-status"></div>
+    </div>
+
+    <!-- DEFINE -->
+    <div class="tool-panel" id="panel-define" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// DICTIONARY</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Look up a word.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="define-word" type="text" placeholder="Word..." class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchDefine" style="animation:none;">Define</button>
+      </div>
+      <div id="define-status" class="tool-status"></div>
+    </div>
+
+    <!-- TEXT TOOLS -->
+    <div class="tool-panel" id="panel-texttools" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// TEXT TOOLS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Transform your text.</h4>
+      <select id="tt-mode" class="tool-input" style="margin-bottom:10px;width:100%;">
+        <option value="smallcaps">sᴍᴀʟʟ ᴄᴀᴘs</option>
+        <option value="flip">Uʍop ǝpᴉsdn</option>
+        <option value="reverse">Reverse</option>
+        <option value="upper">UPPERCASE</option>
+        <option value="lower">lowercase</option>
+        <option value="title">Title Case</option>
+        <option value="rot13">ROT13</option>
+        <option value="caesar">Caesar Cipher (shift 3)</option>
+        <option value="morse">Text → Morse</option>
+        <option value="unmorse">Morse → Text</option>
+        <option value="binary">Text → Binary</option>
+        <option value="unbinary">Binary → Text</option>
+        <option value="hex">Text → Hex</option>
+        <option value="unhex">Hex → Text</option>
+      </select>
+      <textarea id="tt-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchTextTool" style="animation:none;margin-top:10px;">Convert</button>
+      <div id="tt-status" class="tool-status"></div>
+    </div>
+
+    <!-- PASSWORD -->
+    <div class="tool-panel" id="panel-password" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// PASSWORD GENERATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Generate a strong password.</h4>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input id="pw-length" type="number" value="16" min="4" max="128" class="tool-input" style="max-width:100px;">
+        <label style="color:var(--ash);font-size:13px;display:flex;align-items:center;gap:6px;"><input id="pw-symbols" type="checkbox" checked> Symbols</label>
+        <button class="btn btn-ghost btn-sm" data-action="fetchPassword" style="animation:none;">Generate</button>
+      </div>
+      <div id="pw-status" class="tool-status" style="font-family:monospace;font-size:16px;word-break:break-all;"></div>
+    </div>
+
+    <!-- CALCULATOR -->
+    <div class="tool-panel" id="panel-calc" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// CALCULATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Quick math.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="calc-expr" type="text" placeholder="e.g. (12 + 8) * 3" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchCalc" style="animation:none;">=</button>
+      </div>
+      <div id="calc-status" class="tool-status" style="font-size:18px;"></div>
+    </div>
+
+    <!-- UNIT CONVERTER -->
+    <div class="tool-panel" id="panel-unit" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// UNIT CONVERTER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Convert length, weight, or temperature.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <input id="unit-value" type="number" value="1" class="tool-input" style="max-width:100px;">
+        <select id="unit-from" class="tool-input" style="max-width:110px;">
+          <option value="m">meters</option><option value="km">km</option><option value="cm">cm</option><option value="mi">miles</option><option value="ft">feet</option><option value="in">inches</option>
+          <option value="kg">kg</option><option value="g">grams</option><option value="lb">pounds</option><option value="oz">ounces</option>
+          <option value="c">°C</option><option value="f">°F</option><option value="k">Kelvin</option>
+        </select>
+        <span style="color:var(--ash);">→</span>
+        <select id="unit-to" class="tool-input" style="max-width:110px;">
+          <option value="km">km</option><option value="m">meters</option><option value="cm">cm</option><option value="mi">miles</option><option value="ft">feet</option><option value="in">inches</option>
+          <option value="kg">kg</option><option value="g">grams</option><option value="lb">pounds</option><option value="oz">ounces</option>
+          <option value="c">°C</option><option value="f">°F</option><option value="k">Kelvin</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" data-action="fetchUnit" style="animation:none;">Convert</button>
+      </div>
+      <div id="unit-status" class="tool-status" style="font-size:18px;"></div>
+    </div>
+
+    <!-- RANDOM -->
+    <div class="tool-panel" id="panel-random" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// RANDOM</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Dice, coin flip, magic 8-ball.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" data-action="fetchRandom-dice" style="animation:none;">🎲 Roll Dice</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchRandom-coinflip" style="animation:none;">🪙 Flip Coin</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchRandom-8ball" style="animation:none;">🎱 8-Ball</button>
+      </div>
+      <div id="random-status" class="tool-status" style="font-size:18px;"></div>
+    </div>
+
+    <!-- WORD COUNT -->
+    <div class="tool-panel" id="panel-wordcount" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// WORD COUNT</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Count words and characters.</h4>
+      <textarea id="wc-text" placeholder="Paste text here..." class="tool-input" style="width:100%;min-height:100px;resize:vertical;" oninput="fetchWordCount()"></textarea>
+      <div id="wc-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-cipher" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// CIPHER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Caesar, Vigenère, or XOR.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <select id="ci-type" class="tool-input" style="flex:1;min-width:120px;">
+          <option value="caesar">Caesar</option>
+          <option value="vigenere">Vigenère</option>
+          <option value="xor">XOR</option>
+        </select>
+        <select id="ci-mode" class="tool-input" style="flex:1;min-width:120px;">
+          <option value="encode">Encode</option>
+          <option value="decode">Decode</option>
+        </select>
+        <input id="ci-key" type="text" placeholder="Key (number for Caesar, word for others)" class="tool-input" style="flex:1;min-width:180px;">
+      </div>
+      <textarea id="ci-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchCipher" style="animation:none;margin-top:10px;">Run Cipher</button>
+      <div id="ci-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-sudoku" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// SUDOKU</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Generate a puzzle, or reveal the solution.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="sd-difficulty" class="tool-input" style="flex:1;min-width:120px;">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" data-action="generateSudoku" style="animation:none;">New Puzzle</button>
+        <button class="btn btn-ghost btn-sm" data-action="revealSudoku" style="animation:none;">Reveal Solution</button>
+      </div>
+      <div id="sd-grid" style="display:grid;grid-template-columns:repeat(9,1fr);gap:2px;max-width:340px;margin:0 auto;"></div>
+      <div id="sd-status" class="tool-status" style="text-align:center;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-qrreader" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// QR READER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Upload a QR code, get the text.</h4>
+      <input id="qrr-file" type="file" accept="image/*" class="tool-input" style="width:100%;">
+      <button class="btn btn-ghost btn-sm" data-action="fetchQrDecode" style="animation:none;margin-top:10px;">Decode</button>
+      <div id="qrr-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-wordfreq" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// WORD FREQUENCY</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Top 10 most-used words.</h4>
+      <textarea id="wf-text" placeholder="Paste a passage here..." class="tool-input" style="width:100%;min-height:100px;resize:vertical;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchWordFreq" style="animation:none;margin-top:10px;">Analyze</button>
+      <div id="wf-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-distance" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// DISTANCE CALCULATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">How far apart are two places?</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="ds-from" type="text" placeholder="From (e.g. Nairobi)" class="tool-input">
+        <input id="ds-to" type="text" placeholder="To (e.g. London)" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchDistance" style="animation:none;">Calculate</button>
+      </div>
+      <div id="ds-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-imgfilter" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// IMAGE FILTERS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Grayscale, invert, blur, or sepia.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="if-file" type="file" accept="image/*" class="tool-input" style="flex:1;min-width:180px;">
+        <select id="if-filter" class="tool-input" style="flex:1;min-width:140px;">
+          <option value="grayscale">Grayscale</option>
+          <option value="invert">Invert</option>
+          <option value="blur">Blur</option>
+          <option value="sepia">Sepia</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" data-action="fetchImageFilter" style="animation:none;">Apply</button>
+      </div>
+      <div id="if-status" class="tool-status"></div>
+      <img id="if-result" style="display:none;max-width:100%;border-radius:10px;margin-top:14px;">
+    </div>
+
+    <div class="tool-panel" id="panel-github" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// GITHUB LOOKUP</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Look up a GitHub profile.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="gh-user" type="text" placeholder="username" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchGithub" style="animation:none;">Look Up</button>
+      </div>
+      <div id="gh-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-npm" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// NPM LOOKUP</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Look up an npm package.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="npm-pkg" type="text" placeholder="package name" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="fetchNpm" style="animation:none;">Look Up</button>
+      </div>
+      <div id="npm-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+    <div class="tool-panel" id="panel-lorem" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// LOREM IPSUM</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Generate placeholder text.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="lo-count" type="number" value="3" min="1" max="20" class="tool-input" style="max-width:120px;" placeholder="Paragraphs">
+        <button class="btn btn-ghost btn-sm" data-action="fetchLorem" style="animation:none;">Generate</button>
+      </div>
+      <div id="lo-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-dna" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// DNA ENCODER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Encode text as an ACGT sequence.</h4>
+      <textarea id="dna-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" data-action="fetchDna-encode" style="animation:none;">Encode</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchDna-decode" style="animation:none;">Decode</button>
+      </div>
+      <div id="dna-status" class="tool-status" style="word-break:break-all;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-rle" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// RLE COMPRESS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Run-length encode/decode text.</h4>
+      <textarea id="rle-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" data-action="fetchRle-encode" style="animation:none;">Compress</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchRle-decode" style="animation:none;">Decompress</button>
+      </div>
+      <div id="rle-status" class="tool-status" style="word-break:break-all;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-urlenc" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// URL ENCODE</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Encode or decode a URL string.</h4>
+      <textarea id="ue-text" placeholder="Type here..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" data-action="fetchUrlenc-encode" style="animation:none;">Encode</button>
+        <button class="btn btn-ghost btn-sm" data-action="fetchUrlenc-decode" style="animation:none;">Decode</button>
+      </div>
+      <div id="ue-status" class="tool-status" style="word-break:break-all;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-extractlinks" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// EXTRACT LINKS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Pull every URL out of a block of text.</h4>
+      <textarea id="el-text" placeholder="Paste text with links..." class="tool-input" style="width:100%;min-height:100px;resize:vertical;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchExtractLinks" style="animation:none;margin-top:10px;">Extract</button>
+      <div id="el-status" class="tool-status" style="white-space:pre-line;word-break:break-all;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-brainfuck" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// BRAINFUCK</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Run a Brainfuck program.</h4>
+      <textarea id="bf-code" placeholder="++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++." class="tool-input" style="width:100%;min-height:80px;resize:vertical;font-family:monospace;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="fetchBrainfuck" style="animation:none;margin-top:10px;">Run</button>
+      <div id="bf-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-uuid" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// UUID GENERATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Generate a random UUID v4.</h4>
+      <button class="btn btn-ghost btn-sm" data-action="genUuid" style="animation:none;">Generate</button>
+      <div id="uuid-status" class="tool-status mono"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-timestamp" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// TIMESTAMP CONVERTER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Unix timestamp ↔ readable date.</h4>
+      <input id="ts-input" type="text" placeholder="Unix seconds, or leave blank for now" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="convertTimestamp" style="animation:none;margin-top:10px;">Convert</button>
+      <div id="ts-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-roman" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// ROMAN NUMERAL</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Number ↔ Roman numeral.</h4>
+      <input id="rm-input" type="text" placeholder="e.g. 1994 or MCMXCIV" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="convertRoman" style="animation:none;margin-top:10px;">Convert</button>
+      <div id="rm-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-palindrome" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// PALINDROME CHECK</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Is it the same backwards?</h4>
+      <input id="pd-input" type="text" placeholder="Type a word or phrase" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="checkPalindrome" style="animation:none;margin-top:10px;">Check</button>
+      <div id="pd-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-bmi" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// BMI CALCULATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Body mass index.</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input id="bmi-kg" type="number" placeholder="Weight (kg)" class="tool-input">
+        <input id="bmi-cm" type="number" placeholder="Height (cm)" class="tool-input">
+        <button class="btn btn-ghost btn-sm" data-action="calcBmi" style="animation:none;">Calculate</button>
+      </div>
+      <div id="bmi-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-age" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// AGE CALCULATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">How old, exactly?</h4>
+      <input id="age-dob" type="date" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="calcAge" style="animation:none;margin-top:10px;">Calculate</button>
+      <div id="age-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-percent" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// PERCENTAGE</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">What is X% of Y?</h4>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <input id="pc-x" type="number" placeholder="X" class="tool-input" style="max-width:100px;">
+        <span>% of</span>
+        <input id="pc-y" type="number" placeholder="Y" class="tool-input" style="max-width:120px;">
+        <button class="btn btn-ghost btn-sm" data-action="calcPercent" style="animation:none;">=</button>
+      </div>
+      <div id="pc-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-num2words" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// NUMBER → WORDS</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Spell out a number.</h4>
+      <input id="n2w-input" type="number" placeholder="e.g. 4820" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="convertNum2Words" style="animation:none;margin-top:10px;">Spell Out</button>
+      <div id="n2w-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-color" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// COLOR CONVERTER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">HEX ↔ RGB ↔ HSL.</h4>
+      <input id="cl-input" type="text" placeholder="#ff6600 or rgb(255,102,0)" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="convertColor" style="animation:none;margin-top:10px;">Convert</button>
+      <div id="cl-status" class="tool-status" style="white-space:pre-line;"></div>
+      <div id="cl-swatch" style="display:none;width:100%;height:36px;border-radius:8px;margin-top:10px;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-json" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// JSON FORMAT</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Validate and pretty-print JSON.</h4>
+      <textarea id="js-input" placeholder='{"key":"value"}' class="tool-input" style="width:100%;min-height:100px;resize:vertical;font-family:monospace;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="formatJson" style="animation:none;margin-top:10px;">Format</button>
+      <div id="js-status" class="tool-status" style="white-space:pre-wrap;font-family:monospace;font-size:12px;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-regex" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// REGEX TESTER</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Test a pattern against text.</h4>
+      <input id="rx-pattern" type="text" placeholder="Pattern, e.g. \\d+" class="tool-input">
+      <textarea id="rx-text" placeholder="Text to test..." class="tool-input" style="width:100%;min-height:80px;resize:vertical;margin-top:10px;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="testRegex" style="animation:none;margin-top:10px;">Test</button>
+      <div id="rx-status" class="tool-status" style="white-space:pre-line;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-slug" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// SLUG GENERATOR</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Turn a title into a URL slug.</h4>
+      <input id="sl-input" type="text" placeholder="My Blog Post Title!" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="genSlug" style="animation:none;margin-top:10px;">Generate</button>
+      <div id="sl-status" class="tool-status mono"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-diff" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// TEXT DIFF</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Compare two blocks of text line by line.</h4>
+      <textarea id="df-a" placeholder="Original text..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;"></textarea>
+      <textarea id="df-b" placeholder="Changed text..." class="tool-input" style="width:100%;min-height:70px;resize:vertical;margin-top:10px;"></textarea>
+      <button class="btn btn-ghost btn-sm" data-action="diffText" style="animation:none;margin-top:10px;">Compare</button>
+      <div id="df-status" class="tool-status" style="white-space:pre-line;font-family:monospace;font-size:12px;"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-ascii" style="display:none;">
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// ASCII TABLE</span>
+      <h4 style="margin:0 0 16px;font-size:20px;">Look up a character's ASCII code.</h4>
+      <input id="as-input" type="text" maxlength="1" placeholder="Type one character" class="tool-input">
+      <button class="btn btn-ghost btn-sm" data-action="lookupAscii" style="animation:none;margin-top:10px;">Look Up</button>
+      <div id="as-status" class="tool-status"></div>
+    </div>
+
+    <div class="tool-panel" id="panel-devicescan" style="display:none;">
+    <!-- BUGFIX: this status div used to reuse id="ds-status", the same id
+         as the Distance tool panel above. getElementById always grabs the
+         FIRST match on the page, so Device Scan was silently writing its
+         status text into the (hidden) Distance panel -- looked like the
+         Scan button did nothing. Renamed to a unique id below. -->
+      <span class="fb-tag mono" style="display:block;margin-bottom:10px;">// DEVICE & NETWORK INFO</span>
+      <h4 style="margin:0 0 8px;font-size:20px;">What your browser can see.</h4>
+      <p style="color:var(--ash);font-size:13px;margin:0 0 16px;">Everything below comes straight from your own browser — nothing is read off your phone's storage or apps. Location, if you allow it, only appears after you tap the button.</p>
+      <button class="btn btn-ghost btn-sm" data-action="runDeviceScan" style="animation:none;">Scan This Device</button>
+      <div id="dsn-status" class="tool-status"></div>
+      <div id="ds-result" style="margin-top:14px;display:none;font-size:14px;line-height:1.9;"></div>
+    </div>
+
+  </div>
+
+</section>
+
+<style>
+  .tool-card{background:var(--bg-raised);border:1px solid var(--line);border-radius:12px;padding:16px 8px;text-align:center;cursor:pointer;transition:border-color .2s ease,background .2s ease;}
+  .tool-card:hover{border-color:var(--ember-dim);}
+  .tool-card.active{border-color:var(--ember);background:rgba(232,163,61,0.08);}
+  .tool-icon{font-size:22px;margin-bottom:6px;}
+  .tool-label{font-size:12px;color:var(--bone);font-weight:600;}
+  .tool-input{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--bone);font-family:'Space Grotesk',sans-serif;font-size:14px;}
+  .tool-status{margin-top:14px;font-size:14px;color:var(--ash);transition:color .2s ease;}
+  /* ── FIX: results were rendered in the same dim gray as hint/placeholder
+     text (var(--ash)) — same color whether a tool was empty, working, or
+     done. That's why answers were "there" but invisible: nothing on
+     screen told you WHERE to look or THAT it changed. .has-result now
+     gets full-brightness text, a highlighted card behind it, and a brief
+     flash + auto-scroll-into-view the instant a result lands (wired in
+     the delegated click handler below, so this covers every tool). ── */
+  .tool-status.has-result{
+    color:var(--bone);font-size:15px;line-height:1.6;
+    background:var(--bg);border:1px solid var(--ember-dim,#8A6224);border-radius:10px;
+    padding:14px 16px;box-shadow:0 4px 16px -6px rgba(0,0,0,.5);
+  }
+  .tool-status.flash-in{animation:toolResultFlash .9s ease;}
+  @keyframes toolResultFlash{
+    0%{box-shadow:0 0 0 0 rgba(232,163,61,0.55),0 4px 16px -6px rgba(0,0,0,.5);}
+    100%{box-shadow:0 0 0 14px rgba(232,163,61,0),0 4px 16px -6px rgba(0,0,0,.5);}
+  }
+  /* Panel switch + card tap polish — requested "make it feel cool" pass. */
+  .tool-panel.panel-enter{animation:panelEnter .28s ease;}
+  @keyframes panelEnter{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  .tool-card{transition:transform .12s ease,border-color .15s ease;}
+  .tool-card:active{transform:scale(.95);}
+  .music-result{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+  .music-result .mr-info{flex:1;min-width:0;}
+  .music-result .mr-title{font-size:14px;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .music-result .mr-meta{font-size:12px;color:var(--ash);}
+  /* ── Generic "it's working" feedback for every Free Tools button.
+     Applied automatically by the delegated click handler below, so every
+     tool button gets this even though most of their functions only ever
+     touch a separate status line — before this, tapping "Generate" gave
+     no visible change on the button itself. ── */
+  [data-action].is-loading{position:relative;color:transparent!important;pointer-events:none;opacity:.75;}
+  [data-action].is-loading::after{
+    content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;
+    border:2px solid rgba(255,255,255,0.35);border-top-color:var(--bone);border-radius:50%;
+    animation:toolSpin .6s linear infinite;
+  }
+  @keyframes toolSpin{to{transform:rotate(360deg);}}
+</style>
+
+<section class="final-cta">
+  <h2 class="reveal">Stop babysitting bots.<br><em>Start running a fleet.</em></h2>
+  <a href="pair.html" class="btn btn-primary reveal delay-1">Pair Your Number →</a>
+</section>
+
+<script>
+  function selectTool(name) {
+    document.querySelectorAll('.tool-card').forEach(c => c.classList.toggle('active', c.dataset.tool === name));
+    document.querySelectorAll('.tool-panel').forEach(p => {
+      const isTarget = p.id === 'panel-' + name;
+      p.style.display = isTarget ? 'block' : 'none';
+      if (isTarget) {
+        // Small polish: panel slides/fades in instead of just snapping
+        // into view, so switching tools feels intentional.
+        p.classList.remove('panel-enter');
+        void p.offsetWidth;
+        p.classList.add('panel-enter');
+      }
+    });
+    // ✅ Dedicated single-tool view: hide the icon grid and show a back
+    // button, so tapping a tool takes you to a page for just that tool
+    // instead of leaving the whole catalog visible above it.
+    const grid = document.querySelector('.tool-grid');
+    const backBtn = document.getElementById('tool-back-btn');
+    const wrap = document.getElementById('tool-panel-wrap');
+    if (grid) grid.style.display = 'none';
+    if (backBtn) backBtn.style.display = 'inline-block';
+    if (wrap) { wrap.style.display = 'block'; wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  }
+
+  function closeTool() {
+    const grid = document.querySelector('.tool-grid');
+    const backBtn = document.getElementById('tool-back-btn');
+    const wrap = document.getElementById('tool-panel-wrap');
+    if (grid) grid.style.display = 'grid';
+    if (backBtn) backBtn.style.display = 'none';
+    if (wrap) wrap.style.display = 'none';
+    document.querySelectorAll('.tool-panel').forEach(p => { p.style.display = 'none'; });
+    document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function fetchYoutube() {
+    const input = document.getElementById('yt-url');
+    const status = document.getElementById('yt-status');
+    const result = document.getElementById('yt-result');
+    const btn = document.getElementById('yt-btn');
+    const url = input.value.trim();
+    if (!url) { status.textContent = 'Paste a YouTube link first.'; return; }
+    result.style.display = 'none';
+    status.textContent = 'Fetching… this can take a few seconds.';
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/widgets/youtube', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        status.textContent = data.error || 'Something went wrong — try again.';
+      } else {
+        status.textContent = data.title ? `✔ ${data.title}` : '✔ Ready';
+        const video = document.getElementById('yt-video');
+        const dl = document.getElementById('yt-dl-link');
+        video.src = data.url;
+        dl.href = data.url;
+        result.style.display = 'block';
+      }
+    } catch (e) {
+      status.textContent = 'Network error — try again.';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function searchMusic() {
+    const q = document.getElementById('music-q').value.trim();
+    const status = document.getElementById('music-status');
+    const results = document.getElementById('music-results');
+    const btn = document.getElementById('music-btn');
+    results.innerHTML = '';
+    if (!q) { status.textContent = 'Type a song name first.'; return; }
+    status.textContent = 'Searching…';
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/widgets/song-search', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q })
+      });
+      const data = await res.json();
+      if (!data.success) { status.textContent = data.error || 'No results.'; return; }
+      status.textContent = `${data.results.length} result(s) — tap one to download.`;
+      data.results.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'music-result';
+        const mins = r.duration ? Math.floor(r.duration / 60) + ':' + String(r.duration % 60).padStart(2, '0') : '';
+        row.innerHTML = `<div class="mr-info"><div class="mr-title">${r.title}</div><div class="mr-meta">${r.uploader || ''}${mins ? ' • ' + mins : ''}</div></div>
+          <button class="btn btn-ghost btn-sm" style="animation:none;">Get</button>`;
+        row.querySelector('button').onclick = () => downloadMusic(r.url, row);
+        results.appendChild(row);
+      });
+    } catch (e) {
+      status.textContent = 'Network error — try again.';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function downloadMusic(url, row) {
+    const btn = row.querySelector('button');
+    btn.textContent = '…'; btn.disabled = true;
+    try {
+      const res = await fetch('/api/widgets/song-download', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (!data.success) { btn.textContent = 'Failed'; return; }
+      const a = document.createElement('a');
+      a.href = data.url; a.download = (data.title || 'song') + '.mp3'; a.target = '_blank';
+      document.body.appendChild(a); a.click(); a.remove();
+      btn.textContent = '✔ Saved';
+    } catch (e) {
+      btn.textContent = 'Failed';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function fetchQr() {
+    const text = document.getElementById('qr-text').value.trim();
+    const status = document.getElementById('qr-status');
+    const result = document.getElementById('qr-result');
+    result.style.display = 'none';
+    if (!text) { status.textContent = 'Enter some text or a link first.'; return; }
+    status.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/widgets/qr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (!data.success) { status.textContent = data.error || 'Failed to generate.'; return; }
+      document.getElementById('qr-img').src = data.result;
+      result.style.display = 'block';
+      status.textContent = '✔ Ready';
+    } catch (e) {
+      status.textContent = 'Network error — try again.';
+    }
+  }
+
+  async function fetchShorten() {
+    const url = document.getElementById('short-url').value.trim();
+    const status = document.getElementById('short-status');
+    if (!url) { status.textContent = 'Paste a link first.'; return; }
+    status.textContent = 'Shortening…';
+    try {
+      const res = await fetch('/api/widgets/shorten', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      status.innerHTML = data.success
+        ? `✔ <a href="${data.result}" target="_blank" style="color:var(--ember);">${data.result}</a>`
+        : (data.error || 'Failed to shorten.');
+    } catch (e) {
+      status.textContent = 'Network error — try again.';
+    }
+  }
+
+  async function fetchBase64(mode) {
+    const text = document.getElementById('b64-text').value;
+    const status = document.getElementById('b64-status');
+    if (!text.trim()) { status.textContent = 'Enter some text first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/base64', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, text })
+      });
+      const data = await res.json();
+      if (data.success) { document.getElementById('b64-text').value = data.result; status.textContent = '✔ Done'; }
+      else status.textContent = data.error || 'Failed.';
+    } catch (e) {
+      status.textContent = 'Network error — try again.';
+    }
+  }
+
+  async function fetchDefine() {
+    const word = document.getElementById('define-word').value.trim();
+    const status = document.getElementById('define-status');
+    if (!word) { status.textContent = 'Enter a word first.'; return; }
+    status.textContent = 'Looking up…';
+    try {
+      const res = await fetch('/api/widgets/define', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result.meanings.join(' · ') : (data.error || 'Not found.');
+    } catch (e) {
+      status.textContent = 'Network error — try again.';
+    }
+  }
+
+  async function fetchTextTool() {
+    const tool = document.getElementById('tt-mode').value;
+    const text = document.getElementById('tt-text').value;
+    const status = document.getElementById('tt-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool, text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchPassword() {
+    const length = document.getElementById('pw-length').value;
+    const symbols = document.getElementById('pw-symbols').checked;
+    const status = document.getElementById('pw-status');
+    status.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'password', length, symbols })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchCalc() {
+    const expr = document.getElementById('calc-expr').value;
+    const status = document.getElementById('calc-status');
+    if (!expr.trim()) { status.textContent = 'Enter an expression first.'; return; }
+    status.textContent = 'Calculating…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'calc', expr })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? ('= ' + data.result) : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchUnit() {
+    const value = document.getElementById('unit-value').value;
+    const from = document.getElementById('unit-from').value;
+    const to = document.getElementById('unit-to').value;
+    const status = document.getElementById('unit-status');
+    status.textContent = 'Converting…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'unit', value, from, to })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? `${value} ${from} = ${data.result} ${to}` : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchRandom(tool) {
+    const status = document.getElementById('random-status');
+    status.textContent = 'Rolling…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool })
+      });
+      const data = await res.json();
+      if (!data.success) { status.textContent = data.error || 'Failed.'; return; }
+      if (tool === 'dice') status.textContent = `🎲 ${data.result.rolls.join(', ')} (total: ${data.result.total})`;
+      else status.textContent = data.result;
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  let wcTimer = null;
+  async function fetchWordCount() {
+    clearTimeout(wcTimer);
+    wcTimer = setTimeout(async () => {
+      const text = document.getElementById('wc-text').value;
+      const status = document.getElementById('wc-status');
+      if (!text.trim()) { status.textContent = ''; return; }
+      try {
+        const res = await fetch('/api/widgets/text', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tool: 'wordcount', text })
+        });
+        const data = await res.json();
+        if (data.success) status.textContent = `${data.result.words} words · ${data.result.characters} characters · ${data.result.sentences} sentence(s)`;
+      } catch (e) {}
+    }, 400);
+  }
+
+  async function fetchCipher() {
+    const ctype = document.getElementById('ci-type').value;
+    const mode = document.getElementById('ci-mode').value;
+    const key = document.getElementById('ci-key').value;
+    const text = document.getElementById('ci-text').value;
+    const status = document.getElementById('ci-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'cipher', ctype, mode, key, text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  let sudokuSolution = null;
+  function renderSudokuGrid(board, given) {
+    const grid = document.getElementById('sd-grid');
+    grid.innerHTML = '';
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const cell = document.createElement('div');
+        const v = board[r][c];
+        const thick = (r % 3 === 0 ? 'border-top:2px solid var(--ember-dim);' : '') +
+                      (c % 3 === 0 ? 'border-left:2px solid var(--ember-dim);' : '') +
+                      (r === 8 ? 'border-bottom:2px solid var(--ember-dim);' : '') +
+                      (c === 8 ? 'border-right:2px solid var(--ember-dim);' : '');
+        cell.style.cssText = `aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);font-size:15px;font-weight:${given && given[r][c] ? '700' : '400'};color:${given && given[r][c] ? 'var(--bone)' : 'var(--ember)'};${thick}`;
+        cell.textContent = v ? v : '';
+        grid.appendChild(cell);
+      }
+    }
+  }
+  async function generateSudoku() {
+    const difficulty = document.getElementById('sd-difficulty').value;
+    const status = document.getElementById('sd-status');
+    status.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/widgets/sudoku', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate', difficulty })
+      });
+      const data = await res.json();
+      if (!data.success) { status.textContent = data.error || 'Failed.'; return; }
+      sudokuSolution = data.solution;
+      renderSudokuGrid(data.puzzle, data.puzzle.map(row => row.map(v => v !== 0)));
+      status.textContent = 'New puzzle ready.';
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+  function revealSudoku() {
+    const status = document.getElementById('sd-status');
+    if (!sudokuSolution) { status.textContent = 'Generate a puzzle first.'; return; }
+    renderSudokuGrid(sudokuSolution, null);
+    status.textContent = 'Solution revealed.';
+  }
+
+  async function fetchQrDecode() {
+    const fileInput = document.getElementById('qrr-file');
+    const status = document.getElementById('qrr-status');
+    if (!fileInput.files.length) { status.textContent = 'Choose an image first.'; return; }
+    status.textContent = 'Decoding…';
+    try {
+      const fd = new FormData();
+      fd.append('image', fileInput.files[0]);
+      const res = await fetch('/api/widgets/qr-decode', { method: 'POST', body: fd });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchWordFreq() {
+    const text = document.getElementById('wf-text').value;
+    const status = document.getElementById('wf-status');
+    if (!text.trim()) { status.textContent = 'Paste some text first.'; return; }
+    status.textContent = 'Analyzing…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'wordfreq', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchDistance() {
+    const from = document.getElementById('ds-from').value;
+    const to = document.getElementById('ds-to').value;
+    const status = document.getElementById('ds-status');
+    if (!from.trim() || !to.trim()) { status.textContent = 'Enter both places.'; return; }
+    status.textContent = 'Calculating…';
+    try {
+      const res = await fetch('/api/widgets/distance', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? `${data.from_label} → ${data.to_label}: ${data.result}` : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchImageFilter() {
+    const fileInput = document.getElementById('if-file');
+    const filter = document.getElementById('if-filter').value;
+    const status = document.getElementById('if-status');
+    const resultImg = document.getElementById('if-result');
+    resultImg.style.display = 'none';
+    if (!fileInput.files.length) { status.textContent = 'Choose an image first.'; return; }
+    status.textContent = 'Processing…';
+    try {
+      const fd = new FormData();
+      fd.append('image', fileInput.files[0]);
+      fd.append('filter', filter);
+      const res = await fetch('/api/widgets/image-filter', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.success) { status.textContent = data.error || 'Failed.'; return; }
+      resultImg.src = data.result;
+      resultImg.style.display = 'block';
+      status.textContent = 'Done.';
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchGithub() {
+    const username = document.getElementById('gh-user').value;
+    const status = document.getElementById('gh-status');
+    if (!username.trim()) { status.textContent = 'Enter a username first.'; return; }
+    status.textContent = 'Looking up…';
+    try {
+      const res = await fetch('/api/widgets/github', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchNpm() {
+    const pkg = document.getElementById('npm-pkg').value;
+    const status = document.getElementById('npm-status');
+    if (!pkg.trim()) { status.textContent = 'Enter a package name first.'; return; }
+    status.textContent = 'Looking up…';
+    try {
+      const res = await fetch('/api/widgets/npm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ package: pkg })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchLorem() {
+    const count = document.getElementById('lo-count').value || 3;
+    const status = document.getElementById('lo-status');
+    status.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'lorem', text: String(count) })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function runDna(mode) {
+    const text = document.getElementById('dna-text').value;
+    const status = document.getElementById('dna-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: mode === 'encode' ? 'dna' : 'undna', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function runRle(mode) {
+    const text = document.getElementById('rle-text').value;
+    const status = document.getElementById('rle-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: mode === 'encode' ? 'rle' : 'unrle', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function runUrlenc(mode) {
+    const text = document.getElementById('ue-text').value;
+    const status = document.getElementById('ue-status');
+    if (!text.trim()) { status.textContent = 'Type something first.'; return; }
+    status.textContent = 'Working…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: mode === 'encode' ? 'urlencode' : 'urldecode', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchExtractLinks() {
+    const text = document.getElementById('el-text').value;
+    const status = document.getElementById('el-status');
+    if (!text.trim()) { status.textContent = 'Paste some text first.'; return; }
+    status.textContent = 'Scanning…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'extractlinks', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  async function fetchBrainfuck() {
+    const text = document.getElementById('bf-code').value;
+    const status = document.getElementById('bf-status');
+    if (!text.trim()) { status.textContent = 'Paste a Brainfuck program first.'; return; }
+    status.textContent = 'Running…';
+    try {
+      const res = await fetch('/api/widgets/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: 'brainfuck', text })
+      });
+      const data = await res.json();
+      status.textContent = data.success ? data.result : (data.error || 'Failed.');
+    } catch (e) { status.textContent = 'Network error — try again.'; }
+  }
+
+  // ── Pure client-side tools — no network round-trip needed ──────────────
+  function genUuid() {
+    const status = document.getElementById('uuid-status');
+    const id = (crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+    status.textContent = id;
+  }
+
+  function convertTimestamp() {
+    const input = document.getElementById('ts-input').value.trim();
+    const status = document.getElementById('ts-status');
+    try {
+      if (!input) {
+        const now = Math.floor(Date.now() / 1000);
+        status.textContent = `Now: ${now} · ${new Date().toString()}`;
+        return;
+      }
+      if (/^\d+$/.test(input)) {
+        const d = new Date(parseInt(input, 10) * 1000);
+        status.textContent = d.toString();
+      } else {
+        const d = new Date(input);
+        if (isNaN(d.getTime())) { status.textContent = 'Could not parse that date.'; return; }
+        status.textContent = `${Math.floor(d.getTime() / 1000)}`;
+      }
+    } catch (e) { status.textContent = 'Invalid input.'; }
+  }
+
+  function convertRoman() {
+    const input = document.getElementById('rm-input').value.trim();
+    const status = document.getElementById('rm-status');
+    if (!input) { status.textContent = 'Type a number or numeral first.'; return; }
+    const map = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+    if (/^\d+$/.test(input)) {
+      let n = parseInt(input, 10);
+      if (n <= 0 || n > 3999) { status.textContent = 'Number must be 1–3999.'; return; }
+      let out = '';
+      for (const [v, s] of map) { while (n >= v) { out += s; n -= v; } }
+      status.textContent = out;
+    } else {
+      const romanMap = { M:1000, CM:900, D:500, CD:400, C:100, XC:90, L:50, XL:40, X:10, IX:9, V:5, IV:4, I:1 };
+      let s = input.toUpperCase(), i = 0, total = 0;
+      while (i < s.length) {
+        if (i + 1 < s.length && romanMap[s.substr(i,2)]) { total += romanMap[s.substr(i,2)]; i += 2; }
+        else if (romanMap[s[i]]) { total += romanMap[s[i]]; i += 1; }
+        else { status.textContent = 'Not a valid Roman numeral.'; return; }
+      }
+      status.textContent = String(total);
+    }
+  }
+
+  function checkPalindrome() {
+    const input = document.getElementById('pd-input').value;
+    const status = document.getElementById('pd-status');
+    const clean = input.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!clean) { status.textContent = 'Type something first.'; return; }
+    const isPal = clean === clean.split('').reverse().join('');
+    status.textContent = isPal ? `✅ "${input}" is a palindrome.` : `❌ "${input}" is not a palindrome.`;
+  }
+
+  function calcBmi() {
+    const kg = parseFloat(document.getElementById('bmi-kg').value);
+    const cm = parseFloat(document.getElementById('bmi-cm').value);
+    const status = document.getElementById('bmi-status');
+    if (!kg || !cm) { status.textContent = 'Enter both weight and height.'; return; }
+    const m = cm / 100;
+    const bmi = kg / (m * m);
+    let cat = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
+    status.textContent = `BMI: ${bmi.toFixed(1)} — ${cat}`;
+  }
+
+  function calcAge() {
+    const dob = document.getElementById('age-dob').value;
+    const status = document.getElementById('age-status');
+    if (!dob) { status.textContent = 'Pick a date of birth first.'; return; }
+    const birth = new Date(dob), now = new Date();
+    let years = now.getFullYear() - birth.getFullYear();
+    let months = now.getMonth() - birth.getMonth();
+    let days = now.getDate() - birth.getDate();
+    if (days < 0) { months--; days += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+    if (months < 0) { years--; months += 12; }
+    status.textContent = `${years} years, ${months} months, ${days} days old`;
+  }
+
+  function calcPercent() {
+    const x = parseFloat(document.getElementById('pc-x').value);
+    const y = parseFloat(document.getElementById('pc-y').value);
+    const status = document.getElementById('pc-status');
+    if (isNaN(x) || isNaN(y)) { status.textContent = 'Enter both numbers.'; return; }
+    status.textContent = `${x}% of ${y} = ${(x / 100 * y).toFixed(4).replace(/\.?0+$/, '')}`;
+  }
+
+  function convertNum2Words() {
+    const n = parseInt(document.getElementById('n2w-input').value, 10);
+    const status = document.getElementById('n2w-status');
+    if (isNaN(n)) { status.textContent = 'Enter a number first.'; return; }
+    const ones = ['','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+    const tens = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+    function chunk(num) {
+      let s = '';
+      if (num >= 100) { s += ones[Math.floor(num/100)] + ' hundred '; num %= 100; }
+      if (num >= 20) { s += tens[Math.floor(num/10)] + ' '; num %= 10; }
+      if (num > 0) s += ones[num] + ' ';
+      return s.trim();
+    }
+    if (n === 0) { status.textContent = 'zero'; return; }
+    let num = Math.abs(n), parts = [], scales = ['', 'thousand', 'million', 'billion'];
+    let scaleIdx = 0;
+    while (num > 0) {
+      const c = num % 1000;
+      if (c) parts.unshift(chunk(c) + (scales[scaleIdx] ? ' ' + scales[scaleIdx] : ''));
+      num = Math.floor(num / 1000);
+      scaleIdx++;
+    }
+    status.textContent = (n < 0 ? 'negative ' : '') + parts.join(' ').trim();
+  }
+
+  function convertColor() {
+    const input = document.getElementById('cl-input').value.trim();
+    const status = document.getElementById('cl-status');
+    const swatch = document.getElementById('cl-swatch');
+    let r, g, b;
+    const hexMatch = input.match(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/i);
+    const rgbMatch = input.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+    if (hexMatch) {
+      let hex = hexMatch[1];
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      r = parseInt(hex.substr(0,2),16); g = parseInt(hex.substr(2,2),16); b = parseInt(hex.substr(4,2),16);
+    } else if (rgbMatch) {
+      r = +rgbMatch[1]; g = +rgbMatch[2]; b = +rgbMatch[3];
+    } else {
+      status.textContent = 'Enter a HEX (#rrggbb) or rgb(r,g,b) value.';
+      swatch.style.display = 'none';
+      return;
+    }
+    const hex = '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+    const rn = r/255, gn = g/255, bn = b/255;
+    const max = Math.max(rn,gn,bn), min = Math.min(rn,gn,bn);
+    let h, s, l = (max+min)/2;
+    if (max === min) { h = s = 0; }
+    else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === rn) h = (gn - bn) / d + (gn < bn ? 6 : 0);
+      else if (max === gn) h = (bn - rn) / d + 2;
+      else h = (rn - gn) / d + 4;
+      h *= 60;
+    }
+    status.textContent = `HEX: ${hex}\nRGB: rgb(${r}, ${g}, ${b})\nHSL: hsl(${Math.round(h)}, ${Math.round(s*100)}%, ${Math.round(l*100)}%)`;
+    swatch.style.background = hex;
+    swatch.style.display = 'block';
+  }
+
+  function formatJson() {
+    const input = document.getElementById('js-input').value;
+    const status = document.getElementById('js-status');
+    if (!input.trim()) { status.textContent = 'Paste some JSON first.'; return; }
+    try {
+      const parsed = JSON.parse(input);
+      status.textContent = JSON.stringify(parsed, null, 2);
+    } catch (e) { status.textContent = '❌ Invalid JSON: ' + e.message; }
+  }
+
+  function testRegex() {
+    const pattern = document.getElementById('rx-pattern').value;
+    const text = document.getElementById('rx-text').value;
+    const status = document.getElementById('rx-status');
+    if (!pattern) { status.textContent = 'Enter a pattern first.'; return; }
+    try {
+      const re = new RegExp(pattern, 'g');
+      const matches = [...text.matchAll(re)].map(m => m[0]);
+      status.textContent = matches.length ? `${matches.length} match(es):\n${matches.join('\n')}` : 'No matches.';
+    } catch (e) { status.textContent = '❌ Invalid pattern: ' + e.message; }
+  }
+
+  function genSlug() {
+    const input = document.getElementById('sl-input').value;
+    const status = document.getElementById('sl-status');
+    if (!input.trim()) { status.textContent = 'Type a title first.'; return; }
+    const slug = input.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
+    status.textContent = slug;
+  }
+
+  function diffText() {
+    const a = document.getElementById('df-a').value.split('\n');
+    const b = document.getElementById('df-b').value.split('\n');
+    const status = document.getElementById('df-status');
+    const max = Math.max(a.length, b.length);
+    const lines = [];
+    for (let i = 0; i < max; i++) {
+      const la = a[i] ?? '', lb = b[i] ?? '';
+      if (la === lb) lines.push('  ' + la);
+      else {
+        if (a[i] !== undefined) lines.push('- ' + la);
+        if (b[i] !== undefined) lines.push('+ ' + lb);
+      }
+    }
+    status.textContent = lines.join('\n') || 'No differences.';
+  }
+
+  function lookupAscii() {
+    const ch = document.getElementById('as-input').value;
+    const status = document.getElementById('as-status');
+    if (!ch) { status.textContent = 'Type one character first.'; return; }
+    const code = ch.charCodeAt(0);
+    status.textContent = `'${ch}' → decimal ${code} · hex 0x${code.toString(16)} · binary ${code.toString(2).padStart(8,'0')}`;
+  }
+
+  // ── Device & Network Info ────────────────────────────────────────────
+  // Everything here is read from the visitor's OWN browser via standard,
+  // permission-respecting Web APIs — nothing is pulled from the device's
+  // filesystem, apps, or storage (browsers don't allow that, by design,
+  // and this doesn't attempt to work around it). Location is only ever
+  // requested — and only shown — after the visitor explicitly allows it
+  // via the browser's native permission prompt.
+  function guessDeviceName() {
+    const ua = navigator.userAgent || '';
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (/iPad/.test(ua)) return 'iPad';
+    if (/Android/.test(ua)) {
+      const m = ua.match(/Android[^;]*;\s*([^)]+)\)/);
+      return m ? m[1].split('Build')[0].trim() : 'Android device';
+    }
+    if (/Windows/.test(ua)) return 'Windows PC';
+    if (/Macintosh/.test(ua)) return 'Mac';
+    if (/Linux/.test(ua)) return 'Linux device';
+    return 'Unknown device';
+  }
+  async function measureDownlink() {
+    // Real, lightweight speed sample: time a fetch of an asset already on
+    // this page (menu-bg.jpg) with cache-busting, convert to Mbps. Falls
+    // back to the browser's own estimate if the fetch fails.
+    try {
+      const t0 = performance.now();
+      const res = await fetch('/assets/menu-bg.jpg?t=' + Date.now(), { cache: 'no-store' });
+      const blob = await res.blob();
+      const seconds = (performance.now() - t0) / 1000;
+      const mbps = (blob.size * 8 / 1_000_000) / Math.max(seconds, 0.05);
+      return `${mbps.toFixed(1)} Mbps (measured just now)`;
+    } catch (e) {
+      return null;
+    }
+  }
+  async function runDeviceScan() {
+    const status = document.getElementById('dsn-status');
+    const result = document.getElementById('ds-result');
+    result.style.display = 'none';
+    status.textContent = 'Scanning…';
+
+    const lines = [];
+    lines.push(`<strong>Device:</strong> ${guessDeviceName()}`);
+
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+      const type = conn.type && conn.type !== 'unknown' ? conn.type : (conn.effectiveType || 'unknown');
+      lines.push(`<strong>Connection:</strong> ${type}${conn.effectiveType ? ' (' + conn.effectiveType + ')' : ''}`);
+      if (typeof conn.downlink === 'number') lines.push(`<strong>Estimated speed:</strong> ~${conn.downlink} Mbps (browser estimate)`);
+      if (typeof conn.rtt === 'number') lines.push(`<strong>Latency:</strong> ~${conn.rtt} ms`);
+    } else {
+      lines.push(`<strong>Connection:</strong> ${navigator.onLine ? 'Online' : 'Offline'} (this browser doesn't expose WiFi/data detail — Chrome on Android supports it, most others don't)`);
+    }
+
+    if (typeof navigator.deviceMemory === 'number') {
+      lines.push(`<strong>RAM:</strong> ~${navigator.deviceMemory} GB (approximate — Chrome-based browsers only)`);
+    } else {
+      lines.push(`<strong>RAM:</strong> not exposed by this browser`);
+    }
+    if (typeof navigator.hardwareConcurrency === 'number') {
+      lines.push(`<strong>CPU cores:</strong> ${navigator.hardwareConcurrency}`);
+    }
+
+    result.innerHTML = lines.join('<br>');
+    result.style.display = 'block';
+    status.textContent = '';
+
+    // Real measured throughput — runs after the instant fields render.
+    measureDownlink().then(m => {
+      if (m) { result.innerHTML += `<br><strong>Measured speed:</strong> ${m}`; }
+    });
+
+    // Carrier/ISP — best-effort, IP-based, from a public lookup. Not
+    // requested until this point, and clearly labeled either way.
+    try {
+      const r = await fetch('https://ipapi.co/json/');
+      if (r.ok) {
+        const d = await r.json();
+        if (d && (d.org || d.city)) {
+          result.innerHTML += `<br><strong>Network provider:</strong> ${d.org || 'Unknown'}${d.city ? ' · ' + d.city + ', ' + (d.country_name||'') : ''}`;
+        }
+      }
+    } catch (e) { /* ISP lookup optional — silently skip if blocked/offline */ }
+
+    // Location — ONLY added if the visitor explicitly taps this and
+    // grants the browser's native permission prompt. Never auto-requested.
+    if (!document.getElementById('ds-loc-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'ds-loc-btn';
+      btn.className = 'btn btn-ghost btn-sm';
+      btn.style.cssText = 'animation:none;margin-top:12px;display:block;';
+      btn.textContent = 'Also share my location (optional)';
+      btn.onclick = () => {
+        btn.textContent = 'Requesting permission…';
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            result.innerHTML += `<br><strong>Location:</strong> ${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)} (± ${Math.round(pos.coords.accuracy)}m)`;
+            btn.remove();
+          },
+          () => { btn.textContent = 'Permission denied.'; },
+          { timeout: 8000 }
+        );
+      };
+      result.after(btn);
+    }
+  }
+
+  // ── Robust delegated click binding — survives any single handler error,
+  // and doesn't rely on inline onclick attributes at all. ──────────────
+  document.addEventListener('click', function(e) {
+    const card = e.target.closest('.tool-card');
+    if (card && card.dataset.tool) {
+      try { selectTool(card.dataset.tool); } catch (err) { console.error('selectTool failed:', err); }
+      return;
+    }
+    const btn = e.target.closest('[data-action]');
+    if (btn && btn.dataset.action) {
+      const [fn, arg] = btn.dataset.action.split('-');
+      // ✅ FIX: previously only 3 of ~30 tool functions (fetchYoutube,
+      // searchMusic, downloadMusic) ever changed the button itself while
+      // working — everything else only updated a small gray status line,
+      // so tapping "Generate" looked like nothing happened. This wraps
+      // EVERY dispatched action in a spinner on the actual button that
+      // was tapped, restored automatically once the handler settles.
+      // Buttons that already manage their own disabled/text state are
+      // unaffected — both mechanisms just restore on the same finally.
+      btn.classList.add('is-loading');
+      const restore = () => btn.classList.remove('is-loading');
+      let result;
+      try {
+        const handlers = {
+          fetchYoutube, searchMusic, fetchQr, fetchShorten, fetchDefine, fetchTextTool,
+          fetchPassword, fetchCalc, fetchUnit, fetchCipher, generateSudoku, revealSudoku,
+          fetchQrDecode, fetchWordFreq, fetchDistance, fetchImageFilter, fetchGithub, fetchNpm,
+          fetchLorem, fetchExtractLinks, fetchBrainfuck, genUuid, convertTimestamp, convertRoman,
+          checkPalindrome, calcBmi, calcAge, calcPercent, convertNum2Words, convertColor,
+          formatJson, testRegex, genSlug, diffText, lookupAscii, runDeviceScan
+        };
+        if (fn === 'fetchBase64') result = fetchBase64(arg);
+        else if (fn === 'fetchRandom') result = fetchRandom(arg);
+        else if (fn === 'fetchDna') result = runDna(arg);
+        else if (fn === 'fetchRle') result = runRle(arg);
+        else if (fn === 'fetchUrlenc') result = runUrlenc(arg);
+        else if (handlers[fn]) result = handlers[fn]();
+        else { console.warn('No handler for action:', btn.dataset.action); restore(); return; }
+      } catch (err) {
+        console.error('Tool action failed:', btn.dataset.action, err);
+        restore();
+        return;
+      }
+      // ✅ FIX: async handlers set their "Fetching…/Generating…/Searching…"
+      // status text synchronously before their first await — but that text
+      // was staying in low-contrast gray until the whole call finished, so
+      // on a slow connection you'd see a spinning button next to text you
+      // could barely read, which looked broken. Highlight it immediately,
+      // then let the existing finally-highlight run again once the real
+      // result replaces it.
+      revealResult(btn);
+      // Async handlers return a Promise — wait for it, then clear the
+      // spinner. Sync/instant handlers (genUuid, calcBmi, etc.) return
+      // nothing, so just clear the spinner right away.
+      if (result && typeof result.finally === 'function') result.finally(() => { restore(); revealResult(btn); });
+      else { restore(); revealResult(btn); }
+    }
+  });
+
+  // ── FIX: results were landing in a dim, low-contrast status line that
+  // looked identical whether a tool was idle, working, or done — nothing
+  // ever told you an answer had actually appeared, or where to look for
+  // it. This runs after every tool action (all ~30 of them, via the one
+  // delegated handler above) and: lights up any status line that now has
+  // real text in it, flashes it once, and smooth-scrolls it into view.
+  // Result containers that already have their own box styling (the
+  // YouTube preview, the music search result card, etc.) just get
+  // scrolled to — they don't need a second border on top of their own.
+  function revealResult(btn) {
+    const panel = btn.closest('.tool-panel');
+    if (!panel) return;
+    let target = null;
+    panel.querySelectorAll('.tool-status').forEach(el => {
+      const hasText = el.textContent.trim().length > 0;
+      el.classList.toggle('has-result', hasText);
+      if (hasText && !target) target = el;
+    });
+    if (!target) {
+      panel.querySelectorAll('[id$="-result"]').forEach(el => {
+        if (!target && el.offsetParent !== null) target = el;
+      });
+    }
+    if (target) {
+      target.classList.remove('flash-in');
+      void target.offsetWidth; // restart the animation if it's already run once
+      target.classList.add('flash-in');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+</script>
+
+<footer>
+  <div class="fbrand"><span class="serif" style="font-weight:600;">BEAST</span><span class="serif-i">MD</span></div>
+  <div>Free forever · No hidden fees</div>
+  <div class="fmap" style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:18px;font-size:13px;">
+    <a href="pair.html">Pair</a>
+    <a href="register.html">Register</a>
+    <a href="panel.html">My Panel</a>
+    <a href="console.html">Console</a>
+    <a href="chat.html">Community Chat</a>
+    <a href="admin.html" style="opacity:.6;">Admin</a>
+  </div>
+</footer>
+
+<script>
+  // --- 3D tilt: real cursor-driven perspective, not a canned animation ---
+  function attachTilt(el, maxDeg){
+    el.style.transformStyle = 'preserve-3d';
+    function onMove(e){
+      // Touch has no real "hover" — a mouse-tilt effect on a finger tap just
+      // leaves the card permanently rotated once the finger lifts (no
+      // pointerleave fires the way mouseleave does), which is the mobile
+      // "skewed card" bug. Skip tilting for touch/pen input entirely.
+      if (e.pointerType && e.pointerType !== 'mouse') return;
+      const r = el.getBoundingClientRect();
+      const px = ((e.clientX - r.left) / r.width) - 0.5;
+      const py = ((e.clientY - r.top) / r.height) - 0.5;
+      const rx = (-py * maxDeg).toFixed(2);
+      const ry = (px * maxDeg).toFixed(2);
+      el.style.setProperty('--tiltx', rx + 'deg');
+      el.style.setProperty('--tilty', ry + 'deg');
+      el.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+    }
+    function onLeave(){
+      el.style.transform = '';
+      el.style.setProperty('--tiltx','0deg');
+      el.style.setProperty('--tilty','0deg');
+    }
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerleave', onLeave);
+    // Safety net: on touch devices, always reset on release/cancel in case
+    // any tilt transform slipped through before this fix.
+    el.addEventListener('pointerup', onLeave);
+    el.addEventListener('pointercancel', onLeave);
+  }
+  document.querySelectorAll('.tilt-3d').forEach(el => attachTilt(el, 8));
+  document.querySelectorAll('.btn').forEach(el => attachTilt(el, 10));
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // --- scroll progress bar ---
+  const progress = document.getElementById('scrollProgress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    if (progress) progress.style.width = pct + '%';
+  }, { passive: true });
+
+  // --- floating ember particles ---
+  const emberBox = document.getElementById('embers');
+  if (emberBox) {
+    for (let i = 0; i < 22; i++) {
+      const p = document.createElement('div');
+      p.className = 'ember-particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.setProperty('--drift', (Math.random() * 60 - 30) + 'px');
+      p.style.animationDuration = (6 + Math.random() * 8) + 's';
+      p.style.animationDelay = (Math.random() * 10) + 's';
+      emberBox.appendChild(p);
+    }
+  }
+
+  // --- keep the "Commands" stat honest: pull the real count from the live command db ---
+  const commandCountReady = fetch('/assets/commands-db.json').then(r => r.json()).then(list => {
+    if (Array.isArray(list) && list.length) {
+      const el = document.querySelector('.hero-stats [data-suffix="+"]');
+      if (el) el.setAttribute('data-count', String(list.length));
+    }
+  }).catch(() => {});
+
+  // --- count-up stats on reveal ---
+  const counted = new WeakSet();
+  const countIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !counted.has(e.target)) {
+        counted.add(e.target);
+        commandCountReady.finally(() => {
+          document.querySelectorAll('[data-count]').forEach(el => {
+            const target = parseInt(el.getAttribute('data-count'), 10);
+            const suffix = el.getAttribute('data-suffix') || '';
+            const dur = 1200;
+            const start = performance.now();
+            function tick(now) {
+              const p = Math.min((now - start) / dur, 1);
+              const eased = 1 - Math.pow(1 - p, 3);
+              el.textContent = Math.round(eased * target) + suffix;
+              if (p < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+          });
+        });
+      }
+    });
+  }, { threshold: 0.4 });
+  const statsBlock = document.querySelector('.hero-stats');
+  if (statsBlock) countIO.observe(statsBlock);
+</script>
+
+<!-- SITE MUSIC WIDGET -->
+<div id="site-music-widget" style="position:fixed;bottom:24px;right:24px;z-index:999;display:none;align-items:center;gap:8px;background:var(--bg-raised);border:1px solid var(--line);border-radius:999px;padding:10px 16px 10px 10px;box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+  <button id="site-music-prev" aria-label="Previous track" style="width:30px;height:30px;border-radius:50%;border:none;background:transparent;color:var(--ash);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⏮</button>
+  <button id="site-music-toggle" aria-label="Play music" style="width:38px;height:38px;border-radius:50%;border:none;background:var(--ember);color:var(--bg);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">▶</button>
+  <button id="site-music-next" aria-label="Next track" style="width:30px;height:30px;border-radius:50%;border:none;background:transparent;color:var(--ash);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⏭</button>
+  <span id="site-music-title" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ash);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+</div>
+<audio id="site-music-audio" preload="none"></audio>
+<script>
+(function(){
+  fetch('/api/site-music').then(r => r.json()).then(info => {
+    const tracks = info.tracks || [];
+    if (!info.enabled || !tracks.length) return;
+    const widget = document.getElementById('site-music-widget');
+    const audio = document.getElementById('site-music-audio');
+    const toggleBtn = document.getElementById('site-music-toggle');
+    const prevBtn = document.getElementById('site-music-prev');
+    const nextBtn = document.getElementById('site-music-next');
+    const titleEl = document.getElementById('site-music-title');
+    let idx = 0;
+
+    function loadTrack(i, autoplay){
+      idx = (i + tracks.length) % tracks.length;
+      audio.src = tracks[idx].url;
+      titleEl.textContent = tracks[idx].title || `Track ${idx + 1} of ${tracks.length}`;
+      if (autoplay) audio.play().then(() => { toggleBtn.textContent = '⏸'; }).catch(() => {});
+    }
+    // Visitors get the whole playlist: when one track ends, the next one
+    // starts automatically; after the last track it loops back to the first.
+    audio.addEventListener('ended', () => loadTrack(idx + 1, true));
+    prevBtn.addEventListener('click', () => loadTrack(idx - 1, !audio.paused));
+    nextBtn.addEventListener('click', () => loadTrack(idx + 1, !audio.paused));
+
+    loadTrack(0, false);
+    widget.style.display = 'flex';
+
+    // Browsers block autoplay-with-sound, so try a muted autoplay first —
+    // if that succeeds we unmute on the visitor's very first tap/scroll
+    // anywhere on the page, which reads as instant music without a jarring
+    // extra click on the widget itself.
+    audio.muted = true;
+    audio.play().then(() => {
+      const unmuteOnce = () => {
+        audio.muted = false;
+        toggleBtn.textContent = '⏸';
+        ['click','touchstart','scroll','keydown'].forEach(ev => document.removeEventListener(ev, unmuteOnce));
+      };
+      ['click','touchstart','scroll','keydown'].forEach(ev => document.addEventListener(ev, unmuteOnce, { once:true, passive:true }));
+    }).catch(() => { /* even muted autoplay blocked — wait for the button */ });
+
+    toggleBtn.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.muted = false;
+        audio.play();
+        toggleBtn.textContent = '⏸';
+      } else {
+        audio.pause();
+        toggleBtn.textContent = '▶';
+      }
+    });
+  }).catch(() => {});
+})();
+</script>
+
+
+<script>
+  // MOBILE FIX: nav used to just vanish under the breakpoint with no way
+  // to reopen it. Now a hamburger button toggles it as a dropdown.
+  (function(){
+    var btn = document.getElementById('navToggle');
+    var nav = document.querySelector('header nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function(){
+      nav.classList.toggle('open');
+      btn.setAttribute('aria-expanded', nav.classList.contains('open') ? 'true' : 'false');
+    });
+    nav.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){ nav.classList.remove('open'); });
+    });
+  })();
+</script>
+</body>
+</html>
