@@ -51,11 +51,7 @@ const DEFAULTS = {
   // entirely with .setfirstcontactgreeting off.
   firstcontactgreeting: true,
   ownername: '',            // '' = falls back to the live bot name
-  firstcontactmessage:
-    '👋 Hey! This is {name}\'s bot-assisted number — save this contact so '
-    + 'future messages don\'t land as "unknown number" (and to keep it from '
-    + 'getting flagged/banned). {name} will get back to you personally, or '
-    + 'the bot may step in if {name} is away for a bit.',
+  firstcontactmessage: 'Hey {sender}! This is {name} 👋 How can I help you today?',
 
   // ── Update 18: CYPHER-X-style toggles, ported into Admin Panel → Settings.
   // Defaults chosen to match whatever the bot already did before this drop
@@ -152,11 +148,17 @@ function markGreeted(number) {
   if (!g.includes(number)) { g.push(number); fs.writeFileSync(GREETED_FILE, JSON.stringify(g, null, 2)); }
 }
 // Builds the actual text to send, substituting {name} with the session's
-// configured owner name (falls back to the live bot name if unset).
-function buildFirstContactMessage(fallbackName) {
+// configured owner/bot name (falls back to the live bot name if unset) and
+// {sender} with the incoming sender's own WhatsApp display name, so the
+// greeting reads like "Hey Sam! This is BeastMD 👋 How can I help?" instead
+// of a generic canned line.
+function buildFirstContactMessage(fallbackName, senderName) {
   const s = loadSettings();
   const name = (s.ownername || '').trim() || fallbackName || 'the owner';
-  return (s.firstcontactmessage || DEFAULTS.firstcontactmessage).split('{name}').join(name);
+  const sender = (senderName || '').trim() || 'there';
+  return (s.firstcontactmessage || DEFAULTS.firstcontactmessage)
+    .split('{name}').join(name)
+    .split('{sender}').join(sender);
 }
 
 const exportsObj = {

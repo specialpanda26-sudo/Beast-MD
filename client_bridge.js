@@ -2016,10 +2016,10 @@ async function startSession(sessionId, opts = {}) {
           const settingsExtFc = require('./plugins/settings-ext.js');
           if (settingsExtFc.__getSetting('firstcontactgreeting') && !settingsExtFc.__hasBeenGreeted(senderNumber)) {
             settingsExtFc.__markGreeted(senderNumber);
-            const greetingText = settingsExtFc.__buildFirstContactMessage(getBotName());
+            const greetingText = settingsExtFc.__buildFirstContactMessage(getBotName(), name);
             await socket.sendMessage(sender, { text: greetingText }, { quoted: msg });
           }
-        } catch (_) {}
+        } catch (e) { logger.warn('First-contact greeting failed:', e.message); }
       }
 
       if (!isGroup && !isBotAdmin) {
@@ -2743,10 +2743,12 @@ async function startSession(sessionId, opts = {}) {
           // ✅ NEW: on Henry's own number, the AI never just answers every
           // DM like a customer session does. Three gates, all must pass:
           try {
-            // 1) Per-chat opt-in — toggled from the Admin Panel. Chats not
-            //    explicitly turned on are left alone (Henry replies himself).
+            // 1) Per-chat opt-out — replies by default like a normal
+            //    assistant (ChatGPT-style), unless this specific chat was
+            //    explicitly turned off from the Admin Panel or via
+            //    .setownerai off in that chat.
             const allowSetting = await apiClient.get("/chat-settings/get", { params: { chat_id: sender, key: "owner_ai_allowed" } });
-            const allowed = allowSetting?.data?.value === "on";
+            const allowed = allowSetting?.data?.value !== "off";
 
             // First-time-chat tracking — still recorded once per chat (the
             // admin panel's "new chats" list reads this), but the greeting
@@ -2775,7 +2777,7 @@ async function startSession(sessionId, opts = {}) {
               try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
               await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
             }
-          } catch (e) {}
+          } catch (e) { logger.warn('Owner-session AI reply failed:', e.message); }
         } else {
           // Unchanged customer-session behavior — always replies.
           try {
@@ -2788,7 +2790,7 @@ async function startSession(sessionId, opts = {}) {
               try { await socket.sendPresenceUpdate('paused', sender); } catch (_) {}
               await socket.sendMessage(sender, { text: aiReply.data.reply }, { quoted: msg });
             }
-          } catch (e) {}
+          } catch (e) { logger.warn('Customer-session AI reply failed:', e.message); }
         }
       }
 
