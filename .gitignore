@@ -16,3 +16,4 @@ Beast-MD/
 beast-md-repo/
 data/applications/
 apply_guided_apps_patch*.py
+apply_*.py

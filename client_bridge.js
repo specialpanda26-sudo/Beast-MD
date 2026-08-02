@@ -2774,9 +2774,9 @@ async function startSession(sessionId, opts = {}) {
               const uploadUrl = startResp?.data?.upload_url;
               if (uploadUrl) {
                 await socket.sendMessage(sender, {
-                  text: `Ὄb Let's get your *${intentKey.replace(/_/g, ' ')}* application started.\n\n`
+                  text: `Let's get your *${intentKey.replace(/_/g, ' ')}* application started.\n\n`
                       + `Fill in your details and upload the required documents securely here:\n${uploadUrl}\n\n`
-                      + `ὑ2 Your documents are encrypted and only reviewed by an authorized admin. This link expires in ${startResp.data.expires_in_hours || 48} hours.`,
+                      + `Your documents are encrypted and only reviewed by an authorized admin. This link expires in ${startResp.data.expires_in_hours || 48} hours.`,
                 });
                 logActivity('kenya-guided-application', intentKey, body.slice(0, 300), `+${senderJid.split('@')[0]}`);
                 return; // handled — skip generic AI chat below
@@ -2798,11 +2798,17 @@ async function startSession(sessionId, opts = {}) {
         } catch (e) { logger.warn('Kenya intent routing failed:', e.message); }
       }
 
-      // ── Natural AI Chat (DM only, non-command messages) ───────────────────
-      // ✅ NEW (Update 15): .setchatbot on/off actually gates this now — was
+      // -- Natural AI Chat (DM only, non-command messages) -------------------
+      // NEW (Update 15): .setchatbot on/off actually gates this now - was
       // always on regardless of the toggle's saved value.
+      // FIX: this used to branch on isThisOwnerSession alone, which is true
+      // for EVERY sender on a single-tenant deployment (bot number == owner
+      // number) -- so real customers were hitting the owner-only branch
+      // (opt-in gate, 5-min idle window, Sheng persona) meant only for
+      // Henry's own personal chats. Now requires isPrimaryOwner too, so the
+      // owner-only branch only fires when Henry himself is the sender.
       if (!isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/') && require('./plugins/settings-ext.js').__getSetting('chatbot')) {
-        if (isThisOwnerSession) {
+        if (isThisOwnerSession && isPrimaryOwner) {
           // ✅ NEW: on Henry's own number, the AI never just answers every
           // DM like a customer session does. Three gates, all must pass:
           try {
