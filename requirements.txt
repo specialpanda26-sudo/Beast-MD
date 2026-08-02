@@ -10,3 +10,4 @@ edge-tts
 # config needed) once installed alongside it in the same Python env.
 bgutil-ytdlp-pot-provider
 Pillow
+cryptography

@@ -2745,10 +2745,47 @@ async function startSession(sessionId, opts = {}) {
       // ambiguous or unrelated falls through to normal AI chat below,
       // exactly as before this feature existed.
       const KENYA_KEYWORD_HINT = /\b(voter|id card|national id|passport|birth cert|good conduct|police clearance|business (name|reg)|kra ?pin|paye|nhif|shif|nssf|helb|mpesa charges?|mpesa cost|cv|resume|payslip|invoice|kcse|bursary|emergency number|hospital|blood donat|matatu|huduma|ntsa|driving licen[cs]e|kuccps)\b/i;
+      // ✅ NEW: application types that genuinely require documents (per
+      // APPLICATION_TYPES in app.py) get routed into the shared guided-
+      // application engine instead of a static info reply. This list is
+      // the ONLY thing tying an intent key to "needs the document flow" —
+      // every other matched intent (calculators, lookups, info commands)
+      // keeps working exactly as before, unchanged.
+      const GUIDED_APPLICATION_INTENTS = new Set([
+        'helb', 'passport', 'id_replace', 'birth_cert', 'good_conduct', 'business_reg',
+      ]);
       if (!isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/') && KENYA_KEYWORD_HINT.test(body)) {
         try {
           const kenyaIntentResp = await apiClient.post('/kenya-intent', { text: body });
           const intentKey = kenyaIntentResp?.data?.intent;
+
+          if (intentKey && GUIDED_APPLICATION_INTENTS.has(intentKey)) {
+            // Hand off to the generalized guided-application engine: ask
+            // the shared backend for a fresh, single-use, time-limited
+            // secure upload link for this type + this student, then send
+            // it. All field collection + document upload happens on that
+            // web page (encrypted at rest) — never over raw WhatsApp media.
+            try {
+              const startResp = await apiClient.post('/api/application/start', {
+                type: intentKey,
+                phone: senderNumber,
+                name: msg.pushName || '',
+              });
+              const uploadUrl = startResp?.data?.upload_url;
+              if (uploadUrl) {
+                await socket.sendMessage(sender, {
+                  text: `Ὄb Let's get your *${intentKey.replace(/_/g, ' ')}* application started.\n\n`
+                      + `Fill in your details and upload the required documents securely here:\n${uploadUrl}\n\n`
+                      + `ὑ2 Your documents are encrypted and only reviewed by an authorized admin. This link expires in ${startResp.data.expires_in_hours || 48} hours.`,
+                });
+                logActivity('kenya-guided-application', intentKey, body.slice(0, 300), `+${senderJid.split('@')[0]}`);
+                return; // handled — skip generic AI chat below
+              }
+            } catch (e) { logger.warn('Guided application start failed:', e.message); }
+            // falls through to the static info handler below if the
+            // guided flow couldn't be started for any reason
+          }
+
           if (intentKey && allCommands[intentKey]) {
             await allCommands[intentKey]({
               sock: socket, from: sender, msg, isOwner, isPrimaryOwner, isCoOwner,

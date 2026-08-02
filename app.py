@@ -1434,6 +1434,307 @@ def _check_admin_auth(req) -> bool:
     return secrets.compare_digest(token or "", ADMIN_PASSWORD)
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# ✅ NEW: Generalized guided-application + document-intake engine.
+#
+# ONE shared workflow for EVERY application-style Kenya-services feature —
+# not just HELB. Each entry below is the single source of truth for one
+# application type: what info to collect + which documents are required.
+# Adding a new type (e.g. a future NTSA driving-licence flow) is just a
+# new dict entry here — no new routes, no new tables, no new web page.
+#
+# "fields" -> collected on the secure web form as plain text inputs.
+# "documents" -> collected as file uploads, ENCRYPTED at rest (Fernet)
+#   and only ever decrypted on-demand by an authenticated admin.
+# ═══════════════════════════════════════════════════════════════════════
+APPLICATION_TYPES = {
+    "helb": {
+        "label": "HELB Loan Application",
+        "fields": [
+            {"key": "institution", "label": "Institution / University"},
+            {"key": "admission_number", "label": "Admission Number"},
+            {"key": "course", "label": "Course of Study"},
+            {"key": "guarantor_name", "label": "Guarantor Full Name"},
+            {"key": "guarantor_phone", "label": "Guarantor Phone Number"},
+        ],
+        "documents": [
+            {"key": "national_id", "label": "National ID (front & back)"},
+            {"key": "passport_photo", "label": "Passport Photo"},
+            {"key": "admission_letter", "label": "Admission Letter"},
+        ],
+    },
+    "passport": {
+        "label": "Passport Application",
+        "fields": [
+            {"key": "full_name", "label": "Full Name (as on ID)"},
+            {"key": "id_number", "label": "National ID Number"},
+        ],
+        "documents": [
+            {"key": "national_id", "label": "National ID (front & back)"},
+            {"key": "birth_cert", "label": "Birth Certificate"},
+            {"key": "passport_photo", "label": "Passport Photo (white background)"},
+        ],
+    },
+    "id_replace": {
+        "label": "Lost / Replacement National ID",
+        "fields": [
+            {"key": "full_name", "label": "Full Name"},
+            {"key": "old_id_number", "label": "Old ID Number (if known)"},
+        ],
+        "documents": [
+            {"key": "ob_abstract", "label": "Police OB Abstract (for lost ID)"},
+            {"key": "birth_cert", "label": "Birth Certificate"},
+            {"key": "passport_photo", "label": "Passport Photo"},
+        ],
+    },
+    "birth_cert": {
+        "label": "Birth Certificate Application",
+        "fields": [
+            {"key": "child_full_name", "label": "Child's Full Name"},
+            {"key": "date_of_birth", "label": "Date of Birth"},
+            {"key": "place_of_birth", "label": "Place of Birth"},
+        ],
+        "documents": [
+            {"key": "parent_id", "label": "Parent's National ID"},
+            {"key": "notification_of_birth", "label": "Hospital Notification of Birth"},
+        ],
+    },
+    "good_conduct": {
+        "label": "Certificate of Good Conduct",
+        "fields": [
+            {"key": "full_name", "label": "Full Name"},
+            {"key": "id_number", "label": "National ID Number"},
+        ],
+        "documents": [
+            {"key": "national_id", "label": "National ID (front & back)"},
+            {"key": "passport_photo", "label": "Passport Photo"},
+        ],
+    },
+    "business_reg": {
+        "label": "Business Name Registration",
+        "fields": [
+            {"key": "proposed_name_1", "label": "Proposed Business Name (1st choice)"},
+            {"key": "proposed_name_2", "label": "Proposed Business Name (2nd choice)"},
+            {"key": "nature_of_business", "label": "Nature of Business"},
+        ],
+        "documents": [
+            {"key": "national_id", "label": "National ID (front & back)"},
+            {"key": "kra_pin_cert", "label": "KRA PIN Certificate"},
+        ],
+    },
+}
+
+APPLICATION_TOKEN_TTL_SECONDS = 48 * 60 * 60  # 48 hours to complete the upload
+
+APPLICATION_ENCRYPTION_KEY = os.environ.get("APPLICATION_ENCRYPTION_KEY", "").strip()
+_application_fernet = None
+if APPLICATION_ENCRYPTION_KEY:
+    try:
+        from cryptography.fernet import Fernet
+        _application_fernet = Fernet(APPLICATION_ENCRYPTION_KEY.encode())
+    except Exception as e:
+        logger.warning("[applications] APPLICATION_ENCRYPTION_KEY is set but invalid (%s) — "
+                        "encrypted storage for guided applications is DISABLED until fixed.", e)
+else:
+    logger.warning("[applications] APPLICATION_ENCRYPTION_KEY not set — guided-application "
+                    "document uploads will be REJECTED until this is configured. "
+                    "Generate one with: python3 -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"")
+
+APPLICATION_DOCS_DIR = Path("data/applications")
+
+
+def _encrypt_bytes(raw: bytes) -> bytes:
+    return _application_fernet.encrypt(raw)
+
+
+def _decrypt_bytes(enc: bytes) -> bytes:
+    return _application_fernet.decrypt(enc)
+
+
+@app.route("/api/application-types", methods=["GET"])
+async def api_application_types():
+    """Single source of truth for client_bridge.js's guided-flow plugin —
+    it fetches this instead of hardcoding fields/documents per type, so a
+    new application type added here shows up on the WhatsApp side too
+    with zero JS changes."""
+    return jsonify({"types": APPLICATION_TYPES})
+
+
+@app.route("/api/application/start", methods=["POST"])
+async def api_application_start():
+    """Called by client_bridge.js when a guided WhatsApp flow needs to
+    hand the student off to the secure web form. Creates a pending row +
+    single-use time-limited token, returns the upload URL to send them."""
+    data = await request.get_json(force=True, silent=True) or {}
+    app_type = (data.get("type") or "").strip()
+    phone = (data.get("phone") or "").strip()
+    name = (data.get("name") or "").strip()
+    if app_type not in APPLICATION_TYPES:
+        return jsonify({"success": False, "error": "Unknown application type"}), 400
+    if not phone:
+        return jsonify({"success": False, "error": "phone is required"}), 400
+
+    token = secrets.token_urlsafe(24)
+    now = time.time()
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT INTO applications (app_type, phone, name, status, token, token_expires_at, created_at) "
+            "VALUES (?, ?, ?, 'pending', ?, ?, ?)",
+            (app_type, phone, name, token, now + APPLICATION_TOKEN_TTL_SECONDS, now),
+        )
+        await db.commit()
+
+    base_url = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+    upload_url = f"{base_url}/apply/{token}" if base_url else f"/apply/{token}"
+    return jsonify({"success": True, "upload_url": upload_url, "expires_in_hours": APPLICATION_TOKEN_TTL_SECONDS // 3600})
+
+
+async def _get_application_by_token(token: str):
+    async with aiosqlite.connect(DB_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM applications WHERE token = ?", (token,))
+        return await cur.fetchone()
+
+
+@app.route("/apply/<token>", methods=["GET"])
+async def apply_form(token):
+    """Secure web upload page — one generic route serving every
+    application type. Rejects expired/used/unknown tokens."""
+    row = await _get_application_by_token(token)
+    if not row:
+        return Response("Invalid or expired link.", status=404)
+    if row["status"] != "pending":
+        return Response("This application has already been submitted.", status=410)
+    if row["token_expires_at"] and time.time() > row["token_expires_at"]:
+        return Response("This link has expired. Please ask the bot for a new one.", status=410)
+
+    cfg = APPLICATION_TYPES.get(row["app_type"])
+    if not cfg:
+        return Response("Unknown application type.", status=500)
+
+    field_inputs = "\n".join(
+        f'<label>{f["label"]}</label><input type="text" name="field_{f["key"]}" required>'
+        for f in cfg["fields"]
+    )
+    doc_inputs = "\n".join(
+        f'<label>{d["label"]}</label><input type="file" name="doc_{d["key"]}" accept="image/*,.pdf" required>'
+        for d in cfg["documents"]
+    )
+    html_page = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{cfg['label']} — Secure Upload</title>
+<style>
+body{{font-family:sans-serif;background:#0b0f14;color:#e6edf3;max-width:520px;margin:0 auto;padding:20px}}
+h1{{font-size:1.3rem}} label{{display:block;margin-top:16px;margin-bottom:6px;font-size:.9rem;color:#9fb3c8}}
+input{{width:100%;padding:10px;border-radius:8px;border:1px solid #2a3441;background:#141a22;color:#e6edf3;box-sizing:border-box}}
+button{{margin-top:24px;width:100%;padding:12px;border-radius:8px;border:none;background:#22d3ee;color:#04121a;font-weight:700;font-size:1rem}}
+p.note{{color:#9fb3c8;font-size:.85rem}}
+</style></head>
+<body>
+<h1>{cfg['label']}</h1>
+<p class="note">Your documents are encrypted before storage. Only an authorized admin can access them.</p>
+<form method="POST" action="/apply/{token}/submit" enctype="multipart/form-data">
+{field_inputs}
+{doc_inputs}
+<button type="submit">Submit Application</button>
+</form>
+</body></html>"""
+    return Response(html_page, mimetype="text/html")
+
+
+@app.route("/apply/<token>/submit", methods=["POST"])
+async def apply_submit(token):
+    row = await _get_application_by_token(token)
+    if not row:
+        return jsonify({"success": False, "error": "Invalid or expired link"}), 404
+    if row["status"] != "pending":
+        return jsonify({"success": False, "error": "Already submitted"}), 410
+    if row["token_expires_at"] and time.time() > row["token_expires_at"]:
+        return jsonify({"success": False, "error": "Link expired"}), 410
+    if not _application_fernet:
+        return jsonify({"success": False, "error": "Uploads are temporarily disabled — contact the admin"}), 503
+
+    cfg = APPLICATION_TYPES.get(row["app_type"])
+    form = await request.form
+    files = await request.files
+
+    fields_out = {f["key"]: (form.get(f"field_{f['key']}") or "").strip() for f in cfg["fields"]}
+    fields_enc = _encrypt_bytes(json.dumps(fields_out).encode())
+
+    app_dir = APPLICATION_DOCS_DIR / str(row["id"])
+    app_dir.mkdir(parents=True, exist_ok=True)
+    documents_meta = {}
+    for d in cfg["documents"]:
+        f = files.get(f"doc_{d['key']}")
+        if not f or not f.filename:
+            return jsonify({"success": False, "error": f"Missing required document: {d['label']}"}), 400
+        raw = f.read()
+        if len(raw) > 10 * 1024 * 1024:
+            return jsonify({"success": False, "error": f"{d['label']} is too large (10MB max)"}), 400
+        enc_path = app_dir / f"{d['key']}.enc"
+        enc_path.write_bytes(_encrypt_bytes(raw))
+        documents_meta[d["key"]] = {"label": d["label"], "path": str(enc_path)}
+
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "UPDATE applications SET status='submitted', fields_enc=?, documents_json=?, submitted_at=? WHERE id=?",
+            (fields_enc, json.dumps(documents_meta), time.time(), row["id"]),
+        )
+        await db.commit()
+
+    return jsonify({"success": True, "message": "Application received. The admin will review it shortly."})
+
+
+@app.route("/admin/api/applications", methods=["GET"])
+async def admin_list_applications():
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    async with aiosqlite.connect(DB_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT id, app_type, phone, name, status, created_at, submitted_at FROM applications ORDER BY id DESC LIMIT 200"
+        )
+        rows = await cur.fetchall()
+    return jsonify({"applications": [dict(r) for r in rows]})
+
+
+@app.route("/admin/api/applications/<int:app_id>/fields", methods=["GET"])
+async def admin_get_application_fields(app_id):
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    if not _application_fernet:
+        return jsonify({"error": "Encryption key not configured"}), 503
+    async with aiosqlite.connect(DB_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT fields_enc FROM applications WHERE id=?", (app_id,))
+        row = await cur.fetchone()
+    if not row or not row["fields_enc"]:
+        return jsonify({"error": "Not found"}), 404
+    fields = json.loads(_decrypt_bytes(row["fields_enc"]))
+    return jsonify({"fields": fields})
+
+
+@app.route("/admin/api/applications/<int:app_id>/document/<doc_key>", methods=["GET"])
+async def admin_get_application_document(app_id, doc_key):
+    if not await _check_admin_auth_async(request):
+        return jsonify({"error": "Unauthorized"}), 401
+    if not _application_fernet:
+        return jsonify({"error": "Encryption key not configured"}), 503
+    async with aiosqlite.connect(DB_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT documents_json FROM applications WHERE id=?", (app_id,))
+        row = await cur.fetchone()
+    if not row or not row["documents_json"]:
+        return jsonify({"error": "Not found"}), 404
+    docs = json.loads(row["documents_json"])
+    meta = docs.get(doc_key)
+    if not meta:
+        return jsonify({"error": "Document not found"}), 404
+    enc = Path(meta["path"]).read_bytes()
+    raw = _decrypt_bytes(enc)
+    return Response(raw, mimetype="application/octet-stream")
+
+
 async def _check_admin_auth_async(req) -> bool:
     """
     Same as _check_admin_auth, but also:

@@ -14,3 +14,4 @@ __pycache__/
 # regresses again, `git status`/`git add -A` won't re-track a duplicate copy.
 Beast-MD/
 beast-md-repo/
+data/applications/
