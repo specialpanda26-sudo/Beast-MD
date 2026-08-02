@@ -2735,6 +2735,32 @@ async function startSession(sessionId, opts = {}) {
         } catch (e) {}
       }
 
+      // ── Kenya Government Services — natural-language routing ───────────────
+      // ✅ NEW: previously approved, unbuilt. DM-only, runs before generic AI
+      // chat. Cheap keyword pre-filter first (avoids a Groq call on every
+      // single DM) — only messages that plausibly mention a civic/gov topic
+      // get sent to /kenya-intent for real classification. If a confident
+      // match comes back, routes straight to the existing kenya_tools.js
+      // handler (unchanged) instead of a generic chat reply. Anything
+      // ambiguous or unrelated falls through to normal AI chat below,
+      // exactly as before this feature existed.
+      const KENYA_KEYWORD_HINT = /\b(voter|id card|national id|passport|birth cert|good conduct|police clearance|business (name|reg)|kra ?pin|paye|nhif|shif|nssf|helb|mpesa charges?|mpesa cost|cv|resume|payslip|invoice|kcse|bursary|emergency number|hospital|blood donat|matatu|huduma|ntsa|driving licen[cs]e|kuccps)\b/i;
+      if (!isGroup && body && !body.startsWith(CMD_PREFIX) && !body.startsWith('/') && KENYA_KEYWORD_HINT.test(body)) {
+        try {
+          const kenyaIntentResp = await apiClient.post('/kenya-intent', { text: body });
+          const intentKey = kenyaIntentResp?.data?.intent;
+          if (intentKey && allCommands[intentKey]) {
+            await allCommands[intentKey]({
+              sock: socket, from: sender, msg, isOwner, isPrimaryOwner, isCoOwner,
+              isSubAdmin, isBotAdmin, isGroup, sender: senderJid, senderJid,
+              sessionId, senderNumber, args: [], config, apiClient, logActivity,
+            });
+            logActivity('kenya-intent', intentKey, body.slice(0, 300), `+${senderJid.split('@')[0]}`);
+            return; // handled — skip generic AI chat below
+          }
+        } catch (e) { logger.warn('Kenya intent routing failed:', e.message); }
+      }
+
       // ── Natural AI Chat (DM only, non-command messages) ───────────────────
       // ✅ NEW (Update 15): .setchatbot on/off actually gates this now — was
       // always on regardless of the toggle's saved value.

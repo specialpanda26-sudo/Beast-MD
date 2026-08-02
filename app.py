@@ -1290,6 +1290,21 @@ async def api_profile():
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
+# ⚠️ Owner safety check: warn loudly (once, at startup) if any secret is
+# still sitting at the "changeme" placeholder from .env.example. Doesn't
+# block startup — you may be mid-setup — but makes this impossible to miss
+# in your logs instead of silently running with a guessable password.
+def _warn_if_default_secrets():
+    _weak = {
+        "ADMIN_PASSWORD": ADMIN_PASSWORD,
+        "BOT_LOGIN_PASS": os.environ.get("BOT_LOGIN_PASS", ""),
+        "OWNER_RECOVERY_SECRET": os.environ.get("OWNER_RECOVERY_SECRET", ""),
+    }
+    for _key, _val in _weak.items():
+        if _val and _val.strip().lower() == "changeme":
+            logger.warning(f"[SECURITY] {_key} is still set to the default 'changeme' — change this before going live.")
+_warn_if_default_secrets()
+
 # ✅ NEW: in-memory cooldown so /admin/forgot-password can't be spammed to
 # flood the owner's WhatsApp with reset codes. Not persisted on purpose —
 # a restart clearing this is a harmless edge case, not a security hole.
@@ -5465,6 +5480,85 @@ LINK_DIRECTORY: dict = {
 _LINK_CLICK_LOG: dict = {link_id: [] for link_id in LINK_DIRECTORY}
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# Kenya Government Services — Natural-Language Intent Classifier
+# ✅ NEW: previously approved but unbuilt. Lets a DM like "how do I recover
+# my voter card" route straight to the existing kenya_tools.js handlers
+# (already fully built — voter, kra_pin, helb, id_replace, etc.) instead of
+# requiring the exact .voter / .kra_pin / .helb command syntax. Pure
+# additive routing layer — none of the existing kenya_tools.js handlers or
+# their command names change; this only decides WHICH one to call for a
+# free-text message. client_bridge.js calls this before falling through to
+# generic AI chat, and only invokes a kenya_tools.js command if a real
+# intent match comes back — anything ambiguous or unrelated falls through
+# to normal chat untouched.
+# ══════════════════════════════════════════════════════════════════════════
+
+# Keep this in sync with plugins/kenya_tools.js's exported command names.
+# Grouped by real-world task so the model has context, not just bare keys.
+KENYA_INTENTS = {
+    "voter_check": "check/verify voter registration status",
+    "id_replace": "lost or replace a national ID card",
+    "passport": "apply for or renew a passport",
+    "birth_cert": "get/replace a birth certificate",
+    "good_conduct": "police clearance certificate / certificate of good conduct",
+    "business_reg": "register a business name or company",
+    "kra_pin": "get or check a KRA PIN",
+    "paye_calc": "calculate PAYE / income tax on a salary",
+    "nhif": "NHIF/SHIF medical cover contributions or status",
+    "nssf": "NSSF pension contributions or status",
+    "helb": "HELB student loan application or balance",
+    "helb_status": "check HELB loan status",
+    "mpesa_cost": "M-Pesa transaction charges/fees",
+    "cv": "generate or build a CV/resume",
+    "payslip": "generate a payslip",
+    "invoice": "generate an invoice",
+    "kcse": "KCSE exam results or grading",
+    "bursary": "bursary / school fees funding application",
+    "emergency": "emergency contact numbers (police, ambulance, fire)",
+    "hospitals": "find nearby hospitals",
+    "blood": "blood donation information",
+    "matatu": "matatu/public transport fares or routes",
+    "huduma": "Huduma Centre services or locations",
+    "jobs": "job listings/vacancies",
+    "ntsa": "NTSA driving license or vehicle services",
+    "kuccps": "KUCCPS university/college placement",
+}
+
+KENYA_INTENT_SYSTEM_PROMPT = (
+    "You classify a WhatsApp message as either a Kenyan government/civic "
+    "services request, or not. Reply with ONLY raw JSON, no markdown, no "
+    "explanation: {\"intent\": \"<key>\"} using one of these exact keys if "
+    "it clearly matches: " + ", ".join(KENYA_INTENTS.keys()) + ". "
+    "If the message doesn't clearly match any of these, reply exactly: "
+    "{\"intent\": null}. Never invent a key that isn't in that list."
+)
+
+
+@app.route("/kenya-intent", methods=["POST"])
+async def kenya_intent_classify():
+    """Classifies free-text into a kenya_tools.js command key, or null."""
+    data = await request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text or len(text) > 500:
+        return jsonify({"intent": None})
+    if not GROQ_API_KEY:
+        return jsonify({"intent": None})
+    try:
+        raw = await call_groq_ai(text, system=KENYA_INTENT_SYSTEM_PROMPT)
+        # Model is instructed to return raw JSON only, but strip code
+        # fences defensively in case a model wraps it anyway.
+        cleaned = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        parsed = json.loads(cleaned)
+        intent = parsed.get("intent")
+        if intent in KENYA_INTENTS:
+            return jsonify({"intent": intent})
+        return jsonify({"intent": None})
+    except Exception as e:
+        logger.warning(f"[KenyaIntent] classification failed: {e}")
+        return jsonify({"intent": None})
+
+
 async def _lookup_geo(ip: str) -> dict:
     """Best-effort approximate location from IP — city-level, not precise
     GPS, and sometimes wrong on mobile carriers/VPNs."""
@@ -5489,6 +5583,14 @@ async def _lookup_geo(ip: str) -> dict:
 @app.route("/go/<link_id>")
 async def link_tracker_redirect(link_id: str):
     target_url = LINK_DIRECTORY.get(link_id)
+    # ⚠️ Guard: these entries ship as https://example.com placeholders until
+    # you set real destinations (via .env, code edit, or POST
+    # /api/link-directory). Rather than silently sending real visitors to
+    # example.com, refuse and log loudly so it gets caught before anyone
+    # clicks a live marketing link that goes nowhere useful.
+    if target_url and target_url.rstrip("/") == "https://example.com":
+        logger.warning(f"[LinkTracker] '{link_id}' still points at the example.com placeholder — set a real URL via POST /api/link-directory or edit LINK_DIRECTORY.")
+        return Response("<h1>This link isn't configured yet.</h1>", status=503, mimetype="text/html")
     if not target_url:
         logger.warning(f"[LinkTracker] unknown link_id '{link_id}' requested.")
         return Response("<h1>Link Not Found</h1>", status=404, mimetype="text/html")

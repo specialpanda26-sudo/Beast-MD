@@ -7,3 +7,10 @@ sessions/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Guard against the recurring zip-build duplication bug: whatever builds
+# Beast-MD-main-updated.zip has repeatedly nested full copies of the whole
+# project under these two names. Ignored here so even if the build script
+# regresses again, `git status`/`git add -A` won't re-track a duplicate copy.
+Beast-MD/
+beast-md-repo/
